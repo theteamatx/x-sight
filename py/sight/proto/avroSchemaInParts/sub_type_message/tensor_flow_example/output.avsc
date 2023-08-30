@@ -1,0 +1,286 @@
+[
+    {
+        "name": "output_example",
+        "type": [ "null", {
+            "namespace": "output_example",
+            "type": "record",
+            "name": "type_output_example",
+            "fields": [
+                {
+                    "name": "features",
+                    "namespace": "features",
+                    "type": ["null", {
+                        "name": "type_features",
+                        "type": "record",
+                        "fields": [
+                            {
+                                "name": "feature",
+                                "type": ["null", {
+                                    "type": "map",
+                                    "name": "type_feature",
+                                    "values": [ "null", {
+                                        "name": "type_map_features",
+                                        "type": "record",
+                                        "fields": [
+                                            {
+                                                "name": "bytes_list",
+                                                "type": [ "null", {
+                                                    "type": "record",
+                                                    "name": "type_bytes_list",
+                                                    "fields": [
+                                                        {
+                                                            "name": "value",
+                                                            "type": [ "null", {
+                                                                "type": "array",
+                                                                "name": "type_value",
+                                                                "items": ["bytes", "null"]
+                                                            }],
+                                                            "doc": ""
+                                                        }
+                                                  ]
+                                                }],
+                                                "doc": ""
+                                            },
+                                            {
+                                                "name": "float_list",
+                                                "type": [ "null", {
+                                                    "type": "record",
+                                                    "name": "type_float_list",
+                                                    "fields": [
+                                                        {
+                                                            "name": "value",
+                                                            "type": [ "null", {
+                                                                "type": "array",
+                                                                "name": "type_value",
+                                                                "items": ["float", "null"]
+                                                            }],
+                                                            "doc": ""
+                                                        }
+                                                  ]
+                                                }],
+                                                "doc": ""
+                                            },
+                                            {
+                                                "name": "int64_list",
+                                                "type": [ "null", {
+                                                    "type": "record",
+                                                    "name": "type_int64_list",
+                                                    "fields": [
+                                                        {
+                                                            "name": "value",
+                                                            "type": [ "null", {
+                                                                "type": "array",
+                                                                "name": "type_value",
+                                                                "items": ["long", "null"]
+                                                            }],
+                                                            "doc": ""
+                                                        }
+                                                  ]
+                                                }],
+                                                "doc": ""
+                                            }
+                                        ]
+                                    }]
+                                }],
+                                "doc": ""
+                            }
+                        ]
+                    }],
+                    "doc": ""
+                }
+          ]
+        }],
+        "doc": ""
+    },
+    {
+        "name": "output_sequence_example",
+        "type": [ "null", {
+            "namespace": "output_sequence_example",
+            "type": "record",
+            "name": "type_output_sequence_example",
+            "fields": [
+                {
+                    
+                    "name": "context",
+                    "type": ["null", {
+                        "namespace": "output_sequence_example.context",
+                        "name": "type_context",
+                        "type": "record",
+                        "fields": [
+                            {
+                                "name": "feature",
+                                "type": ["null", {
+                                    "type": "map",
+                                    "name": "type_feature",
+                                    "values": [ "null", {
+                                        "name": "type_map_features",
+                                        "type": "record",
+                                        "fields": [
+                                            {
+                                                "name": "bytes_list",
+                                                "type": [ "null", {
+                                                    "type": "record",
+                                                    "name": "type_bytes_list",
+                                                    "fields": [
+                                                        {
+                                                            "name": "value",
+                                                            "type": [ "null", {
+                                                                "type": "array",
+                                                                "name": "type_value",
+                                                                "items": ["bytes", "null"]
+                                                            }],
+                                                            "doc": ""
+                                                        }
+                                                  ]
+                                                }],
+                                                "doc": ""
+                                            },
+                                            {
+                                                "name": "float_list",
+                                                "type": [ "null", {
+                                                    "type": "record",
+                                                    "name": "type_float_list",
+                                                    "fields": [
+                                                        {
+                                                            "name": "value",
+                                                            "type": [ "null", {
+                                                                "type": "array",
+                                                                "name": "type_value",
+                                                                "items": ["float", "null"]
+                                                            }],
+                                                            "doc": ""
+                                                        }
+                                                  ]
+                                                }],
+                                                "doc": ""
+                                            },
+                                            {
+                                                "name": "int64_list",
+                                                "type": [ "null", {
+                                                    "type": "record",
+                                                    "name": "type_int64_list",
+                                                    "fields": [
+                                                        {
+                                                            "name": "value",
+                                                            "type": [ "null", {
+                                                                "type": "array",
+                                                                "name": "type_value",
+                                                                "items": ["long", "null"]
+                                                            }],
+                                                            "doc": ""
+                                                        }
+                                                  ]
+                                                }],
+                                                "doc": ""
+                                            }
+                                        ]
+                                    }]
+                                }],
+                                "doc": ""
+                            }
+                        ]
+                    }],
+                    "doc": ""
+                },
+                {
+                    "name": "feature_lists",
+                    "type": ["null", {
+                        "namespace": "output_sequence_example.feature_lists",
+                        "name": "type_feature_lists",
+                        "type": "record",
+                        "fields": [
+                            {
+                                "name": "feature_list",
+                                "type": ["null", {
+                                    "type": "map",
+                                    "name": "type_feature_list",
+                                    "values": [ "null", {
+                                        "name": "type_map_feature_list",
+                                        "type": "record",
+                                        "fields": [
+                                            {
+                                                "name": "feature",
+                                                "type": {
+                                                    "type": "array",
+                                                    "name": "type_feature",
+                                                    "items": 
+                                                    {
+                                                        "name": "type_item_feature",
+                                                        "type": "record",
+                                                        "fields": [
+                                                            {
+                                                                "name": "bytes_list",
+                                                                "type": [ "null", {
+                                                                    "type": "record",
+                                                                    "name": "type_bytes_list",
+                                                                    "fields": [
+                                                                        {
+                                                                            "name": "value",
+                                                                            "type": [ "null", {
+                                                                                "type": "array",
+                                                                                "name": "type_value",
+                                                                                "items": ["bytes", "null"]
+                                                                            }],
+                                                                            "doc": ""
+                                                                        }
+                                                                  ]
+                                                                }],
+                                                                "doc": ""
+                                                            },
+                                                            {
+                                                                "name": "float_list",
+                                                                "type": [ "null", {
+                                                                    "type": "record",
+                                                                    "name": "type_float_list",
+                                                                    "fields": [
+                                                                        {
+                                                                            "name": "value",
+                                                                            "type": [ "null", {
+                                                                                "type": "array",
+                                                                                "name": "type_value",
+                                                                                "items": ["float", "null"]
+                                                                            }],
+                                                                            "doc": ""
+                                                                        }
+                                                                  ]
+                                                                }],
+                                                                "doc": ""
+                                                            },
+                                                            {
+                                                                "name": "int64_list",
+                                                                "type": [ "null", {
+                                                                    "type": "record",
+                                                                    "name": "type_int64_list",
+                                                                    "fields": [
+                                                                        {
+                                                                            "name": "value",
+                                                                            "type": [ "null", {
+                                                                                "type": "array",
+                                                                                "name": "type_value",
+                                                                                "items": ["long", "null"]
+                                                                            }],
+                                                                            "doc": ""
+                                                                        }
+                                                                  ]
+                                                                }],
+                                                                "doc": ""
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                "doc": ""    
+                                            }
+                                        ]
+                                    }]
+                                }],
+                                "doc": ""
+                            }
+                        ]
+                    }],
+                    "doc": ""
+                }
+          ]
+        }],
+        "doc": ""
+    }
+]

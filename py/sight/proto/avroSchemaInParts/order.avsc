@@ -1,0 +1,15 @@
+{
+    "name": "order",
+    "type": {
+        "type": "record",
+        "name": "type_order",
+        "fields": [
+            {
+                "name": "timestamp_ns",
+                "type": "long",
+                "doc": "timestamp"
+            }
+      ]
+    },
+    "doc": "The attributes that are in-force at the time this object was logged"
+}

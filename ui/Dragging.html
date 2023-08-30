@@ -1,0 +1,75 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script>
+    // From https://www.w3schools.com/howto/howto_js_draggable.asp
+    function dragElement(elmnt, dragElmnt) {
+      console.log(elmnt);
+      var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    //  if (document.getElementById(elmnt.id + "header")) {
+    //    // if present, the header is where you move the DIV from:
+    //    document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+    //  } else {
+        // otherwise, move the DIV from anywhere inside the DIV:
+        dragElmnt.onmousedown = dragMouseDown;
+    //  }
+    
+      function dragMouseDown(e) {
+        console.log('dragMouseDown()');
+        console.log(e);
+        console.log(elmnt);
+        dragElmnt.innerHTML = '&#9994;';
+        e = e || window.event;
+        e.preventDefault();
+        e.stopPropagation();
+        elmnt.style.position='absolute';
+        // get the mouse cursor position at startup:
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        // call a function whenever the cursor moves:
+        document.onmousemove = elementDrag;
+        document.style.zIndex = 1000; 
+      }
+    
+      function elementDrag(e) {
+        console.log('elementDrag()');
+        console.log(e);
+        e = e || window.event;
+        e.preventDefault();
+        elmnt.style.position='fixed';
+        // calculate the new cursor position:
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        console.log('pos1='+pos1+', pos2='+pos2+', pos3='+pos3+', pos4='+pos4);
+        console.log('client=['+e.clientX+", "+e.clientY+"]");
+        // set the element's new position:
+        elmnt.style.top = e.clientY+"px";// (elmnt.offsetTop - pos2) + "px";
+        elmnt.style.left = e.clientX+"px"; // (elmnt.offsetLeft - pos1) + "px";
+        console.log(elmnt.style);
+      }
+    
+      function closeDragElement() {
+        console.log('closeDragElement()');
+        // stop moving when mouse button is released:
+        document.onmouseup = null;
+        document.onmousemove = null;
+        dragElmnt.innerHTML = '&#9995;';
+      }
+    }
+    </script>

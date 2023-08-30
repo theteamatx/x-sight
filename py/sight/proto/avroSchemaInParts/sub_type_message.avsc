@@ -1,0 +1,166 @@
+[
+    {
+        "name": "text",
+        "type": ["null", {
+            "namespace": "text",
+            "name": "text",
+            "type": "record",
+            "fields": [
+                {
+                    "name": "text",
+                    "type": "string",
+                    "doc": ""
+                },
+                {
+                    "name": "sub_type",
+                    "type": {
+                        "type": "enum",
+                        "name": "sub_type",
+                        "symbols":
+                        [
+                            "ST_UNKNOWN",
+                            "ST_TEXT",
+                            "ST_HTML"
+                        ],
+                        "doc": "sub-type"
+                    },
+                    "doc": ""
+                }
+            ]
+        }],
+        "doc": "text from oneOf type sub_type_message"
+    },
+    {
+        "name": "block_start",
+        "type": ["null", {
+            "namespace": "block_start",
+            "name": "block_start",
+            "type": "record",
+            "fields": [
+                {
+                    "name": "label",
+                    "type": "string",
+                    "doc": ""
+                },
+                {
+                    "name": "sub_type",
+                    "type": [ "null",{
+                        "type": "enum",
+                        "name": "sub_type",
+                        "symbols":
+                        [
+                            "ST_UNKNOWN",
+                            "ST_FLUME_DO_FN_CREATE",
+                            "ST_FLUME_DO_FN_START_DO",
+                            "ST_FLUME_COMPARE_FN_CREATE",
+                            "ST_FLUME_COMPARE_FN_START_COMPARE",
+                            "ST_NAMED_VALUE",
+                            "ST_LIST",
+                            "ST_TABLE",
+                            "ST_TENSORFLOW_MODEL_APPLICATION",
+                            "ST_TENSORFLOW_MODEL_TRAINING_EPOCH",
+                            "ST_TENSORFLOW_MODEL_TRAINING",
+                            "ST_SIMULATION",
+                            "ST_SIMULATION_PARAMETERS",
+                            "ST_SIMULATION_STATE",
+                            "ST_SIMULATION_TIME_STEP",
+                            "ST_CLUSTER_ASSIGNMENT",
+                            "ST_CONFIGURATION"
+                        ],
+                        "doc": "sub-type"
+                    }],
+                    "doc": ""
+                },
+                {
+                    "name": "list",
+                    "type": ["null", {
+                        "namespace": "list",
+                        "name": "list",
+                        "type": "record",
+                        "fields": [
+                            {
+                                "name": "sub_type",
+                                "type": [ "null",{
+                                    "type": "enum",
+                                    "name": "sub_type",
+                                    "symbols":
+                                    [
+                                        "ST_UNKNOWN",
+                                        "ST_HOMOGENEOUS",
+                                        "ST_HETEROGENEOUS",
+                                        "ST_MAP",
+                                        "ST_MAP_ENTRY",
+                                        "ST_DICT"
+                                    ],
+                                    "doc": "sub-type"
+                                }],
+                                "doc": ""
+                            }
+                        ]
+                    }],
+                    "doc": "Sub-type of the message"
+                }
+            ]
+        }],
+        "doc": "block_start from oneOf type sub_type_message"
+    },
+    {
+        "name": "block_end",
+        "type": ["null", {
+            "namespace": "block_end",
+            "name": "block_end",
+            "type": "record",
+            "fields": [
+                {
+                    "name": "label",
+                    "type": "string",
+                    "doc": ""
+                },
+                {
+                    "name": "sub_type",
+                    "type": [ "null",{
+                        "type": "enum",
+                        "name": "sub_type",
+                        "symbols":
+                        [
+                            "ST_UNKNOWN",
+                            "ST_FLUME_DO_FN_COMPLETE",
+                            "ST_FLUME_DO_FN_END_DO",
+                            "ST_FLUME_COMPARE_FN_COMPLETE",
+                            "ST_FLUME_COMPARE_FN_END_COMPARE",
+                            "ST_NAMED_VALUE",
+                            "ST_LIST",
+                            "ST_TABLE",
+                            "ST_TENSORFLOW_MODEL_APPLICATION",
+                            "ST_TENSORFLOW_MODEL_TRAINING_EPOCH",
+                            "ST_TENSORFLOW_MODEL_TRAINING",
+                            "ST_SIMULATION",
+                            "ST_SIMULATION_PARAMETERS",
+                            "ST_SIMULATION_STATE",
+                            "ST_SIMULATION_TIME_STEP",
+                            "ST_CLUSTER_ASSIGNMENT"
+                        ],
+                        "doc": "sub-type"
+                    }],
+                    "doc": ""
+                },
+                {
+                    "name": "location_of_block_start",
+                    "type": ["null", "string"],
+                    "doc": "Sub-type of the message"
+                },
+                {
+                    "name": "num_direct_contents",
+                    "type": ["null", "long"],
+                    "doc": "Sub-type of the message"
+                },
+                {
+                    "name": "num_transitive_contents",
+                    "type": ["null", "long"],
+                    "doc": "Sub-type of the message"
+                }
+            ]
+        }],
+        "doc": "block_end from oneOf type sub_type_message"
+    }
+]

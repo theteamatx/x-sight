@@ -1,0 +1,357 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script>
+    class NamedValueShower {
+      Show(container, data, blockStartIdx, blockEndIdx, indent) {
+        // console.log(indent+"NamedValueShower::Show("+blockStartIdx+" - "+blockEndIdx+")");
+        // console.log(data[blockStartIdx]);
+        // console.log(data[blockEndIdx]);
+        var tbl = document.createElement("table");
+        tbl.setAttribute("id", data[blockStartIdx].location);
+        tbl.style.borderStyle='filled filled filled filled';
+        tbl.border=2;
+        container.appendChild(tbl);
+        
+        var bodyRow = document.createElement('tr');
+        bodyRow.style.width='100%';
+        tbl.appendChild(bodyRow);
+        
+        var nameCell = document.createElement('td');
+        nameCell.setAttribute("id", 'name_cell_'+data[blockStartIdx].location);
+        bodyRow.appendChild(nameCell);
+        nameCell.innerHTML = data[blockStartIdx]['blockStart']['label'];
+        
+        var valueCell = document.createElement('td');
+        valueCell.setAttribute("id", 'value_cell_'+data[blockStartIdx].location);
+        bodyRow.appendChild(valueCell);
+        ShowObject(valueCell, data[blockStartIdx+1]['location'], data[blockEndIdx-1]['location'], 
+                    data[blockStartIdx+1]['index'], data[blockEndIdx-1]['index'], 
+                    data[blockEndIdx]['blockEnd']['num_direct_contents'], data, 
+                    blockStartIdx+1, blockEndIdx-1, indent+'  ');
+      }
+    }
+    
+    class ListShower {
+      constructor() {
+        this.showers = {
+          'ST_HOMOGENEOUS': new FlatListShower(), 
+          'ST_HETEROGENEOUS': new FlatListShower(),
+          'ST_MAP': new MapShower(),
+          'ST_MAP_ENTRY': new MapEntryShower(),
+          'ST_DICT': new DictShower(),
+        };
+      }
+      
+      Show(container, data, blockStartIdx, blockEndIdx, indent) {
+         this.showers[data[blockStartIdx]['blockStart']['list']['sub_type']].Show(
+              container, data, blockStartIdx, blockEndIdx, indent+'  ');
+      }
+    }
+    
+    class FlatListShower {
+      Show(container, data, blockStartIdx, blockEndIdx, indent) {
+        // console.log(indent+"FlatListShower::Show("+blockStartIdx+" - "+blockEndIdx+")");
+        // console.log(data[blockStartIdx]);
+        // console.log(data[blockEndIdx]);
+        var tbl = document.createElement("table");
+        tbl.setAttribute("id", data[blockStartIdx].location);
+        tbl.style.borderStyle='filled filled filled filled';
+        tbl.border=1;
+        container.appendChild(tbl);
+        
+        var eltIdx = blockStartIdx+1;
+        while (eltIdx<blockEndIdx) {
+          // console.log(indent+"ListShower::Show("+blockStartIdx+" - "+blockEndIdx+') <<< eltIdx='+eltIdx+', data[eltIdx]["subType"]='+data[eltIdx]["subType"]);
+          var row = document.createElement('tr');
+          row.style.width='100%';
+          tbl.appendChild(row);
+            
+          var cell = document.createElement('td');
+          cell.setAttribute("id", 'flat_list_cell_'+data[eltIdx].location);
+          row.appendChild(cell);
+          
+          eltIdx = objectHandlers[data[eltIdx]["subType"]].Process(cell, data, eltIdx, blockEndIdx-1, indent+'  ')
+          // console.log(indent+"ListShower::Show("+blockStartIdx+" - "+blockEndIdx+') >>> eltIdx='+eltIdx);
+        }
+      }
+    }
+    
+    class MapShower {
+      Show(container, data, blockStartIdx, blockEndIdx, indent) {
+        // console.log(indent+"MapShower::Show("+blockStartIdx+" - "+blockEndIdx+")");
+        // console.log(data[blockStartIdx]);
+        // console.log(data[blockEndIdx]);
+        var tbl = document.createElement("table");
+        tbl.setAttribute("id", data[blockStartIdx].location);
+        tbl.style.borderStyle='filled filled filled filled';
+        tbl.border=1;
+        container.appendChild(tbl);
+        
+        var eltIdx = blockStartIdx+1;
+        while (eltIdx<blockEndIdx-1) {
+          // console.log('<<< eltIdx='+eltIdx)
+          var row = document.createElement('tr');
+          row.style.width='100%';
+          tbl.appendChild(row);
+            
+          var cell = document.createElement('td');
+          cell.setAttribute("id", 'map_cell_'+data[eltIdx].location);
+          row.appendChild(cell);
+          
+          // console.log('eltIdx='+eltIdx+', data[eltIdx]["subType"]='+data[eltIdx]["subType"]);
+          
+          // console.log(objectHandlers[data[eltIdx]["subType"]]);
+          eltIdx = objectHandlers[data[eltIdx]["subType"]].Process(cell, data, eltIdx, blockEndIdx-1, indent+'  ')
+    
+          // console.log('>>> eltIdx='+eltIdx)
+        }
+      }
+    }
+    
+    class MapEntryShower {
+      Show(container, data, blockStartIdx, blockEndIdx, indent) {
+        console.log(indent+"MapEntryShower::Show("+blockStartIdx+" - "+blockEndIdx+")");
+        console.log(data[blockStartIdx]);
+        console.log(data[blockEndIdx]);
+        var tbl = document.createElement("table");
+        tbl.setAttribute("id", data[blockStartIdx].location);
+        tbl.style.borderStyle='filled filled filled filled';
+        tbl.border=0;
+        container.appendChild(tbl);
+        
+        var row = document.createElement('tr');
+        row.style.width='100%';
+        tbl.appendChild(row);
+        
+        var keyCell = document.createElement('td');
+        keyCell.setAttribute("id", 'map_key_cell_'+data[blockStartIdx].location);
+        row.appendChild(keyCell);
+        var keyEndIdx = objectHandlers[data[blockStartIdx+1]["subType"]].Process(keyCell, data, blockStartIdx+1, blockEndIdx-1, indent+'  ')
+        console.log('keyEndIdx='+keyEndIdx)
+        console.log(data[keyEndIdx])
+    
+        var arrowCell = document.createElement('td');
+        arrowCell.setAttribute("id", 'map_arrow_cell_'+data[blockStartIdx].location);
+        arrowCell.innerHTML = '&xmap;';
+        row.appendChild(arrowCell);
+    
+        var valCell = document.createElement('td');
+        valCell.setAttribute("id", 'map_value_cell_'+data[blockStartIdx].location);
+        row.appendChild(valCell);
+        if (data[keyEndIdx]['subType']=='ST_BLOCK_END') {
+          valCell.innerHTML='???'
+        } else {
+          objectHandlers[data[keyEndIdx]["subType"]].Process(valCell, data, keyEndIdx, blockEndIdx-1, indent+'  ')
+        }
+      }
+    }
+    
+    class DictShower {
+      Show(container, data, blockStartIdx, blockEndIdx, indent) {
+        // console.log(indent+"DictShower::Show("+blockStartIdx+" - "+blockEndIdx+")");
+        // console.log(data[blockStartIdx]);
+        // console.log(data[blockEndIdx]);
+    
+        var button = document.createElement('div')
+        button.innerHTML = '&ofcir;';
+        button.setAttribute('class', 'named_value_tooltip');
+        container.appendChild(button);
+    
+        var spanTooltip = document.createElement('span');
+        spanTooltip.setAttribute('class', 'named_value_tooltiptext');
+        button.appendChild(spanTooltip);
+    
+        var tbl = document.createElement("table");
+        tbl.setAttribute("id", data[blockStartIdx].location);
+        tbl.style.borderStyle='filled filled filled filled';
+        tbl.border=1;
+        spanTooltip.appendChild(tbl);
+        
+        var eltIdx = blockStartIdx+1;
+        while (eltIdx<blockEndIdx-1) {
+          // console.log('<<< eltIdx='+eltIdx)
+          var row = document.createElement('tr');
+          row.style.width='100%';
+          tbl.appendChild(row);
+            
+          var cell = document.createElement('td');
+          cell.setAttribute("id", 'dict_cell_'+data[eltIdx].location);
+          row.appendChild(cell);
+          
+          // console.log('eltIdx='+eltIdx)
+          // console.log(data[eltIdx]);
+          // console.log(objectHandlers[data[eltIdx]["subType"]]);
+          eltIdx = objectHandlers[data[eltIdx]["subType"]].Process(cell, data, eltIdx, blockEndIdx-1, indent+'  ')
+    
+          // console.log('>>> eltIdx='+eltIdx)
+        }
+      }
+    }
+    
+    class TableShower {
+      Show(container, data, blockStartIdx, blockEndIdx, indent) {
+        console.log("In table Shower...");
+        console.log(indent+"TableShower::Show("+blockStartIdx+" - "+blockEndIdx+")");
+        var graph  = document.createElement("div");
+        graph.id = 'table_'+blockStartIdx;
+        container.appendChild(graph);
+    
+        var tbl = document.createElement("table");
+        tbl.setAttribute("id", data[blockStartIdx].location);
+        tbl.style.borderStyle='filled filled filled filled';
+        tbl.border=1;
+        container.appendChild(tbl);
+        var eltIdx = blockStartIdx+2;
+    
+        var headerRow = document.createElement('thead');
+        var keyColNames = [];
+        while (eltIdx<blockEndIdx && 
+               !(data[eltIdx]['subType']=='ST_BLOCK_END' && 
+                data[eltIdx]['blockEnd']['sub_type'] == 'ST_LIST')) {
+          var key = document.createElement('th');
+          key.innerHTML = data[eltIdx]['value']['string_value'];
+          headerRow.appendChild(key);
+    
+          keyColNames.push(data[eltIdx]['value']['string_value']);
+          eltIdx++;
+        }
+    
+        var valueColNames = [];
+        eltIdx += 2;
+        while (eltIdx<blockEndIdx && 
+               !(data[eltIdx]['subType']=='ST_BLOCK_END' && 
+                data[eltIdx]['blockEnd']['sub_type'] == 'ST_LIST')) {
+          var key = document.createElement('td');
+          key.setAttribute("id", 'table_key_cell_'+data[eltIdx].location);
+          key.innerHTML = data[eltIdx]['value']['string_value'];
+          headerRow.appendChild(key);
+    
+          valueColNames.push(data[eltIdx]['value']['string_value']);
+          eltIdx++;
+        }
+        tbl.appendChild(headerRow);
+    
+        var allColNames = keyColNames.concat(valueColNames);
+    
+        eltIdx += 2;
+        var cols = {};
+        for (var colName of allColNames) {
+          cols[colName] = [];
+        }
+    
+        var min_key = 1e100;
+        var max_key = -1e100;
+        var min_val = 1e100;
+        var max_val = -1e100;
+    
+        while (eltIdx<blockEndIdx && 
+               !(data[eltIdx]['subType']=='ST_BLOCK_END' && 
+                data[eltIdx]['blockEnd']['sub_type'] == 'ST_LIST')) {
+          eltIdx ++;
+          var dataRow = document.createElement('tr');
+          var idx=0;
+          while (eltIdx<blockEndIdx && 
+               !(data[eltIdx]['subType']=='ST_BLOCK_END' && 
+                data[eltIdx]['blockEnd']['sub_type'] == 'ST_LIST')) {
+            // console.log('Elt <<<')
+            // console.log(data[eltIdx]);
+    
+            var value = document.createElement('td');
+            value.setAttribute("id", 'table_value_cell_'+data[eltIdx].location);
+            // if (data[eltIdx]['value.subType'] == 'ST_STRING') {
+            //   value.innerHTML = data[eltIdx]['value.doubleValue'];
+    
+            // } 
+            // value.innerHTML = data[eltIdx]['value.doubleValue'];
+            ShowObject(value, data[eltIdx]['location'], data[eltIdx]['location'], 
+                        data[eltIdx]['index'], data[eltIdx]['index'], 
+                        1, data, 
+                        eltIdx, eltIdx, indent+'  ');
+            dataRow.appendChild(value);
+    
+            cols[allColNames[idx]].push(data[eltIdx]['value']['double_value']);
+            if (idx == 0) {
+              min_key = Math.min(min_key, data[eltIdx]['value']['double_value']);
+              max_key = Math.max(max_key, data[eltIdx]['value']['double_value']);
+            }
+            if (idx > keyColNames.length) {
+              min_val = Math.min(min_val, data[eltIdx]['value']['double_value']);
+              max_val = Math.max(max_val, data[eltIdx]['value']['double_value']);
+            }
+            eltIdx ++;
+            idx++;
+          }
+          tbl.appendChild(dataRow);
+          eltIdx++;
+        }
+    
+      //   var data = []
+      //   for (var colName of valueColNames) {
+      //     for (var idx=0; idx < cols[colName].length; idx++) {
+      //       data.push({
+      //         colName: colName,
+      //         key: cols[keyColNames[0]][idx],
+      //         val: cols[colName][idx],
+      //       });
+      //     }
+      //   }
+    
+      //   var margin = {top: 10, right: 30, bottom: 30, left: 60},
+      //   width = 460 - margin.left - margin.right,
+      //   height = 400 - margin.top - margin.bottom;
+      //   var svg = 
+      //     d3.select("#"+graph.id)
+      //      .append("svg")
+      //      .attr("width", width + margin.left + margin.right)
+      //      .attr("height", height + margin.top + margin.bottom)
+      //      .append("g")
+      //     .attr("transform",
+      //         "translate(" + margin.left + "," + margin.top + ")");
+    
+      // // Add X axis
+      // var x = d3.scaleLinear()
+      //   .domain([min_key, max_key])
+      //   .range([ 0, width ]);
+      // svg.append("g")
+      //   .attr("transform", "translate(0," + height + ")")
+      //   .call(d3.axisBottom(x));
+    
+      // // Add Y axis
+      // var y = d3.scaleLinear()
+      //   .domain([min_val, max_val])
+      //   .range([ height, 0]);
+      // svg.append("g")
+      //   .call(d3.axisLeft(y));
+    
+      // var color = d3.scaleOrdinal(d3.schemeCategory10);
+      
+      // // Add dots
+      // svg.append('g')
+      //   .selectAll("dot")
+      //   .data(data)
+      //   .enter()
+      //   .append("circle")
+      //     .attr("cx", function (d) { return x(d.key); } )
+      //     .attr("cy", function (d) { return y(d.val); } )
+      //     .attr("r", 5)
+      //     .style("fill", function (d) { return color(d.colName); })
+      //     .style("stroke", function (d) { return color(d.colName); });
+      }
+    }
+    </script>
+    
+    

@@ -1,0 +1,87 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script>
+
+
+   // Returns whether the attribute selections in selections match the 
+   // ones recorded in attributes for a particular data element.
+   function AttrSelectionMatches(selection, attributes) {
+     // If nothing is currently selected, then no constraints have been placed
+     // the selector matches everything.
+     if (Object.keys(selection).length == 0) {
+       console.log("    No match: empty selection");
+       return true;
+     }
+     // If something is currently selected but this element has no attributes,
+     // then the selection doesn't match it.
+     if (attributes == undefined) {
+       console.log("    No match: no attributes");
+       return false;
+     }
+     for (var key in selection) {
+       if (attributes[key] == undefined ||
+           selection[key] != attributes[key]['value']) {
+               console.log("    No match: key "+key);
+         return false;
+       }
+     }
+    //  console.log("    Match");
+     return true;
+   }
+   
+   
+   function ShowSelectedWidgets(prefix, container, selection) {
+     //console.log("<<<ShowSelectedWidgets("+prefix+")");
+     var idx = 0;
+     var curLoc = prefix+(prefix==""?"":":")+idx;
+     //console.log("curLoc="+curLoc);
+     var element = document.getElementById(curLoc);
+     //console.log("element="+element);
+     var data = location2Data[curLoc];
+     //console.log("data="+data);
+     var totalSubElements = 0;
+     var totalMatchingSubElements = 0;
+     
+     while (idx==0 || data) {
+       //console.log("Index: "+idx);        
+       if (element) {
+         //console.log(element);
+         //console.log(data['attributes']);
+         //console.log("matches="+AttrSelectionMatches(selection, data['attributes']));
+         totalSubElements++;
+         var anySubElementsMatch = ShowSelectedWidgets(curLoc, element, selection);
+         if (anySubElementsMatch || AttrSelectionMatches(selection, data['attributes'])) {
+           totalMatchingSubElements++;
+           element.style.display = 'block';
+           //element.style.backgroundColor = "red";
+         } else {
+           element.style.display = 'none';
+           //element.style.backgroundColor = "green";
+         }
+       }
+       idx++;
+       curLoc = prefix+(prefix==""?"":":")+idx;
+       element = document.getElementById(curLoc);
+       data = location2Data[curLoc];
+       //console.log("next id: "+prefix+(prefix==""?"":":")+idx+", element="+element+", data="+data);
+     }
+     //console.log(">>>ShowSelectedWidgets("+prefix+")");
+     return totalMatchingSubElements > 0;
+   }
+   
+
+</script>

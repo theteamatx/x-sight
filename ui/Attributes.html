@@ -1,0 +1,169 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script>
+    var attrSelectors = {};
+    var attrSelectorIdxToName = {};
+    
+    function ShowAttributesSelector(container, attributesData, logId, logOwner) {
+      console.log("In function ShowAttributesSelector....")
+        var attributes = {};
+       //  for (var attr of attributesData) {
+       //    var possibleVals;
+       //    if (attr['key'] in attributes) {
+       //      possibleVals = attributes[attr['key']];
+       //    } else {
+       //      possibleVals = [];
+       //      attributes[attr['key']] = possibleVals;
+       //    }
+       //    possibleVals.push(attr['value'][0]);
+       //  }
+       for (var attr of attributesData) {
+         attributes[attr['key']] = attr['value'];
+       }
+       attributes['maxDepth'] = [];
+        
+       var attrTable = document.createElement("table");
+       attrTable.setAttribute("style", "background-color:#d0d0e1; border-style:solid; border-color:#000000");
+       var attrTblHead = document.createElement("tbody");
+       var attrIdx = 0
+       for (var attr of Object.entries(attributes)) {
+         var attrTblHeadRow = document.createElement('tr');
+         var attrTblHeadData = document.createElement('td');
+         attrTblHeadData.appendChild(document.createTextNode(attr[0].replaceAll('"', '&quot').replaceAll("'", '&apos;')));
+         var attrList = document.createElement('input');
+         attrList.setAttribute('list', 'attr_selector_'+attrIdx);
+         attrList.setAttribute('name', 'sel_list_'+attrIdx);
+         //  attrList.setAttribute("onchange", "javascript:selectAttribute(this, '"+attrIdx+"')");
+         var attrSelector = document.createElement("datalist");
+         attrSelector.setAttribute('id', 'attr_selector_'+attrIdx);
+         attrSelector.setAttribute("multiple", 1);
+         for (var attrValue of attr[1]) {
+           var attrOption = document.createElement("option");
+           attrOption.setAttribute('value', attrValue);
+           attrOption.innerHTML = attrValue.replaceAll('"', '&quot').replaceAll("'", '&apos;');
+           attrSelector.appendChild(attrOption);
+         }
+         var defaultAttrOption = document.createElement("option");
+         defaultAttrOption.setAttribute('value', '');
+         attrSelector.appendChild(defaultAttrOption);
+         attrSelectors[attrIdx] = attrList;
+         attrSelectorIdxToName[attrIdx] = attr[0];
+          
+         attrTblHeadData.appendChild(attrList);
+         attrTblHeadData.appendChild(attrSelector);
+         attrTblHeadRow.appendChild(attrTblHeadData);
+         attrTblHead.appendChild(attrTblHeadRow);
+         ++attrIdx;
+       }
+       attrTable.appendChild(attrTblHead);      
+       container.appendChild(attrTable);
+        
+       var button = document.createElement("button");
+       button.innerHTML = 'Search';
+       button.setAttribute('onclick', 'javascript:searchOnAttributes("'+logId+'", "'+logOwner+'")');
+       button.setAttribute('class', 'mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--accent');
+       container.appendChild(button);
+     }   
+      
+      function onSearchSuccess(data) {
+       console.log('In function onSearchSuccess....');
+       //  console.log(data.success);
+   
+        if (!data.success) {
+          var errMessage = data.err_message.details.code;
+          for (var error of data.err_message.details.errors) {
+            errMessage += '\n' + error.message;
+          }
+          alert(errMessage);
+          return;
+        }
+        console.log('onSearchSuccess: data');
+        console.log(data);
+        console.log("Going in for loop");
+        for (var i=0; i<data['logData'].length; i++) {
+         //  console.log("In for loop, value of i : ", i);
+          location2Data[data['logData'][i]["location"]] = data['logData'][i];
+        }
+        console.log("out of for loop");
+       //  debugger; 
+        document.getElementById('log_view').innerHTML = '';
+        reset(data['logData'], 0, data['logData'].length-1);
+        console.log("before show object method");
+        
+        ShowObject(document.getElementById('log_view'), 
+                   /*containerStartLocation=*/undefined, /*containerEndLocation=*/undefined,
+                   /*containerStartGlobalIdx=*/undefined, /*containerEndGlobalIdx=*/undefined,
+                   /*num_direct_contents=*/undefined, 
+                   data['logData'], 0, data['logData'].length-1, '');
+        document.body.style.cursor = 'default';
+        console.log('Out function onSearchSuccess....');
+      }
+       
+       function searchOnAttributes(logId, logOwner) {
+         console.log("In function searchOnAttributes .....");
+         var numSelections = 0;
+         var selection = {};
+         var maxDepth = 0;
+         for (var sel of Object.entries(attrSelectors)) {
+           // console.log(sel);
+           //if (sel[1].selectedIndex >= 0 &&
+           //    sel[1].options[sel[1].selectedIndex].value != ;;) {
+           if (sel[1].value == '') {
+             continue;
+           }
+           if (sel[0] == 'maxDepth') {
+             maxDepth = parseInt(sel[1].value);
+           } else {
+             //selection[sel[0]] = sel[1].options[sel[1].selectedIndex].value;
+             selection[attrSelectorIdxToName[sel[0]]] = sel[1].value;
+             numSelections++;
+           }
+         }
+         //ShowSelectedWidgets("", document.body, selection);
+         console.log(selection);
+         document.body.style.cursor = 'wait';
+         google.script.run.withSuccessHandler(onSearchSuccess).select(
+           selection, maxDepth, /* rangeStartLocation= */ '', /* rangeEndLocation= */ '', 
+           /* includeHierarchicalContext= */ true, 
+           /* delayedLoading= */ false, 
+           logId, logOwner);
+           console.log("Out of function searchOnAttributes .....");
+       }
+       
+       function selectionsFromServerParams(selections) {
+         var selection = {};
+         if (selections === undefined || selections == '' || selections == 'undefined') {
+           return selection;
+         }
+         for (var sel of '<?= selections ?>'.split(',')) {
+           var keyval = sel.split(':');
+           selection[keyval[0]] = keyval[1];
+         }
+         return selection;
+       }
+       
+       function searchOnAttributesFromServerParams(selections, logId, logOwner) {
+         var selection = selectionsFromServerParams(selections);
+         if (Object.keys(selection).length == 0) {
+           return;
+         }
+         google.script.run.withSuccessHandler(onSearchSuccess).select(selection, logId, logOwner, '', 'log_view');
+       }
+       
+   </script>
+   
+   

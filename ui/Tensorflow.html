@@ -1,0 +1,637 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script>
+
+    class TensorFlowModelApplicationShower {
+      constructor() {
+        this.tensors = {};
+        this.tensorLocation = {};
+        this.boundingShape = {};
+        this.lockedDimValues = {};
+      }
+    
+      GetBatchSize(uniqueId) {
+        // console.log(this.boundingShape);
+        // console.log(uniqueId);
+        return this.boundingShape[uniqueId][0];
+      }
+      
+      SetBatch(uniqueId, unitIdx) {
+        // console.log('Application SetBatch('+uniqueId+', unitIdx='+unitIdx+')');
+        if (unitIdx === '') {
+          this.lockedDimValues[uniqueId][0] = '';
+        } else {
+          this.lockedDimValues[uniqueId][0] = parseInt(unitIdx);
+        }
+        this.UpdateLockedDimValues(uniqueId);
+        for (var tensorIdx=0; tensorIdx < this.tensors[uniqueId].length; ++tensorIdx) {
+          var curShower = this.tensors[uniqueId][tensorIdx];
+          var curTensorLoc = this.tensorLocation[uniqueId][tensorIdx];
+          curShower.SetVisible(curTensorLoc);
+        }
+      }
+    
+      UpdateLockedDimValues(uniqueId) {
+        // console.log('Application SetBatch('+uniqueId+', this.tensors[uniqueId].length='+this.tensors[uniqueId].length+')');
+        // console.log(this.lockedDimValues[uniqueId]);
+        // console.log(this.tensors[uniqueId]);
+        for (var tensorIdx=0; tensorIdx < this.tensors[uniqueId].length; ++tensorIdx) {
+          var curShower = this.tensors[uniqueId][tensorIdx];
+          var curTensorLoc = this.tensorLocation[uniqueId][tensorIdx];
+          curShower.UpdateLockedDimValues(curTensorLoc, this.lockedDimValues[uniqueId]);
+        }
+      }
+    
+      Show(container, data, blockStartIdx, blockEndIdx, indent) {
+        // console.log('TensorFlowModelApplicationShower ['+blockStartIdx+' - '+blockEndIdx+']');
+        var curObject = this;
+        var uniqueId = data[blockStartIdx]['location'];
+        this.tensors[uniqueId] = [];
+        this.tensorLocation[uniqueId] = [];
+        this.boundingShape[uniqueId] = [];
+        this.lockedDimValues[uniqueId] = [];
+    
+        // console.log(indent+'TensorFlowModelApplicationShower::Show('+blockStartIdx+' - '+blockEndIdx+', uniqueId='+uniqueId+')');
+        var body = document.createElement('table');
+        container.appendChild(body);
+        body.style.backgroundColor = '#EAEAEA';
+    
+        var controlPadRow = document.createElement('tr');
+        body.appendChild(controlPadRow);
+    
+        var controlPad = document.createElement('td');
+        controlPadRow.appendChild(controlPad);
+    
+        var bodyPadRow = document.createElement('tr');
+        body.appendChild(bodyPadRow);
+    
+        var bodyCell = document.createElement('td');
+        bodyPadRow.appendChild(bodyCell);
+    
+        var eltIdx = blockStartIdx + 1;
+    
+        while (eltIdx<blockEndIdx && 
+               !(data[eltIdx]['subType']=='ST_BLOCK_END' && 
+                data[eltIdx]['blockEnd']['sub_type'] == 'ST_TENSORFLOW_MODEL_APPLICATION')) {
+          // console.log('TensorFlowModelApplicationShower: data[eltIdx='+eltIdx+']=');
+          // console.log(data[eltIdx]);
+          var newEltIdx = ShowObject(bodyCell, data[eltIdx]['location'], data[eltIdx]['location'], 
+                      data[eltIdx]['index'], data[eltIdx]['index'], 
+                      1, data, 
+                      eltIdx, eltIdx, indent+'  ');
+          // console.log('TensorFlowModelApplicationShower: data[newEltIdx='+newEltIdx+']=');
+          // console.log(data[newEltIdx]);
+          if (data[eltIdx]['subType']=='ST_TENSOR') {
+            this.tensors[uniqueId].push(objectHandlers['ST_TENSOR'].showers['ST_TENSOR']);
+            this.tensorLocation[uniqueId].push(data[eltIdx]['location']);
+          }
+          eltIdx=newEltIdx;
+        }
+    
+        // console.log('TensorFlowModelApplicationShower tensors['+uniqueId+']=');
+        // console.log(this.tensors[uniqueId]);
+        // console.log('TensorFlowModelApplicationShower boundingShape['+uniqueId+']=');
+        // console.log(this.boundingShape[uniqueId]);
+    
+        // Calculate the bounding box of all the tensor shapes 
+        for (var tensorIdx=0; tensorIdx < this.tensors[uniqueId].length; ++tensorIdx) {
+          var curShower = this.tensors[uniqueId][tensorIdx];
+          var curTensorLoc = this.tensorLocation[uniqueId][tensorIdx];
+          var curShape = curShower.GetShape(curTensorLoc);
+          // console.log('TensorFlowModelApplicationShower '+tensorIdx+', '+curShower.GetLabel(curTensorLoc)+', curShape=');
+          // console.log(curShape);
+          // Compute the max between curShape and boundingShape on the dimensions they share.
+          var i=0;
+          while(i<Math.min(curShape.length, this.boundingShape[uniqueId].length)) {
+            this.boundingShape[uniqueId][i] = Math.max(curShape[i], this.boundingShape[uniqueId][i]);
+            ++i;
+          }
+          // Append any additional dimensions from curShape to boundingShape.
+          while(i<curShape.length) {
+            this.boundingShape[uniqueId].push(curShape[i]);
+            ++i;
+          }
+        }
+        // console.log('boundingShape[uniqueId]');
+        // console.log(this.boundingShape[uniqueId]);
+    
+        // Create the control pad for constraining tensor dimensions
+        for (var i=0; i<this.boundingShape[uniqueId].length; ++i) {
+          this.lockedDimValues[uniqueId].push('');
+          var selector = document.createElement('select');
+          const curIndex = i;
+          selector.onchange = function(e) {
+            if (e.srcElement.selectedOptions[0].id === '') {
+              curObject.lockedDimValues[uniqueId][curIndex] = '';
+            } else {
+              curObject.lockedDimValues[uniqueId][curIndex] = parseInt(e.srcElement.selectedOptions[0].id);
+            }
+            curObject.UpdateLockedDimValues(uniqueId);
+          }
+          controlPad.appendChild(selector);
+    
+          var anyOption = document.createElement('option');
+          selector.appendChild(anyOption);
+          anyOption.id='';
+          anyOption.innerHTML='*';
+          anyOption.selected = true;
+    
+          for (var j=0; j<this.boundingShape[uniqueId][i]; ++j) {
+            var option = document.createElement('option');
+            selector.appendChild(option);
+            option.id=j;
+            option.innerHTML=j;
+          }
+        }
+      }
+    }
+    
+    class TensorFlowModelTrainingEpochShower {
+      constructor(logId, logOwner) {
+        this.logId = logId;
+        this.logOwner = logOwner;
+        this.containerElement = {};
+        this.bodyElement = {};
+        // Maps each uniqueId to whether the contents of this epoch have been loaded.
+        this.loaded = {};
+        // Maps each uniqueId (location of the epoch's start) to the location of the corresponding end log object.
+        this.epochEndLocation = {};
+        // For each uniqueId, maps the location of each TensorFlowModelApplication within this epoch to its shower.
+        this.steps = {};
+        // For each uniqueId, list of the locations of the contained TensorFlowModelApplications and the locations of their endpoints.
+        this.stepLocation = {};
+        this.stepEndLocation = {};
+        this.curStep = {}
+        this.batchSize = {};
+        this.selectedUnitId = {};
+      }
+    
+      GetBatchSize(uniqueId) {
+        return this.batchSize[uniqueId];
+      }
+    
+      SetBatch(uniqueId, unitIdx) {
+        // console.log('Epoch SetBatch('+uniqueId+') unitIdx='+unitIdx);
+        if (unitIdx === '') {
+          this.selectedUnitId[uniqueId] = '';
+        } else {
+          this.selectedUnitId[uniqueId] = parseInt(unitIdx);
+        }
+        this.UpdateBatch(uniqueId);
+      }
+    
+      UpdateBatch(uniqueId) {
+        // if (this.loaded[uniqueId]) {
+          // console.log('Epoch UpdateBatch('+uniqueId+') this.selectedUnitId[uniqueId]='+this.selectedUnitId[uniqueId]);
+          for (var stepLocation of this.stepLocation[uniqueId]) {
+          // for (var stepIdx=0; stepIdx < this.stepLocation[uniqueId].length; ++stepIdx) {
+            // console.log('step '+stepIdx+' location='+this.stepLocation[uniqueId][stepIdx]);
+            if (stepLocation in this.steps[uniqueId]) {
+              this.steps[uniqueId][stepLocation].SetBatch(stepLocation, this.selectedUnitId[uniqueId]);
+            }
+          }
+        // }
+      }
+    
+      MakeInvisible(uniqueId) {
+        // console.log('MakeInvisible('+uniqueId+')');
+        // console.log(this.bodyElement[uniqueId]);
+        this.bodyElement[uniqueId].style.visibility = 'hidden';
+        this.bodyElement[uniqueId].style.display = "none";
+      }
+    
+      MakeVisible(uniqueId) {
+        // console.log('MakeVisible('+uniqueId+')');
+        // console.log(this.stepLocation);
+        // console.log(this.bodyElement[uniqueId]);
+        if (!this.loaded[uniqueId]) {
+          for (var stepIdx=0; stepIdx < this.stepLocation[uniqueId].length; ++stepIdx) {
+            getLogRange(
+              // this.containerElement[uniqueId].parentNode.id, 
+              this.bodyElement[uniqueId].id,
+              // this.containerElement[uniqueId].id, 
+              this.bodyElement[uniqueId].id,
+              // this.bodyElement[uniqueId], 
+              /* extraDepth= */ -1, 
+              /* rangeStartLocation= */ this.stepLocation[uniqueId][stepIdx], //uniqueId, 
+              /* rangeEndLocation= */ this.stepEndLocation[uniqueId][stepIdx], //this.epochEndLocation, 
+              this.logId, 
+              this.logOwner,
+              'objectHandlers["ST_BLOCK_START"].showers["ST_TENSORFLOW_MODEL_TRAINING_EPOCH"].StepLoaded("'+uniqueId+'", '+stepIdx+')');
+          }
+        }
+        this.bodyElement[uniqueId].style.visibility = 'visible';
+        this.bodyElement[uniqueId].style.display = "block";
+      }
+    
+      StepLoaded(uniqueId, stepIdx) {
+        // console.log('StepLoaded: '+uniqueId+', '+stepIdx);
+        var stepLocation = this.stepLocation[uniqueId][stepIdx];
+        this.steps[uniqueId][stepLocation] = objectHandlers['ST_BLOCK_START'].showers['ST_TENSORFLOW_MODEL_APPLICATION'];
+        this.steps[uniqueId][stepLocation].SetBatch(stepLocation, this.selectedUnitId[uniqueId]);
+        // console.log('this.steps[uniqueId].length='+Object.keys(this.steps[uniqueId]).length+', this.stepLocation[uniqueId].length='+this.stepLocation[uniqueId].length);
+        if (Object.keys(this.steps[uniqueId]).length == this.stepLocation[uniqueId].length) {
+          this.loaded[uniqueId] = true;  
+        }
+      }
+    
+      Show(container, data, blockStartIdx, blockEndIdx, indent) {
+        // console.log('TensorFlowModelTrainingEpochShower ['+blockStartIdx+' - '+blockEndIdx+']');
+        // console.log(data[blockEndIdx]);
+        var curObject = this;
+        var uniqueId = data[blockStartIdx]['location'];
+        this.containerElement[uniqueId] = container;
+        this.loaded[uniqueId] = false;
+        this.epochEndLocation[uniqueId] = data[blockEndIdx]['location'];
+        this.steps[uniqueId] = {};
+        this.stepLocation[uniqueId] = [];
+        this.stepEndLocation[uniqueId] = [];
+        this.curStep[uniqueId] = [];
+        this.batchSize[uniqueId] = data[blockStartIdx]['blockStart']['tensor_flow_model_training_epoch']['batchSize'];
+        this.selectedUnitId[uniqueId] = '';
+    
+        var body = document.createElement('table');
+        body.id = 'TensorFlowModelTrainingEpoch_'+uniqueId;
+        this.bodyElement[uniqueId] = body;
+        container.appendChild(body);
+        // body.style.backgroundColor = "blue";
+    
+        var controlPadRow = document.createElement('tr');
+        body.appendChild(controlPadRow);
+    
+        var controlPad = document.createElement('td');
+        controlPadRow.appendChild(controlPad);
+    
+        var bodyPadRow = document.createElement('tr');
+        body.appendChild(bodyPadRow);
+    
+        var bodyCell = document.createElement('td');
+        bodyPadRow.appendChild(bodyCell);
+    
+        var tensorTable = document.createElement('table');
+        bodyPadRow.appendChild(tensorTable);
+    
+        var eltIdx = blockStartIdx + 1;
+        
+        while (eltIdx<blockEndIdx && 
+               !(data[eltIdx]['subType']=='ST_BLOCK_END' && 
+                data[eltIdx]['blockEnd']['sub_type'] == 'ST_TENSORFLOW_MODEL_TRAINING_EPOCH')) {
+          // console.log('TensorFlowModelTrainingEpochShower data[eltIdx='+eltIdx+']=');
+          // console.log(data[eltIdx]);
+          // if (data[eltIdx].selected) {
+          var newEltIdx = ShowObject(bodyCell, data[eltIdx]['location'], data[eltIdx]['location'], 
+                      data[eltIdx]['index'], data[eltIdx]['index'], 
+                      1, data, 
+                      eltIdx, eltIdx, indent+'  ');
+          // console.log('TensorFlowModelTrainingEpochShower data[newEltIdx='+newEltIdx+']=');
+          // console.log(data[newEltIdx]);
+          if (data[eltIdx]['subType'] == 'ST_BLOCK_START' && data[eltIdx]['blockStart']['sub_type'] == 'ST_TENSORFLOW_MODEL_APPLICATION') {
+            // console.log('TensorFlowModelTrainingEpochShower next eltIdx='+eltIdx);
+            if (data[eltIdx].selected) {
+              this.steps[uniqueId][data[eltIdx]['location']] = objectHandlers['ST_BLOCK_START'].showers['ST_TENSORFLOW_MODEL_APPLICATION'];
+            }
+            this.stepLocation[uniqueId].push(data[eltIdx]['location']);
+            this.stepEndLocation[uniqueId].push(data[newEltIdx]['location']);
+            eltIdx = newEltIdx+1;
+          } else {
+            eltIdx = newEltIdx;
+          }
+        }
+        // console.log('TensorFlowModelTrainingEpochShower steps');
+        // console.log(this.steps[uniqueId]);
+    
+        // // Calculate the batch size that works for all the epochs (max across the batch size of each epoch)
+        // for (var stepIdx=0; stepIdx < this.steps[uniqueId].length; ++stepIdx) {
+        //   var curShower = this.steps[uniqueId][stepIdx];
+        //   var curStepLoc = this.stepLocation[uniqueId][stepIdx];
+        //   // console.log('TensorFlowModelTrainingEpochShower curShower='+curShower+' curStepLoc='+curStepLoc+" curShower.GetBatchSize(curStepLoc)="+curShower.GetBatchSize(curStepLoc));
+        //   // this.batchSize[uniqueId] = Math.max(this.batchSize[uniqueId], curShower.GetBatchSize(curStepLoc));
+        // }
+        // console.log('batchSize[uniqueId]');
+        // console.log(this.batchSize[uniqueId]);
+    
+        // Create the control pad for selecting the unit and the epoch
+        var controlPadTable = document.createElement('table');
+        controlPad.appendChild(controlPadTable);
+    
+        var controlPadTableRow = document.createElement('tr');
+        controlPadTable.appendChild(controlPadTableRow);
+    
+        // Batches
+        var controlPadTableBatchCol = document.createElement('td');
+        controlPadTableRow.appendChild(controlPadTableBatchCol);
+    
+        var controlPadTableBatchLabel = document.createElement('span');
+        controlPadTableBatchLabel.innerHTML = 'Batch: '+uniqueId;
+        controlPadTableBatchCol.appendChild(controlPadTableBatchLabel);
+    
+        var batchSelector = document.createElement('select');
+        controlPadTableBatchCol.appendChild(batchSelector);
+        batchSelector.onchange = function(e) {
+          curObject.SetBatch(uniqueId, e.srcElement.selectedOptions[0].id);
+        }
+    
+        var anyOption = document.createElement('option');
+        batchSelector.appendChild(anyOption);
+        anyOption.id='';
+        anyOption.innerHTML='*';
+        anyOption.selected = true;
+    
+        for (var unitIdx=0; unitIdx<this.batchSize[uniqueId]; ++unitIdx) {
+          var option = document.createElement('option');
+          batchSelector.appendChild(option);
+          option.id=unitIdx;
+          option.innerHTML=unitIdx;
+        }
+      }
+    }
+    
+    class TensorFlowModelTrainingShower {
+      constructor() {
+        this.epochs = {};
+        this.epochLocation = {};
+        this.curEpoch = {}
+        this.batchSize = {};
+        this.selectedUnitId = {};
+        this.selectedEpoch = {};
+        this.epochSelector = {};
+        this.epochIndicator = {};
+        this.batchSelector = {};
+        this.batchIndicator = {};
+      }
+    
+      SetBatch(uniqueId, unitIdx) {
+        if (unitIdx === '') {
+          this.selectedUnitId[uniqueId] = '';
+        } else {
+          this.selectedUnitId[uniqueId] = parseInt(unitIdx);
+        }
+        this.UpdateBatch(uniqueId);
+      }
+    
+      ChangeBatch(uniqueId, unitDelta) {
+        // console.log('ChangeBatch('+uniqueId+', '+unitDelta+') this.selectedUnitId[uniqueId]='+this.selectedUnitId[uniqueId]);
+        if (this.selectedUnitId[uniqueId] === '') {
+          if (unitDelta > 0) {
+            this.selectedUnitId[uniqueId] = 0;
+          } else {
+            this.selectedUnitId[uniqueId] = this.batchSize[uniqueId] - 1;
+          }
+        } else {
+          this.selectedUnitId[uniqueId] += unitDelta;
+          if (this.selectedUnitId[uniqueId]<0) {
+            this.selectedUnitId[uniqueId] = 0;
+          }
+          if (this.selectedUnitId[uniqueId] >= this.batchSize[uniqueId]) {
+            this.selectedUnitId[uniqueId] = this.batchSize[uniqueId] - 1;
+          }
+        }
+        this.UpdateBatch(uniqueId);
+      }
+    
+      UpdateBatch(uniqueId) {
+        for (var epochIdx=0; epochIdx < this.epochs[uniqueId].length; ++epochIdx) {
+          // console.log('UpdateBatch epochIdx='+epochIdx+' this.selectedUnitId[uniqueId]='+this.selectedUnitId[uniqueId]);
+          this.epochs[uniqueId][epochIdx].SetBatch(this.epochLocation[uniqueId][epochIdx], this.selectedUnitId[uniqueId]);
+        }
+        this.batchSelector[uniqueId].value = this.selectedUnitId[uniqueId];
+        this.batchIndicator[uniqueId].innerHTML = this.batchSelector[uniqueId].value;
+      }
+    
+      ChangeEpochVisibility(uniqueId, epochDelta) {
+        console.log('ChangeEpochVisibility('+uniqueId+', '+epochDelta+') this.selectedEpoch[uniqueId]='+this.selectedEpoch[uniqueId]);
+        var newEpoch = this.selectedEpoch[uniqueId];
+        if (newEpoch === '') {
+          if (epochDelta > 0) {
+            newEpoch = 0;
+          } else {
+            newEpoch = this.epochs[uniqueId].length - 1;
+          }
+        } else {
+          newEpoch += epochDelta;
+          if (newEpoch<0) {
+            newEpoch = 0;
+          }
+          if (newEpoch >= this.epochs[uniqueId].length) {
+            newEpoch = this.epochs[uniqueId].length - 1;
+          }
+        }
+        this.SwitchEpochVisibility(uniqueId, newEpoch);
+      }
+    
+      SwitchEpochVisibility(uniqueId, newEpoch) {
+        // console.log('SwitchEpochVisibility: old selectedEpoch='+this.selectedEpoch[uniqueId]);
+        // console.log(this.epochLocation[uniqueId]);
+        // Hide the currently visible epoch.
+        this.epochs[uniqueId][this.selectedEpoch[uniqueId]].MakeInvisible(this.epochLocation[uniqueId][this.selectedEpoch[uniqueId]]);
+        // Show the newly-selected epoch.
+        this.selectedEpoch[uniqueId] = parseInt(newEpoch);
+        // console.log('SwitchEpochVisibility: new selectedEpoch='+this.selectedEpoch[uniqueId]);
+        // console.log(this.epochs[uniqueId]);
+        this.epochIndicator[uniqueId].innerHTML = newEpoch;
+        this.epochs[uniqueId][this.selectedEpoch[uniqueId]].MakeVisible(this.epochLocation[uniqueId][this.selectedEpoch[uniqueId]]);
+        this.epochSelector[uniqueId].value = newEpoch;
+      }
+    
+      Show(container, data, blockStartIdx, blockEndIdx, indent) {
+        console.log('TensorFlowModelTrainingShower ['+blockStartIdx+' - '+blockEndIdx+']');
+        var curObject = this;
+        var uniqueId = data[blockStartIdx]['location'];
+        this.epochs[uniqueId] = [];
+        this.epochLocation[uniqueId] = [];
+        this.curEpoch[uniqueId] = [];
+        this.batchSize[uniqueId] = 0;
+        this.selectedEpoch[uniqueId] = 0;
+        this.selectedUnitId[uniqueId] = 0;
+    
+        // console.log(indent+'TableShower::Show('+blockStartIdx+' - '+blockEndIdx+')');
+        var body = document.createElement('table');
+        body.style.backgroundColor = '#FFFED6';
+        container.appendChild(body);
+    
+        var controlPadRow = document.createElement('tr');
+        body.appendChild(controlPadRow);
+    
+        var controlPad = document.createElement('td');
+        controlPadRow.appendChild(controlPad);
+    
+        var bodyPadRow = document.createElement('tr');
+        body.appendChild(bodyPadRow);
+    
+        var bodyCell = document.createElement('td');
+        bodyPadRow.appendChild(bodyCell);
+    
+        var eltIdx = blockStartIdx + 1;
+    
+        while (eltIdx<blockEndIdx && 
+               !(data[eltIdx]['subType']=='ST_BLOCK_END' && 
+                data[eltIdx]['blockEnd']['sub_type'] == 'ST_TENSORFLOW_MODEL_TRAINING')) {
+          // console.log('TensorFlowModelTrainingShower: data[eltIdx='+eltIdx+']=');
+          // console.log(data[eltIdx]);
+          var newEltIdx = ShowObject(bodyCell, data[eltIdx]['location'], data[eltIdx]['location'], 
+                      data[eltIdx]['index'], data[eltIdx]['index'], 
+                      1, data, 
+                      eltIdx, eltIdx, indent+'  ');
+          // console.log('TensorFlowModelTrainingShower: data[newEltIdx='+newEltIdx+']=');
+          // console.log(data[newEltIdx]);
+          if (data[eltIdx]['subType'] == 'ST_BLOCK_START' && data[eltIdx]['blockStart']['sub_type'] == 'ST_TENSORFLOW_MODEL_TRAINING_EPOCH') {
+            var curEpochShower = objectHandlers['ST_BLOCK_START'].showers['ST_TENSORFLOW_MODEL_TRAINING_EPOCH'];
+            this.epochs[uniqueId].push(curEpochShower);
+            this.epochLocation[uniqueId].push(data[eltIdx]['location']);
+            if (this.epochs[uniqueId].length == 1) {
+              curEpochShower.MakeVisible(data[eltIdx]['location']);
+            } else {
+              curEpochShower.MakeInvisible(data[eltIdx]['location']);
+            }
+          }
+          eltIdx = newEltIdx;
+        }
+    
+        // console.log('this.epochs[uniqueId]');
+        // console.log(this.epochs[uniqueId]);
+    
+        // Calculate the batch size that works for all the epochs (max across the batch size of each epoch)
+        for (var epochIdx=0; epochIdx < this.epochs[uniqueId].length; ++epochIdx) {
+          var curShower = this.epochs[uniqueId][epochIdx];
+          var curepochLoc = this.epochLocation[uniqueId][epochIdx];
+          this.batchSize[uniqueId] = Math.max(this.batchSize[uniqueId], curShower.GetBatchSize(curepochLoc));
+        }
+        // console.log('this.batchSize[uniqueId]');
+        // console.log(this.batchSize[uniqueId]);
+    
+        // Create the control pad for selecting the unit and the epoch
+        var controlPadTable = document.createElement('table');
+        controlPad.appendChild(controlPadTable);
+    
+        var controlPadTableRow = document.createElement('tr');
+        controlPadTable.appendChild(controlPadTableRow);
+    
+        // Epoch
+        var controlPadTableEpochCol = document.createElement('td');
+        controlPadTableRow.appendChild(controlPadTableEpochCol);
+        // controlPadTableRow.style.backgroundColor = "red";
+    
+        var controlPadTableEpochLabel = document.createElement('span');
+        controlPadTableEpochLabel.innerHTML = 'Epoch';
+        controlPadTableEpochCol.appendChild(controlPadTableEpochLabel);
+    
+        var epochLeftButton = document.createElement("button");
+        epochLeftButton.innerHTML = "&larr;";
+        controlPadTableEpochCol.appendChild(epochLeftButton);
+        epochLeftButton.onclick = function(e) {
+          curObject.ChangeEpochVisibility(uniqueId, -1);
+        }
+    
+        this.epochSelector[uniqueId] = document.createElement('input');
+        this.epochSelector[uniqueId].type = 'range';
+        this.epochSelector[uniqueId].min = 0;
+        this.epochSelector[uniqueId].value = 0;
+        this.epochSelector[uniqueId].max = this.epochs[uniqueId].length-1;
+        this.epochSelector[uniqueId].onchange = function(e) {
+          curObject.SwitchEpochVisibility(uniqueId, e.srcElement.value);
+        }
+        controlPadTableEpochCol.appendChild(this.epochSelector[uniqueId]);
+        
+        this.epochIndicator[uniqueId] = document.createElement('span');
+        controlPadTableEpochCol.appendChild(this.epochIndicator[uniqueId]); 
+        this.epochIndicator[uniqueId].innerHTML = this.epochSelector[uniqueId].value;
+        
+        // this.epochSelector[uniqueId] = document.createElement('select');
+        // controlPadTableEpochCol.appendChild(this.epochSelector[uniqueId]);
+        // this.epochSelector[uniqueId].onchange = function(e) {
+        //   curObject.SwitchEpochVisibility(uniqueId, e.srcElement.selectedOptions[0].id);
+        // }
+        // // console.log('TensorFlowModelTrainingShower: epochs=');
+        // // console.log(this.epochs[uniqueId]);
+        
+        // for (var epochIdx=0; epochIdx<this.epochs[uniqueId].length; ++epochIdx) {
+        //   var option = document.createElement('option');
+        //   this.epochSelector[uniqueId].appendChild(option);
+        //   option.id=epochIdx;
+        //   option.innerHTML=epochIdx;
+        // }
+    
+        var epochRightButton = document.createElement("button");
+        epochRightButton.innerHTML = "&rarr;";
+        controlPadTableEpochCol.appendChild(epochRightButton);
+        epochRightButton.onclick = function(e) {
+          curObject.ChangeEpochVisibility(uniqueId, 1);
+        }
+    
+        var controlPadTableBatchCol = document.createElement('td');
+        controlPadTableRow.appendChild(controlPadTableBatchCol);
+        // controlPadTableRow.style.backgroundColor = "green";
+    
+        var controlPadTableBatchLabel = document.createElement('span');
+        controlPadTableBatchLabel.innerHTML = 'Batch';
+        controlPadTableBatchCol.appendChild(controlPadTableBatchLabel);
+    
+        var batchLeftButton = document.createElement("button");
+        batchLeftButton.innerHTML = "&larr;";
+        controlPadTableBatchCol.appendChild(batchLeftButton);
+        batchLeftButton.onclick = function(e) {
+          curObject.ChangeBatch(uniqueId, -1);
+        }
+        
+        this.batchSelector[uniqueId] = document.createElement('input');
+        this.batchSelector[uniqueId].type = 'range';
+        this.batchSelector[uniqueId].min = 0;
+        this.batchSelector[uniqueId].value = 0;
+        this.batchSelector[uniqueId].max = this.batchSize[uniqueId]-1;
+        this.batchSelector[uniqueId].onchange = function(e) {
+          curObject.SetBatch(uniqueId, e.srcElement.value);
+          // curObject.SetBatch(uniqueId, e.srcElement.selectedOptions[0].id);
+        }
+        controlPadTableBatchCol.appendChild(this.batchSelector[uniqueId]); 
+    
+        this.batchIndicator[uniqueId] = document.createElement('span');
+        controlPadTableBatchCol.appendChild(this.batchIndicator[uniqueId]); 
+        this.batchIndicator[uniqueId].innerHTML = this.batchSelector[uniqueId].value;
+    
+        // batchSelector.max = this.batchSize[uniqueId];
+        // this.batchSelector[uniqueId] = document.createElement('select');
+        // controlPadTableBatchCol.appendChild(this.batchSelector[uniqueId]);
+        // this.batchSelector[uniqueId].onchange = function(e) {
+        //   curObject.SetBatch(uniqueId, e.srcElement.selectedOptions[0].id);
+        // }
+    
+        // var anyOption = document.createElement('option');
+        // this.batchSelector[uniqueId].appendChild(anyOption);
+        // anyOption.id='';
+        // anyOption.innerHTML='*';
+        // anyOption.selected = true;
+    
+        // for (var unitIdx=0; unitIdx<this.batchSize[uniqueId]; ++unitIdx) {
+        //   var option = document.createElement('option');
+        //   this.batchSelector[uniqueId].appendChild(option);
+        //   option.id=unitIdx;
+        //   option.innerHTML=unitIdx;
+        // }
+    
+        var batchRightButton = document.createElement("button");
+        batchRightButton.innerHTML = "&rarr;";
+        controlPadTableBatchCol.appendChild(batchRightButton);
+        batchRightButton.onclick = function(e) {
+          curObject.ChangeBatch(uniqueId, 1);
+        }
+    
+        this.SetBatch(uniqueId, this.selectedUnitId[uniqueId]);
+      }
+    }
+    
+    
+    </script>

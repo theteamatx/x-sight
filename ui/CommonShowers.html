@@ -1,0 +1,221 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script>
+    class ScopeShower extends BlockShower {
+      constructor() {
+        super();
+        this.colors = ["#a6cee3","#1f78b4","#b2df8a","#33a02c","#fb9a99","#e31a1c","#fdbf6f","#ff7f00","#cab2d6","#6a3d9a","#ffff99","#b15928"];
+        this.scopeDepth = 0;
+       
+        // Keys are the names of each scope the body of which is currently collapsed.
+        this.collapsed = {};
+      }
+      ShowHeaderContents(container, data, blockStartIdx, blockEndIdx) {
+        var visibilityToggle = document.createElement("a");
+        visibilityToggle.innerHTML = //data[blockStartIdx].location + " - " + data[blockEndIdx].location + ": "+
+          data[blockStartIdx]['blockStart']['label'] + "&#9658;";
+        visibilityToggle.id = "visibility_toggle_"+data[blockStartIdx].location;
+        visibilityToggle.setAttribute('onclick',
+          "javascript:objectHandlers['ST_BLOCK_START'].showers['ST_SCOPE_START'].ClickedOnScope(event, '"+
+              data[blockStartIdx].location+"', '"+
+              data[blockStartIdx]['blockStart']['label']+"');");
+        container.appendChild(visibilityToggle);
+  
+        var dragHandle = document.createElement('a');
+        dragHandle.innerHTML='&#9995;'
+        container.appendChild(dragHandle);
+        return dragHandle;
+      }
+      ShowHeader(container, data, blockStartIdx, blockEndIdx) {
+        var tblHead = document.createElement('thead');
+        var headRow = document.createElement('tr');
+        var headData = document.createElement('td');
+        tblHead.style.width='100%';
+        headRow.style.width='100%';
+        headData.style.width='100%';
+        headData.id = 'scope_head_'+data[blockStartIdx].location;
+        headData.colSpan = 2;
+        headData.style.backgroundColor = this.colors[this.scopeDepth%this.colors.length];
+        var dragHandle = this.ShowHeaderContents(headData, data, blockStartIdx, blockEndIdx);
+        AddAttributesTooltip(headData, data, blockStartIdx);
+       
+        headRow.appendChild(headData);
+        tblHead.appendChild(headRow);
+        container.appendChild(tblHead);
+       
+        dragElement(container, dragHandle);
+        return tblHead;
+      }
+      ShowBodyContents(container, data, blockStartIdx, blockEndIdx, indent) {
+        console.log("In function ShowBodyContents of ScopeShower")
+        this.scopeDepth++;
+        console.log(indent+'ScopeShower::ShowBodyContents(blockStartIdx='+blockStartIdx+', blockEndIdx='+blockEndIdx+') this.scopeDepth='+this.scopeDepth);
+        console.log(data[blockStartIdx])
+        console.log(data[blockEndIdx])
+        ShowObject(container, data[blockStartIdx]['location'], data[blockEndIdx]['location'], 
+                   data[blockStartIdx]['index'], data[blockEndIdx]['index'], 
+                   data[blockEndIdx]['blockEnd']['num_direct_contents'], data, 
+                   blockStartIdx+1, blockEndIdx, indent+'  ');
+        this.scopeDepth--;
+      }
+      ShowBody(container, data, blockStartIdx, blockEndIdx, indent) {
+        console.log("In function ShowBody...")
+        // console.log(toString(ShowBody.caller))
+        console.log("blockStartIdx : ", blockStartIdx)
+        console.log("blockEndIdx : ", blockEndIdx)
+        var tblBody = document.createElement('tbody');
+        var bodyRow = document.createElement('tr');
+        tblBody.style.width='100%';
+        bodyRow.style.width='100%';
+       
+        var leftBoundary = document.createElement('td');
+        leftBoundary.style.borderStyle='none none none none';
+        leftBoundary.onclick = function(e) {
+          console.log('onclick');
+          console.log(e);
+          setViewToId('scope_head_'+data[blockStartIdx].location, /* top= */ true, leftBoundary);
+        };
+        leftBoundary.oncontextmenu = function(e) {
+          console.log('oncontextmenu');
+          console.log(e);
+          e.preventDefault();
+          setViewToId('scope_head_'+data[blockStartIdx].location, /* bottom= */ false, leftBoundary);
+          return false;
+       };
+      
+  //     leftBoundary.setAttribute('onclick',
+  //       'javascript:window.location.href = "#scope_head_'+data[blockStartIdx].location+'"');
+        leftBoundary.width = '4px';
+        bodyRow.appendChild(leftBoundary);
+        AddTitleTooltip(leftBoundary, data[blockStartIdx]['blockStart']['label'], '#BDBAFF', '#5D56FF')
+       
+        var bodyData = document.createElement('td');
+        bodyData.style.width='100%';
+        bodyData.style.borderStyle='solid none none solid';
+        bodyData.id = 'scope_body_'+data[blockStartIdx].location;
+        bodyRow.appendChild(bodyData);
+        tblBody.appendChild(bodyRow);
+        container.appendChild(tblBody);
+       /*bodyData.appendChild(document.createTextNode(
+       data[blockStartIdx]['subType']+
+       '| label: '+data[blockStartIdx]['blockStart.label']+
+       ' location: '+data[blockStartIdx]['location']+'<<<'
+       ));
+       bodyData.appendChild(document.createElement('hr'));*/
+        this.ShowBodyContents(bodyData, data, blockStartIdx, blockEndIdx, indent); 
+      //  this.ShowBodyContents(bodyData, data, blockStartIdx, 8, indent); 
+       /*bodyData.appendChild(document.createElement('hr'));
+       bodyData.appendChild(document.createTextNode(
+       '>>>' + data[blockEndIdx]['subType']+
+       '| label: '+data[blockEndIdx]['blockEnd.label']+
+       ', location: '+data[blockEndIdx]['location']+
+       ', location_of_blockStart: '+data[blockEndIdx]['blockEnd.location_of_blockStart']
+       ));*/
+        return tblBody;
+      }
+      ClickedOnScope(event, scopeLocation, scopeLabel) {
+        var scopeBody = document.getElementById('scope_body_'+scopeLocation);
+        if (scopeBody == undefined) {
+          console.log('ClickedOnScope(): No scope body at location '+scopeLocation);
+          return;
+        }
+        var visibilityToggle = document.getElementById('visibility_toggle_'+scopeLocation);
+        if (visibilityToggle == undefined) {
+          console.log('ClickedOnScope(): No scope visibility toggle at location '+scopeLocation);
+          return;
+        }
+        if (this.collapsed[scopeLocation] !== undefined) {
+          delete this.collapsed[scopeLocation];
+          visibilityToggle.innerHTML = scopeLabel+'&#9658;';
+          scopeBody.style.display = 'block';
+        } else {
+          this.collapsed[scopeLocation] = 1;
+          visibilityToggle.innerHTML = scopeLabel+'&#9660;';
+          scopeBody.style.display = 'none';
+        }
+       
+  //        var iframe = document.createElement('iframe');
+  //        iframe.style='width:100%; height:30em;'
+  //        iframe.setAttribute('frameborder', 'no');
+  //        iframe.setAttribute('scrolling', 'auto');
+  //        iframe.setAttribute('src', 'http://www.cnn.com');
+  //        document.getElementById('scope_body_'+scopeLocation).appendChild(iframe);
+      }
+    }
+    
+    class ValueShower extends SingletonShower {
+      constructor() {
+        super();
+      }
+  
+      ShowContents(container, data, itemIdx) {
+        //container.appendChild(document.createTextNode(data[itemIdx]['text.text']));
+        var htmlSpan = document.createElement('span');
+        htmlSpan.setAttribute('id', 'html_span_'+data[itemIdx]['location']);
+        // console.log('ValueShower: "'+data[itemIdx]['value']['sub_type']+'"');
+        // console.log(data[itemIdx]);
+        if (data[itemIdx]['value']['sub_type'] == 'ST_STRING') {
+           htmlSpan.innerHTML = '"'+
+              data[itemIdx]['value']['string_value']
+               .replace(/ /g, '&nbsp;')
+               .replace(/\n/g, '<br>')
+               .replace(/\\n/g, '<br>')
+               .replace(/\r/g, '<br>')
+               .replace(/\\r/g, '<br>')+'"';
+        } else if (data[itemIdx]['value']['sub_type'] == 'ST_BYTES') {
+           htmlSpan.innerHTML = '"' + data[itemIdx]['value']['bytes_value'] + '"';
+        } else if (data[itemIdx]['value']['sub_type'] == 'ST_INT64') {
+           htmlSpan.innerHTML = data[itemIdx]['value']['int64_value'];
+        } else if (data[itemIdx]['value']['sub_type'] == 'ST_DOUBLE') {
+           htmlSpan.innerHTML = data[itemIdx]['value']['double_value'];
+        } else if (data[itemIdx]['value']['sub_type'] == 'ST_BOOL') {
+           htmlSpan.innerHTML = data[itemIdx]['value']['bool_value'];
+        } else if (data[itemIdx]['value']['sub_type'] == 'ST_NONE') {
+           htmlSpan.innerHTML = 'none';
+        }
+        AddAttributesTooltip(htmlSpan, data, itemIdx);
+        container.appendChild(htmlSpan);
+        //container.appendChild(document.createElement('br'));
+      }
+    }
+    
+    class GenMessageShower extends SingletonShower {
+      constructor() {
+        super();
+      }
+  
+      ShowContents(container, data, itemIdx) {
+        var div = document.createElement('div');
+        div.style.backgroundColor = '#cccccc';
+        div.appendChild(document.createTextNode(data[itemIdx]['genMessage.encMessage']));
+        container.appendChild(div);
+      }
+    }
+   
+    class StatusShower extends SingletonShower {
+      constructor() {
+        super();
+      }
+  
+      ShowContents(container, data, itemIdx) {
+        var div = document.createElement('div');
+        div.style.backgroundColor = '#FF5A36';
+        div.appendChild(document.createTextNode(data[itemIdx]['status']['errorCode']+ ': '+data[itemIdx]['status']['errorMessage']));
+        container.appendChild(div);
+      }
+    }
+  </script>

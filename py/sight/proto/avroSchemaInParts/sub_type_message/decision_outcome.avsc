@@ -1,0 +1,20 @@
+{
+    "name": "decision_outcome",
+    "type": ["null", {
+        "name": "type_decision_outcome",
+        "type": "record",
+        "fields": [
+            {
+                "name": "outcome_label",
+                "type": ["string", "null"],
+                "doc": ""
+            },
+            {
+                "name": "outcome_value",
+                "type": ["float", "null"],
+                "doc": ""
+            }
+        ]
+    }],
+    "doc": ""
+}

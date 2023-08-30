@@ -1,0 +1,20 @@
+{
+    "name": "tensor_flow_model_training_epoch",
+    "type": [ "null", {
+        "type": "record",
+        "name": "type_tensor_flow_model_training_epoch",
+        "fields": [
+            {
+                "name": "epoch_num",
+                "type": "long",
+                "doc": ""
+            },
+            {
+                "name": "batch_size",
+                "type": "long",
+                "doc": ""
+            }
+        ]
+    }],
+    "doc": "The attributes that are in-force at the time this object was logged"
+}

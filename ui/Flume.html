@@ -1,0 +1,264 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script>
+
+    class FlumeDoFnShower extends BlockShower{
+      constructor(height, width) {
+        super();
+        this.activeDoFn = [];
+        this.sourceToTargets = {};
+        this.targetToSources = {};
+        this.passThroughStageIds = new Set();
+      }
+       
+      connectSourceToTarget(source, target) {
+  //      console.log('sourceToTargets source='+source+', target='+target);
+  //      console.log('    BEFORE: this.sourceToTargets:');
+  //      for (var s in this.sourceToTargets) {
+  //        console.log('    BEFORE:     s='+s);
+  //        for (var t of this.sourceToTargets[s]) {
+  //          console.log('    BEFORE:         t='+t);
+  //        }
+  //      }
+  //      console.log('    BEFORE: this.targetToSources:');
+  //      for (var t in this.targetToSources) {
+  //        console.log('    BEFORE:     t='+t);
+  //        for (var s of this.targetToSources[t]) {
+  //          console.log('    BEFORE:         s='+s);
+  //        }
+  //      }
+  //      console.log(this.targetToSources);
+  //      console.log('source in this.targetToSources='+(source in this.targetToSources));
+        // If the source of this dependence was the target of another dependence. 
+        if (source in this.targetToSources) {
+          if (!(target in this.targetToSources)) {
+            this.targetToSources[target] = new Set();
+          } else {
+            this.targetToSources[target].delete(source);
+          }
+          for (var originalSource of this.targetToSources[source]) {
+            this.sourceToTargets[originalSource].delete(source);
+            this.sourceToTargets[originalSource].add(target);
+            this.targetToSources[target].add(originalSource);
+          }
+          delete this.targetToSources[source];
+        } else {
+          this.sourceToTargets[source] = new Set();
+          this.sourceToTargets[source].add(target);
+          if (!(target in this.targetToSources)) {
+            this.targetToSources[target] = new Set();
+          }
+          this.targetToSources[target].add(source);
+        }
+  //      console.log('    AFTER: this.sourceToTargets:');
+  //      for (var s in this.sourceToTargets) {
+  //        console.log('    AFTER:     t='+s);
+  //        for (var t of this.sourceToTargets[s]) {
+  //          console.log('    AFTER:         t='+t);
+  //        }
+  //      }
+  //      console.log('    AFTER: this.targetToSources:');
+  //      for (var t in this.targetToSources) {
+  //        console.log('    AFTER:     t='+t);
+  //        for (var s of this.targetToSources[t]) {
+  //          console.log('    AFTER:         s='+s);
+  //        }
+  //      }
+      }
+      
+      isPassThroughStage(stageId) {
+        return stageId in this.passThroughStageIds;
+      }
+       
+      ShowBodyContents(container, data, blockStartIdx, blockEndIdx, indent) {
+        var div = document.createElement('div');
+        div.id = 'flume_do_fn_body_'+data[blockStartIdx]['location'];
+        var link = document.createElement('a');
+        // link.setAttribute('class', 'onClickLink');
+        link.style='text-decoration: underline';
+        var stageId = 0;
+        if (data[blockStartIdx]['blockStart']['flume_do_fn_start_do']['input_stage_id'] != undefined) {
+          stageId = data[blockStartIdx]['blockStart']['flume_do_fn_start_do']['input_stage_id'];
+        }
+        var itemId = 0;
+        if (data[blockStartIdx]['blockStart']['flume_do_fn_start_do']['input_item_id'] != undefined) {
+          itemId = data[blockStartIdx]['blockStart']['flume_do_fn_start_do']['input_item_id'];
+        }
+        var isPassThroughStage = data[blockStartIdx]['blockStart']['flume_do_fn_start_do']['is_passthrough'] == 'true';
+        if (isPassThroughStage) {
+          this.passThroughStageIds.add(stageId);
+        }
+        this.activeDoFn.push({
+          stageId: stageId,
+          itemId: itemId,
+          isPassThrough: isPassThroughStage
+        });
+        
+        // console.log('FlumeDoFnShower, blockStartIdx='+blockStartIdx);
+        // console.log(data[blockStartIdx]);
+        var doFnShower = this;
+        if (data[blockStartIdx]['blockStart']['flume_do_fn_start_do']['is_passthrough'] != 'true') {
+          link.onclick= function() { 
+               console.log(doFnShower.targetToSources[stageId + '-' + itemId].values().next().value);
+               var curSources = doFnShower.targetToSources[stageId + '-' + itemId].values().next().value.split('-');
+               console.log(curSources);
+               setViewToId('flume_fn_emit_stage_' + curSources[0] + '_item_' + curSources[1]);
+  //            setViewToId('flume_fn_emit_stage_' + stageId + '_item_' + itemId);
+          };
+          link.setAttribute('id', 'flume_do_fn_stage_' + stageId + '_item_' + itemId);
+          link.innerHTML = 'Input';//, doFnStage='+stageId+', itemId=' + itemId+'<br>';
+        
+          div.appendChild(link);
+          div.appendChild(document.createElement("hr"));
+          container.appendChild(div);
+        }
+        
+        var children = document.createElement('div');
+        children.id = 'flume_do_fn_children_'+data[blockStartIdx]['location'];
+        div.appendChild(children);
+        if (data[blockEndIdx]['blockEnd'] == undefined) {
+          ShowObject(children, data[blockStartIdx]['location'], data[blockEndIdx]['location'], 
+                     data[blockStartIdx]['index'], data[blockEndIdx]['index'], 
+                     blockEndIdx - blockStartIdx, data, 
+                     blockStartIdx+1, blockEndIdx, indent+'  ');
+        } else {
+          ShowObject(children, data[blockStartIdx]['location'], data[blockEndIdx]['location'], 
+                     data[blockStartIdx]['index'], data[blockEndIdx]['index'], 
+                     data[blockEndIdx]['blockEnd']['num_direct_contents'], data, 
+                     blockStartIdx+1, blockEndIdx, indent+'  ');
+        }
+        this.activeDoFn.pop();
+      }
+    }
+    
+    class FlumeCompareFnShower extends BlockShower{
+      AddLink(index, compareData, container) {
+        var link = document.createElement('a');
+        link.setAttribute('class', 'onClickLink');
+        link.style='text-decoration: underline';
+        var stageId = 0;
+        if (compareData['input'+index+'StageId'] != undefined) {
+          stageId = compareData['input'+index+'StageId'];
+        }
+        var itemId = 0;
+        if (compareData['input'+index+'ItemId'] != undefined) {
+          itemId = compareData['input'+index+'ItemId'];
+        }
+        link.onclick= function() { 
+            setViewToId('flume_fn_emit_stage_' + stageId + '_item_' + itemId);
+        };
+        link.setAttribute('id', 'flume_do_fn_stage_' + stageId + '_item_' + itemId);
+        link.innerHTML = 'Input'+index+'<br>';
+        container.appendChild(link);
+      }
+       
+      ShowBodyContents(container, data, blockStartIdx, blockEndIdx, indent) {
+        var div = document.createElement('div');
+        this.AddLink(1, data[blockStartIdx]['blockStart']['flume_compare_fn_start_compare'], div);
+        this.AddLink(2, data[blockStartIdx]['blockStart']['flume_compare_fn_start_compare'], div);
+        container.appendChild(div);
+        
+        if (data[blockEndIdx]['blockEnd'] == undefined) {
+          ShowObject(div, data[blockStartIdx]['location'], data[blockEndIdx]['location'], 
+                     data[blockStartIdx]['index'], data[blockEndIdx]['index'], 
+                     blockEndIdx - blockStartIdx, data, 
+                     blockStartIdx+1, blockEndIdx, indent+'  ');
+        } else {
+          ShowObject(div, data[blockStartIdx]['location'], data[blockEndIdx]['location'], 
+                     data[blockStartIdx]['index'], data[blockEndIdx]['index'], 
+                     data[blockEndIdx]['blockEnd']['num_direct_contents'], data, 
+                     blockStartIdx+1, blockEndIdx, indent+'  ');
+        }
+      }
+    }
+    
+    class FlumeFnEmitShower extends SingletonShower {
+      constructor() {
+        super();
+      }
+  
+      ShowContents(container, data, itemIdx) {
+        var link = document.createElement('a');
+        link.classList.add('onClickLink');
+        link.style='text-decoration: underline';
+        var stageId = 0;
+  
+        if (data[itemIdx]['flumeDoFnEmit']['stage_id'] != undefined) {
+          stageId = data[itemIdx]['flumeDoFnEmit']['stage_id'];
+        }
+        var itemId = 0;
+        if (data[itemIdx]['flumeDoFnEmit']['item_id'] != undefined) {
+          itemId = data[itemIdx]['flumeDoFnEmit']['item_id'];
+        }
+        
+        // console.log('FlumeFnEmitShower');
+        // console.log(data[itemIdx]);
+        var doFnShower = objectHandlers['ST_BLOCK_START'].showers['ST_FLUME_DO_FN_START_DO'];
+        console.log('stageId='+stageId+' itemId='+itemId);
+        for (var doFn of doFnShower.activeDoFn) {
+          // console.log('doFn.stageId='+doFn.stageId+' doFn.itemId='+doFn.itemId+' doFn.isPassThrough='+doFn.isPassThrough+'='+(doFn.isPassThrough=='false'));
+          if (doFn.isPassThrough) {
+            // console.log('isPassthrough');
+  //          doFnShower.transitivelyTransferDependencies(doFn.stageId + '-' + doFn.itemId, stageId + '-' + itemId);
+            doFnShower.connectSourceToTarget(doFn.stageId + '-' + doFn.itemId, stageId + '-' + itemId);
+          } else {
+            doFnShower.connectSourceToTarget(stageId + '-' + itemId, stageId + '-' + itemId);
+          }
+        }
+        // console.log(doFnShower.sourceToTargets);
+        
+        link.onclick= function() { 
+          var curTargets = doFnShower.sourceToTargets[stageId + '-' + itemId].values().next().value.split('-');
+          // console.log(curTargets);
+          setViewToId('flume_do_fn_stage_' + curTargets[0] + '_item_' + curTargets[1]);
+        };
+        link.setAttribute('id', 'flume_fn_emit_stage_' + stageId + '_item_' + itemId);                     
+        link.innerHTML = 'Emit';//, Stage='+stageId+', Item='+itemId;
+        container.appendChild(document.createElement("hr"));
+        container.appendChild(link);
+      }
+    }
+    
+    class FlumeDependShower extends SingletonShower {
+      constructor() {
+        super();
+      }
+  
+      ShowContents(container, data, itemIdx) {
+        var link = document.createElement('a');
+        // link.setAttribute('class', 'onClickLink');
+        link.style='text-decoration: underline';
+        var stageId = 0;
+        if (data[itemIdx]['flumeDepend.inputStageId'] != undefined) {
+          stageId = data[itemIdx]['flumeDepend.inputStageId'];
+        }
+        var itemId = 0;
+        if (data[itemIdx]['flumeDepend.inputItemId'] != undefined) {
+          itemId = data[itemIdx]['flumeDepend.inputItemId'];
+        }
+        link.onclick= function() { 
+            setViewToId('flume_fn_emit_stage_' + stageId + '_item_' + itemId);
+        };
+        link.setAttribute('id', 'flume_do_fn_stage_' + stageId + '_item_' + itemId);                     
+        link.innerHTML = '*';
+  //      console.log(data[itemIdx]);
+        container.appendChild(link);
+      }
+    }
+  
+  </script>
+  

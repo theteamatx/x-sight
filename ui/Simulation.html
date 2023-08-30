@@ -1,0 +1,43 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script>
+    class SimulationTimeStepShower extends ScopeShower {
+      ShowHeaderContents(container, data, blockStartIdx, blockEndIdx) {
+        console.log('SimulationTimeStepShower')
+        console.log(data[blockStartIdx]['blockStart']['simulation_time_step_start'])
+        var visibilityToggle = document.createElement("a");
+        var titleText = data[blockStartIdx]['blockStart']['label'] + 
+            ': TS Index '+data[blockStartIdx]['blockStart']['simulation_time_step_start']['time_step_index'] + 
+            ', Time '+data[blockStartIdx]['blockStart']['simulation_time_step_start']['time_step']
+        if( data[blockStartIdx]['blockStart']['simulation_time_step_start']['time_step_units']) {
+            titleText += ' ' + data[blockStartIdx]['blockStart']['simulation_time_step_start']['time_step_units'].replace(/^(TSU_)/,'')
+        }
+        visibilityToggle.innerHTML = titleText + '&#9658;';
+        visibilityToggle.id = "visibility_toggle_"+data[blockStartIdx].location;
+        visibilityToggle.setAttribute('onclick',
+          "javascript:objectHandlers['ST_BLOCK_START'].showers['ST_SCOPE_START'].ClickedOnScope(event, '"+
+              data[blockStartIdx].location+"', '"+
+              titleText+"');");
+        container.appendChild(visibilityToggle);
+  
+        var dragHandle = document.createElement('a');
+        dragHandle.innerHTML='&#9995;'
+        container.appendChild(dragHandle);
+        return dragHandle;
+      }
+    }
+  </script>

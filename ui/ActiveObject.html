@@ -1,0 +1,159 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script>
+
+    function initActiveObject() {
+      objHistory = [document.getElementById("log_view")];
+      curObjIdx = 0;
+    }
+    
+    document.addEventListener("keypress", function(event) {
+      // console.log('KeyEvent:');
+      // console.log(objHistory);
+      // console.log('curObjIdx='+curObjIdx);
+      if (event.key == 'z' && curObjIdx > 0) {
+        objHistory[curObjIdx].classList.remove('active');
+        curObjIdx--;
+        moveViewToTopOfElt(objHistory[curObjIdx]);
+      } else if (event.key == 'x' && curObjIdx < objHistory.length-1) {
+        objHistory[curObjIdx].classList.remove('active');
+        curObjIdx++;
+        moveViewToTopOfElt(objHistory[curObjIdx]);
+      }
+    });
+    
+     
+    function getPos(el) {
+             console.log('*getPos');
+             console.log(el);
+      for (var lx=0, ly=0, lw=0, lh=0;
+           el != null;
+           el = el.offsetParent()) {
+             console.log('getPos');
+             console.log(el);
+    
+           lx += el.offsetLeft; 
+           ly += el.offsetTop;
+           if (lw==0) {
+             lw=el.offsetWidth;
+           }
+           if (lh==0) {
+             lh=el.offsetHeight;
+           }
+    // console.log('lx='+lx+' ly='+ly+' lw='+lw+' lh='+lh);
+      }
+      return {x:lx, y:ly, width: lw, height: lh}
+    }
+    
+    function setViewToId(targetId, top, boundaryElt) {
+      console.log ('setViewToId(top='+top+', targetId='+targetId+')');
+      targetElt = document.getElementById(targetId)
+      console.log (targetElt);
+      console.log (boundaryElt);
+      if (targetElt) {
+        objHistory[curObjIdx].classList.remove('active');
+        objHistory.splice(curObjIdx+1, objHistory.length-curObjIdx)
+        objHistory.push(targetElt);
+        curObjIdx++;  
+        if (top) {
+          return moveViewToTopOfElt(targetElt);
+        } else {
+          return moveViewToBottomOfElt(targetElt, boundaryElt);
+        }
+      }
+    }
+    
+    function moveViewToTopOfElt(targetElt) {
+      console.log('moveViewToTopOfElt targetElt='+targetElt);
+      if (targetElt == undefined) {
+        return;
+      }
+      targetElt.classList.add('active');
+      console.log('moveViewToTopOfElt getPos(targetElt)');
+      console.log(getPos(targetElt));
+      console.log(window);
+      // window.scrollTo(0, getPos(targetElt).y);
+      window.scrollTo(0, 500);
+    } 
+    
+    function moveViewToBottomOfElt(targetElt, boundaryElt) {
+      if (targetElt == undefined) {
+        return;
+      }
+      targetElt.classList.add('active');
+      window.scrollTo(0, getPos(targetElt).y + getPos(targetElt).height + boundaryElt.offsetHeight - window.innerHeight);
+    } 
+     
+    
+    // From https://www.w3schools.com/howto/howto_js_draggable.asp
+    function dragElement(elmnt, dragElmnt) {
+      // console.log(elmnt);
+      var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+    //  if (document.getElementById(elmnt.id + "header")) {
+    //    // if present, the header is where you move the DIV from:
+    //    document.getElementById(elmnt.id + "header").onmousedown = dragMouseDown;
+    //  } else {
+        // otherwise, move the DIV from anywhere inside the DIV:
+        dragElmnt.onmousedown = dragMouseDown;
+    //  }
+    
+      function dragMouseDown(e) {
+        // console.log('dragMouseDown()');
+        // console.log(e);
+        // console.log(elmnt);
+        dragElmnt.innerHTML = '&#9994;';
+        e = e || window.event;
+        e.preventDefault();
+        e.stopPropagation();
+        elmnt.style.position='absolute';
+        // get the mouse cursor position at startup:
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        document.onmouseup = closeDragElement;
+        // call a function whenever the cursor moves:
+        document.onmousemove = elementDrag;
+        document.style.zIndex = 1000; 
+      }
+    
+      function elementDrag(e) {
+        // console.log('elementDrag()');
+        // console.log(e);
+        e = e || window.event;
+        e.preventDefault();
+        elmnt.style.position='fixed';
+        // calculate the new cursor position:
+        pos1 = pos3 - e.clientX;
+        pos2 = pos4 - e.clientY;
+        pos3 = e.clientX;
+        pos4 = e.clientY;
+        // console.log('pos1='+pos1+', pos2='+pos2+', pos3='+pos3+', pos4='+pos4);
+        // console.log('client=['+e.clientX+", "+e.clientY+"]");
+        // set the element's new position:
+        elmnt.style.top = e.clientY+"px";// (elmnt.offsetTop - pos2) + "px";
+        elmnt.style.left = e.clientX+"px"; // (elmnt.offsetLeft - pos1) + "px";
+        // console.log(elmnt.style);
+      }
+    
+      function closeDragElement() {
+        // console.log('closeDragElement()');
+        // stop moving when mouse button is released:
+        document.onmouseup = null;
+        document.onmousemove = null;
+        dragElmnt.innerHTML = '&#9995;';
+      }
+    }
+</script>

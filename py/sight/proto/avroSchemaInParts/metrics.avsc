@@ -1,0 +1,20 @@
+{
+    "name": "metrics",
+    "type": [ "null", {
+        "type": "record",
+        "name": "type_metrics",
+        "fields": [
+            {
+                "name": "process_free_swap_space_bytes",
+                "type": "long",
+                "doc": ""
+            },
+            {
+                "name": "process_total_swap_space_bytes",
+                "type": "long",
+                "doc": ""
+            }
+      ]
+    }],
+    "doc": "Encapsulates meta-data that tracks the dynamic behavior of the system"
+}

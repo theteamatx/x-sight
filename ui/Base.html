@@ -1,0 +1,998 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
+
+<script>
+// google.charts.load('current', {packages: ['corechart', 'bar']});
+// google.charts.setOnLoadCallback(drawBasic);
+
+class SingletonProcessor {
+  constructor(logId, logOwner) {
+    this.showers = {
+      'ST_TEXT': new TextShower(),
+      'ST_TENSOR': new TensorShower(),
+      'ST_VALUE': new ValueShower(),
+      'ST_GEN_MESSAGE': new GenMessageShower(),
+      'ST_STATUS': new StatusShower(),
+      'ST_FLUME_DO_FN_EMIT': new FlumeFnEmitShower(),
+      'ST_FLUME_DEPEND': new FlumeDependShower(),
+    };
+  }
+
+  Process(container, data, startIdx, endIdx, indent) {
+    if (this.showers[data[startIdx]['subType']]) {
+      this.showers[data[startIdx]['subType']].Show(
+        container, data, startIdx, indent+'  ');
+    }
+
+    return startIdx+1;
+  }
+}
+
+class GapProcessor {
+  constructor(logId, logOwner) {
+    this.shower = new GapShower(logId, logOwner);
+  }
+
+  Process(container, data, startIdx, endIdx, indent) {
+    console.log(indent+'GapProcessor: ['+startIdx+', '+endIdx+'] ['+data[startIdx].location+' - '+data[endIdx].location+'] container.id='+container.id);
+    // console.log(data[startIdx]);
+    var rangeEndIdx = startIdx;
+    while(rangeEndIdx <= endIdx && !data[rangeEndIdx].selected) {
+      // console.log(data[rangeEndIdx]);
+      ++rangeEndIdx;
+    }
+    // console.log(indent+"GapProcessor: rangeEndIdx-1="+(rangeEndIdx-1));
+    this.shower.Show(container, data, startIdx, rangeEndIdx-1);
+    return rangeEndIdx;
+  }
+}
+
+class BlockProcessor {
+  constructor(logId, logOwner) {
+    // console.log("In the constructor of BlockProcessor")
+    this.showers = {
+      undefined: new ScopeShower(),
+      '' : new BlockShower(),
+      'ST_UNKNOWN': new ScopeShower(),
+      'ST_SCOPE_START': new ScopeShower(),
+      'ST_NAMED_VALUE': new NamedValueShower(),
+      'ST_LIST': new ListShower(),
+      'ST_TABLE': new TableShower(),
+//        'ST_PYTHON_AST_START': new PythonAstShower(),
+      'ST_FLUME_DO_FN_CREATE': new ScopeShower(),
+      'ST_FLUME_DO_FN_START_DO': new FlumeDoFnShower(),
+      'ST_FLUME_COMPARE_FN_START_COMPARE': new FlumeCompareFnShower(),
+      'ST_TENSORFLOW_MODEL_APPLICATION': new TensorFlowModelApplicationShower(),
+      'ST_TENSORFLOW_MODEL_TRAINING_EPOCH': new TensorFlowModelTrainingEpochShower(logId, logOwner),
+      'ST_TENSORFLOW_MODEL_TRAINING': new TensorFlowModelTrainingShower(),
+      'ST_SIMULATION': new ScopeShower(),
+      'ST_SIMULATION_PARAMETERS': new ScopeShower(),
+      'ST_SIMULATION_TIME_STEP': new SimulationTimeStepShower(),
+      'ST_SIMULATION_STATE': new ScopeShower(),
+    };
+
+    this.startToEndIdx = {};
+    this.startToEndIdxInitialized = false;
+  }
+
+  Initialize() {
+    console.log("In the Initialize method of BlockProcessor")
+    this.startToEndLoc = {}; 
+  }
+
+  MatchStartToEndLoc(data, startIdx, endIdx, indent) {
+    console.log("In the MatchStartToEndLoc of BlockProcessor")
+    for (var idx=startIdx; idx<=endIdx; ++idx) {
+      if (data[idx]['subType'] == 'ST_BLOCK_END') {
+        // this.startToEndLoc[data[idx]['blockEnd']['locationOfBlockStart']] =
+        //     data[idx].location;
+
+        this.startToEndLoc[data[idx]['blockEnd']['location_of_block_start']] =
+            data[idx].location;
+      }
+    }
+    this.startToEndLocInitialized = true;
+  }
+
+  Process(container, data, startIdx, endIdx, indent) {
+    console.log(indent+'BlockProcessor::Process('+startIdx+' - '+endIdx+')');
+    // console.log(data[startIdx]);
+
+
+    // Not working
+    var blockEndLoc = this.startToEndLoc[data[startIdx]['location']];
+    
+    // So, added manually
+    //     var startToEndLoc = {"0000000000:0000000001:0000000000" : "0000000000:0000000001:0000000001",
+    // "0000000000:0000000001" : "0000000000:0000000002",
+    // "0000000000" : "0000000001",
+    // "0000000002:0000000002:0000000000" : "0000000002:0000000002:0000000001",
+    // "0000000002:0000000002" : "0000000002:0000000003",
+    // "0000000002:0000000005:0000000000" : "0000000002:0000000005:0000000001",
+    // "0000000002:0000000005" : "0000000002:0000000006",
+    // "0000000002:0000000007:0000000000" : "0000000002:0000000007:0000000001",
+    // "0000000002:0000000007" : "0000000002:0000000008",
+    // "0000000002" : "0000000003",
+    // "0000000004:0000000000:0000000000" : "0000000004:0000000000:0000000001",
+    // "0000000004:0000000000:0000000002:0000000000" : "0000000004:0000000000:0000000002:0000000001",
+    // "0000000004:0000000000:0000000002:0000000002:0000000002:0000000000" : "0000000004:0000000000:0000000002:0000000002:0000000002:0000000001",
+    // "0000000004:0000000000:0000000002:0000000002:0000000002" : "0000000004:0000000000:0000000002:0000000002:0000000003",
+    // "0000000004:0000000000:0000000002:0000000002" : "0000000004:0000000000:0000000002:0000000003",
+    // "0000000004:0000000000:0000000002" : "0000000004:0000000000:0000000003",
+    // "0000000004:0000000000:0000000004:0000000001" : "0000000004:0000000000:0000000004:0000000002",
+    // "0000000004:0000000000:0000000004" : "0000000004:0000000000:0000000005",
+    // "0000000004:0000000000:0000000006" : "0000000004:0000000000:0000000007",
+    // "0000000004:0000000000:0000000008" : "0000000004:0000000000:0000000009",
+    // "0000000004:0000000000:0000000010" : "0000000004:0000000000:0000000011",
+    // "0000000004:0000000000:0000000012" : "0000000004:0000000000:0000000013",
+    // "0000000004:0000000000" : "0000000004:0000000001",
+    // "0000000004" : "0000000005"}
+    //  var blockEndLoc = startToEndLoc[data[startIdx]['location']];
+    
+    // console.log(indent+'BlockProcessor::Process('+startIdx+' - '+endIdx+'), blockEndLoc='+blockEndLoc);
+    // console.log('startToEndLoc');
+    // console.log(this.startToEndLoc);
+    // console.log('location2Idx');
+    // console.log(location2Idx);
+    var blockEndIdx = location2Idx[blockEndLoc];
+    // console.log(indent+'BlockProcessor::Process('+startIdx+' - '+endIdx+'), blockEndLoc='+blockEndLoc+', blockEndIdx='+blockEndIdx);
+
+    if (this.showers[data[startIdx]['blockStart']['sub_type']]) {
+      this.showers[data[startIdx]['blockStart']['sub_type']].Show(
+        container, data, startIdx, blockEndIdx, indent+'@@');
+    }
+    // console.log(indent+'BlockProcessor::Process('+startIdx+' - '+endIdx+' returning '+(blockEndIdx+1));
+    return blockEndIdx+1;
+  }
+}
+
+class BlockShower {
+  constructor() { }
+
+  ShowHeaderContents(container, data, blockStartIdx, blockEndIdx) {
+    container.appendChild(document.createTextNode(
+      //data[blockStartIdx].location + " - " + data[blockEndIdx].location + ": "+
+    data[blockStartIdx]['blockStart']['label']));
+  }
+
+  ShowHeader(container, data, blockStartIdx, blockEndIdx) {
+    var tblHead = document.createElement('thead');
+    var headRow = document.createElement('tr');
+    var headData = document.createElement('td');
+    tblHead.style.width='100%';
+    headRow.style.width='100%';
+    headData.style.width='100%';
+    this.ShowHeaderContents(headData, data, blockStartIdx, blockEndIdx)
+    headRow.appendChild(headData);
+    tblHead.appendChild(headRow);
+    container.appendChild(tblHead);
+    return tblHead;
+  }
+
+  ShowBodyContents(container, data, blockStartIdx, blockEndIdx, indent) {
+    ShowObject(container, data[blockStartIdx]['location'], data[blockEndIdx]['location'], 
+                data[blockStartIdx]['index'], data[blockEndIdx]['index'], 
+                data[blockEndIdx]['blockEnd']['num_direct_contents'], data, blockStartIdx+1, blockEndIdx, indent);
+  }
+
+  ShowBody(container, data, blockStartIdx, blockEndIdx, indent) {
+    var tblBody = document.createElement("tbody");
+    var bodyRow = document.createElement('tr');
+    var bodyData = document.createElement('td');
+    tblBody.style.width='100%';
+    bodyRow.style.width='100%';
+    bodyData.style.width='100%';
+    bodyRow.appendChild(bodyData);
+    tblBody.appendChild(bodyRow);
+    container.appendChild(tblBody);
+    this.ShowBodyContents(bodyData, data, blockStartIdx, blockEndIdx, indent);
+    return tblBody;
+  }
+
+  Show(container, data, blockStartIdx, blockEndIdx, indent) {
+    console.log(indent+"BlockShower::Show("+blockStartIdx+" - "+blockEndIdx+")");
+    var tbl = document.createElement("table");
+    tbl.setAttribute("id", data[blockStartIdx].location);
+    tbl.style.borderStyle='none none none none';
+//     tbl.onmouseout = function() { tbl.style.borderColor='black'; };
+//     tbl.onmouseover = function() { tbl.style.borderColor='blue'; };
+    tbl.border=2;
+//     tbl.style.paddingLeft='3px';
+//     tbl.style.paddingTop='3px';
+    container.appendChild(tbl);
+    this.ShowHeader(tbl, data, blockStartIdx, blockEndIdx);
+    this.ShowBody(tbl, data, blockStartIdx, blockEndIdx, indent);
+  }
+}
+
+class SingletonShower {
+  constructor() { }
+
+  ShowContents(container, data, itemIdx) {
+  } 
+
+  Show(container, data, itemIdx) {
+    var span = document.createElement("span");
+    span.setAttribute("id", data[itemIdx].location);
+    this.ShowContents(span, data, itemIdx);
+    container.appendChild(span);
+  }
+}
+
+function setInnerHTMLWithScript(elm, html) {
+  elm.innerHTML = html;
+  Array.from(elm.querySelectorAll("script")).forEach( oldScript => {
+    const newScript = document.createElement("script");
+    Array.from(oldScript.attributes)
+      .forEach( attr => newScript.setAttribute(attr.name, attr.value) );
+    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+    oldScript.parentNode.replaceChild(newScript, oldScript);
+  });
+}
+
+class TextShower extends SingletonShower {
+  constructor() {
+    super();
+  }
+
+  ShowContents(container, data, itemIdx) {
+    //container.appendChild(document.createTextNode(data[itemIdx]['text.text']));
+    var htmlSpan = document.createElement('span');
+    htmlSpan.setAttribute('id', 'html_span_'+data[itemIdx]['location']);
+    // Show Text
+    if (data[itemIdx]['text']['sub_type'] == "ST_TEXT") {
+      htmlSpan.innerHTML = data[itemIdx]['text']['text'].replace(/ /g, '&nbsp;').replace(/\n/g, '<br>').replace(/\\n/g, '<br>').replace(/\r/g, '<br>').replace(/\\r/g, '<br>');
+      // console.log(htmlSpan);
+    }
+    // Show HTML
+    else if (data[itemIdx]['text']['sub_type'] == "ST_HTML") {
+      setInnerHTMLWithScript(htmlSpan, data[itemIdx]['text']['text'].replace(/\\n/g, '\n'));
+    }
+    AddAttributesTooltip(htmlSpan, data, itemIdx);
+    container.appendChild(htmlSpan);
+  }
+}
+
+
+class TensorShower extends SingletonShower {
+  constructor() {
+    super();
+
+    this.label = {};
+    this.tensorShape = {};
+    this.lockedDimValues = {};
+    this.tensorLogObject = {};
+    this.tensorEncodingGenerated = {};
+    this.tensor = {};
+    this.htmlSpan = {};
+    this.dataType = {};
+  }
+
+  GetLabel(uniqueId) {
+    return this.label[uniqueId];
+  }
+
+  LoadSubTensorRec(tensor1d, index1d, curDim, uniqueId, typeCastFunc) {
+    if (curDim == this.tensorShape[uniqueId].length-1) {
+      console.log('range=['+index1d+'-'+index1d+this.tensorShape[uniqueId][this.tensorShape[uniqueId].length-1]+']')
+      return [index1d + this.tensorShape[uniqueId][this.tensorShape[uniqueId].length-1],
+              tensor1d.slice(index1d, index1d+this.tensorShape[uniqueId][this.tensorShape[uniqueId].length-1]).map(Number)]
+              
+      // console.log('values')
+      // console.log(values)
+      // return values
+    }
+
+    var subTensor = [];
+    for (var i=0; i<this.tensorShape[uniqueId][curDim]; ++i) {
+      const [newIndex1d, curSubTensor] = this.LoadSubTensorRec(tensor1d, index1d, curDim+1, uniqueId, typeCastFunc);
+      index1d = newIndex1d;
+      subTensor.push(curSubTensor);
+    }
+    return [index1d, subTensor];
+  }
+
+  LoadSubTensor(tensor1d, uniqueId, typeCastFunc) {
+    console.log('LoadSubTensor')
+    console.log(tensor1d)
+    return this.LoadSubTensorRec(tensor1d, 0, 0, uniqueId, typeCastFunc)[1];
+  }
+
+  IsFreeDim(curDim, uniqueId) {
+    // console.log(this.lockedDimValues[uniqueId][curDim]);
+    return !Number.isInteger(this.lockedDimValues[uniqueId][curDim]); 
+  }
+
+  NumLockedLaterDims(curDim, uniqueId) {
+    var numFreeDims = 0;
+    for (var i=curDim+1; i<this.lockedDimValues[uniqueId].length; ++i) {
+      if (this.IsFreeDim(i, uniqueId)) {
+        numFreeDims++;
+      }
+    }
+    return numFreeDims;
+  }
+
+  GetLastLockedDimValue(curDim, uniqueId, subTensor) {
+    for (var i=curDim+1; i<this.lockedDimValues[uniqueId].length; ++i) {
+      subTensor = subTensor[this.lockedDimValues[uniqueId][i]]; 
+    }
+    return subTensor;
+  }
+
+  FormatValue(uniqueId, value) {
+    if (this.dataType[uniqueId] == 'ST_DOUBLE') {
+      value = Number.parseFloat(value).toExponential(2);
+    }
+    return value;
+  }
+
+  // Returns this.lockedDimValues[uniqueId][curDim] while ensuring that it is within the
+  // bounds set by this.tensorShape[uniqueId][curDim]
+  BoundedLockedDimValue(uniqueId, curDim) {
+    console.log(this.lockedDimValues[uniqueId]);
+    console.log(this.tensorShape[uniqueId]);
+    if (curDim >= this.lockedDimValues[uniqueId].length || curDim >= this.tensorShape[uniqueId][curDim]) {
+      return undefined;
+    }
+    if (this.lockedDimValues[uniqueId][curDim] < 0) {
+      return 0;
+    }
+    if (this.lockedDimValues[uniqueId][curDim] >= this.tensorShape[uniqueId][curDim]) {
+      return this.tensorShape[uniqueId][curDim]-1;
+    }
+    return this.lockedDimValues[uniqueId][curDim];
+  }
+
+  CreateTensorEncodingRec(indexWithinContainerTensor, subTensor, minValue, maxValue, curDim, uniqueId, container) {
+    console.log("In function CreateTensorEncodingRec.."); 
+    if (curDim >= this.tensorShape[uniqueId].length) {
+       console.log("In if");
+       return '';
+    }
+    console.log("Out of if");
+    console.log('CreateTensorEncodingRec(indexWithinContainerTensor='+indexWithinContainerTensor+', label='+this.label[uniqueId]+', minValue='+minValue+', maxValue='+maxValue+', curDim='+curDim+',freedim='+this.IsFreeDim(curDim, uniqueId)+', NumLockedLaterDims='+this.NumLockedLaterDims(curDim, uniqueId));
+    console.log(subTensor);
+
+    if (curDim>0) {
+      console.log("In if (curDim>0)");
+      let containerRow = document.createElement('tr');
+      container.appendChild(containerRow);
+      let indexCell = document.createElement('td');
+      indexCell.style.backgroundColor = '#dddddd';
+      containerRow.appendChild(indexCell);
+      let subTensorLabel = indexWithinContainerTensor;
+      if (!this.IsFreeDim(curDim, uniqueId)) {
+        subTensorLabel = this.FormatValue(uniqueId, subTensor[this.BoundedLockedDimValue(uniqueId, curDim-1)]);
+      }
+      indexCell.innerHTML = subTensorLabel;
+
+      let subTensorCell = document.createElement('td');
+      containerRow.appendChild(subTensorCell);
+      let subTensorTable = document.createElement('table');
+      subTensorCell.appendChild(subTensorTable)
+
+      container = subTensorTable;
+    }
+
+    if (!this.IsFreeDim(curDim, uniqueId)) {
+      console.log("In if (!this.IsFreeDim(curDim, uniqueId))");
+      // If this is not the final dimension, show the subsequent ones.
+      if (curDim < this.lockedDimValues[uniqueId].length-1) {
+        return this.CreateTensorEncodingRec(subTensor[this.BoundedLockedDimValue(uniqueId, curDim)], minValue, maxValue, curDim+1, uniqueId, container);
+      } 
+      
+      // This is the final dimension, so show the scalar value in this locked dimension.
+      var row = document.createElement('tr');
+      container.appendChild(row);
+      var cell = document.createElement('td');
+      cell.style.borderColor = 'gray';
+      row.appendChild(cell);
+      cell.innerHTML = this.FormatValue(uniqueId, subTensor[this.BoundedLockedDimValue(uniqueId, this.lockedDimValues[uniqueId].length-1)]);
+      return;
+    }
+    if (!Array.isArray(subTensor)) {
+      console.log("In if (!Array.isArray(subTensor))");
+      subTensor = [subTensor];
+    }
+
+    if (this.NumLockedLaterDims(curDim, uniqueId)<=1) {
+      console.log("In if (this.NumLockedLaterDims(curDim, uniqueId)<=1)");
+      var row = document.createElement('tr');
+      container.appendChild(row);
+
+      // console.log('last: ');
+      // console.log(subTensor);
+      // for (var i=0; i<subTensor.length; ++i) {
+      //   var cell = document.createElement('td');
+      //   row.appendChild(cell);
+      //   cell.width = 50;
+      //   cell.innerHTML = this.FormatValue(uniqueId, this.GetLastLockedDimValue(curDim, uniqueId, subTensor[i]));
+      // }
+      
+      var chartRow = document.createElement('tr');
+      container.appendChild(chartRow);
+      var chartCell = document.createElement('td');
+      chartCell.colSpan='100000';
+      chartRow.appendChild(chartCell);
+      // this.DrawColumnChart(chartCell, subTensor)
+
+      if (this.tensorLogObject[uniqueId]['dim_axis_values'].length==1) {
+        console.log('subTensor')
+        console.log(subTensor)
+        var subTensorViz = '<table>'
+        subTensorViz += '<tr>'
+        for (const v of this.tensorLogObject[uniqueId]['dim_axis_values'][0].value) {
+          subTensorViz += '<td>' + v + '</td>'
+        }  
+        subTensorViz += '</tr>'
+        subTensorViz += '<tr>'
+        for (const v of subTensor) {
+          subTensorViz += '<td>' + v + '</td>'
+        }  
+        subTensorViz += '</tr>'
+        subTensorViz += '</table>'
+        chartCell.innerHTML = subTensorViz
+      } else {
+        console.log([...Array(this.tensorShape[uniqueId][curDim+1]).keys()].map(x=>x.toString()))
+        console.log([...Array(this.tensorShape[uniqueId][curDim]).keys()].map(x=>x.toString()))
+
+        console.log(this.tensorLogObject[uniqueId])
+        if (this.tensorLogObject[uniqueId]['dim_label']) {
+          var variantAxisLabels = this.tensorLogObject[uniqueId]['dim_axis_values'][0].value
+          var dataAxisLabels = this.tensorLogObject[uniqueId]['dim_axis_values'][1].value
+        } else {
+          var variantAxisLabels = [...Array(this.tensorShape[uniqueId][curDim]).keys()].map(x=>x.toString())
+          var dataAxisLabels = [...Array(this.tensorShape[uniqueId][curDim+1]).keys()].map(x=>x.toString())
+        }
+        console.log('variantAxisLabels')
+        console.log(variantAxisLabels)
+        console.log('dataAxisLabels')
+        console.log(dataAxisLabels)
+        console.log([...Array(dataAxisLabels)])
+        console.log('this.NumLockedLaterDims(curDim, uniqueId)='+this.NumLockedLaterDims(curDim, uniqueId))
+        console.log(this.tensorShape[uniqueId][curDim])
+
+        if (this.NumLockedLaterDims(curDim, uniqueId)==0 ||
+            this.tensorShape[uniqueId][curDim]==1) {
+          data = subTensor;
+          if (this.tensorShape[uniqueId][curDim]==1) {
+            data = data[0];
+          }
+          var data = [
+            {
+              x: dataAxisLabels,
+              y: data,
+              mode: 'markers',
+              type: 'scatter'
+            }
+          ];
+        } else {
+          var data = new Array();
+          for (let i=0; i<variantAxisLabels.length; ++i) {
+            data[variantAxisLabels[i]] = subTensor[i]
+          }
+          console.log('data')
+          console.log(data)
+
+          var dataOrderedByVariant = new Array();
+          for (const variant of variantAxisLabels.sort()) {
+            dataOrderedByVariant.push(data[variant])
+          } 
+          variantAxisLabels = variantAxisLabels.sort()
+
+          var data = [
+            {
+              // x: [...Array(this.tensorShape[uniqueId][curDim+1]).keys()].map(x=>x.toString()),
+              // x: ['Morning', 'Afternoon', 'Evening'],
+              // y: [...Array(this.tensorShape[uniqueId][curDim]).keys()].map(x=>x.toString()),
+              zmin: minValue, 
+              zmax: maxValue, 
+              z: dataOrderedByVariant, //subTensor,
+              type: 'heatmap'
+            }
+          ];
+        }
+
+        var layout = {
+          xaxis: {
+            ticks: '',
+            tickmode: 'array',
+            tickvals: [...Array(this.tensorShape[uniqueId][curDim+1]).keys()],
+            ticktext: dataAxisLabels,
+            side: 'top'
+          },
+          yaxis: {
+            ticks: '',
+            tickmode: 'array',
+            // tickvals: Array(variantAxisLabels),
+            // ticktext: Array(variantAxisLabels).map(x=>x.toString()),//
+            tickvals: [...Array(this.tensorShape[uniqueId][curDim]).keys()],
+            ticktext: variantAxisLabels,
+            ticksuffix: '',
+            autosize: true
+          }
+        };
+
+        console.log('plotting')
+        console.log(data)
+        console.log(layout)
+        Plotly.newPlot(chartCell, data, layout);
+      }
+      return;
+    }
+    var html = '<table border=1,style="border-color:black;border-fill:solid;border-width:1px;border-collapse:collapse;">';
+    for (let i=0; i<subTensor.length; ++i) {
+      this.CreateTensorEncodingRec(i, subTensor[i], minValue, maxValue, curDim+1, uniqueId, container);
+      // html += '<tr>' + this.CreateTensorEncodingRec(row, curDim+1, uniqueId) + '</tr>';
+    }
+  }
+
+  CreateTensorEncoding(uniqueId, container) {
+    console.log("In function CreateTensorEncoding.."); 
+    var containerTable = document.createElement('table');
+    container.appendChild(containerTable);
+    containerTable.tableLayout = 'fixed';
+    containerTable.width = '100%';
+    containerTable.style.border = '1px solid grey'
+
+    var headerRow = document.createElement('tr');
+    containerTable.appendChild(headerRow);
+    var headerCell = document.createElement('td');
+    headerCell.colSpan='100000';
+    headerRow.appendChild(headerCell);
+    headerCell.innerHTML = this.label[uniqueId];
+    // debugger;
+    console.log('this.tensor uniqueId='+uniqueId)
+    console.log(this.tensor[uniqueId])
+
+    if (this.tensor[uniqueId] !== undefined) {
+      let flatValues = this.tensor[uniqueId].flat(this.tensorShape[uniqueId].length)
+
+      this.CreateTensorEncodingRec(undefined, this.tensor[uniqueId], Math.min(...flatValues), Math.max(...flatValues), 0, uniqueId, containerTable);
+    }
+    console.log("Out of function CreateTensorEncoding.."); 
+  }
+
+  // DrawColumnChart(targetElement, values) {
+  //     // var data = new google.visualization.DataTable();
+  //     // data.addColumn('timeofday', 'Time of Day');
+  //     // data.addColumn('number', 'Motivation Level');
+
+  //     // data.addRows([
+  //     //   [{v: [8, 1, 0], f: '8 am'}, 1],
+  //     //   [{v: [9, 2, 0], f: '9 am'}, 2],
+  //     //   [{v: [10, 3	, 0], f:'10 am'}, 3],
+  //     //   [{v: [11, 0, 0], f: '11 am'}, 4],
+  //     //   [{v: [12, 0, 0], f: '12 pm'}, 5],
+  //     //   [{v: [13, 0, 0], f: '1 pm'}, 6],
+  //     //   [{v: [14, 0, 0], f: '2 pm'}, 7],
+  //     //   [{v: [15, 0, 0], f: '3 pm'}, 8],
+  //     //   [{v: [16, 0, 0], f: '4 pm'}, 9],
+  //     //   [{v: [17, 0, 0], f: '5 pm'}, 10],
+  //     // ]);
+
+  //     // var options = {
+  //     //   title: 'Motivation Level Throughout the Day',
+  //     //   hAxis: {
+  //     //     title: 'Time of Day',
+  //     //     format: 'h:mm a',
+  //     //     viewWindow: {
+  //     //       min: [7, 30, 0],
+  //     //       max: [17, 30, 0]
+  //     //     }
+  //     //   },
+  //     //   vAxis: {
+  //     //     title: 'Rating (scale of 1-10)'
+  //     //   }
+  //     // };
+
+  //     // var chart = new google.visualization.ColumnChart(
+  //     //   targetElement);
+
+  //     // chart.draw(data, options);
+  //   var data = new google.visualization.DataTable();
+  //   data.addColumn('number', 'idx');
+  //   data.addColumn('number', 'Value');
+
+  //   var row = []
+  //   var maxValue = -1e100;
+  //   var minValue = 1e100;
+  //   for (var i=0; i<values.length; ++i) {
+  //     // var showValue = 0;
+  //     // if (values[i] <= 0) {
+  //     //   showValue = 1e-10;
+  //     // } else {
+  //     //   showValue = Math.log10(values[i]);
+  //     // }
+  //     // row.push([i, showValue])
+  //     row.push([i, values[i]]);
+  //     maxValue = Math.max(maxValue, values[i]);
+  //     minValue = Math.min(minValue, values[i]);
+  //   }
+  //   // console.log('row');
+  //   // console.log(row);
+  //   data.addRows(row);
+
+  //   var options = {
+  //     width: 1500,
+  //     height: 60,
+  //     legend:{position:'none'},
+  //     vAxis: { 
+  //       gridlines: { count: 4 },
+  //       viewWindowMode:'explicit',
+  //       viewWindow: {
+  //             max:maxValue,
+  //             min:minValue
+  //       }
+  //     }
+  //     // title: 'Motivation Level Throughout the Day',
+  //     // hAxis: {
+  //     //   title: 'Time of Day',
+  //     //   format: 'h:mm a',
+  //     //   viewWindow: {
+  //     //     min: [7, 30, 0],
+  //     //     max: [17, 30, 0]
+  //     //   }
+  //     // },
+  //     // vAxis: {
+  //     //   title: 'Rating (scale of 1-10)'
+  //     // }
+  //   };
+
+  //   var chart = new google.visualization.ColumnChart(targetElement);
+
+  //   chart.draw(data, options);
+  //   // alert('?');
+  // }
+
+  UpdateLockedDimValues(uniqueId, newLockedDimValues) {
+    this.lockedDimValues[uniqueId] = newLockedDimValues.slice(0, this.tensorShape[uniqueId].length);
+  }
+
+  SetVisible(uniqueId) {
+    // console.log('SetVisible('+this.label[uniqueId]+')')
+    // console.log(this.tensor[uniqueId]);
+    this.htmlSpan[uniqueId].innerHTML = '';
+    if (!this.tensorEncodingGenerated[uniqueId]) {
+      this.CreateTensorEncoding(uniqueId, this.htmlSpan[uniqueId]);
+      this.tensorEncodingGenerated[uniqueId] = true;
+    }
+  }
+
+  ShowContents(container, data, itemIdx) {
+    // console.log(data)
+    // console.log(itemIdx)
+    // console.log(data[itemIdx])
+    var uniqueId = data[itemIdx]['location'];
+    // console.log('uniqueId='+uniqueId);
+    this.label[uniqueId] = data[itemIdx]['tensor']['label'];
+    this.lockedDimValues = {}
+    this.lockedDimValues[uniqueId] = [];
+    this.htmlSpan[uniqueId] = undefined;
+    this.tensorEncodingGenerated[uniqueId] = false;
+    this.tensorLogObject[uniqueId] = data[itemIdx]['tensor'];
+
+    this.htmlSpan[uniqueId] = document.createElement('span');
+    this.htmlSpan[uniqueId].setAttribute('id', 'html_span_'+data[itemIdx]['location']);
+    console.log('TensorShower ShowContents: '+this.label[uniqueId]);
+    console.log(data[itemIdx]);
+    console.log('tensor')
+    console.log(data[itemIdx]['tensor']);
+    console.log('this.tensorShape');
+    console.log(this.tensorShape);
+    if (data[itemIdx]['tensor']['shape'] !== undefined) {
+      this.tensorShape[uniqueId] = data[itemIdx]['tensor']['shape'].map(Number);
+      console.log(this.label[uniqueId]+': this.tensorShape[uniqueId]');
+      console.log(this.tensorShape[uniqueId]);
+      for (const s of this.tensorShape[uniqueId]) {
+        this.lockedDimValues[uniqueId].push(undefined);
+      }
+
+      this.dataType[uniqueId] = data[itemIdx]['tensor']['sub_type'];
+      if (data[itemIdx]['tensor']['sub_type'] == 'ST_STRING') {
+        this.tensor[uniqueId] = this.LoadSubTensor(data[itemIdx]['tensor']['string_values']['value'], uniqueId, x => x);
+      } else if (data[itemIdx]['tensor']['sub_type'] == 'ST_BYTES') {
+        this.tensor[uniqueId] = this.LoadSubTensor(data[itemIdx]['tensor']['bytes_values']['value'], uniqueId, x => x);
+      } else if (data[itemIdx]['tensor']['sub_type'] == 'ST_INT64') {
+        this.tensor[uniqueId] = this.LoadSubTensor(data[itemIdx]['tensor']['int64_values']['value'], uniqueId, parseInt);
+      } else if (data[itemIdx]['tensor']['sub_type'] == 'ST_DOUBLE') {
+        this.tensor[uniqueId] = this.LoadSubTensor(data[itemIdx]['tensor']['double_values']['value'], uniqueId, parseFloat);
+      } else if (data[itemIdx]['tensor']['sub_type'] == 'ST_BOOL') {
+        this.tensor[uniqueId] = this.LoadSubTensor(data[itemIdx]['tensor']['bool_values']['value'], uniqueId, x => x.toLowerCase()=='true');
+      }
+      // console.log('this.tensor['+this.label[uniqueId]+'=');
+      // console.log(this.tensor[uniqueId]);
+      // this.htmlSpan[uniqueId].innerHTML = '';
+      // this.CreateTensorEncoding(uniqueId, this.htmlSpan[uniqueId]);
+      AddAttributesTooltip(this.htmlSpan[uniqueId], data, itemIdx);
+      container.appendChild(this.htmlSpan[uniqueId]);
+      this.SetVisible(uniqueId)
+    }
+  }
+
+  GetShape(uniqueId) {
+    return this.tensorShape[uniqueId];
+  }
+}
+
+class GapShower {
+  constructor(logId, logOwner) {
+    self.logId = logId;
+    self.logOwner = logOwner;
+  }
+  Show(container, data, rangeStartIdx, rangeEndIdx) {
+    // console.log('Show: ['+rangeStartIdx+', '+rangeEndIdx+']');
+    var gapDiv = document.createElement('div');
+    gapDiv.setAttribute('id', 'gap_' + data[rangeStartIdx].location + '-' + data[rangeEndIdx].location);
+    var gapIcon = document.createElement('span');
+    gapIcon.innerHTML = '&#x1F441';
+    gapDiv.appendChild(gapIcon);
+    // console.log(gapDiv);
+    // console.log(gapDiv.parentNode);
+
+    var gapButton1 = document.createElement('button');
+    gapButton1.innerHTML = '1';
+    gapButton1.setAttribute('onclick', 
+          'javascript:getLogRange("'+
+                //gapDiv.parentNode.id
+                document.getElementById('block_body_'+data[rangeStartIdx].location).parentNode.id+
+                +'", "'+gapDiv.id+'", 1, "'+
+                data[rangeStartIdx].location+'", "'+data[rangeEndIdx].location+'", "'+
+                logId+'", "'+logOwner+'", "")');
+    gapDiv.appendChild(gapButton1);
+
+    var gapButton2 = document.createElement('button');
+    gapButton2.innerHTML = '2';
+    gapButton2.setAttribute('onclick', 
+          'javascript:getLogRange("'+
+                document.getElementById('block_body_'+data[rangeStartIdx].location).parentNode.id+
+                //gapDiv.parentNode.id+
+                '", "'+gapDiv.id+'", 2, "'+
+                data[rangeStartIdx].location+'", "'+data[rangeEndIdx].location+'", "'+
+                logId+'", "'+logOwner+'", "")');
+    gapDiv.appendChild(gapButton2);
+
+    var gapButtonFill = document.createElement("button");
+    gapButtonFill.innerHTML = '&map;';
+    var gapButtonText = document.createElement("input");
+    gapButtonText.setAttribute('type', 'text');
+    gapButtonText.setAttribute('size', '1');
+    gapButtonText.setAttribute('id', 'gap_button_'+data[rangeEndIdx].location);
+    gapButtonFill.setAttribute('onclick', 
+    // 'javascript:console.log(document.getElementById("gap_button_'+data[rangeEndIdx].location+'").value)');
+          'javascript:getLogRange("'+
+                document.getElementById('block_body_'+data[rangeStartIdx].location).parentNode.id+
+                //gapDiv.parentNode.id+
+                '", "'+gapDiv.id+'", '+
+                'parseInt(document.getElementById("gap_button_'+data[rangeEndIdx].location+'").value), '+
+                '"'+data[rangeStartIdx].location+'", "'+data[rangeEndIdx].location+'", '+
+                '"'+logId+'", "'+logOwner+'", "")');
+    gapDiv.appendChild(gapButtonText);
+    gapDiv.appendChild(gapButtonFill);
+
+    var gapButtonInf = document.createElement("button");
+    gapButtonInf.innerHTML = '&infin;';
+    gapButtonInf.setAttribute('onclick', 
+          'javascript:getLogRange("'+
+                document.getElementById('block_body_'+data[rangeStartIdx].location).parentNode.id+
+                //gapDiv.parentNode.id+
+                '", "'+gapDiv.id+'", -1, "'+
+                data[rangeStartIdx].location+'", "'+data[rangeEndIdx].location+'", "'+
+                logId+'", "'+logOwner+'", "")');
+    gapDiv.appendChild(gapButtonInf);
+
+    container.appendChild(gapDiv);
+  }
+
+  GetShower(uniqueId) {
+    return this.tensorShape[uniqueId];
+  }
+}
+
+function onGetLogRangeSuccess(data) {
+  console.log(data);
+  if (!data.success) {
+    var errMessage = data.err_message.details.code;
+    for (var error of data.err_message.details.errors) {
+      errMessage += '\n' + error.message;
+    }
+    alert(errMessage);
+    return;
+  }
+
+  document.body.style.cursor = "default";
+  console.log('onGetLogRangeSuccess');
+  console.log(data);
+  var gapDiv =  document.getElementById(data['placeholderDomEltId']);
+  // console.log(gapDiv);
+  var containerDiv =  document.getElementById(data['containerDomEltId']);
+  // console.log(containerDiv);
+  // containerDiv.removeChild(gapDiv);
+
+  update(data['logData'], 0, data['logData'].length-1);
+
+  if (data['logData'].length == 0) {
+    return;
+  }
+
+  for (var i=0; i<data['logData'].length; i++) {
+    location2Data[data['logData'][i]['location']] = data['logData'][i];
+  }
+
+  var firstObj = data['logData'][0];
+  var lastObj = data['logData'][data['logData'].length-1];
+  ShowObject(containerDiv, 
+              /*containerStartLocation=*/ firstObj.location, 
+              /*containerEndLocation=*/ lastObj.location, 
+              /*containerStartGlobalIdx=*/ firstObj.index, 
+              /*containerEndGlobalIdx=*/ lastObj.index,
+              /*num_direct_contents=*/undefined, data['logData'], 0, data['logData'].length-1, '');
+
+  if (data['callback']) {
+    eval(data['callback']);
+  }
+}
+
+function getLogRange(containerId, gapDivId, extraDepth, rangeStartLocation, rangeEndLocation, logId, logOwner, callback) {
+  console.log('getLogRange(containerId='+containerId+', gapDivId='+gapDivId+
+              ', extraDepth='+extraDepth+', range=['+rangeStartLocation+', rangeEndIdx='+rangeEndLocation+'], logId='+logId+', logOwner='+logOwner+')');
+  var maxDepth = 0;
+  if (extraDepth>=0) {
+    maxDepth = rangeStartLocation.split(':').length + extraDepth;
+  }
+  //document.getElementById(gapButtonDivId).style.display = 'none';
+  document.getElementById(gapDivId).innerHTML = '&#x23f3;'
+  document.body.style.cursor = 'wait';
+  var gapDiv = document.getElementById('block_body_'+rangeStartLocation);
+  // console.log('gapDiv.parentNode.id='+gapDiv.parentNode.id);
+  // console.log(gapDiv);
+  // console.log(gapDiv.parentNode);
+  google.script.run.withSuccessHandler(onGetLogRangeSuccess).select(
+    /* selection= */ {}, /* maxDepth= */ maxDepth, 
+    rangeStartLocation, rangeEndLocation, 
+    /* includeHierarchicalContext= */ false, 
+    /* delayedLoading= */ false,
+    logId, logOwner, 
+    /* containerDomEltId= */ containerId,
+    /* placeholderDomEltId= */ gapDiv ==undefined ? gapDivId : gapDiv.id,
+    callback); //gapDivId=);
+}
+
+function AddChild(container, data, startIdx, endIdx, indent) {
+  console.log("In function AddChild")
+  console.log(indent+'<-< AddChild: ['+startIdx+' - '+endIdx+']');
+  console.log(indent+'<-< AddChild: ['+startIdx+' - '+endIdx+'] ['+data[startIdx].location+' - '+data[endIdx].location+']');
+  // console.log(indent+'container.id='+container.id);
+  // console.log(container) ;
+  // console.log(data[startIdx]);
+  console.log("startIdx : "+startIdx+" , endIdx : "+endIdx)
+  
+
+  var location = data[startIdx]['location'];
+  var childDiv = document.getElementById('block_body_'+location);
+  if (childDiv != undefined) {
+    childDiv.innerHTML = '';
+  } else {
+    childDiv = document.createElement("div");
+    childDiv.id = 'block_body_'+location;
+  }
+  // console.log(childDiv);
+
+  var processor;
+  if (!data[startIdx].selected) {
+    processor = gapProcessor;
+  } else {
+    processor = objectHandlers[data[startIdx]["subType"]];
+  }
+  if (processor == undefined) {
+    return startIdx + 1;
+  }
+
+  // Add childDiv to container in location order.
+  var latestLoc = undefined;
+  for (var curChild of container.children) {
+    if (curChild.id > childDiv.id) {
+      container.insertBefore(childDiv, curChild);
+      return processor.Process(childDiv, data, startIdx, endIdx, indent+'##');
+    }
+    if (curChild.id == childDiv.id) {
+      return processor.Process(childDiv, data, startIdx, endIdx, indent+'##');
+    }
+  }
+  container.appendChild(childDiv);
+  var retVal= processor.Process(childDiv, data, startIdx, endIdx, indent+'##');
+
+  console.log("Out of function AddChild")
+  // console.log(indent+'>-> AddChild: ['+startIdx+' - '+endIdx+'] ['+data[startIdx].location+' - '+data[endIdx].location+'] retVal='+retVal);
+  return retVal;
+}
+
+function ShowObject(container, containerStartLocation, containerEndLocation, 
+                    containerStartGlobalIdx, containerEndGlobalIdx,
+                    num_direct_contents, data, startIdx, endIdx, indent) {
+  // console.log(indent+"ShowObject("+startIdx+" - "+endIdx+", containerStartLocation=", containerStartLocation+
+  //                       ", containerEndLocation="+ containerEndLocation+
+  //                       ", containerStartGlobalIdx="+containerStartGlobalIdx+", containerEndGlobalIdx="+containerEndGlobalIdx+
+  //                       ", num_direct_contents="+num_direct_contents+")");
+  console.log("In function ShowObject")
+  console.log("startIdx : "+startIdx+" , endIdx : "+endIdx)
+  // console.log()
+  // console.log( ShowObject.caller)
+  var i=startIdx;
+  while (i<=endIdx) {
+    i = AddChild(container, data, i, endIdx, indent + i + '  ');
+  }
+  console.log("Out of function ShowObject")
+  return i;
+}
+
+function AddAttributesTooltip(container, data, index) {
+  var text = "";
+  //text += 'location: ' + data[index]['location'] + '<br>';
+  if (data[index]['attributes'] != undefined) {
+    var keys = Object.keys(data[index]['attributes']);
+    for (var i=0; i<keys.length; i++) {
+      if (i>0) {
+        text += '<br>';
+      }
+      text += keys[i] + ': ' + data[index]['attributes'][keys[i]];
+    }
+    text += '<br>';
+  }
+  text += data[index]['file']+':'+data[index]['line']+'<br>'+data[index]['func'];    
+  
+  /*var tooltip = document.createElement("div");
+  tooltip.setAttribute("class", "tooltip");
+  var tooltipText = document.createElement("span");
+  tooltipText.setAttribute("class", "tooltiptext");
+  tooltipText.appendChild(document.createTextNode(text));
+  tooltip.appendChild(tooltipText);
+  container.appendChild(tooltip);*/
+  
+  container.setAttribute('class', 'tooltip');
+  var spanTooltip = document.createElement('span');
+  spanTooltip.setAttribute('class', 'tooltiptext');
+  spanTooltip.innerHTML = text;
+  container.appendChild(spanTooltip);
+  
+  /*var tooltip = document.createElement("div");
+  tooltip.setAttribute("class", "mdl-tooltip");
+  tooltip.setAttribute("data-mdl-for", container.id);
+  container.appendChild(tooltip);*/
+}
+
+function AddTitleTooltip(container, title, offColor, onColor) {
+  container.setAttribute('class', 'tooltip');
+  container.style.backgroundColor = offColor;
+  var spanTooltip = document.createElement('span');
+  spanTooltip.setAttribute('class', 'tooltiptext');
+  spanTooltip.innerHTML = title;
+  container.onmouseout = function(e) { 
+    container.style.backgroundColor = offColor;
+  };
+  container.onmouseover = function(e) { 
+    container.style.backgroundColor = onColor;
+    spanTooltip.style.top = e.pageY+'px';
+  };
+  container.appendChild(spanTooltip);
+}
+ 
+</script>
+
+

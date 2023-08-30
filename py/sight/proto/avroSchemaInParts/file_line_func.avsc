@@ -1,0 +1,17 @@
+[
+    {
+        "name": "file",
+        "type": "string",
+        "doc": "File name"
+      },
+      {
+        "name": "line",
+        "type": "int",
+        "doc": "Line name"
+      },
+      {
+        "name": "func",
+        "type": "string",
+        "doc": "Function name"
+      }
+]

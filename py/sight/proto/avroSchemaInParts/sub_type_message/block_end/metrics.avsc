@@ -1,0 +1,15 @@
+{
+    "name": "metrics",
+    "type": [ "null", {
+        "type": "record",
+        "name": "type_metrics",
+        "fields": [
+            {
+                "name": "elapsed_time_ns",
+                "type": "long",
+                "doc": ""
+            }
+      ]
+    }],
+    "doc": "Encapsulates meta-data that tracks the dynamic behavior of the system"
+}

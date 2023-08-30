@@ -1,0 +1,94 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<style>
+    .tooltip .tooltiptext {
+        visibility: hidden;
+        background-color: white;
+        border-color: black;
+        color: #333;
+        text-align: center;
+        border-radius: 4px;
+        padding: 4px 0;
+        opacity: 0.7;
+    
+        /* Position the tooltip */
+        position: absolute;
+        z-index: 1;
+    }
+    
+    .tooltip:hover .tooltiptext {
+        visibility: visible;
+    }
+    
+    .tooltip2 .tooltiptext {
+        visibility: hidden;
+        background-color: white;
+        border-color: black;
+        color: #333;
+        text-align: center;
+        border-radius: 4px;
+        padding: 4px 0;
+        opacity: 0.7;
+    
+        /* Position the tooltip */
+        position: absolute;
+        z-index: 1;
+    }
+    
+    .tooltip2:hover .tooltiptext {
+        visibility: visible;
+    }
+    
+    .named_value_tooltip .named_value_tooltiptext {
+        visibility: hidden;
+        background-color: #fff0f5;
+        border-color: black;
+        color: #000000;
+        text-align: center;
+        border-radius: 4px;
+        padding: 4px 0;
+        opacity: 0.9;
+    
+        /* Position the tooltip */
+        position: absolute;
+        z-index: 1;
+    }
+    
+    .named_value_tooltip:hover .named_value_tooltiptext {
+        visibility: visible;
+    }
+    
+    .active {
+      border-color: #FF7878;
+      border-style: solid;
+      border-width: 3px;
+    }
+    
+    .onClickLink {
+      /* border: none; */
+      border-color: inherited;
+      background-color: '#EDEDED';
+      padding: 7px 14px;
+      font-size: 16px;
+      text-align: center;
+      cursor: pointer;
+      color: dodgerblue;
+      display: inline-block;
+    }
+    
+    .onClickLink:hover {background: #eee;}
+    </style>

@@ -1,0 +1,102 @@
+[
+{
+    "name": "string_values",
+    "type": [ "null", {
+        "namespace": "value_type",
+        "type": "record",
+        "name": "type_string_values",
+        "fields": [
+            {
+                "name": "value",
+                "type": {
+                    "type": "array",
+                    "name": "type_value",
+                    "items": "string"
+                },
+                "doc": ""
+            }
+      ]
+    }],
+    "doc": "The attributes that are in-force at the time this object was logged"
+},
+{
+    "name": "bytes_values",
+    "type": [ "null", {
+        "namespace": "value_type",
+        "type": "record",
+        "name": "type_bytes_values",
+        "fields": [
+            {
+                "name": "value",
+                "type": {
+                    "type": "array",
+                    "name": "type_value",
+                    "items": "bytes"
+                },
+                "doc": ""
+            }
+      ]
+    }],
+    "doc": "The attributes that are in-force at the time this object was logged"
+},
+{
+    "name": "int64_values",
+    "type": [ "null", {
+        "namespace": "value_type",
+        "type": "record",
+        "name": "type_int64_values",
+        "fields": [
+            {
+                "name": "value",
+                "type": {
+                    "type": "array",
+                    "name": "type_value",
+                    "items": "long"
+                },
+                "doc": ""
+            }
+      ]
+    }],
+    "doc": "The attributes that are in-force at the time this object was logged"
+},
+{
+    "name": "double_values",
+    "type": [ "null", {
+        "namespace": "value_type",
+        "type": "record",
+        "name": "type_double_values",
+        "fields": [
+            {
+                "name": "value",
+                "type": {
+                    "type": "array",
+                    "name": "type_value",
+                    "items": "double"
+                },
+                "doc": ""
+            }
+      ]
+    }],
+    "doc": "The attributes that are in-force at the time this object was logged"
+},
+{
+    "name": "bool_values",
+    "type": [ "null", {
+        "namespace": "value_type",
+        "type": "record",
+        "name": "type_bool_values",
+        "fields": [
+            {
+                "name": "value",
+                "type": {
+                    "type": "array",
+                    "name": "type_value",
+                    "items": "boolean"
+                },
+                "doc": ""
+            }
+      ]
+    }],
+    "doc": "The attributes that are in-force at the time this object was logged"
+}
+]

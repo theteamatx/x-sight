@@ -1,0 +1,40 @@
+<!--
+ Copyright 2023 Google LLC
+
+ Licensed under the Apache License, Version 2.0 (the "License");
+ you may not use this file except in compliance with the License.
+ You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing, software
+ distributed under the License is distributed on an "AS IS" BASIS,
+ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ See the License for the specific language governing permissions and
+ limitations under the License.
+-->
+
+<script>
+    function showUserAccess() {
+      document.getElementById('access_ctrl').showModal();
+    }
+   
+    function onSuccessaddUserAccess(data){
+      console.log("onSuccessaddUserAccess")
+      console.log(data);
+      var accessResponseDialog = document.getElementById('access_response');
+      var accessResponseMessage = document.getElementById('access_response_message');
+      if (data.statusCode == undefined) {
+        accessResponseMessage.innerHTML = 'Access updated';
+      } else {
+        accessResponseMessage.innerHTML = data.statusMesg;
+      }
+      accessResponseDialog.showModal();
+    }
+   
+    function addUserAccess(logId, logOwner, userName) {
+      document.body.style.cursor = 'wait';
+      console.log("calling addUserAccess: "+logId+", "+ userName);
+      google.script.run.withSuccessHandler(onSuccessaddUserAccess).addUserAccess(logId, logOwner, userName);
+    }
+</script>

@@ -1,0 +1,29 @@
+{
+    "name": "list",
+    "type": ["null", {
+        "namespace": "list",
+        "name": "list",
+        "type": "record",
+        "fields": [
+            {
+                "name": "sub_type",
+                "type": [ "null",{
+                    "type": "enum",
+                    "name": "sub_type",
+                    "symbols":
+                    [
+                        "ST_UNKNOWN",
+                        "ST_HOMOGENEOUS",
+                        "ST_HETEROGENEOUS",
+                        "ST_MAP",
+                        "ST_MAP_ENTRY",
+                        "ST_DICT"
+                    ],
+                    "doc": "sub-type"
+                }],
+                "doc": ""
+            }
+        ]
+    }],
+    "doc": "Sub-type of the message"
+}

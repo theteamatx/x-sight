@@ -1,0 +1,25 @@
+{
+    "name": "exception",
+    "type": ["null", {
+        "name": "type_exception",
+        "type": "record",
+        "fields": [
+            {
+                "name": "type",
+                "type": "string",
+                "doc": ""
+            },
+            {
+                "name": "value",
+                "type": "string",
+                "doc": ""
+            },
+            {
+                "name": "traceback",
+                "type": "string",
+                "doc": ""
+            }
+        ]
+    }],
+    "doc": "The ending point of a region where a given key has a given value"
+}
