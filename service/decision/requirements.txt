@@ -9,7 +9,7 @@ dm-reverb==0.7.0
 dm-sonnet==2.0.1
 jax==0.4.1
 jaxlib==0.4.1
-tensorflow==2.8.0
+tensorflow==2.11.1
 tensorflow-probability==0.15.0
 trfl==1.2.0
 gym==0.26.2
