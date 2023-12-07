@@ -1,9 +1,0 @@
-{
-    "name": "ancestor_start_location",
-    "type": {
-        "type": "array",
-        "name": "type_ancestor_start_location",
-        "items": "string"
-    },
-    "doc": "The locations of the starting points of all the blocks that contain this object"
-}
