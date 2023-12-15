@@ -14,7 +14,7 @@ chex==0.1.82
 click==8.1.3
 cloudpickle==2.2.0
 contourpy==1.0.7
-cryptography==38.0.4
+cryptography==41.0.6
 cycler==0.11.0
 decorator==5.1.1
 Deprecated==1.2.13
