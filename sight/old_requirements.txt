@@ -4,7 +4,7 @@ asttokens==2.2.1
 astunparse==1.6.3
 atari-py==0.2.9
 attrs==22.1.0
-avro==1.11.1
+avro==1.11.3
 backcall==0.2.0
 cachetools==4.2.4
 certifi==2022.9.24
