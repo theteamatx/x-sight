@@ -42,7 +42,7 @@ _EXPERIMENT_NAME = flags.DEFINE_string(
 #     'project_id', None, 'Id of cloud project'
 # )
 _PROJECT_ID = flags.DEFINE_string(
-    'project_id', os.environ['PROJECT_ID'], 'Id of cloud project'
+    'project_id', os.environ["PROJECT_ID"], 'Id of cloud project'
 )
 _PROJECT_REGION = flags.DEFINE_string(
     'project_region', 'us-central1', 'location to store project-data'
@@ -53,7 +53,7 @@ _DSUB_MACHINE_TYPE = flags.DEFINE_string(
 # _DSUB_LOGGING = flags.DEFINE_string(
 #     'log_path',
 #     # 'tmp/logs',
-#     f'gs://{FLAGS.project_id}/d-sub/logs/default',
+#     f'gs://{os.environ["PROJECT_ID"]}/d-sub/logs/default',
 #     'storage URI to store d-sub logs',
 # )
 
@@ -196,7 +196,6 @@ def start_job_in_docker(
     )
     if FLAGS.service_account:
       f.write(f' --service_account={FLAGS.service_account}')
-      # {FLAGS.project_id}.iam.gserviceaccount.com
     f.write(f' {decision_params_arg}\n ')
   os.chmod('/tmp/sight_script/sight_decision_command.sh', 0o755)
   subprocess.run(['cp', binary_path, '/tmp'], check=True)
@@ -285,7 +284,7 @@ def start_jobs(
 
   remote_script = (
       # 'gs://dsub_cameltrain/cameltrain/' + binary_path.split('/')[-1]
-      f'gs://{FLAGS.project_id}-sight/d-sub/binary/' + binary_path.split('/')[-1]
+      f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/' + binary_path.split('/')[-1]
   )
   print(f'Uploading {binary_path}...')
   subprocess.run(['gsutil', 'cp', '-c', binary_path, remote_script], check=True)
@@ -303,7 +302,7 @@ def start_jobs(
       + f' --deployment_mode={deployment_mode}'
       + f' --worker_mode={worker_mode}'
       + f' --optimizer_type={optimizer_type}'
-      + f' --project_id={FLAGS.project_id}'
+      + f' --project_id={os.environ["PROJECT_ID"]}'
   )
   if FLAGS.env_name:
     command += f' --env_name={FLAGS.env_name}'
@@ -316,7 +315,7 @@ def start_jobs(
       f'--image={docker_image}',
       f'--machine-type={_DSUB_MACHINE_TYPE.value}',
       f'--project={_PROJECT_ID.value}',
-      f'--logging=gs://{FLAGS.project_id}-sight/d-sub/logs/{service._SERVICE_ID}',
+      f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service._SERVICE_ID}/{sight.id}',
       '--env',
       f'PARENT_LOG_ID={sight.id}',
       '--env',
@@ -326,7 +325,7 @@ def start_jobs(
       '--input',
       f'SCRIPT={remote_script}',
       f'--command={command}',
-      f'--service-account={FLAGS.service_account}@{FLAGS.project_id}.iam.gserviceaccount.com',
+      f'--service-account={FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com',
       f'--boot-disk-size={_DSUB_BOOT_DISK_SIZE.value}',
       '--tasks',
       '/tmp/optimization_tasks.tsv',
@@ -338,7 +337,7 @@ def start_jobs(
   subprocess.run(args, check=True)
 
   sight.exit_block('Worker Spawning', sight_pb2.Object())
-  logging.info('worker logs available at : %s', f'gs://{FLAGS.project_id}/d-sub/logs/default')
+  logging.info('worker logs available at : %s', f'gs://{os.environ["PROJECT_ID"]}/d-sub/logs/default')
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
 
 
@@ -383,7 +382,7 @@ def start_job_in_dsub_local(
       sight.location.next()
 
   remote_script = (
-      f'gs://{FLAGS.project_id}/sight/d-sub/binary/' + binary_path.split('/')[-1]
+      f'gs://{os.environ["PROJECT_ID"]}/sight/d-sub/binary/' + binary_path.split('/')[-1]
   )
   print(f'Uploading {binary_path}...')
   subprocess.run(['gsutil', 'cp', '-c', binary_path, remote_script], check=True)
@@ -396,7 +395,7 @@ def start_job_in_dsub_local(
   if FLAGS.service_account:
     script_args = (
         script_args + f'--service_account={FLAGS.service_account}'
-    )  # {FLAGS.project_id}.iam.gserviceaccount.com
+    )
 
   print('sight.id=%s' % sight.id)
   args = [
@@ -404,9 +403,9 @@ def start_job_in_dsub_local(
       '--provider=local',
       f'--image={docker_image}',
       f'--project={_PROJECT_ID.value}',
-      f'--logging=gs://{FLAGS.project_id}/d-sub/logs/default',
+      f'--logging=gs://{os.environ["PROJECT_ID"]}/d-sub/logs/local/{sight.id}',
       '--env',
-      f'GOOGLE_CLOUD_PROJECT={FLAGS.project_id}',
+      f'GOOGLE_CLOUD_PROJECT={os.environ["PROJECT_ID"]}',
       '--env',
       'GOOGLE_APPLICATION_CREDENTIALS=/mnt/data/mount/file'
       + f'{FLAGS.gcloud_dir_path}/application_default_credentials.json',

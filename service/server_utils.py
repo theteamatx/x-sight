@@ -14,6 +14,7 @@
 
 """Common resources used in the gRPC sight_service example."""
 
+import os
 import json
 import time
 import logging
@@ -48,7 +49,7 @@ def create_database(instance_id, database_id, log_table_id, study_table_id):
 
   method_name = "create_database"
   logging.debug(">>>>  In %s of %s", method_name, _file_name)
-  spanner_client = spanner.Client(project=FLAGS.project_id)
+  spanner_client = spanner.Client(project=os.environ['PROJECT_ID'])
 
   instance = spanner_client.instance(instance_id)
   if instance.exists():

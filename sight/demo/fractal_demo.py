@@ -14,6 +14,7 @@
 
 """Demo of using the fractal environment."""
 
+import os
 from typing import Sequence
 from absl import app
 from absl import flags
@@ -49,9 +50,8 @@ def driver_fn(sim_env, sight: Sight) -> None:
 
 def get_sight_instance():
   params = sight_pb2.Params(
-      label="fractal_demo",
-      project_id=FLAGS.project_id,
-      bucket_name=f"{FLAGS.project_id}-sight",
+      label='fractal_demo',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
   )
   sight_obj = Sight(params)
   return sight_obj

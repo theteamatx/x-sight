@@ -82,6 +82,7 @@ class Vizier(OptimizerInstance):
     super().__init__()
     self.vizier_study = ''
     self.current_trial: Dict[str, str] = {}
+    self.vizier_url = ''
 
   @overrides
   def launch(
@@ -106,6 +107,7 @@ class Vizier(OptimizerInstance):
         + '?project='
         + PROJECT_ID
     )
+    self.vizier_url = vizier_url
 
     self.vizier_study = vizier_response.name
     logging.info('updated self : %s', str(self.__dict__))
@@ -177,6 +179,19 @@ class Vizier(OptimizerInstance):
       self, request: service_pb2.CurrentStatusRequest
   ) -> service_pb2.CurrentStatusResponse:
     method_name = "current_status"
+    logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    # optimal = _vizier_client.list_optimal_trials({
+    #     'parent': self.vizier_study,
+    # })
+    print('user can check status of vizier study here : ', self.vizier_url)
+    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+    return service_pb2.CurrentStatusResponse(response_str=str(self.vizier_url))
+
+  @overrides
+  def fetch_optimal_action(
+    self, request: service_pb2.FetchOptimalActionRequest
+  ) -> service_pb2.FetchOptimalActionResponse:
+    method_name = "fetch_optimal_action"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     optimal = _vizier_client.list_optimal_trials({
         'parent': self.vizier_study,

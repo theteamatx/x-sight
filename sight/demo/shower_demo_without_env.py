@@ -14,6 +14,7 @@
 
 """Demo of using the Sight Decision API to train custom shower env."""
 
+import os
 from typing import Sequence
 from absl import app
 from absl import flags
@@ -26,9 +27,8 @@ FLAGS = flags.FLAGS
 
 def get_sight_instance():
   params = sight_pb2.Params(
-      label="shower_experiment",
-      project_id=FLAGS.project_id,
-      bucket_name=f"{FLAGS.project_id}-sight",
+      label='shower_experiment',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
   )
   sight_obj = Sight(params)
   return sight_obj

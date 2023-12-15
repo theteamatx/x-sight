@@ -14,6 +14,7 @@
 
 """Demo for the python bindings to the Sight logging library."""
 
+import os
 from absl import app
 from absl import flags
 import numpy as np
@@ -28,9 +29,8 @@ FLAGS = flags.FLAGS
 
 def get_sight_instance():
   params = sight_pb2.Params(
-      label="demo file",
-      project_id=FLAGS.project_id,
-      bucket_name=f"{FLAGS.project_id}-sight",
+      label='demo file',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
   )
   sight_obj = Sight(params)
   return sight_obj

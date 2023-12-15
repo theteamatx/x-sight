@@ -23,7 +23,7 @@ def warn(*args, **kwargs):
 
 warnings.warn = warn
 
-import sys
+import os
 import gym
 from typing import Sequence
 from absl import app
@@ -38,9 +38,8 @@ FLAGS = flags.FLAGS
 
 def get_sight_instance():
   params = sight_pb2.Params(
-      label="gym_experiment",
-      project_id=FLAGS.project_id,
-      bucket_name=f"{FLAGS.project_id}-sight",
+      label='gym_experiment',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
   )
   sight_obj = Sight(params)
   return sight_obj

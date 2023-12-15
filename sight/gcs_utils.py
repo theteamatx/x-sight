@@ -128,7 +128,7 @@ def create_external_bq_table(
   )
   if 'PARENT_LOG_ID' not in os.environ:
     create_table(
-        params.project_id,
+        os.environ["PROJECT_ID"],
         params.dataset_name,
         file_name,
         params.external_file_format,

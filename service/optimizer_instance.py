@@ -111,3 +111,8 @@ class OptimizerInstance:
       self, request: service_pb2.ProposeActionRequest
   ) -> service_pb2.ProposeActionResponse:
     return service_pb2.ProposeActionResponse()
+
+  def fetch_optimal_action(
+      self, request: service_pb2.FetchOptimalActionRequest
+  ) -> service_pb2.FetchOptimalActionResponse:
+    return service_pb2.FetchOptimalActionResponse()

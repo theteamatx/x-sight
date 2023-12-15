@@ -163,6 +163,16 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     )
     logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
+  def FetchOptimalAction(self, request, context):
+    method_name = "FetchOptimalAction"
+    logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+
+    obj = self.optimizers.get_instance(request.client_id).fetch_optimal_action(
+        request
+    )
+    logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
+
   def ProposeAction(self, request, context):
     method_name = "ProposeAction"
     logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)

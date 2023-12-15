@@ -1,4 +1,4 @@
-title: Sight Manager
+title: Test Manager
 description: Custom role with permissions to setup sight flow.
 stage: ALPHA
 includedPermissions:

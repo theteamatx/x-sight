@@ -26,6 +26,7 @@ from absl import logging
 import grpc
 from service import service_pb2
 from service import service_pb2_grpc
+from sight import service
 from sight.proto import sight_pb2
 from sight.service import generate_metadata
 
@@ -38,10 +39,13 @@ def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  sight_service, metadata = generate_metadata()
   req = service_pb2.CurrentStatusRequest()
   req.client_id = _LOG_ID.value
-  response = sight_service.CurrentStatus(req, 300, metadata=metadata)
+  response = service.call(
+      lambda s, meta: s.CurrentStatus(req, 300, metadata=meta)
+  )
+  # sight_service, metadata = generate_metadata()
+  # response = sight_service.CurrentStatus(req, 300, metadata=metadata)
   print(response.response_str)
 
 

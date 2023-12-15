@@ -96,7 +96,6 @@ _SERVICE_ACCOUNT = flags.DEFINE_string(
     'service_account',
     # None,
     'sight-service-account',
-    # {flags.FLAGS.project_id}.iam.gserviceaccount.com
     'service account to call sight-service',
 )
 _GCLOUD_DIR_PATH = flags.DEFINE_string(
@@ -139,6 +138,7 @@ _TRAINED_MODEL_LOG_ID = flags.DEFINE_string(
 _file_name = 'decision_actor.py'
 _sight_id = None
 _rewards = []
+FLAGS = flags.FLAGS
 
 
 def configure(
@@ -289,10 +289,12 @@ def run(
     state_attrs = state_to_dict(env.observation_spec(), 'state')
   if action_attrs == {}:
     action_attrs = state_to_dict(env.action_spec(), 'action')
+  # print('action_attrs : ', action_attrs)
 
   decision_configuration = sight_pb2.DecisionConfigurationStart()
   _attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
   _attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
+  # print('action_attrs : ', decision_configuration)
 
   sight.enter_block(
       'Decision Configuration',
@@ -314,6 +316,7 @@ def run(
           driver_fn, state_attrs, action_attrs
       )
   )
+
   sight.widget_decision_state['proposed_actions'] = []
 
   if _OPTIMIZER_TYPE.value == 'dm_acme':
@@ -325,13 +328,26 @@ def run(
 
   if _DECISON_MODE.value == 'run':
     logging.info('_DECISON_MODE.value == run')
-    sight.widget_decision_state['sum_outcome'] = 0
-    sight.widget_decision_state['last_reward'] = None
-    if env:
-      driver_fn(env, sight)
-    else:
-      driver_fn(sight)
-    finalize_episode(sight)
+    # sight.widget_decision_state['sum_outcome'] = 0
+    # sight.widget_decision_state['last_reward'] = None
+    # if env:
+    #   driver_fn(env, sight)
+    # else:
+    #   driver_fn(sight)
+    # finalize_episode(sight)
+
+    if(not FLAGS.trained_model_log_id):
+      raise ValueError("trained_model_log_id have to be passed from the trained run for decision_mokde = run")
+
+    req = service_pb2.FetchOptimalActionRequest(
+        client_id=FLAGS.trained_model_log_id,
+        # worker_id=f'client_{client_id}_worker_{worker_location}',
+    )
+    response = service.call(
+        lambda s, meta: s.FetchOptimalAction(req, 300, metadata=meta)
+    )
+    print('response : ', response.response_str)
+
 
   elif _DECISON_MODE.value == 'configured_run':
     # ? not proper flow right now
@@ -376,6 +392,14 @@ def run(
       driver_fn(sight)
   elif _DECISON_MODE.value == 'train':
     print('_DECISON_MODE.value : ', _DECISON_MODE.value)
+
+    details = sight.widget_decision_state['decision_episode_fn']
+    # print('details.action_min : ', details.action_min.values(), list(details.action_min.values())[0])
+    possible_actions = list(details.action_max.values())[0] - list(details.action_min.values())[0] + 2
+    print(possible_actions)
+    if(_OPTIMIZER_TYPE.value == 'exhaustive_search' and possible_actions < _NUM_TRIALS.value):
+      raise ValueError(f"max possible value for num_trials is : {possible_actions}")
+
     if _DEPLOYMENT_MODE.value == 'distributed':
       logging.info('_DEPLOYMENT_MODE.value == distributed')
       if(not _DOCKER_IMAGE.value):
@@ -701,6 +725,8 @@ def finalize_episode(sight):  # , optimizer_obj
           outcome_value=sight.widget_decision_state['sum_outcome'],
       )
       req.decision_outcome.CopyFrom(decision_outcome)
+      optimizer_obj = optimizer.get_instance()
+      optimizer_obj.finalize_episode(sight, req)
     elif _OPTIMIZER_TYPE.value == 'dm_acme':
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight)
@@ -735,6 +761,7 @@ def finalize_episode(sight):  # , optimizer_obj
 
 def finalize(sight):
   logging.info(
+      'Get latest status of this training by runnign this script : '
       'python3 sight/widgets/decision/current_status.py'
       ' --log_id=%s --service_name=%s',
       sight.id,

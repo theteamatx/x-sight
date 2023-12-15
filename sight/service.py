@@ -173,7 +173,7 @@ def _find_or_deploy_server() -> str:
           'docker',
           'build',
           '-t',
-          f'gcr.io/{FLAGS.project_id}/sight-service-' + get_service_id(),
+          f'gcr.io/{os.environ["PROJECT_ID"]}/sight-service-' + get_service_id(),
           '-f',
           docker_file_path,
           '.',
@@ -204,7 +204,7 @@ def _find_or_deploy_server() -> str:
 
   # Step 4: push created image to gcr.io
   push_out = subprocess.run(
-      ['docker', 'push', f'gcr.io/{FLAGS.project_id}/sight-service-' + get_service_id()],
+      ['docker', 'push', f'gcr.io/{os.environ["PROJECT_ID"]}/sight-service-' + get_service_id()],
       check=True,
       capture_output=True,
   )
@@ -229,9 +229,9 @@ def _find_or_deploy_server() -> str:
           'run',
           'deploy',
           'sight-service-' + get_service_id(),
-          f'--image=gcr.io/{FLAGS.project_id}/sight-service-{get_service_id()}@sha256:{image_id}',
+          f'--image=gcr.io/{os.environ["PROJECT_ID"]}/sight-service-{get_service_id()}@sha256:{image_id}',
           '--allow-unauthenticated',
-          f'--service-account={flags.FLAGS.service_account}@{flags.FLAGS.project_id}.iam.gserviceaccount.com',
+          f'--service-account={flags.FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com',
           '--concurrency=default',
           '--cpu=2',
           '--memory=8Gi',
@@ -239,7 +239,7 @@ def _find_or_deploy_server() -> str:
           '--max-instances=1',
           '--no-cpu-throttling',
           '--region=us-central1',
-          f'--project={FLAGS.project_id}',
+          f'--project={os.environ["PROJECT_ID"]}',
       ],
       check=True,
       capture_output=True,
@@ -252,7 +252,7 @@ def _find_or_deploy_server() -> str:
           'container',
           'images',
           'delete',
-          f'gcr.io/{FLAGS.project_id}/sight-service-{get_service_id()}@sha256:{image_id}',
+          f'gcr.io/{os.environ["PROJECT_ID"]}/sight-service-{get_service_id()}@sha256:{image_id}',
           '--quiet',
           '--force-delete-tags',
       ],
@@ -271,7 +271,7 @@ def _find_or_deploy_server() -> str:
 
   print(
       'Log:'
-      f' https://pantheon.corp.google.com/run/detail/us-central1/sight-service-{get_service_id()}/logs?project={FLAGS.project_id}'
+      f' https://pantheon.corp.google.com/run/detail/us-central1/sight-service-{get_service_id()}/logs?project={os.environ["PROJECT_ID"]}'
   )
 
   return get_service_id()
@@ -314,6 +314,7 @@ def get_id_token_of_service_account(
         headers=headers,
         data=data,
     )
+    # print('response : ', response.json())
     return response.json()['token']
   except Exception as e:
     logging.info('API CALL ERROR: %s', e)
@@ -345,13 +346,12 @@ def generate_id_token():
     # impersonating service-account if passed in parameter
 
     if flags.FLAGS.service_account != None:
-      # print(
-      #     'using credentials of service account'
-      #     f' {flags.FLAGS.service_account}@{flags.FLAGS.project_id}.iam.gserviceaccount.com.....'
-      # )
+      print("using service account's credentils..... :")
+      # print(f'{flags.FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com')
       user_access_token = creds.token
-      service_account = f'{flags.FLAGS.service_account}@{flags.FLAGS.project_id}.iam.gserviceaccount.com'
-
+      service_account = f'{flags.FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com'
+      # print('user_access_token : ', user_access_token)
+      # print('service_account : ',service_account)
       url = f'https://{_service_addr()}'
       service_account_id_token = get_id_token_of_service_account(
           user_access_token, service_account, url
@@ -363,6 +363,7 @@ def generate_id_token():
       user_id_token = creds.id_token
       id_token = user_id_token
 
+  # print('id_token : ', id_token)
   return id_token
 
 

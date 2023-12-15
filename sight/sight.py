@@ -135,7 +135,8 @@ class Sight(object):
 
   # The API Key for the BQ Sight service
   # SIGHT_API_KEY = 'AKfycbz35qrsrKUmm2FITMsLW9vSbKoBxEYv4EggM_m1Q2H3' #cameltrain
-  SIGHT_API_KEY = 'AKfycbw9eY9dk-JstxeAizfMfJZ8qwHm6BVmOZEgBUey-HPL' #catan-(now generalized)
+  # SIGHT_API_KEY = 'AKfycbw9eY9dk-JstxeAizfMfJZ8qwHm6BVmOZEgBUey-HPL' #catan-(now generalized)
+  SIGHT_API_KEY = 'AKfycbxHmmutVP-o1rsv3bLEUWQhbTG4uzTN_7VwR6sGUpOdvhrVQbtoOFcQtHbBeO0un3BfiQ'
 
   def __init__(
       self,
@@ -353,30 +354,33 @@ class Sight(object):
         if self.avro_file_counter == 1:
           create_external_bq_table(self.params, self.file_name, self.id)
           logging.info(
-              'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
+              'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
               self.SIGHT_API_KEY,
               self.params.dataset_name,
               self.file_name,
               self.params.log_owner,
-              FLAGS.project_id
+              os.environ['PROJECT_ID']
           )
       self.avro_log.close()
       logging.info('stream successfully completed')
 
     if not self.params.local and not self.params.in_memory:
-      time.sleep(1)
+      # time.sleep(1)
       logging.info(
           (
-              'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
-              'log_id=%s&log_owner=%s&project_id=%s',
+              'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
+              'log_id=%s.%s&log_owner=%s&project_id=%s',
           ),
           self.SIGHT_API_KEY,
-          self.id,
+          self.params.dataset_name,
+          self.file_name,
           self.params.log_owner,
-          FLAGS.project_id
+          os.environ['PROJECT_ID']
       )
-    decision.finalize(self)
+
+    if(FLAGS.decision_mode == 'train'):
+      decision.finalize(self)
     finalize_server()
     self.open = False
 
@@ -729,15 +733,15 @@ class Sight(object):
           )
           if self.avro_file_counter == 1:
             create_external_bq_table(self.params, self.file_name, self.id)
-            logging.info(
-                'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
-                'log_id=%s.%s&log_owner=%s&project_id=%s',
-                self.SIGHT_API_KEY,
-                self.params.dataset_name,
-                self.file_name,
-                self.params.log_owner,
-                FLAGS.project_id
-            )
+            # logging.info(
+            #     'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
+            #     'log_id=%s.%s&log_owner=%s&project_id=%s',
+            #     self.SIGHT_API_KEY,
+            #     self.params.dataset_name,
+            #     self.file_name,
+            #     self.params.log_owner,
+            #     os.environ['PROJECT_ID'],
+            # )
             # print("now sleeping for 5 minutes...")
             # time.sleep(300)
           self.avro_log.close()

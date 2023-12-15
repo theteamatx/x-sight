@@ -14,6 +14,7 @@
 
 """Demo of using the Sight Decision API to train sweetness controller."""
 
+import os
 import random
 from typing import Sequence
 
@@ -38,7 +39,7 @@ def driver(sight: Sight) -> None:
   print("current value of sweet_tooth : ", sweet_tooth)
   data_structures.log_var("sweet_tooth", sweet_tooth, sight)
 
-  for _ in range(3):
+  for _ in range(1):
     choice = decision.decision_point("candy", sight)
     sight.text(
         "sweet_tooth=%s, choice=%s, joy=%s"
@@ -56,9 +57,8 @@ def driver(sight: Sight) -> None:
 
 def get_sight_instance():
   params = sight_pb2.Params(
-      label="sweetness_experiment",
-      project_id=FLAGS.project_id,
-      bucket_name=f"{FLAGS.project_id}-sight",
+      label='sweetness_experiment',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
   )
   sight_obj = Sight(params)
   return sight_obj

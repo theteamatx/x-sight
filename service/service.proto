@@ -31,6 +31,8 @@ service SightService {
 
   rpc CurrentStatus(CurrentStatusRequest) returns (CurrentStatusResponse) {}
 
+  rpc FetchOptimalAction(FetchOptimalActionRequest) returns (FetchOptimalActionResponse) {}
+
   rpc ProposeAction(ProposeActionRequest) returns (ProposeActionResponse) {}
 
   rpc FinalizeEpisode(FinalizeEpisodeRequest)
@@ -189,6 +191,15 @@ message DecisionPointResponse {
 // message DecisionOutcomeResponse {
 //   string response_str = 1;
 // }
+
+message FetchOptimalActionRequest {
+  string client_id = 1;
+  string worker_id = 2;
+}
+
+message FetchOptimalActionResponse {
+  string response_str = 1;
+}
 
 message CurrentStatusRequest {
   string client_id = 1;

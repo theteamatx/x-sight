@@ -31,9 +31,12 @@ class ExhaustiveSearch:
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
     )
+    print("response **************: ",response)
+
     return response.action[0].value.double_value
 
   def finalize_episode(self, sight, request):
+    print('##############################################################')
     response = service.call(
         lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)
     )

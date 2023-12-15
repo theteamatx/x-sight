@@ -14,6 +14,7 @@
 
 """Demo of using the Sight Decision API to optimize an application."""
 
+import os
 import random
 from typing import Sequence
 
@@ -49,9 +50,8 @@ def driver(sight: Sight) -> None:
 
 def get_sight_instance():
   params = sight_pb2.Params(
-      label="secret_find_experiment",
-      project_id=FLAGS.project_id,
-      bucket_name=f"{FLAGS.project_id}-sight",
+      label='secret_find_experiment',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
   )
   sight_obj = Sight(params)
   return sight_obj

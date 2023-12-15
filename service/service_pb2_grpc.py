@@ -55,6 +55,11 @@ class SightServiceStub(object):
                 request_serializer=service_dot_service__pb2.CurrentStatusRequest.SerializeToString,
                 response_deserializer=service_dot_service__pb2.CurrentStatusResponse.FromString,
                 )
+        self.FetchOptimalAction = channel.unary_unary(
+                '/sight.x.service.SightService/FetchOptimalAction',
+                request_serializer=service_dot_service__pb2.FetchOptimalActionRequest.SerializeToString,
+                response_deserializer=service_dot_service__pb2.FetchOptimalActionResponse.FromString,
+                )
         self.ProposeAction = channel.unary_unary(
                 '/sight.x.service.SightService/ProposeAction',
                 request_serializer=service_dot_service__pb2.ProposeActionRequest.SerializeToString,
@@ -124,6 +129,12 @@ class SightServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def FetchOptimalAction(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def ProposeAction(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -178,6 +189,11 @@ def add_SightServiceServicer_to_server(servicer, server):
                     servicer.CurrentStatus,
                     request_deserializer=service_dot_service__pb2.CurrentStatusRequest.FromString,
                     response_serializer=service_dot_service__pb2.CurrentStatusResponse.SerializeToString,
+            ),
+            'FetchOptimalAction': grpc.unary_unary_rpc_method_handler(
+                    servicer.FetchOptimalAction,
+                    request_deserializer=service_dot_service__pb2.FetchOptimalActionRequest.FromString,
+                    response_serializer=service_dot_service__pb2.FetchOptimalActionResponse.SerializeToString,
             ),
             'ProposeAction': grpc.unary_unary_rpc_method_handler(
                     servicer.ProposeAction,
@@ -333,6 +349,23 @@ class SightService(object):
         return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/CurrentStatus',
             service_dot_service__pb2.CurrentStatusRequest.SerializeToString,
             service_dot_service__pb2.CurrentStatusResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def FetchOptimalAction(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/FetchOptimalAction',
+            service_dot_service__pb2.FetchOptimalActionRequest.SerializeToString,
+            service_dot_service__pb2.FetchOptimalActionResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
