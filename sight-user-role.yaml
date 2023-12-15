@@ -1,0 +1,21 @@
+title: Sight User
+description: Custom role with User permissions to work with sight.
+stage: ALPHA
+includedPermissions:
+- bigquery.datasets.create
+- bigquery.datasets.get
+- bigquery.tables.create
+- iam.serviceAccounts.actAs
+- iam.serviceAccounts.getOpenIdToken
+- lifesciences.operations.cancel
+- lifesciences.operations.get
+- lifesciences.operations.list
+- lifesciences.workflows.run
+- run.routes.invoke
+- run.services.get
+- storage.buckets.create
+- storage.buckets.get
+- storage.objects.create
+- storage.objects.delete
+- storage.objects.get
+- storage.objects.list
