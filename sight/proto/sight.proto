@@ -1,0 +1,630 @@
+// Copyright 2023 Google LLC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
+syntax = "proto3";
+
+package sight.x.proto;
+
+import "sight/proto/example.proto";
+import "sight/proto/widgets/pipeline/flume/flume.proto";
+
+// A mapping from some key to a value.
+// Next Tag: 3
+message Attribute {
+  string key = 1;
+  string value = 2;
+}
+
+// Base object from which all other logging objects are derived.
+// Next Tag: 25
+message Object {
+  // The current location in the nesting hierarchy of the log.
+  // (documenting this is optional since it can be inferred from the surrounding
+  // log context).
+  string location = 1;
+
+  // Index of this object in the log, which provides a total order on log
+  // entries but is not semantically meaningful.
+  int64 index = 2;
+
+  // The unique ID of the log. location and index fields must be unique for
+  // a specific value of log_uid but can be same for different logs.
+  string log_uid = 24;
+
+  // The attributes that are in-force at the time this object was logged.
+  // (documenting this is optional since it can be inferred from the surrounding
+  // log context).
+  repeated Attribute attribute = 3;
+
+  // Next Tag: 16
+  enum SubType {
+    ST_UNKNOWN = 0;
+    ST_TEXT = 1;
+    ST_BLOCK_START = 2;
+    ST_BLOCK_END = 3;
+    ST_ATTRIBUTE_START = 4;
+    ST_ATTRIBUTE_END = 5;
+    ST_FLUME_DO_FN_EMIT = 6;
+    ST_FLUME_DEPEND = 7;
+    ST_VALUE = 8;
+    ST_EXCEPTION = 9;
+    ST_TENSOR = 10;
+    ST_TENSORFLOW_EXAMPLE = 12;
+    ST_DECISION_POINT = 13;
+    ST_DECISION_OUTCOME = 14;
+    // A dummy object that does not have semantic content from the user.
+    ST_GAP = 11;
+  }
+  SubType sub_type = 4;
+
+  oneof sub_type_message {
+    Text text = 5;
+    BlockStart block_start = 6;
+    BlockEnd block_end = 7;
+    AttributeStart attribute_start = 8;
+    AttributeEnd attribute_end = 9;
+    widgets.flume.proto.FlumeDoFnEmit flume_do_fn_emit = 14;
+    widgets.flume.proto.FlumeDepend flume_depend = 15;
+    Value value = 16;
+    Exception exception = 17;
+    Tensor tensor = 20;
+    TensorFlowExample tensor_flow_example = 21;
+    DecisionPoint decision_point = 22;
+    DecisionOutcome decision_outcome = 23;
+  }
+
+  string file = 10;
+  int32 line = 11;
+  string func = 12;
+
+  // The locations of the starting points of all the blocks that contain this
+  // object.
+  repeated string ancestor_start_location = 13;
+
+  // Encapsulates meta-data that tracks the dynamic behavior of the system
+  // at or near the time of the logged event.
+  message Metrics {
+    int64 process_free_swap_space_bytes = 1;
+    int64 process_total_swap_space_bytes = 2;
+  }
+  Metrics metrics = 18;
+
+  // Encapsulates meta-data that tracks the partial or total order among log
+  // events.
+  message Order {
+    int64 timestamp_ns = 1;
+  }
+  Order order = 19;
+}
+
+// Describes the configuration of some aspect of Sight or a Sight widget.
+message ConfigurationStart {
+  // Next Tag: 2
+  enum SubType {
+    ST_UNKNOWN = 0;
+    ST_DECISION_CONFIGURATION = 1;
+  }
+  SubType sub_type = 1;
+
+  oneof sub_type_message {
+    DecisionConfigurationStart decision_configuration = 2;
+  }
+}
+
+message Exception {
+  string type = 1;
+  string value = 2;
+  string traceback = 3;
+}
+
+// Next Tag: 11
+message Tensor {
+  enum SubType {
+    ST_UNKNOWN = 0;
+    ST_STRING = 1;
+    ST_BYTES = 2;
+    ST_INT64 = 3;
+    ST_DOUBLE = 4;
+    ST_BOOL = 5;
+  }
+  SubType sub_type = 1;
+
+  string label = 2;
+
+  repeated int64 shape = 3;
+
+  repeated string dim_label = 9;
+
+  repeated StringValues dim_axis_values = 10;
+
+  message StringValues {
+    repeated string value = 1;
+  }
+
+  message BytesValues {
+    repeated bytes value = 1;
+  }
+
+  message Int64Values {
+    repeated int64 value = 1;
+  }
+
+  message DoubleValues {
+    repeated double value = 1;
+  }
+
+  message BoolValues {
+    repeated bool value = 1;
+  }
+
+  oneof value_type {
+    StringValues string_values = 4;
+
+    BytesValues bytes_values = 5;
+
+    Int64Values int64_values = 6;
+
+    DoubleValues double_values = 7;
+
+    BoolValues bool_values = 8;
+  }
+}
+
+// Contains a single example with both input and output data
+message TensorFlowExample {
+  oneof input {
+    Example input_example = 1;
+    SequenceExample input_sequence_example = 2;
+  }
+
+  oneof output {
+    Example output_example = 3;
+    SequenceExample output_sequence_example = 4;
+  }
+}
+
+// The wrapper for the entire log.
+// Next Tag: 2
+message Log {
+  repeated Object obj = 1;
+}
+
+// Region of raw text within the log.
+// Next Tag: 3
+message Text {
+  string text = 1;
+
+  enum SubType {
+    ST_UNKNOWN = 0;
+    ST_TEXT = 1;
+    ST_HTML = 2;
+  }
+  SubType sub_type = 2;
+}
+
+// A typed value.
+// Next Tag: 8
+message Value {
+  enum SubType {
+    ST_UNKNOWN = 0;
+    ST_STRING = 1;
+    ST_BYTES = 2;
+    ST_INT64 = 3;
+    ST_DOUBLE = 4;
+    ST_BOOL = 5;
+    ST_NONE = 6;
+  }
+  SubType sub_type = 1;
+
+  oneof value_type {
+    string string_value = 2;
+
+    bytes bytes_value = 3;
+
+    int64 int64_value = 4;
+
+    double double_value = 5;
+
+    bool bool_value = 6;
+
+    bool none_value = 7;
+  }
+}
+
+// The starting point of a block. Must be matched to a BlockEnd.
+// Next Tag: 13
+message BlockStart {
+  string label = 1;
+
+  // Next Tag: 17
+  enum SubType {
+    ST_UNKNOWN = 0;
+    // Creation of a Flume DoFn instance.
+    ST_FLUME_DO_FN_CREATE = 1;
+    // Start of the execution of a Flume DoFn Do operation.
+    ST_FLUME_DO_FN_START_DO = 2;
+    // Creation of a Flume CompareFn instance.
+    ST_FLUME_COMPARE_FN_CREATE = 3;
+    // Start of the execution of a Flume CompareFn Compare operation.
+    ST_FLUME_COMPARE_FN_START_COMPARE = 4;
+    // Start of a named value where the block label is the name and the
+    // contents of the block are the value identified by the name.
+    ST_NAMED_VALUE = 5;
+    // Start of a list of values.
+    ST_LIST = 6;
+    // Named columns of values.
+    ST_TABLE = 7;
+    // Tensorflow model application
+    ST_TENSORFLOW_MODEL_APPLICATION = 8;
+    // Tensorflow model training epoch
+    ST_TENSORFLOW_MODEL_TRAINING_EPOCH = 9;
+    // Tensorflow model overall training process
+    ST_TENSORFLOW_MODEL_TRAINING = 10;
+    // An execution of a simulation.
+    ST_SIMULATION = 11;
+    // The parameters of a simulation.
+    ST_SIMULATION_PARAMETERS = 12;
+    // The intermediate state of a simulation.
+    ST_SIMULATION_STATE = 13;
+    // A single simulation time step.
+    ST_SIMULATION_TIME_STEP = 14;
+    // Assignment of object ids to cluster ids.
+    ST_CLUSTER_ASSIGNMENT = 15;
+    // An object that describes the configuration of some aspect of Sight or
+    // a Sight widget.
+    ST_CONFIGURATION = 16;
+  }
+  SubType sub_type = 2;
+
+  oneof sub_type_message {
+    widgets.flume.proto.FlumeDoFnCreate flume_do_fn_create = 3;
+    widgets.flume.proto.FlumeDoFnStartDo flume_do_fn_start_do = 4;
+    widgets.flume.proto.FlumeCompareFnCreate flume_compare_fn_create = 5;
+    widgets.flume.proto.FlumeCompareFnStartCompare
+        flume_compare_fn_start_compare = 6;
+    ListStart list = 7;
+    TensorFlowModelTrainingEpochStart tensor_flow_model_training_epoch = 8;
+    SimulationStart simulation_start = 9;
+    SimulationParametersStart simulation_parameters_start = 10;
+    SimulationTimeStepStart simulation_time_step_start = 11;
+    ConfigurationStart configuration = 12;
+  }
+}
+
+// The ending point of a block. Must be matched to a BlockStart.
+// Next Tag: 13
+message BlockEnd {
+  string label = 1;
+
+  // Next Tag: 16
+  enum SubType {
+    ST_UNKNOWN = 0;
+    // Completion of a Flume DoFn instance.
+    ST_FLUME_DO_FN_COMPLETE = 1;
+    // End of the execution of a Flume DoFn Do operation.
+    ST_FLUME_DO_FN_END_DO = 2;
+    // Completion of a Flume CompareFn instance.
+    ST_FLUME_COMPARE_FN_COMPLETE = 3;
+    // End of the execution of a Flume CompareFn Compare operation.
+    ST_FLUME_COMPARE_FN_END_COMPARE = 4;
+    // End of a named value block.
+    ST_NAMED_VALUE = 5;
+    // End of a list of values.
+    ST_LIST = 6;
+    // Named columns of values.
+    ST_TABLE = 7;
+    // Tensorflow model application
+    ST_TENSORFLOW_MODEL_APPLICATION = 8;
+    // Tensorflow model training epoch
+    ST_TENSORFLOW_MODEL_TRAINING_EPOCH = 9;
+    // Tensorflow model overall training process
+    ST_TENSORFLOW_MODEL_TRAINING = 10;
+    // An execution of a simulation.
+    ST_SIMULATION = 11;
+    // The parameters of a simulation.
+    ST_SIMULATION_PARAMETERS = 12;
+    // The intermediate state of a simulation.
+    ST_SIMULATION_STATE = 13;
+    // A single simulation time step.
+    ST_SIMULATION_TIME_STEP = 14;
+    // Assignment of object ids to cluster ids.
+    ST_CLUSTER_ASSIGNMENT = 15;
+  }
+  SubType sub_type = 6;
+
+  // The location in the log's nesting hierarchy of the BlockStart message
+  // that matches this one.
+  string location_of_block_start = 2;
+
+  // The number of log objects directly contained by this block.
+  int64 num_direct_contents = 3;
+
+  // The number of log objects directly contained by this block.
+  int64 num_transitive_contents = 4;
+
+  oneof sub_type_message {
+    widgets.flume.proto.FlumeDoFnComplete flume_do_fn_complete = 7;
+    widgets.flume.proto.FlumeDoFnEndDo flume_do_fn_end_do = 8;
+    widgets.flume.proto.FlumeCompareFnComplete flume_compare_fn_complete = 9;
+    widgets.flume.proto.FlumeCompareFnEndCompare flume_compare_fn_end_compare =
+        10;
+  }
+
+  // Encapsulates meta-data that tracks the dynamic behavior of the system
+  // at or near the time of the logged event.
+  message Metrics {
+    int64 elapsed_time_ns = 1;
+  }
+  Metrics metrics = 12;
+}
+
+// Starting point of a List of values
+// Next Tag: 2
+message ListStart {
+  enum SubType {
+    ST_UNKNOWN = 0;
+    // Entities within list have the same structure.
+    ST_HOMOGENEOUS = 1;
+    // Entities within the list are not constrained to have a consistent
+    // structure.
+    ST_HETEROGENEOUS = 2;
+    // Entities within the list are lists of two elements where the first is
+    // the key and the second is the value.
+    ST_MAP = 3;
+    // This list is a key-value pair within a map.
+    ST_MAP_ENTRY = 4;
+    // Entities within the list are lists of named values.
+    ST_DICT = 5;
+  }
+  SubType sub_type = 1;
+}
+
+// Starting point of a TensorFlow model training epoch
+message TensorFlowModelTrainingEpochStart {
+  int64 epoch_num = 1;
+
+  int64 batch_size = 2;
+}
+
+// Identifies the start of a region where a given key has a given value.
+// If observed within inside an AttributeStart/AttributeEnd block where key
+// is already set to a value, the value specified here overrides the value
+// of the containing block until the matching AttributeEnd is reached.
+// Next Tag: 2
+message AttributeStart {
+  Attribute attribute = 1;
+}
+
+// The ending point of a region where a given key has a given value.
+// Next Tag: 2
+message AttributeEnd {
+  string key = 1;
+}
+
+// Proto encoding of the configuration parameters of a Sight object.
+// Next Tag: 21
+message Params {
+  // Indicates that the log will be stored without the use of the Sight
+  // service or the benefits of its UI.
+  bool local = 1;
+
+  // The directory to which the log data will be written.
+  string log_dir_path = 2;
+
+  // Unique label used to differentiate the output log files from those
+  // from other application runs.
+  string label = 3;
+
+  // Indicates whether a text-formatted file needs to be written to
+  // log_dir_path.
+  bool text_output = 4;
+
+  // Indicates whether a ColumnIO-formatted file needs to be written to
+  // log_dir_path.
+  bool columnio_output = 5;
+
+  // Indicates whether a Capacitor-formatted file needs to be written to
+  // log_dir_path.
+  bool capacitor_output = 6;
+
+  // The user/group that owns the log tables.
+  string log_owner = 7;
+
+  // The path prefix common to all the file(s) that hold the log.
+  string path_prefix = 8;
+
+  // The location of the log block that contains the given fragment of log.
+  // Format: colon(':')-separated integers.
+  string container_location = 9;
+
+  // UUID of this log
+  int64 id = 10;
+
+  // Indicates whether this object should be silent (not emit any log and
+  // use up the minimum amount of resources).
+  bool silent_logger = 11;
+
+  // Indicates whether the log should be stored in memory rather than in a
+  // file.
+  bool in_memory = 12;
+
+  // Indicates whether a avro-formatted file needs to be written to
+  // log_dir_path.
+  bool avro_output = 13;
+
+  // Project ID in GCS to store the log files
+  string project_id = 14;
+
+  // Bucket name in GCS project
+  string bucket_name = 15;
+
+  // complete path in GCS bucket to store the log files
+  string gcp_path = 16;
+
+  // File format of the log files to be stored
+  string file_format = 17;
+
+  // BigQuery dataset name in which table will be created
+  string dataset_name = 18;
+
+  // Indicates file format of the file stored in GCS bucket, from which external
+  // table will be created
+  string external_file_format = 19;
+
+  // File URI specifying all the files to map with single table in BQ
+  string external_file_uri = 20;
+}
+
+message SimulationStart {}
+
+message SimulationParametersStart {}
+
+message SimulationTimeStepStart {
+  // Integral index of the time step within the overall ordering of time steps.
+  // The index can be hierarchical, supporting steps, sub-steps, etc., as
+  // appropriate. Indexes are ordered lexicographically.
+  repeated int64 time_step_index = 1;
+
+  // Exact value of time within the simulation.
+  float time_step = 2;
+
+  // The amount of simulation time represented by this time-step.
+  float time_step_size = 3;
+
+  // The units of time_step and time_step_size
+  enum TimeStepUnits {
+    TSU_UNKNOWN = 0;
+    TSU_SECOND = 1;
+    TSU_MINUTE = 2;
+    TSU_HOUR = 3;
+    TSU_DAY = 4;
+    TSU_MONTH = 5;
+    TSU_QUARTER = 6;
+    TSU_YEAR = 7;
+  }
+  TimeStepUnits time_step_units = 4;
+}
+
+// *************************************
+// **** DECISONS AND THEIR OUTCOMES ****
+// *************************************
+
+message DecisionConfigurationStart {
+  // Algorithm that specifies a single fixed outcome for the choice.
+  message FixedChoiceAlgorithm {
+    string chosen_option = 1;
+    map<string, string> chosen_parameters = 2;
+  }
+
+  // Encoding of a Scikit Learn model that predicts the outcome of a decision.
+  message ScikitLearnAlgorithm {
+    bytes model_encoding = 1;
+    repeated string input_fields = 2;
+  }
+
+  // Encoding of a TF Agents Reinforcement Learning.
+  message TfAgentsAlgorithm {
+    bytes model_encoding = 1;
+    repeated string input_fields = 2;
+  }
+
+  // Encoding of a differentiable model that approximates the relationship
+  // from earlier states and decision points to later states and outcomes.
+  message DifferentiableSurrogate {
+    message KerasModel {
+      string structure_json = 1;
+
+      // Weights are recorded as ST_NAMED_VALUE objects contained within the
+      // configuration block.
+    }
+
+    oneof choice_model {
+      KerasModel keras_model = 1;
+    }
+
+    message MinMaxNormalizer {
+      message AttrProps {
+        string attr_name = 1;
+        float attr_min = 2;
+        float attr_max = 3;
+      }
+      repeated AttrProps attr_props = 1;
+    }
+
+    oneof choice_input_normalizer {
+      MinMaxNormalizer min_max_input_normalizer = 2;
+    }
+
+    oneof choice_output_normalizer {
+      MinMaxNormalizer min_max_output_normalizer = 3;
+    }
+  }
+
+  message ChoiceAlgorithm {
+    oneof choice_algorithms {
+      FixedChoiceAlgorithm fixed_choice = 1;
+      ScikitLearnAlgorithm scikit_learn = 2;
+      TfAgentsAlgorithm tf_agents = 3;
+      DifferentiableSurrogate differentiable_surrogate = 4;
+    }
+  }
+
+  // Maps each choice label to the algorithm to be used to choose the option.
+  map<string, ChoiceAlgorithm> choice_algorithm = 1;
+
+  // Properties of and constraints on attributes.
+  message AttrProps {
+    float min_value = 1;
+    float max_value = 2;
+
+    // The size of a discrete valid quantum of values between min_value and
+    // max_value (if step_size > 0).
+    // Valid values are: min_value, min_value + step_size, min_value +
+    // step_size*2, ... max_value is only a valid value of max_value - min_value
+    // is divisible by step_size.
+    float step_size = 3;
+
+    // Possible float-type values of this attribute.
+    repeated float valid_float_values = 4;
+  }
+
+  // The attributes of application's state
+  map<string, AttrProps> state_attrs = 2;
+  map<string, AttrProps> action_attrs = 3;
+}
+
+message DecisionParam {
+  string key = 1;
+  Value value = 2;
+}
+
+message DecisionPoint {
+  // Identifies the choice being made.
+  string choice_label = 1;
+
+  // Identifies the chosen option.
+  string chosen_option = 2;
+
+  // The parameters that characterize the chosen option.
+  repeated DecisionParam choice_params = 3;
+  repeated DecisionParam state_params = 4;
+}
+
+message DecisionOutcome {
+  string outcome_label = 1;
+  // The numeric value of this outcome, with higher values being more desirable.
+  float outcome_value = 2;
+  float discount = 3;
+}
