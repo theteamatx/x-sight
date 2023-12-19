@@ -1,0 +1,23 @@
+title: Test Manager
+description: Custom role with permissions to setup sight flow.
+stage: ALPHA
+includedPermissions:
+- iam.roles.create
+- iam.roles.get
+- iam.roles.list
+- iam.roles.update
+- iam.serviceAccounts.actAs
+- iam.serviceAccounts.create
+- iam.serviceAccounts.get
+- iam.serviceAccounts.list
+- resourcemanager.projects.getIamPolicy
+- resourcemanager.projects.setIamPolicy
+- run.services.create
+- run.services.get
+- storage.buckets.get
+- storage.objects.create
+- storage.objects.get
+- storage.objects.list
+
+
+
