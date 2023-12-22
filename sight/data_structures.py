@@ -18,12 +18,14 @@ import inspect
 from typing import Any, List, Optional, Sequence
 
 import numpy as np
+import pandas as pd
 from sight.location import Location
 # import tensorflow as tf
 
 from sight.proto import sight_pb2
 from sight.widgets.decision import decision
 from sight.widgets.numpy_sight import numpy_sight
+from sight.widgets.pandas_sight import pandas_sight
 # from py.widgets.simulation import simulation_state
 # from py.widgets.tensorflow_sight import tensorflow_sight
 
@@ -103,6 +105,7 @@ def log(
     # pytype: enable=attribute-error
   sight.set_object_code_loc(sight_obj, frame)
 
+  # print('data_structures.log_var obj_to_log=%s' % (obj_to_log, ))
   if isinstance(obj_to_log, str):
     sight_obj.sub_type = sight_pb2.Object.SubType.ST_VALUE
     sight_obj.value.sub_type = sight_pb2.Value.ST_STRING
@@ -167,6 +170,8 @@ def log(
     numpy_sight.log('np array', obj_to_log, sight, frame)
   # elif isinstance(obj_to_log, tf.Tensor):
   #   tensorflow_sight.log('TensorFlow Tensor', obj_to_log, sight, frame)
+  elif isinstance(obj_to_log, pd.DataFrame):
+    pandas_sight.log('pandas.DataFrame', obj_to_log, sight, frame)
   elif isinstance(obj_to_log, dict) or hasattr(obj_to_log, '__dict__'):
     if isinstance(obj_to_log, dict):
       obj_dict = obj_to_log
@@ -202,7 +207,12 @@ def log(
         block_start=sight_pb2.BlockStart(sub_type=sight_pb2.BlockStart.ST_LIST),
     )
     sight.exit_block('map', end_obj)
-
+  else:
+    print('OTHER')
+    sight_obj.sub_type = sight_pb2.Object.SubType.ST_VALUE
+    sight_obj.value.sub_type = sight_pb2.Value.ST_STRING
+    sight_obj.value.string_value = str(obj_to_log)
+    sight.log_object(sight_obj, True)
 
 def get_full_sublog_of_first_element(
     log_segment: Sequence[sight_pb2.Object],

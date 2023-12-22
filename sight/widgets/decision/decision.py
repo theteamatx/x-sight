@@ -27,6 +27,7 @@ from service import service_pb2
 from sight import service
 from sight.proto import sight_pb2
 from sight.widgets.decision import exhaustive_search_client
+from sight.widgets.decision import llm_optimizer_client
 from sight.widgets.decision import trials
 from sight.widgets.decision import vizier_optimizer_client
 from sight.widgets.decision.acme import acme_optimizer_client
@@ -70,7 +71,7 @@ _DEPLOYMENT_MODE = flags.DEFINE_enum(
 _OPTIMIZER_TYPE = flags.DEFINE_enum(
     'optimizer_type',
     None,
-    ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search'],
+    ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search', 'llm_gemini'],
     'The optimizer to use',
 )
 _NUM_TRAIN_WORKERS = flags.DEFINE_integer(
@@ -289,12 +290,10 @@ def run(
     state_attrs = state_to_dict(env.observation_spec(), 'state')
   if action_attrs == {}:
     action_attrs = state_to_dict(env.action_spec(), 'action')
-  # print('action_attrs : ', action_attrs)
 
   decision_configuration = sight_pb2.DecisionConfigurationStart()
   _attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
   _attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
-  # print('action_attrs : ', decision_configuration)
 
   sight.enter_block(
       'Decision Configuration',
@@ -316,7 +315,6 @@ def run(
           driver_fn, state_attrs, action_attrs
       )
   )
-
   sight.widget_decision_state['proposed_actions'] = []
 
   if _OPTIMIZER_TYPE.value == 'dm_acme':
@@ -325,6 +323,8 @@ def run(
     optimizer.obj = vizier_optimizer_client.Vizier(sight)
   elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
     optimizer.obj = exhaustive_search_client.ExhaustiveSearch(sight)
+  elif _OPTIMIZER_TYPE.value == 'llm_gemini':
+    optimizer.obj = llm_optimizer_client.LLM(sight)
 
   if _DECISON_MODE.value == 'run':
     logging.info('_DECISON_MODE.value == run')
@@ -347,6 +347,7 @@ def run(
         lambda s, meta: s.FetchOptimalAction(req, 300, metadata=meta)
     )
     print('response : ', response.response_str)
+
 
 
   elif _DECISON_MODE.value == 'configured_run':
@@ -391,8 +392,6 @@ def run(
     else:
       driver_fn(sight)
   elif _DECISON_MODE.value == 'train':
-    print('_DECISON_MODE.value : ', _DECISON_MODE.value)
-
     details = sight.widget_decision_state['decision_episode_fn']
     # print('details.action_min : ', details.action_min.values(), list(details.action_min.values())[0])
     possible_actions = list(details.action_max.values())[0] - list(details.action_min.values())[0] + 2
@@ -400,6 +399,7 @@ def run(
     if(_OPTIMIZER_TYPE.value == 'exhaustive_search' and possible_actions < _NUM_TRIALS.value):
       raise ValueError(f"max possible value for num_trials is : {possible_actions}")
 
+    print('_DECISON_MODE.value : ', _DECISON_MODE.value)
     if _DEPLOYMENT_MODE.value == 'distributed':
       logging.info('_DEPLOYMENT_MODE.value == distributed')
       if(not _DOCKER_IMAGE.value):
@@ -583,22 +583,27 @@ def decision_point(
 
   # selected_action will be same for all calls of decision point in these
   # optimizers. As such, it is cached as the constant action.
-  elif (
-      _OPTIMIZER_TYPE.value == 'vizier'
-      or _OPTIMIZER_TYPE.value == 'genetic_algorithm'
-      or _OPTIMIZER_TYPE.value == 'exhaustive_search'
-  ):
-
+  elif _OPTIMIZER_TYPE.value in ['vizier', 'genetic_algorithm', 'exhaustive_search']:
     optimizer_obj = optimizer.get_instance()
     selected_action = optimizer_obj.decision_point(sight, req)
-
-    print('selected action : ', selected_action)
-    sight.widget_decision_state['constant_action'] = {sight.widget_decision_state['decision_episode_fn'].action_attrs[0] : selected_action}
+    sight.widget_decision_state['constant_action'] = {
+      sight.widget_decision_state['decision_episode_fn'].action_attrs[0] : selected_action
+    }
+  elif _OPTIMIZER_TYPE.value == 'llm_gemini':
+    optimizer_obj = optimizer.get_instance()
+    # logging.info('sight.widget_decision_state=%s', sight.widget_decision_state)
+    if 'outcome_value' in sight.widget_decision_state:
+      req.decision_outcome.outcome_value = sight.widget_decision_state['outcome_value']
+      req.decision_outcome.discount = sight.widget_decision_state['discount']
+    selected_action = optimizer_obj.decision_point(sight, req)
+    logging.info('selected action : %s', selected_action)
 
   chosen_action = {}
   chosen_action[
       sight.widget_decision_state['decision_episode_fn'].action_attrs[0]
   ] = selected_action
+  logging.info('sight.widget_decision_state[\'decision_episode_fn\'].action_attrs=%s', sight.widget_decision_state['decision_episode_fn'].action_attrs)
+  logging.info('chosen_action=%s', chosen_action)
 
 
   choice_params: List[sight_pb2.DecisionParam] = []
@@ -624,7 +629,7 @@ def decision_point(
   obj.decision_point.choice_params.extend(choice_params)
   sight.log_object(obj, inspect.currentframe().f_back.f_back)
 
-  logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+  logging.debug('<<<<  Out %s of %s', method_name, _file_name)
   return chosen_action
 
 
@@ -650,6 +655,7 @@ def decision_outcome(
   sight.widget_decision_state['discount'] = discount
   sight.widget_decision_state['outcome_value'] = outcome_value
   sight.widget_decision_state['sum_outcome'] += outcome_value
+  logging.info('decision_outcome() outcome_value=%s, sum_outcome=%s', outcome_value, sight.widget_decision_state['sum_outcome'])
 
   sight.log_object(
       sight_pb2.Object(
@@ -681,6 +687,7 @@ def finalize_episode(sight):  # , optimizer_obj
   method_name = 'finalize_episode'
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
+  logging.info('Finalize sight.widget_decision_state=%s', sight.widget_decision_state)
   _rewards.append(round(sight.widget_decision_state['sum_outcome'], 2))
   print('rewards : ', _rewards, len(_rewards))
 
@@ -713,20 +720,12 @@ def finalize_episode(sight):  # , optimizer_obj
       req.decision_outcome.CopyFrom(decision_outcome)
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight, req)
-    elif _OPTIMIZER_TYPE.value == 'genetic_algorithm':
+    elif _OPTIMIZER_TYPE.value in ['genetic_algorithm', 'exhaustive_search', 'llm_gemini']:
       decision_outcome = sight_pb2.DecisionOutcome(
           outcome_label='outcome',
           outcome_value=sight.widget_decision_state['sum_outcome'],
       )
       req.decision_outcome.CopyFrom(decision_outcome)
-    elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
-      decision_outcome = sight_pb2.DecisionOutcome(
-          outcome_label='outcome',
-          outcome_value=sight.widget_decision_state['sum_outcome'],
-      )
-      req.decision_outcome.CopyFrom(decision_outcome)
-      optimizer_obj = optimizer.get_instance()
-      optimizer_obj.finalize_episode(sight, req)
     elif _OPTIMIZER_TYPE.value == 'dm_acme':
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight)
@@ -761,7 +760,7 @@ def finalize_episode(sight):  # , optimizer_obj
 
 def finalize(sight):
   logging.info(
-      'Get latest status of this training by runnign this script : '
+      'Get latest status of this training by running this script : '
       'python3 sight/widgets/decision/current_status.py'
       ' --log_id=%s --service_name=%s',
       sight.id,

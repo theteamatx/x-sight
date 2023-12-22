@@ -77,7 +77,7 @@ def get_service_id() -> str:
     _SERVICE_ID = 'default'
   _SIGHT_SERVICE_KNOWN = True
 
-  # print("service id : sight-service-", _SERVICE_ID)
+  logging.info("service id : sight-service-"+ _SERVICE_ID)
   return _SERVICE_ID
 
 
@@ -85,7 +85,6 @@ def _service_addr() -> str:
   # return f'sight-service-{get_service_id()}-dq7fdwqgbq-uc.a.run.app'
   global _UNIQUE_STRING
   if(_UNIQUE_STRING):
-    # print("_UNIQUE_STRING : ", _UNIQUE_STRING)
     return f'sight-service-{get_service_id()}-{_UNIQUE_STRING}-uc.a.run.app'
   else:
     try:
@@ -93,7 +92,7 @@ def _service_addr() -> str:
             'gcloud run services describe'
             f" sight-service-{get_service_id()} --region us-central1 --format='value(status.url)'"
         )
-      # print("service url : ", service_url)
+      #print("service url : ", service_url)
       _UNIQUE_STRING =  re.search(r'https://.*-(\w+)-uc\.a\.run\.app', service_url).group(1)
       # print("_UNIQUE_STRING : ", _UNIQUE_STRING)
     except Exception as e:
@@ -314,7 +313,7 @@ def get_id_token_of_service_account(
         headers=headers,
         data=data,
     )
-    # print('response : ', response.json())
+    # print('response=%s' % response)
     return response.json()['token']
   except Exception as e:
     logging.info('API CALL ERROR: %s', e)
@@ -345,25 +344,30 @@ def generate_id_token():
     creds.refresh(auth_req)
     # impersonating service-account if passed in parameter
 
+    # print('service_account=%s' % flags.FLAGS.service_account)
     if flags.FLAGS.service_account != None:
-      print("using service account's credentils..... :")
-      # print(f'{flags.FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com')
+      # print(
+      #     'using credentials of service account'
+      #     f' {flags.FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com.....'
+      # )
       user_access_token = creds.token
       service_account = f'{flags.FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com'
-      # print('user_access_token : ', user_access_token)
-      # print('service_account : ',service_account)
+      # print('service_account=%s' % service_account)
+      # print('user_access_token=%s' % user_access_token)
+
       url = f'https://{_service_addr()}'
+      # logging.info('url=%s', url)
       service_account_id_token = get_id_token_of_service_account(
           user_access_token, service_account, url
       )
+      # print('id_token=%s' % service_account_id_token)
       id_token = service_account_id_token
     # using user credentials
     else:
-      # print("using user's credentils.....")
+      # print("using user's credentils..... creds=%s" % creds)
       user_id_token = creds.id_token
       id_token = user_id_token
 
-  # print('id_token : ', id_token)
   return id_token
 
 
@@ -441,6 +445,7 @@ def call(invoke_func: Callable[[Any, Any], Any]) -> Any:
   num_retries = 0
   backoff_interval = 0.5
   # while True:
+  # logging.info('sight_service=%s', sight_service)
   for i in range(1):
     try:
       response = invoke_func(sight_service, metadata)

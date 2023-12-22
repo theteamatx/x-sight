@@ -114,6 +114,7 @@ enum OptimizerType {
   OT_ACME = 2;
   OT_GENETIC_ALGORITHM = 3;
   OT_EXHAUSTIVE_SEARCH = 4;
+  // OT_LLM = 5;
 }
 
 message VizierConfig {}

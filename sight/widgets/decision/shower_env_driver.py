@@ -39,10 +39,11 @@ def driver_fn(sight: Sight) -> None:
   for _ in range(shower_length):
     # Ask Sight's optimizer for the action to perform.
     chosen_action = decision.decision_point("DP_label", sight)
-    direction = np.array(chosen_action["Direction"], dtype=np.int64)
+    # direction = np.array(chosen_action["Direction"], dtype=np.int64)
 
     # Change temperature based on the Sight-recommended direction.
-    temperature += direction - 1
+    temperature += chosen_action["Direction"]
+    logging.info('temperature=%s, direction=%s', temperature, chosen_action["Direction"])
     data_structures.log_var("Temperature", temperature, sight)
 
     # Calculate reward based on whether the temperature target has
@@ -50,7 +51,7 @@ def driver_fn(sight: Sight) -> None:
     if temperature >= 37 and temperature <= 39:
       current_reward = 1
     else:
-      current_reward = -1
+      current_reward = -abs(temperature - 38)
 
     # Inform Sight of the outcome of the recommended action.
     decision.decision_outcome(

@@ -36,7 +36,7 @@ def upload_blob_from_stream(bucket_name, gcp_path, file_obj, file_name, count):
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
   if not bucket.exists():
-    logging.info(f"creating bucket {bucket_name}, as it didn't exist....")
+    # logging.info(f"creating bucket {bucket_name}, as it didn't exist....")
     bucket = storage_client.create_bucket(bucket_name)
 
   blob_name = gcp_path + '/' + file_name + '_' + str(count) + '.avro'
@@ -46,7 +46,7 @@ def upload_blob_from_stream(bucket_name, gcp_path, file_obj, file_name, count):
   file_obj.seek(0)
   # Upload data from the stream to your bucket.
   blob.upload_from_file(file_obj)
-  logging.info(f'Stream data uploaded to {blob_name} in bucket {bucket_name}.')
+  # logging.info(f'Stream data uploaded to {blob_name} in bucket {bucket_name}.')
 
 
 def create_table(
@@ -74,19 +74,19 @@ def create_table(
     # Check if the dataset exists
     client = bigquery.Client(project_id)
     dataset = client.get_dataset(dataset_name)
-    logging.info(f"Dataset {dataset_name} already exists.")
+    # logging.info(f"Dataset {dataset_name} already exists.")
   except Exception as e:
     # If the dataset does not exist, create a new dataset
     dataset = bigquery.Dataset(f"{project_id}.{dataset_name}")
     dataset = client.create_dataset(dataset)
-    logging.info(f"Dataset {dataset_name} created.")
+    # logging.info(f"Dataset {dataset_name} created.")
 
 
-  logging.info(
-      'Creating external table %s mapping to : %s.',
-      table_name,
-      external_file_uri,
-  )
+  # logging.info(
+  #     'Creating external table %s mapping to : %s.',
+  #     table_name,
+  #     external_file_uri,
+  # )
   try:
     client = bigquery.Client(project_id)
     dataset_ref = client.dataset(dataset_name)
@@ -97,7 +97,7 @@ def create_table(
     external_config.source_uris = [external_file_uri]
     table.external_data_configuration = external_config
     client.create_table(table)
-    logging.info('%s table successfully created.', table_name)
+    # logging.info('%s table successfully created.', table_name)
   except:
     logging.info(f"Error creating table: {e}")
 

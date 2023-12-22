@@ -40,6 +40,7 @@ from service import service_pb2
 from service import service_pb2_grpc
 from service.genetic_algorithm import GeneticAlgorithm
 from service.exhaustive_search import ExhaustiveSearch
+from service.llm import LLM
 from service.optimizer_instance import OptimizerInstance
 from service.vizier import Vizier
 from service.acme_optimizer import Acme
@@ -92,7 +93,9 @@ class Optimizers:
         self.instances[request.client_id] = Vizier()
         return self.instances[request.client_id].launch(request)
       elif optimizer_type == service_pb2.OptimizerType.OT_GENETIC_ALGORITHM:
-        self.instances[request.client_id] = GeneticAlgorithm()
+        # self.instances[request.client_id] = GeneticAlgorithm()
+        # return self.instances[request.client_id].launch(request)
+        self.instances[request.client_id] = LLM()
         return self.instances[request.client_id].launch(request)
       elif optimizer_type == service_pb2.OptimizerType.OT_EXHAUSTIVE_SEARCH:
         self.instances[request.client_id] = ExhaustiveSearch()
@@ -102,6 +105,9 @@ class Optimizers:
         obj = self.instances[request.client_id].launch(request)
         logging.info("self of optimizers class:  %s", str(self.__dict__))
         return obj
+      # elif optimizer_type == service_pb2.OptimizerType.OT_LLM:
+      #   self.instances[request.client_id] = LLM()
+      #   return self.instances[request.client_id].launch(request)
       else:
         return service_pb2.LaunchResponse(
             display_string=f"OPTIMIZER '{optimizer_type}' NOT VALID!!"
@@ -172,6 +178,7 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     )
     logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
     return obj
+
 
   def ProposeAction(self, request, context):
     method_name = "ProposeAction"

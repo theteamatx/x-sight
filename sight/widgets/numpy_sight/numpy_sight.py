@@ -109,6 +109,8 @@ def log(
   obj.sub_type = sight_pb2.Object.SubType.ST_TENSOR
   obj.tensor.label = label
   obj.tensor.shape.extend(labeled_array.array.shape)
+  print('labeled_array=%s' % labeled_array)
+  print('labeled_array.array.dtype=%s' % labeled_array.array.dtype)
   if (
       labeled_array.array.dtype == float
       or labeled_array.array.dtype == np.float32

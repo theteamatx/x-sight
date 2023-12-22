@@ -42,7 +42,7 @@ _EXPERIMENT_NAME = flags.DEFINE_string(
 #     'project_id', None, 'Id of cloud project'
 # )
 _PROJECT_ID = flags.DEFINE_string(
-    'project_id', os.environ["PROJECT_ID"], 'Id of cloud project'
+    'project_id', os.environ['PROJECT_ID'], 'Id of cloud project'
 )
 _PROJECT_REGION = flags.DEFINE_string(
     'project_region', 'us-central1', 'location to store project-data'
@@ -117,7 +117,8 @@ def launch(
   req.client_id = str(sight.id)
   if optimizer_type == 'vizier':
     req.optimizer_type = service_pb2.OptimizerType.OT_VIZIER
-  elif optimizer_type == 'genetic_algorithm':
+  # elif optimizer_type == 'genetic_algorithm':
+  elif optimizer_type.startswith('llm_'):
     req.optimizer_type = service_pb2.OptimizerType.OT_GENETIC_ALGORITHM
     req.genetic_algorithm_config.max_population_size = num_train_workers
   elif optimizer_type == 'exhaustive_search':
@@ -145,6 +146,8 @@ def launch(
       req.acme_config.action_max.extend(action_max)
       req.acme_config.action_param_length = action_param_length
       req.acme_config.possible_actions = possible_actions
+  # elif optimizer_type.startswith('llm_'):
+  #   req.optimizer_type = service_pb2.OptimizerType.OT_LLM
   else:
     req.optimizer_type = service_pb2.OptimizerType.OT_UNKNOWN
 
@@ -196,6 +199,7 @@ def start_job_in_docker(
     )
     if FLAGS.service_account:
       f.write(f' --service_account={FLAGS.service_account}')
+      # {os.environ["PROJECT_ID"]}.iam.gserviceaccount.com
     f.write(f' {decision_params_arg}\n ')
   os.chmod('/tmp/sight_script/sight_decision_command.sh', 0o755)
   subprocess.run(['cp', binary_path, '/tmp'], check=True)
@@ -315,7 +319,7 @@ def start_jobs(
       f'--image={docker_image}',
       f'--machine-type={_DSUB_MACHINE_TYPE.value}',
       f'--project={_PROJECT_ID.value}',
-      f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service._SERVICE_ID}/{sight.id}',
+      f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service._SERVICE_ID}',
       '--env',
       f'PARENT_LOG_ID={sight.id}',
       '--env',
@@ -395,7 +399,7 @@ def start_job_in_dsub_local(
   if FLAGS.service_account:
     script_args = (
         script_args + f'--service_account={FLAGS.service_account}'
-    )
+    )  # {os.environ["PROJECT_ID"]}.iam.gserviceaccount.com
 
   print('sight.id=%s' % sight.id)
   args = [

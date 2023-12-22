@@ -183,11 +183,11 @@ class Sight(object):
       # Added : opening Avro file
 
       if self.params.avro_output:
-        logging.info('#######SERVICE###############')
+        # logging.info('#######SERVICE###############')
 
         try:
           if 'PARENT_LOG_ID' in os.environ:
-            logging.info('PARENT_LOG_ID found - worker process')
+            # logging.info('PARENT_LOG_ID found - worker process')
             worker_location = os.environ['worker_location'].replace(':', '_')
             self.path_prefix = (
                 self.params.label
@@ -208,7 +208,7 @@ class Sight(object):
                 self.params.label + '_' + self.id + '_' + 'log' + '_run_mode'
             )
           else:
-            logging.info('calling generate metadata')
+            # logging.info('calling generate metadata')
             req = service_pb2.CreateRequest(
                 log_owner=self.params.log_owner,
                 label=self.params.label,
@@ -218,9 +218,9 @@ class Sight(object):
             response = service.call(
                 lambda s, meta: s.Create(req, 300, metadata=meta)
             )
-            logging.info('##### response=%s #####', response)
+            # logging.info('##### response=%s #####', response)
             self.id = response.id
-            logging.info('PARENT_LOG_ID not found - parent process')
+            # logging.info('PARENT_LOG_ID not found - parent process')
             self.path_prefix = (
                 self.params.label + '_' + str(response.id) + '_' + 'log'
             )
@@ -356,29 +356,33 @@ class Sight(object):
           logging.info(
               'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
+              #'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
+              #'log_id=%s.%s&log_owner=%s&project_id=%s',
               self.SIGHT_API_KEY,
               self.params.dataset_name,
               self.file_name,
               self.params.log_owner,
-              os.environ['PROJECT_ID']
+              os.environ['PROJECT_ID'],
           )
       self.avro_log.close()
-      logging.info('stream successfully completed')
+      # logging.info('stream successfully completed')
 
     if not self.params.local and not self.params.in_memory:
-      # time.sleep(1)
+      time.sleep(1)
       logging.info(
           (
               'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
+#              'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
+#              'log_id=%s&log_owner=%s&project_id=%s',
           ),
           self.SIGHT_API_KEY,
           self.params.dataset_name,
           self.file_name,
+#          self.id,
           self.params.log_owner,
           os.environ['PROJECT_ID']
       )
-
     if(FLAGS.decision_mode == 'train'):
       decision.finalize(self)
     finalize_server()
@@ -742,6 +746,15 @@ class Sight(object):
             #     self.params.log_owner,
             #     os.environ['PROJECT_ID'],
             # )
+            #logging.info(
+            #    'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
+            #    'log_id=%s.%s&log_owner=%s&project_id=%s',
+            #    self.SIGHT_API_KEY,
+            #    self.params.dataset_name,
+            #    self.file_name,
+            #    self.params.log_owner,
+            #    FLAGS.project_id
+            #)
             # print("now sleeping for 5 minutes...")
             # time.sleep(300)
           self.avro_log.close()
