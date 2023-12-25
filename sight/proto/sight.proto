@@ -522,67 +522,54 @@ message SimulationTimeStepStart {
 // *************************************
 
 message DecisionConfigurationStart {
-  // Algorithm that specifies a single fixed outcome for the choice.
-  message FixedChoiceAlgorithm {
-    string chosen_option = 1;
-    map<string, string> chosen_parameters = 2;
+  enum OptimizerType {
+    OT_UNKNOWN = 0;
+    OT_VIZIER = 1;
+    OT_ACME = 2;
+    OT_GENETIC_ALGORITHM = 3;
+    OT_EXHAUSTIVE_SEARCH = 4;
+    OT_LLM = 5;
   }
 
-  // Encoding of a Scikit Learn model that predicts the outcome of a decision.
-  message ScikitLearnAlgorithm {
-    bytes model_encoding = 1;
-    repeated string input_fields = 2;
+  message VizierConfig {}
+
+  message AcmeConfig {
+    string env_name = 1;
+    repeated float state_min = 2;
+    repeated float state_max = 3;
+    int64 state_param_length = 4;
+    repeated float action_min = 5;
+    repeated float action_max = 6;
+    int64 action_param_length = 7;
+    int64 possible_actions = 8;
   }
 
-  // Encoding of a TF Agents Reinforcement Learning.
-  message TfAgentsAlgorithm {
-    bytes model_encoding = 1;
-    repeated string input_fields = 2;
+  message GeneticAlgorithmConfig {
+    int64 max_population_size = 1;
   }
 
-  // Encoding of a differentiable model that approximates the relationship
-  // from earlier states and decision points to later states and outcomes.
-  message DifferentiableSurrogate {
-    message KerasModel {
-      string structure_json = 1;
+  message ExhaustiveSearchConfig {}
 
-      // Weights are recorded as ST_NAMED_VALUE objects contained within the
-      // configuration block.
-    }
+  message LLMConfig {
+    // LLM-readable description of the program to be driven by the LLM.  
+    string description = 1;
+  }
 
-    oneof choice_model {
-      KerasModel keras_model = 1;
-    }
-
-    message MinMaxNormalizer {
-      message AttrProps {
-        string attr_name = 1;
-        float attr_min = 2;
-        float attr_max = 3;
-      }
-      repeated AttrProps attr_props = 1;
-    }
-
-    oneof choice_input_normalizer {
-      MinMaxNormalizer min_max_input_normalizer = 2;
-    }
-
-    oneof choice_output_normalizer {
-      MinMaxNormalizer min_max_output_normalizer = 3;
+  message ChoiceConfig {
+    oneof choice_config {
+      VizierConfig vizier_config = 1;
+      AcmeConfig acme_config = 2;
+      GeneticAlgorithmConfig genetic_algorithm_config = 3;
+      ExhaustiveSearchConfig exhaustive_search_config = 4;
+      LLMConfig llm_config = 5;
     }
   }
 
-  message ChoiceAlgorithm {
-    oneof choice_algorithms {
-      FixedChoiceAlgorithm fixed_choice = 1;
-      ScikitLearnAlgorithm scikit_learn = 2;
-      TfAgentsAlgorithm tf_agents = 3;
-      DifferentiableSurrogate differentiable_surrogate = 4;
-    }
-  }
+  OptimizerType optimizer_type = 4;
+  
 
-  // Maps each choice label to the algorithm to be used to choose the option.
-  map<string, ChoiceAlgorithm> choice_algorithm = 1;
+  // Maps each choice label to the configuration of the algorithm to be used to choose the option.
+  map<string, ChoiceConfig> choice_config = 1;
 
   // Properties of and constraints on attributes.
   message AttrProps {
@@ -598,6 +585,9 @@ message DecisionConfigurationStart {
 
     // Possible float-type values of this attribute.
     repeated float valid_float_values = 4;
+
+    // The human-/LLM-readable description of this attribute.
+    string description = 5;
   }
 
   // The attributes of application's state

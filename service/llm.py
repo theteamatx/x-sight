@@ -49,21 +49,23 @@ class LLM(OptimizerInstance):
       self, request: service_pb2.LaunchRequest
   ) -> service_pb2.LaunchResponse:
     response = super(LLM, self).launch(request)
-    self.script = 'You are controlling a simulation that is trying to reach a goal. ' + \
-                  'The goal is to find a comfortable temperature for a shower.' + \
-                  'The simulation will periodically report its state and then ask you ' + \
+    llm_config = request.decision_config_params.choice_config[request.label].llm_config
+
+    self.script = 'You are controlling an agent that is trying to reach a goal. The agent is described as follows.\n'
+    self.script += f'"{llm_config.description}"'
+    self.script += 'The simulation will periodically report its state and then ask you ' + \
                   'to select an action for it to perform. After it has performed this ' + \
                   'action it will report back the numeric outcome of the this action. ' + \
                   'Higher outcome values are better than low outcome values beause higher outcomes mean that the temperature of the shower is closer to the ideal comfortable temperature. Your job ' + \
                   'is to choose actions that maximize the outcome values.\n' + \
                   'The state of the simulation consists of the following attributes: \n'
     self.script += '    {' + ', '.join([
-          f'"{key}": {{ "min_value": {p.min_value}, "max_value": {p.max_value} }},\n'
+          f'"{key}": {{ "description": {p.description}, "min_value": {p.min_value}, "max_value": {p.max_value} }},\n'
           for key, p in self.state.items()
         ]) + '}\n'
     self.script += 'The possible actions you need to select are: \n'
     self.script += '    {' + ', '.join([
-          f'"{key}": {{ "min_value": {p.min_value}, "max_value": {p.max_value} }},\n'
+          f'"{key}": {{ "description": {p.description}, "min_value": {p.min_value}, "max_value": {p.max_value} }},\n'
           for key, p in self.actions.items()
         ]) + '}\n'
     self.script += '========================\n'

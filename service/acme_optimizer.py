@@ -302,7 +302,9 @@ class Acme(OptimizerInstance):
     super(Acme, self).launch(request)
 
     # self.create_learner(request.client_id, request.acme_config.env_name)
-    self.create_learner(request.client_id, request.acme_config)
+    
+    self.create_learner(request.client_id, 
+                        llm_config = request.decision_config_params.choice_config[request.label].acme_config)
 
     # TODO : meetashah : this is old version, might have to modify for now.
     # storing client details in case server crashed - mid run

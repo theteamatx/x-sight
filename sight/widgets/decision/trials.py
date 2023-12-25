@@ -30,6 +30,7 @@ from dotenv import load_dotenv
 from sight import service
 from sight.proto import sight_pb2
 from sight.widgets.decision.acme import acme_optimizer_client
+from sight.widgets.decision.optimizer_client import OptimizerClient
 
 load_dotenv()
 
@@ -84,11 +85,14 @@ def _get_experiment_name(sight: Any) -> str:
 
 
 def launch(
-    optimizer_type: str,
+    # optimizer_type: str,
     # optimizer_config: Any,
-    state_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
-    action_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
+    # state_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
+    # action_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
+    optimizer: OptimizerClient,
+    decision_configuration: sight_pb2.DecisionConfigurationStart,
     num_train_workers: int,
+    description: str,
     sight: Any,
 ):
   """Launches the experiment with the service.
@@ -98,6 +102,7 @@ def launch(
     state_attrs: maps the name of each state variable to its possible values.
     action_attrs: maps the name of each variable that describes possible
       decisions to its possible values.
+    description: Human-readable description of the application.
     num_train_workers: numbers of workers to be spawned
     sight: The Sight object to be used for logging.
   """
@@ -106,50 +111,15 @@ def launch(
 
   req = service_pb2.LaunchRequest()
 
-  config_param = sight_pb2.DecisionConfigurationStart()
-  for key, attr in action_attrs.items():
-    config_param.action_attrs[key].CopyFrom(attr)
-  for key, attr in state_attrs.items():
-    config_param.state_attrs[key].CopyFrom(attr)
-  req.decision_config_params.CopyFrom(config_param)
+  # config_param = sight_pb2.DecisionConfigurationStart()
+  # for key, attr in action_attrs.items():
+  #   config_param.action_attrs[key].CopyFrom(attr)
+  # for key, attr in state_attrs.items():
+  #   config_param.state_attrs[key].CopyFrom(attr)
+  req.decision_config_params.CopyFrom(decision_configuration)
 
   req.label = sight.params.label
   req.client_id = str(sight.id)
-  if optimizer_type == 'vizier':
-    req.optimizer_type = service_pb2.OptimizerType.OT_VIZIER
-  # elif optimizer_type == 'genetic_algorithm':
-  elif optimizer_type.startswith('llm_'):
-    req.optimizer_type = service_pb2.OptimizerType.OT_GENETIC_ALGORITHM
-    req.genetic_algorithm_config.max_population_size = num_train_workers
-  elif optimizer_type == 'exhaustive_search':
-    req.optimizer_type = service_pb2.OptimizerType.OT_EXHAUSTIVE_SEARCH
-  elif optimizer_type == 'dm_acme':
-    req.optimizer_type = service_pb2.OptimizerType.OT_ACME
-    if FLAGS.env_name:
-      req.acme_config.env_name = FLAGS.env_name
-    else:
-      (
-          state_min,
-          state_max,
-          state_param_length,
-          action_min,
-          action_max,
-          action_param_length,
-          possible_actions,
-      ) = acme_optimizer_client.generate_spec_details(
-          sight.widget_decision_state['decision_episode_fn']
-      )
-      req.acme_config.state_min.extend(state_min)
-      req.acme_config.state_max.extend(state_max)
-      req.acme_config.state_param_length = state_param_length
-      req.acme_config.action_min.extend(action_min)
-      req.acme_config.action_max.extend(action_max)
-      req.acme_config.action_param_length = action_param_length
-      req.acme_config.possible_actions = possible_actions
-  # elif optimizer_type.startswith('llm_'):
-  #   req.optimizer_type = service_pb2.OptimizerType.OT_LLM
-  else:
-    req.optimizer_type = service_pb2.OptimizerType.OT_UNKNOWN
 
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
   logging.info('##### Launch response=%s #####', response)

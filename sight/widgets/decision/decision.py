@@ -26,13 +26,12 @@ from absl import logging
 from service import service_pb2
 from sight import service
 from sight.proto import sight_pb2
-from sight.widgets.decision import exhaustive_search_client
-from sight.widgets.decision import llm_optimizer_client
-from sight.widgets.decision import trials
-from sight.widgets.decision import vizier_optimizer_client
-from sight.widgets.decision.acme import acme_optimizer_client
+from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
+from sight.widgets.decision.single_action_optimizer_client import SingleActionOptimizerClient
+from sight.widgets.decision.acme.acme_optimizer_client import AcmeOptimizerClient
 from sight.widgets.decision.driver import driver_fn
 from sight.widgets.decision import decision_episode_fn
+from sight.widgets.decision import trials
 
 _DECISON_MODE = flags.DEFINE_enum(
     'decision_mode',
@@ -166,8 +165,8 @@ def configure(
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
   if decision_configuration:
-    widget_decision_state['choice_algorithm'] = (
-        decision_configuration.choice_algorithm
+    widget_decision_state['choice_config'] = (
+        decision_configuration.choice_config
     )
 
   if 'state' not in widget_decision_state:
@@ -189,16 +188,6 @@ def _attr_dict_to_proto(
   """Converts a dict of attribute constraints to its proto representation."""
   for attr_name, attr_range in attrs.items():
     attrs_proto[attr_name].CopyFrom(attr_range)
-
-
-def _attr_dict_to_sight(
-    attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
-    sight: Any,
-):
-  """Adds a dict of attribute into sight to be used by RL framework."""
-  for attr_name, attr_range in attrs.items():
-    print(attr_name, ' : ', attr_range)
-
 
 class Optimizer:
 
@@ -266,6 +255,7 @@ def run(
     action_attrs: Dict[
         str, sight_pb2.DecisionConfigurationStart.AttrProps
     ] = {},
+    description: str = '',
 ):
   """Driver for running applications that use the Decision API.
 
@@ -278,13 +268,26 @@ def run(
       many time as needed, possibly concurrently (i.e. does not keep state
       within global variables either internally or via its interactions with
       external resources).
-    state_attrs: maps the name of each state variable to its possible values.
-    action_attrs: maps the name of each variable that describes possible
+    state_attrs: Maps the name of each state variable to its possible values.
+    action_attrs: Maps the name of each variable that describes possible
       decisions to its possible values.
+    description: Human-readable description of the application.
   """
 
   method_name = 'run'
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
+
+  if _OPTIMIZER_TYPE.value == 'dm_acme':
+    optimizer.obj = AcmeOptimizerClient(sight)
+  elif _OPTIMIZER_TYPE.value == 'vizier':
+    optimizer.obj = SingleActionOptimizerClient(sight, sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER)
+  elif _OPTIMIZER_TYPE.value == 'genetic_algorithm':
+    optimizer.obj = GeneticAlgorithmOptimizerClient(
+      max_population_size = _NUM_TRAIN_WORKERS.value, sight)
+  elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
+    optimizer.obj = SingleActionOptimizerClient(sight, sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH)
+  elif _OPTIMIZER_TYPE.value == 'llm_gemini':
+    optimizer.obj = LLMOptimizerClient(description, sight)
 
   if state_attrs == {}:
     state_attrs = state_to_dict(env.observation_spec(), 'state')
@@ -292,6 +295,9 @@ def run(
     action_attrs = state_to_dict(env.action_spec(), 'action')
 
   decision_configuration = sight_pb2.DecisionConfigurationStart()
+  decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
+  
+  decision_configuration.choice_config[sight.params.label].CopyFrom(optimizer.obj.create_config())
   _attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
   _attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
 
@@ -316,15 +322,6 @@ def run(
       )
   )
   sight.widget_decision_state['proposed_actions'] = []
-
-  if _OPTIMIZER_TYPE.value == 'dm_acme':
-    optimizer.obj = acme_optimizer_client.Acme(sight)
-  elif _OPTIMIZER_TYPE.value == 'vizier':
-    optimizer.obj = vizier_optimizer_client.Vizier(sight)
-  elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
-    optimizer.obj = exhaustive_search_client.ExhaustiveSearch(sight)
-  elif _OPTIMIZER_TYPE.value == 'llm_gemini':
-    optimizer.obj = llm_optimizer_client.LLM(sight)
 
   if _DECISON_MODE.value == 'run':
     logging.info('_DECISON_MODE.value == run')
@@ -405,9 +402,8 @@ def run(
       if(not _DOCKER_IMAGE.value):
         raise ValueError("docker_image must be provided for distributed mode")
       trials.launch(
-          _OPTIMIZER_TYPE.value,
-          state_attrs,
-          action_attrs,
+          optimizer.obj,
+          decision_configuration,
           _NUM_TRAIN_WORKERS.value,
           sight,
       )
@@ -432,9 +428,8 @@ def run(
         num_samples_to_run = int(os.environ['num_samples'])
       else:
         trials.launch(
-            _OPTIMIZER_TYPE.value,
-            state_attrs,
-            action_attrs,
+            optimizer.obj,
+            decision_configuration,
             _NUM_TRAIN_WORKERS.value,
             sight,
         )
