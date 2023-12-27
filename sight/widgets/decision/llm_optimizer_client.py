@@ -16,7 +16,9 @@
 
 from typing import Optional, Sequence, Tuple
 
+from absl import logging
 from sight import service
+from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from overrides import override
 
@@ -31,11 +33,13 @@ class LLMOptimizerClient (OptimizerClient):
   
   @override
   def create_config(self) -> sight_pb2.DecisionConfigurationStart.ChoiceConfig:
-    return sight_pb2.DecisionConfigurationStart.ChoiceConfig(
-      sight_pb2.DecisionConfigurationStart.LLMConfig(
-        description = self._description
-      )
+    choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig(
     )
+    llm_config = sight_pb2.DecisionConfigurationStart.LLMConfig(
+        description=self._description
+      )
+    choice_config.llm_config.CopyFrom(llm_config)
+    return choice_config
 
   @override
   def decision_point(self, sight, request):

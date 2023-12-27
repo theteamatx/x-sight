@@ -72,12 +72,12 @@ class LLM(OptimizerInstance):
     for i in range(5):
       self.script += 'Decision State:\n'
       self.script += '    {' + ', '.join([
-          f'"{key}": {((p.max_value - p.min_value) * random.random() + p.min_value)}\n'
+          f'"{key}": {((p.max_value - p.min_value) * random.random() + p.min_value)}'
           for key, p in self.state.items()
         ]) + '}\n'
       self.script += 'Decision Action (json format):\n'
       self.script += '    {' + ', '.join([
-          f'"{key}": {((p.max_value - p.min_value) * random.random() + p.min_value)}\n'
+          f'"{key}": {((p.max_value - p.min_value) * random.random() + p.min_value)}'
           for key, p in self.actions.items()
         ]) + '}\n'
       self.script += f'Decision Outcome: {random.random()}\n'
@@ -104,7 +104,7 @@ class LLM(OptimizerInstance):
 
     addition += 'Decision State:\n'
     addition += '    {' + ', '.join([
-        f'"{p.key}": {p.value.double_value}\n'
+        f'"{p.key}": {p.value.double_value}'
           for p in request.decision_point.state_params
         ]) + '}\n'
     addition += 'Decision Action (json format):\n'
@@ -131,7 +131,7 @@ class LLM(OptimizerInstance):
             "threshold": "BLOCK_LOW_AND_ABOVE"
         },
         "generation_config": {
-            "temperature": 0.9,
+            "temperature": 0.3,
             "topP": 0.8,
             "topK": 3,
             "maxOutputTokens": 8192,
@@ -147,7 +147,9 @@ class LLM(OptimizerInstance):
     logging.info('script: %s', self.script)
     logging.info('response=%s', response)
     # logging.info('text=%s', response[0]['candidates'][0]['content']['parts'][0]['text'])
-    text = response[0]['candidates'][0]['content']['parts'][0]['text']
+    text = ''
+    for r in response:
+      text += r['candidates'][0]['content']['parts'][0]['text']
     if text[-1] != '}':
       text += '}'
     logging.info('text=%s', text)

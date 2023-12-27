@@ -44,6 +44,7 @@ from service.llm import LLM
 from service.optimizer_instance import OptimizerInstance
 from service.vizier import Vizier
 from service.acme_optimizer import Acme
+from sight.proto import sight_pb2
 from readerwriterlock import rwlock
 
 
@@ -82,32 +83,31 @@ class Optimizers:
     self.instances_lock = rwlock.RWLockFair()
 
   def launch(
-      self, optimizer_type: Any, request: service_pb2.LaunchRequest
+      self, request: service_pb2.LaunchRequest
   ) -> service_pb2.LaunchResponse:
     """Creates more specific optimizer and use them while responding to clients accordingly.
     """
     method_name = "launch"
     logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+    optimizer_type = request.decision_config_params.optimizer_type
     with self.instances_lock.gen_wlock():
-      if optimizer_type == service_pb2.OptimizerType.OT_VIZIER:
+      if optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER:
         self.instances[request.client_id] = Vizier()
         return self.instances[request.client_id].launch(request)
-      elif optimizer_type == service_pb2.OptimizerType.OT_GENETIC_ALGORITHM:
-        # self.instances[request.client_id] = GeneticAlgorithm()
-        # return self.instances[request.client_id].launch(request)
-        self.instances[request.client_id] = LLM()
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_GENETIC_ALGORITHM:
+        self.instances[request.client_id] = GeneticAlgorithm()
         return self.instances[request.client_id].launch(request)
-      elif optimizer_type == service_pb2.OptimizerType.OT_EXHAUSTIVE_SEARCH:
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH:
         self.instances[request.client_id] = ExhaustiveSearch()
         return self.instances[request.client_id].launch(request)
-      elif optimizer_type == service_pb2.OptimizerType.OT_ACME:
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_ACME:
         self.instances[request.client_id] = Acme()
         obj = self.instances[request.client_id].launch(request)
         logging.info("self of optimizers class:  %s", str(self.__dict__))
         return obj
-      # elif optimizer_type == service_pb2.OptimizerType.OT_LLM:
-      #   self.instances[request.client_id] = LLM()
-      #   return self.instances[request.client_id].launch(request)
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM:
+        self.instances[request.client_id] = LLM()
+        return self.instances[request.client_id].launch(request)
       else:
         return service_pb2.LaunchResponse(
             display_string=f"OPTIMIZER '{optimizer_type}' NOT VALID!!"
@@ -203,8 +203,8 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     method_name = "Launch"
     logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
     # start_time = time.time()
-    # logging.info("request here is : %s", request)
-    obj = self.optimizers.launch(request.optimizer_type, request)
+    logging.info("request here is : %s", request)
+    obj = self.optimizers.launch(request)
     # calculate_resolve_time(start_time)
     logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
     return obj

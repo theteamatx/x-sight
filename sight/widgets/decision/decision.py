@@ -283,7 +283,7 @@ def run(
     optimizer.obj = SingleActionOptimizerClient(sight, sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER)
   elif _OPTIMIZER_TYPE.value == 'genetic_algorithm':
     optimizer.obj = GeneticAlgorithmOptimizerClient(
-      max_population_size = _NUM_TRAIN_WORKERS.value, sight)
+      max_population_size = _NUM_TRAIN_WORKERS.value, sight=sight)
   elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
     optimizer.obj = SingleActionOptimizerClient(sight, sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH)
   elif _OPTIMIZER_TYPE.value == 'llm_gemini':

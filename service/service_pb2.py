@@ -17,17 +17,10 @@ from sight.proto import sight_pb2 as sight_dot_proto_dot_sight__pb2
 from service.numproto.protobuf import ndarray_pb2 as service_dot_numproto_dot_protobuf_dot_ndarray__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15service/service.proto\x12\x0fsight.x.service\x1a\x17sight/proto/sight.proto\x1a\'service/numproto/protobuf/ndarray.proto\"\xb2\x02\n\x1d\x43opyDataToReplayServerRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12/\n\x0bobservation\x18\x03 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12*\n\x06\x61\x63tion\x18\x04 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12*\n\x06reward\x18\x05 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12,\n\x08\x64iscount\x18\x06 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12\x34\n\x10next_observation\x18\x07 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\"6\n\x1e\x43opyDataToReplayServerResponse\x12\x14\n\x0cresponse_str\x18\x01 \x01(\t\"\xc4\x03\n\x11GetWeightsRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12L\n\x14\x65pisode_observations\x18\x03 \x03(\x0b\x32..sight.x.service.GetWeightsRequest.Observation\x1a\x83\x02\n\x0bObservation\x12*\n\x06\x61\x63tion\x18\x01 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12=\n\x08steptype\x18\x02 \x01(\x0e\x32+.sight.x.service.GetWeightsRequest.StepType\x12*\n\x06reward\x18\x03 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12,\n\x08\x64iscount\x18\x04 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12/\n\x0bobservation\x18\x05 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\"5\n\x08StepType\x12\x0b\n\x07\x44\x45\x46\x41ULT\x10\x00\x12\t\n\x05\x46IRST\x10\x01\x12\x07\n\x03MID\x10\x02\x12\x08\n\x04LAST\x10\x03\"\xf0\x01\n\x12GetWeightsResponse\x12\x39\n\x06layers\x18\x01 \x03(\x0b\x32).sight.x.service.GetWeightsResponse.Layer\x1a\x9e\x01\n\x05Layer\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x46\n\x07weights\x18\x02 \x01(\x0b\x32\x35.sight.x.service.GetWeightsResponse.Layer.WeightsData\x1a?\n\x0bWeightsData\x12\t\n\x01\x62\x18\x01 \x03(\x02\x12%\n\x01w\x18\x02 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\"\x0e\n\x0cVizierConfig\"\xbf\x01\n\nAcmeConfig\x12\x10\n\x08\x65nv_name\x18\x01 \x01(\t\x12\x11\n\tstate_min\x18\x02 \x03(\x02\x12\x11\n\tstate_max\x18\x03 \x03(\x02\x12\x1a\n\x12state_param_length\x18\x04 \x01(\x03\x12\x12\n\naction_min\x18\x05 \x03(\x02\x12\x12\n\naction_max\x18\x06 \x03(\x02\x12\x1b\n\x13\x61\x63tion_param_length\x18\x07 \x01(\x03\x12\x18\n\x10possible_actions\x18\x08 \x01(\x03\"5\n\x16GeneticAlgorithmConfig\x12\x1b\n\x13max_population_size\x18\x01 \x01(\x03\"\x18\n\x16\x45xhaustiveSearchConfig\"\xb5\x03\n\x0c\x41\x63me_Request\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12G\n\x14\x65pisode_observations\x18\x03 \x03(\x0b\x32).sight.x.service.Acme_Request.Observation\x1a\xfe\x01\n\x0bObservation\x12*\n\x06\x61\x63tion\x18\x01 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12\x38\n\x08steptype\x18\x02 \x01(\x0e\x32&.sight.x.service.Acme_Request.StepType\x12*\n\x06reward\x18\x03 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12,\n\x08\x64iscount\x18\x04 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12/\n\x0bobservation\x18\x05 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\"5\n\x08StepType\x12\x0b\n\x07\x44\x45\x46\x41ULT\x10\x00\x12\t\n\x05\x46IRST\x10\x01\x12\x07\n\x03MID\x10\x02\x12\x08\n\x04LAST\x10\x03\"\xe1\x01\n\rAcme_Response\x12\x34\n\x06layers\x18\x01 \x03(\x0b\x32$.sight.x.service.Acme_Response.Layer\x1a\x99\x01\n\x05Layer\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x41\n\x07weights\x18\x02 \x01(\x0b\x32\x30.sight.x.service.Acme_Response.Layer.WeightsData\x1a?\n\x0bWeightsData\x12\t\n\x01\x62\x18\x01 \x03(\x02\x12%\n\x01w\x18\x02 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\"\xe8\x01\n\x14\x44\x65\x63isionPointRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12\x34\n\x0e\x64\x65\x63ision_point\x18\x03 \x01(\x0b\x32\x1c.sight.x.proto.DecisionPoint\x12\x38\n\x10\x64\x65\x63ision_outcome\x18\x04 \x01(\x0b\x32\x1e.sight.x.proto.DecisionOutcome\x12:\n\x13\x61\x63me_decision_point\x18\x05 \x01(\x0b\x32\x1d.sight.x.service.Acme_Request\"|\n\x15\x44\x65\x63isionPointResponse\x12,\n\x06\x61\x63tion\x18\x01 \x03(\x0b\x32\x1c.sight.x.proto.DecisionParam\x12\x35\n\racme_response\x18\x02 \x01(\x0b\x32\x1e.sight.x.service.Acme_Response\"A\n\x19\x46\x65tchOptimalActionRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\"2\n\x1a\x46\x65tchOptimalActionResponse\x12\x14\n\x0cresponse_str\x18\x01 \x01(\t\"<\n\x14\x43urrentStatusRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\"-\n\x15\x43urrentStatusResponse\x12\x14\n\x0cresponse_str\x18\x01 \x01(\t\"\xce\x03\n\rLaunchRequest\x12I\n\x16\x64\x65\x63ision_config_params\x18\x01 \x01(\x0b\x32).sight.x.proto.DecisionConfigurationStart\x12\x36\n\x0eoptimizer_type\x18\x02 \x01(\x0e\x32\x1e.sight.x.service.OptimizerType\x12\r\n\x05label\x18\x03 \x01(\t\x12\x11\n\tclient_id\x18\x04 \x01(\t\x12\x36\n\rvizier_config\x18\x05 \x01(\x0b\x32\x1d.sight.x.service.VizierConfigH\x00\x12\x32\n\x0b\x61\x63me_config\x18\x06 \x01(\x0b\x32\x1b.sight.x.service.AcmeConfigH\x00\x12K\n\x18genetic_algorithm_config\x18\x07 \x01(\x0b\x32\'.sight.x.service.GeneticAlgorithmConfigH\x00\x12K\n\x18\x65xhaustive_search_config\x18\x08 \x01(\x0b\x32\'.sight.x.service.ExhaustiveSearchConfigH\x00\x42\x12\n\x10optimizer_config\"(\n\x0eLaunchResponse\x12\x16\n\x0e\x64isplay_string\x18\x01 \x01(\t\"\xdf\x01\n\x14ProposeActionRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12\x41\n\x06\x61\x63tion\x18\x03 \x03(\x0b\x32\x31.sight.x.service.ProposeActionRequest.ActionEntry\x12/\n\x07outcome\x18\x04 \x01(\x0b\x32\x1e.sight.x.proto.DecisionOutcome\x1a-\n\x0b\x41\x63tionEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x02:\x02\x38\x01\"-\n\x15ProposeActionResponse\x12\x14\n\x0cresponse_str\x18\x01 \x01(\t\"\xe6\x01\n\x16\x46inalizeEpisodeRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12\x34\n\x0e\x64\x65\x63ision_point\x18\x03 \x01(\x0b\x32\x1c.sight.x.proto.DecisionPoint\x12\x38\n\x10\x64\x65\x63ision_outcome\x18\x04 \x01(\x0b\x32\x1e.sight.x.proto.DecisionOutcome\x12\x36\n\x0eoptimizer_type\x18\x05 \x01(\x0e\x32\x1e.sight.x.service.OptimizerType\"D\n\x17\x46inalizeEpisodeResponse\x12\x14\n\x0cresponse_str\x18\x01 \x01(\t\x12\x13\n\x0bstop_worker\x18\x02 \x01(\x08\" \n\x0bTestRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\"\x1b\n\x0cTestResponse\x12\x0b\n\x03val\x18\x01 \x01(\t\"\xa0\x01\n\rCreateRequest\x12*\n\x06\x66ormat\x18\x01 \x01(\x0e\x32\x1a.sight.x.service.LogFormat\x12\x14\n\x0clog_dir_path\x18\x02 \x01(\t\x12\x11\n\tlog_owner\x18\x03 \x01(\t\x12\r\n\x05label\x18\x04 \x01(\t\x12+\n\tattribute\x18\x05 \x03(\x0b\x32\x18.sight.x.proto.Attribute\"1\n\x0e\x43reateResponse\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x13\n\x0bpath_prefix\x18\x02 \x01(\t*o\n\rOptimizerType\x12\x0e\n\nOT_UNKNOWN\x10\x00\x12\r\n\tOT_VIZIER\x10\x01\x12\x0b\n\x07OT_ACME\x10\x02\x12\x18\n\x14OT_GENETIC_ALGORITHM\x10\x03\x12\x18\n\x14OT_EXHAUSTIVE_SEARCH\x10\x04*[\n\tLogFormat\x12\x0e\n\nLF_UNKNOWN\x10\x00\x12\x0f\n\x0bLF_COLUMNIO\x10\x01\x12\x10\n\x0cLF_CAPACITOR\x10\x02\x12\x0e\n\nLF_SPANNER\x10\x03\x12\x0b\n\x07LF_AVRO\x10\x04\x32\x99\x08\n\x0cSightService\x12\x45\n\x04Test\x12\x1c.sight.x.service.TestRequest\x1a\x1d.sight.x.service.TestResponse\"\x00\x12S\n\x12PrintInsertionTime\x12\x1c.sight.x.service.TestRequest\x1a\x1d.sight.x.service.TestResponse\"\x00\x12K\n\x06\x43reate\x12\x1e.sight.x.service.CreateRequest\x1a\x1f.sight.x.service.CreateResponse\"\x00\x12K\n\x06Launch\x12\x1e.sight.x.service.LaunchRequest\x1a\x1f.sight.x.service.LaunchResponse\"\x00\x12W\n\nGetWeights\x12\".sight.x.service.GetWeightsRequest\x1a#.sight.x.service.GetWeightsResponse\"\x00\x12`\n\rDecisionPoint\x12%.sight.x.service.DecisionPointRequest\x1a&.sight.x.service.DecisionPointResponse\"\x00\x12{\n\x16\x43opyDataToReplayServer\x12..sight.x.service.CopyDataToReplayServerRequest\x1a/.sight.x.service.CopyDataToReplayServerResponse\"\x00\x12`\n\rCurrentStatus\x12%.sight.x.service.CurrentStatusRequest\x1a&.sight.x.service.CurrentStatusResponse\"\x00\x12o\n\x12\x46\x65tchOptimalAction\x12*.sight.x.service.FetchOptimalActionRequest\x1a+.sight.x.service.FetchOptimalActionResponse\"\x00\x12`\n\rProposeAction\x12%.sight.x.service.ProposeActionRequest\x1a&.sight.x.service.ProposeActionResponse\"\x00\x12\x66\n\x0f\x46inalizeEpisode\x12\'.sight.x.service.FinalizeEpisodeRequest\x1a(.sight.x.service.FinalizeEpisodeResponse\"\x00\x62\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15service/service.proto\x12\x0fsight.x.service\x1a\x17sight/proto/sight.proto\x1a\'service/numproto/protobuf/ndarray.proto\"\xb2\x02\n\x1d\x43opyDataToReplayServerRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12/\n\x0bobservation\x18\x03 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12*\n\x06\x61\x63tion\x18\x04 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12*\n\x06reward\x18\x05 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12,\n\x08\x64iscount\x18\x06 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12\x34\n\x10next_observation\x18\x07 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\"6\n\x1e\x43opyDataToReplayServerResponse\x12\x14\n\x0cresponse_str\x18\x01 \x01(\t\"\xc4\x03\n\x11GetWeightsRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12L\n\x14\x65pisode_observations\x18\x03 \x03(\x0b\x32..sight.x.service.GetWeightsRequest.Observation\x1a\x83\x02\n\x0bObservation\x12*\n\x06\x61\x63tion\x18\x01 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12=\n\x08steptype\x18\x02 \x01(\x0e\x32+.sight.x.service.GetWeightsRequest.StepType\x12*\n\x06reward\x18\x03 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12,\n\x08\x64iscount\x18\x04 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12/\n\x0bobservation\x18\x05 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\"5\n\x08StepType\x12\x0b\n\x07\x44\x45\x46\x41ULT\x10\x00\x12\t\n\x05\x46IRST\x10\x01\x12\x07\n\x03MID\x10\x02\x12\x08\n\x04LAST\x10\x03\"\xf0\x01\n\x12GetWeightsResponse\x12\x39\n\x06layers\x18\x01 \x03(\x0b\x32).sight.x.service.GetWeightsResponse.Layer\x1a\x9e\x01\n\x05Layer\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x46\n\x07weights\x18\x02 \x01(\x0b\x32\x35.sight.x.service.GetWeightsResponse.Layer.WeightsData\x1a?\n\x0bWeightsData\x12\t\n\x01\x62\x18\x01 \x03(\x02\x12%\n\x01w\x18\x02 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\"\xb5\x03\n\x0c\x41\x63me_Request\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12G\n\x14\x65pisode_observations\x18\x03 \x03(\x0b\x32).sight.x.service.Acme_Request.Observation\x1a\xfe\x01\n\x0bObservation\x12*\n\x06\x61\x63tion\x18\x01 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12\x38\n\x08steptype\x18\x02 \x01(\x0e\x32&.sight.x.service.Acme_Request.StepType\x12*\n\x06reward\x18\x03 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12,\n\x08\x64iscount\x18\x04 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\x12/\n\x0bobservation\x18\x05 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\"5\n\x08StepType\x12\x0b\n\x07\x44\x45\x46\x41ULT\x10\x00\x12\t\n\x05\x46IRST\x10\x01\x12\x07\n\x03MID\x10\x02\x12\x08\n\x04LAST\x10\x03\"\xe1\x01\n\rAcme_Response\x12\x34\n\x06layers\x18\x01 \x03(\x0b\x32$.sight.x.service.Acme_Response.Layer\x1a\x99\x01\n\x05Layer\x12\x0c\n\x04name\x18\x01 \x01(\t\x12\x41\n\x07weights\x18\x02 \x01(\x0b\x32\x30.sight.x.service.Acme_Response.Layer.WeightsData\x1a?\n\x0bWeightsData\x12\t\n\x01\x62\x18\x01 \x03(\x02\x12%\n\x01w\x18\x02 \x01(\x0b\x32\x1a.numproto.protobuf.NDArray\"\xe8\x01\n\x14\x44\x65\x63isionPointRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12\x34\n\x0e\x64\x65\x63ision_point\x18\x03 \x01(\x0b\x32\x1c.sight.x.proto.DecisionPoint\x12\x38\n\x10\x64\x65\x63ision_outcome\x18\x04 \x01(\x0b\x32\x1e.sight.x.proto.DecisionOutcome\x12:\n\x13\x61\x63me_decision_point\x18\x05 \x01(\x0b\x32\x1d.sight.x.service.Acme_Request\"|\n\x15\x44\x65\x63isionPointResponse\x12,\n\x06\x61\x63tion\x18\x01 \x03(\x0b\x32\x1c.sight.x.proto.DecisionParam\x12\x35\n\racme_response\x18\x02 \x01(\x0b\x32\x1e.sight.x.service.Acme_Response\"A\n\x19\x46\x65tchOptimalActionRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\"2\n\x1a\x46\x65tchOptimalActionResponse\x12\x14\n\x0cresponse_str\x18\x01 \x01(\t\"<\n\x14\x43urrentStatusRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\"-\n\x15\x43urrentStatusResponse\x12\x14\n\x0cresponse_str\x18\x01 \x01(\t\"|\n\rLaunchRequest\x12I\n\x16\x64\x65\x63ision_config_params\x18\x01 \x01(\x0b\x32).sight.x.proto.DecisionConfigurationStart\x12\r\n\x05label\x18\x03 \x01(\t\x12\x11\n\tclient_id\x18\x04 \x01(\t\"(\n\x0eLaunchResponse\x12\x16\n\x0e\x64isplay_string\x18\x01 \x01(\t\"\xdf\x01\n\x14ProposeActionRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12\x41\n\x06\x61\x63tion\x18\x03 \x03(\x0b\x32\x31.sight.x.service.ProposeActionRequest.ActionEntry\x12/\n\x07outcome\x18\x04 \x01(\x0b\x32\x1e.sight.x.proto.DecisionOutcome\x1a-\n\x0b\x41\x63tionEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\x02:\x02\x38\x01\"-\n\x15ProposeActionResponse\x12\x14\n\x0cresponse_str\x18\x01 \x01(\t\"\xff\x01\n\x16\x46inalizeEpisodeRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\x12\x11\n\tworker_id\x18\x02 \x01(\t\x12\x34\n\x0e\x64\x65\x63ision_point\x18\x03 \x01(\x0b\x32\x1c.sight.x.proto.DecisionPoint\x12\x38\n\x10\x64\x65\x63ision_outcome\x18\x04 \x01(\x0b\x32\x1e.sight.x.proto.DecisionOutcome\x12O\n\x0eoptimizer_type\x18\x05 \x01(\x0e\x32\x37.sight.x.proto.DecisionConfigurationStart.OptimizerType\"D\n\x17\x46inalizeEpisodeResponse\x12\x14\n\x0cresponse_str\x18\x01 \x01(\t\x12\x13\n\x0bstop_worker\x18\x02 \x01(\x08\" \n\x0bTestRequest\x12\x11\n\tclient_id\x18\x01 \x01(\t\"\x1b\n\x0cTestResponse\x12\x0b\n\x03val\x18\x01 \x01(\t\"\xa0\x01\n\rCreateRequest\x12*\n\x06\x66ormat\x18\x01 \x01(\x0e\x32\x1a.sight.x.service.LogFormat\x12\x14\n\x0clog_dir_path\x18\x02 \x01(\t\x12\x11\n\tlog_owner\x18\x03 \x01(\t\x12\r\n\x05label\x18\x04 \x01(\t\x12+\n\tattribute\x18\x05 \x03(\x0b\x32\x18.sight.x.proto.Attribute\"1\n\x0e\x43reateResponse\x12\n\n\x02id\x18\x01 \x01(\x03\x12\x13\n\x0bpath_prefix\x18\x02 \x01(\t*[\n\tLogFormat\x12\x0e\n\nLF_UNKNOWN\x10\x00\x12\x0f\n\x0bLF_COLUMNIO\x10\x01\x12\x10\n\x0cLF_CAPACITOR\x10\x02\x12\x0e\n\nLF_SPANNER\x10\x03\x12\x0b\n\x07LF_AVRO\x10\x04\x32\x99\x08\n\x0cSightService\x12\x45\n\x04Test\x12\x1c.sight.x.service.TestRequest\x1a\x1d.sight.x.service.TestResponse\"\x00\x12S\n\x12PrintInsertionTime\x12\x1c.sight.x.service.TestRequest\x1a\x1d.sight.x.service.TestResponse\"\x00\x12K\n\x06\x43reate\x12\x1e.sight.x.service.CreateRequest\x1a\x1f.sight.x.service.CreateResponse\"\x00\x12K\n\x06Launch\x12\x1e.sight.x.service.LaunchRequest\x1a\x1f.sight.x.service.LaunchResponse\"\x00\x12W\n\nGetWeights\x12\".sight.x.service.GetWeightsRequest\x1a#.sight.x.service.GetWeightsResponse\"\x00\x12`\n\rDecisionPoint\x12%.sight.x.service.DecisionPointRequest\x1a&.sight.x.service.DecisionPointResponse\"\x00\x12{\n\x16\x43opyDataToReplayServer\x12..sight.x.service.CopyDataToReplayServerRequest\x1a/.sight.x.service.CopyDataToReplayServerResponse\"\x00\x12`\n\rCurrentStatus\x12%.sight.x.service.CurrentStatusRequest\x1a&.sight.x.service.CurrentStatusResponse\"\x00\x12o\n\x12\x46\x65tchOptimalAction\x12*.sight.x.service.FetchOptimalActionRequest\x1a+.sight.x.service.FetchOptimalActionResponse\"\x00\x12`\n\rProposeAction\x12%.sight.x.service.ProposeActionRequest\x1a&.sight.x.service.ProposeActionResponse\"\x00\x12\x66\n\x0f\x46inalizeEpisode\x12\'.sight.x.service.FinalizeEpisodeRequest\x1a(.sight.x.service.FinalizeEpisodeResponse\"\x00\x62\x06proto3')
 
-_OPTIMIZERTYPE = DESCRIPTOR.enum_types_by_name['OptimizerType']
-OptimizerType = enum_type_wrapper.EnumTypeWrapper(_OPTIMIZERTYPE)
 _LOGFORMAT = DESCRIPTOR.enum_types_by_name['LogFormat']
 LogFormat = enum_type_wrapper.EnumTypeWrapper(_LOGFORMAT)
-OT_UNKNOWN = 0
-OT_VIZIER = 1
-OT_ACME = 2
-OT_GENETIC_ALGORITHM = 3
-OT_EXHAUSTIVE_SEARCH = 4
 LF_UNKNOWN = 0
 LF_COLUMNIO = 1
 LF_CAPACITOR = 2
@@ -42,10 +35,6 @@ _GETWEIGHTSREQUEST_OBSERVATION = _GETWEIGHTSREQUEST.nested_types_by_name['Observ
 _GETWEIGHTSRESPONSE = DESCRIPTOR.message_types_by_name['GetWeightsResponse']
 _GETWEIGHTSRESPONSE_LAYER = _GETWEIGHTSRESPONSE.nested_types_by_name['Layer']
 _GETWEIGHTSRESPONSE_LAYER_WEIGHTSDATA = _GETWEIGHTSRESPONSE_LAYER.nested_types_by_name['WeightsData']
-_VIZIERCONFIG = DESCRIPTOR.message_types_by_name['VizierConfig']
-_ACMECONFIG = DESCRIPTOR.message_types_by_name['AcmeConfig']
-_GENETICALGORITHMCONFIG = DESCRIPTOR.message_types_by_name['GeneticAlgorithmConfig']
-_EXHAUSTIVESEARCHCONFIG = DESCRIPTOR.message_types_by_name['ExhaustiveSearchConfig']
 _ACME_REQUEST = DESCRIPTOR.message_types_by_name['Acme_Request']
 _ACME_REQUEST_OBSERVATION = _ACME_REQUEST.nested_types_by_name['Observation']
 _ACME_RESPONSE = DESCRIPTOR.message_types_by_name['Acme_Response']
@@ -121,34 +110,6 @@ GetWeightsResponse = _reflection.GeneratedProtocolMessageType('GetWeightsRespons
 _sym_db.RegisterMessage(GetWeightsResponse)
 _sym_db.RegisterMessage(GetWeightsResponse.Layer)
 _sym_db.RegisterMessage(GetWeightsResponse.Layer.WeightsData)
-
-VizierConfig = _reflection.GeneratedProtocolMessageType('VizierConfig', (_message.Message,), {
-  'DESCRIPTOR' : _VIZIERCONFIG,
-  '__module__' : 'service.service_pb2'
-  # @@protoc_insertion_point(class_scope:sight.x.service.VizierConfig)
-  })
-_sym_db.RegisterMessage(VizierConfig)
-
-AcmeConfig = _reflection.GeneratedProtocolMessageType('AcmeConfig', (_message.Message,), {
-  'DESCRIPTOR' : _ACMECONFIG,
-  '__module__' : 'service.service_pb2'
-  # @@protoc_insertion_point(class_scope:sight.x.service.AcmeConfig)
-  })
-_sym_db.RegisterMessage(AcmeConfig)
-
-GeneticAlgorithmConfig = _reflection.GeneratedProtocolMessageType('GeneticAlgorithmConfig', (_message.Message,), {
-  'DESCRIPTOR' : _GENETICALGORITHMCONFIG,
-  '__module__' : 'service.service_pb2'
-  # @@protoc_insertion_point(class_scope:sight.x.service.GeneticAlgorithmConfig)
-  })
-_sym_db.RegisterMessage(GeneticAlgorithmConfig)
-
-ExhaustiveSearchConfig = _reflection.GeneratedProtocolMessageType('ExhaustiveSearchConfig', (_message.Message,), {
-  'DESCRIPTOR' : _EXHAUSTIVESEARCHCONFIG,
-  '__module__' : 'service.service_pb2'
-  # @@protoc_insertion_point(class_scope:sight.x.service.ExhaustiveSearchConfig)
-  })
-_sym_db.RegisterMessage(ExhaustiveSearchConfig)
 
 Acme_Request = _reflection.GeneratedProtocolMessageType('Acme_Request', (_message.Message,), {
 
@@ -314,10 +275,8 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   DESCRIPTOR._options = None
   _PROPOSEACTIONREQUEST_ACTIONENTRY._options = None
   _PROPOSEACTIONREQUEST_ACTIONENTRY._serialized_options = b'8\001'
-  _OPTIMIZERTYPE._serialized_start=4079
-  _OPTIMIZERTYPE._serialized_end=4190
-  _LOGFORMAT._serialized_start=4192
-  _LOGFORMAT._serialized_end=4283
+  _LOGFORMAT._serialized_start=3474
+  _LOGFORMAT._serialized_end=3565
   _COPYDATATOREPLAYSERVERREQUEST._serialized_start=109
   _COPYDATATOREPLAYSERVERREQUEST._serialized_end=415
   _COPYDATATOREPLAYSERVERRESPONSE._serialized_start=417
@@ -334,60 +293,52 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _GETWEIGHTSRESPONSE_LAYER._serialized_end=1169
   _GETWEIGHTSRESPONSE_LAYER_WEIGHTSDATA._serialized_start=1106
   _GETWEIGHTSRESPONSE_LAYER_WEIGHTSDATA._serialized_end=1169
-  _VIZIERCONFIG._serialized_start=1171
-  _VIZIERCONFIG._serialized_end=1185
-  _ACMECONFIG._serialized_start=1188
-  _ACMECONFIG._serialized_end=1379
-  _GENETICALGORITHMCONFIG._serialized_start=1381
-  _GENETICALGORITHMCONFIG._serialized_end=1434
-  _EXHAUSTIVESEARCHCONFIG._serialized_start=1436
-  _EXHAUSTIVESEARCHCONFIG._serialized_end=1460
-  _ACME_REQUEST._serialized_start=1463
-  _ACME_REQUEST._serialized_end=1900
-  _ACME_REQUEST_OBSERVATION._serialized_start=1591
-  _ACME_REQUEST_OBSERVATION._serialized_end=1845
+  _ACME_REQUEST._serialized_start=1172
+  _ACME_REQUEST._serialized_end=1609
+  _ACME_REQUEST_OBSERVATION._serialized_start=1300
+  _ACME_REQUEST_OBSERVATION._serialized_end=1554
   _ACME_REQUEST_STEPTYPE._serialized_start=873
   _ACME_REQUEST_STEPTYPE._serialized_end=926
-  _ACME_RESPONSE._serialized_start=1903
-  _ACME_RESPONSE._serialized_end=2128
-  _ACME_RESPONSE_LAYER._serialized_start=1975
-  _ACME_RESPONSE_LAYER._serialized_end=2128
+  _ACME_RESPONSE._serialized_start=1612
+  _ACME_RESPONSE._serialized_end=1837
+  _ACME_RESPONSE_LAYER._serialized_start=1684
+  _ACME_RESPONSE_LAYER._serialized_end=1837
   _ACME_RESPONSE_LAYER_WEIGHTSDATA._serialized_start=1106
   _ACME_RESPONSE_LAYER_WEIGHTSDATA._serialized_end=1169
-  _DECISIONPOINTREQUEST._serialized_start=2131
-  _DECISIONPOINTREQUEST._serialized_end=2363
-  _DECISIONPOINTRESPONSE._serialized_start=2365
-  _DECISIONPOINTRESPONSE._serialized_end=2489
-  _FETCHOPTIMALACTIONREQUEST._serialized_start=2491
-  _FETCHOPTIMALACTIONREQUEST._serialized_end=2556
-  _FETCHOPTIMALACTIONRESPONSE._serialized_start=2558
-  _FETCHOPTIMALACTIONRESPONSE._serialized_end=2608
-  _CURRENTSTATUSREQUEST._serialized_start=2610
-  _CURRENTSTATUSREQUEST._serialized_end=2670
-  _CURRENTSTATUSRESPONSE._serialized_start=2672
-  _CURRENTSTATUSRESPONSE._serialized_end=2717
-  _LAUNCHREQUEST._serialized_start=2720
-  _LAUNCHREQUEST._serialized_end=3182
-  _LAUNCHRESPONSE._serialized_start=3184
-  _LAUNCHRESPONSE._serialized_end=3224
-  _PROPOSEACTIONREQUEST._serialized_start=3227
-  _PROPOSEACTIONREQUEST._serialized_end=3450
-  _PROPOSEACTIONREQUEST_ACTIONENTRY._serialized_start=3405
-  _PROPOSEACTIONREQUEST_ACTIONENTRY._serialized_end=3450
-  _PROPOSEACTIONRESPONSE._serialized_start=3452
-  _PROPOSEACTIONRESPONSE._serialized_end=3497
-  _FINALIZEEPISODEREQUEST._serialized_start=3500
-  _FINALIZEEPISODEREQUEST._serialized_end=3730
-  _FINALIZEEPISODERESPONSE._serialized_start=3732
-  _FINALIZEEPISODERESPONSE._serialized_end=3800
-  _TESTREQUEST._serialized_start=3802
-  _TESTREQUEST._serialized_end=3834
-  _TESTRESPONSE._serialized_start=3836
-  _TESTRESPONSE._serialized_end=3863
-  _CREATEREQUEST._serialized_start=3866
-  _CREATEREQUEST._serialized_end=4026
-  _CREATERESPONSE._serialized_start=4028
-  _CREATERESPONSE._serialized_end=4077
-  _SIGHTSERVICE._serialized_start=4286
-  _SIGHTSERVICE._serialized_end=5335
+  _DECISIONPOINTREQUEST._serialized_start=1840
+  _DECISIONPOINTREQUEST._serialized_end=2072
+  _DECISIONPOINTRESPONSE._serialized_start=2074
+  _DECISIONPOINTRESPONSE._serialized_end=2198
+  _FETCHOPTIMALACTIONREQUEST._serialized_start=2200
+  _FETCHOPTIMALACTIONREQUEST._serialized_end=2265
+  _FETCHOPTIMALACTIONRESPONSE._serialized_start=2267
+  _FETCHOPTIMALACTIONRESPONSE._serialized_end=2317
+  _CURRENTSTATUSREQUEST._serialized_start=2319
+  _CURRENTSTATUSREQUEST._serialized_end=2379
+  _CURRENTSTATUSRESPONSE._serialized_start=2381
+  _CURRENTSTATUSRESPONSE._serialized_end=2426
+  _LAUNCHREQUEST._serialized_start=2428
+  _LAUNCHREQUEST._serialized_end=2552
+  _LAUNCHRESPONSE._serialized_start=2554
+  _LAUNCHRESPONSE._serialized_end=2594
+  _PROPOSEACTIONREQUEST._serialized_start=2597
+  _PROPOSEACTIONREQUEST._serialized_end=2820
+  _PROPOSEACTIONREQUEST_ACTIONENTRY._serialized_start=2775
+  _PROPOSEACTIONREQUEST_ACTIONENTRY._serialized_end=2820
+  _PROPOSEACTIONRESPONSE._serialized_start=2822
+  _PROPOSEACTIONRESPONSE._serialized_end=2867
+  _FINALIZEEPISODEREQUEST._serialized_start=2870
+  _FINALIZEEPISODEREQUEST._serialized_end=3125
+  _FINALIZEEPISODERESPONSE._serialized_start=3127
+  _FINALIZEEPISODERESPONSE._serialized_end=3195
+  _TESTREQUEST._serialized_start=3197
+  _TESTREQUEST._serialized_end=3229
+  _TESTRESPONSE._serialized_start=3231
+  _TESTRESPONSE._serialized_end=3258
+  _CREATEREQUEST._serialized_start=3261
+  _CREATEREQUEST._serialized_end=3421
+  _CREATERESPONSE._serialized_start=3423
+  _CREATERESPONSE._serialized_end=3472
+  _SIGHTSERVICE._serialized_start=3568
+  _SIGHTSERVICE._serialized_end=4617
 # @@protoc_insertion_point(module_scope)

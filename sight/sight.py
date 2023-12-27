@@ -218,7 +218,7 @@ class Sight(object):
             response = service.call(
                 lambda s, meta: s.Create(req, 300, metadata=meta)
             )
-            # logging.info('##### response=%s #####', response)
+            logging.info('##### response=%s #####', response)
             self.id = response.id
             # logging.info('PARENT_LOG_ID not found - parent process')
             self.path_prefix = (

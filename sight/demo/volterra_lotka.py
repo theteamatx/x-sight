@@ -24,9 +24,10 @@ from sight import data_structures
 from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
-from sight.widgets.simulation.simulation import Simulation
-from sight.widgets.simulation.simulation_state import SimulationState
-from sight.widgets.simulation.simulation_time_step import SimulationTimeStep
+# from sight.widgets.simulation.simulation import Simulation
+# from sight.widgets.simulation.simulation_state import SimulationState
+# from sight.widgets.simulation.simulation_time_step import SimulationTimeStep
+import os
 
 _LAST_TS = flags.DEFINE_integer(
     'last_ts', 10, 'The final day of the simulation.'
@@ -77,7 +78,7 @@ def driver(sight: Sight) -> None:
     #     time_step_units=sight_pb2.SimulationTimeStepStart.TSU_UNKNOWN,
     #     sight=sight,
     # ):
-      action = decision.decision_point('init', sight, default_params)
+      action = decision.decision_point('init', sight) #, default_params)
       logging.info('action=%s', action)
       if idx == 0:
         r = action['R0']
@@ -127,8 +128,6 @@ The Lotka–Volterra equations, also known as the Lotka–Volterra predator–pr
 
 The prey are assumed to have an unlimited food supply and to reproduce exponentially, unless subject to predation; this exponential growth is represented in the equation above by the term αx. The rate of predation on the prey is assumed to be proportional to the rate at which the predators and the prey meet; this is represented above by βxy. If either x or y is zero, then there can be no predation. With these two terms the prey equation above can be interpreted as follows: the rate of change of the prey's population is given by its own growth rate minus the rate at which it is preyed upon.
 
-The term δxy represents the growth of the predator population. (Note the similarity to the predation rate; however, a different constant is used, as the rate at which the predator population grows is not necessarily equal to the rate at which it consumes the prey). The term γy represents the loss rate of the predators due to either natural death or emigration; it leads to an exponential decay in the absence of prey. Hence the equation expresses that the rate of change of the predator's population depends upon the rate at which it consumes prey, minus its intrinsic death rate.
-
 The Lotka–Volterra predator-prey model makes a number of assumptions about the environment and biology of the predator and prey populations:[5]
 
 The prey population finds ample food at all times.
@@ -137,7 +136,7 @@ The rate of change of population is proportional to its size.
 During the process, the environment does not change in favour of one species, and genetic adaptation is inconsequential.
 Predators have limitless appetite.
 Both populations can be described by a single variable. This amounts to assuming that the populations do not have a spatial or age distribution that contributes to the dynamics.
-'''
+''',
         state_attrs={
             'R': sight_pb2.DecisionConfigurationStart.AttrProps(
                 min_value=0, max_value=100,
@@ -159,19 +158,19 @@ Both populations can be described by a single variable. This amounts to assuming
             ),
             'alpha': sight_pb2.DecisionConfigurationStart.AttrProps(
                 min_value=0, max_value=20,
-                'The growth rate of the prey.',
+                description='The growth rate of the prey.',
             ),
             'beta': sight_pb2.DecisionConfigurationStart.AttrProps(
                 min_value=0, max_value=20,
-                ' effect of the presence of predators on the prey growth rate, for example by predator eating the prey.'
+                description='The effect of the presence of predators on the prey growth rate, for example by predator eating the prey.'
             ),
             'gamma': sight_pb2.DecisionConfigurationStart.AttrProps(
                 min_value=0, max_value=20,
-                'The death rate of the predators independent of the prey.',
+                description='The death rate of the predators independent of the prey.',
             ),
             'delta': sight_pb2.DecisionConfigurationStart.AttrProps(
                 min_value=0, max_value=20,
-                'The effect of the presence of prey on the predator\'s growth rate, for example how the predator eating the prey affects the predator population.',
+                description='The effect of the presence of prey on the predator\'s growth rate, for example how the predator eating the prey affects the predator population.',
             ),
         },
         sight=sight,

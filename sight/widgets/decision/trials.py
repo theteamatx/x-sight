@@ -92,7 +92,6 @@ def launch(
     optimizer: OptimizerClient,
     decision_configuration: sight_pb2.DecisionConfigurationStart,
     num_train_workers: int,
-    description: str,
     sight: Any,
 ):
   """Launches the experiment with the service.
@@ -102,12 +101,12 @@ def launch(
     state_attrs: maps the name of each state variable to its possible values.
     action_attrs: maps the name of each variable that describes possible
       decisions to its possible values.
-    description: Human-readable description of the application.
     num_train_workers: numbers of workers to be spawned
     sight: The Sight object to be used for logging.
   """
   method_name = 'launch'
   logging.debug('>>>>>>>>>  In %s method of %s file.', method_name, _file_name)
+  logging.info('decision_configuration=%s' % decision_configuration)
 
   req = service_pb2.LaunchRequest()
 

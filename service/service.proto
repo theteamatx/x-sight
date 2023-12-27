@@ -209,7 +209,7 @@ message FinalizeEpisodeRequest {
   string worker_id = 2;
   sight.x.proto.DecisionPoint decision_point = 3;
   sight.x.proto.DecisionOutcome decision_outcome = 4;
-  OptimizerType optimizer_type = 5;
+  sight.x.proto.DecisionConfigurationStart.OptimizerType optimizer_type = 5;
 }
 
 message FinalizeEpisodeResponse {
