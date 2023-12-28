@@ -22,6 +22,7 @@ import dm_env
 import jax
 import numpy as np
 import reverb
+from service import service_pb2
 from sight.proto import sight_pb2
 from sight.widgets.decision.acme import sight_adder
 from sight.widgets.decision.acme import sight_variable_source
@@ -212,7 +213,7 @@ class AcmeOptimizerClient (OptimizerClient):
     )
 
   @override
-  def decision_point(self, sight, request):
+  def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     """communicates with decision_point method on server.
 
     Stores the trajectories locally, after storing 50 trajectories, calls
@@ -273,7 +274,7 @@ class AcmeOptimizerClient (OptimizerClient):
     return self._last_acme_action
 
   @override
-  def finalize_episode(self, sight, request):
+  def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
     """completes episode and stores remaining local trajectories to server.
 
     Args:

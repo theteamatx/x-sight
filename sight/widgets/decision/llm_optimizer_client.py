@@ -17,6 +17,7 @@
 from typing import Optional, Sequence, Tuple
 
 from absl import logging
+from service import service_pb2
 from sight import service
 from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient
@@ -42,22 +43,22 @@ class LLMOptimizerClient (OptimizerClient):
     return choice_config
 
   @override
-  def decision_point(self, sight, request):
+  def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     for key, value in sight.widget_decision_state["state"].items():
-      logging.info('key=%s / value=%s', key, value)
+      # logging.info('key=%s / value=%s', key, value)
       param = request.decision_point.state_params.add()
       param.key = key
       param.value.sub_type
       param.value.double_value = value
-    logging.info('request=%s', request)
+    # logging.info('request=%s', request)
 
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
     )
-    return response.action[0].value.double_value
+    return self._get_dp_action(response)
 
   @override
-  def finalize_episode(self, sight, request):
+  def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
     response = service.call(
         lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)
     )

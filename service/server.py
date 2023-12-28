@@ -203,7 +203,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     method_name = "Launch"
     logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
     # start_time = time.time()
-    logging.info("request here is : %s", request)
     obj = self.optimizers.launch(request)
     # calculate_resolve_time(start_time)
     logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)

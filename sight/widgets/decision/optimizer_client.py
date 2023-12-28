@@ -14,8 +14,9 @@
 
 """Base implementation of optimizer clients that communicate with the decision service."""
 
-from typing import Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
+from service import service_pb2
 from sight import service
 from sight.proto import sight_pb2
 
@@ -31,15 +32,23 @@ class OptimizerClient:
   def create_config(self) -> sight_pb2.DecisionConfigurationStart.ChoiceConfig:
     return sight_pb2.DecisionConfigurationStart.ChoiceConfig()
 
-  def decision_point(self, sight, request):
+  def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
     )
     print("response **************: ",response)
 
-    return response.action[0].value.double_value
+    return self._get_dp_action(response)
+  
+  def _get_dp_action(self, dp_response: service_pb2.DecisionPointResponse) -> Dict[str, float]:
+    """Returns the dict representation of the action encoded in dp_response."""
+    d = {}
+    for a in dp_response.action:
+      d[a.key] = a.value.double_value
+    return d
 
-  def finalize_episode(self, sight, request):
+
+  def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
     response = service.call(
         lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)
     )

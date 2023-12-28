@@ -15,6 +15,7 @@
 """Client for optimizers that are called once per episode to communicate with server."""
 from typing import Optional, Sequence, Tuple
 
+from service import service_pb2
 from sight import service
 from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient
@@ -29,16 +30,16 @@ class SingleActionOptimizerClient(OptimizerClient):
     self._sight = sight
   
   @override
-  def decision_point(self, sight, request):
+  def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
     )
     print("response **************: ",response)
 
-    return response.action[0].value.double_value
+    return self._get_dp_action(response)
 
   @override
-  def finalize_episode(self, sight, request):
+  def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
     print('##############################################################')
     response = service.call(
         lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)

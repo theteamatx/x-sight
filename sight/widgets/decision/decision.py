@@ -575,31 +575,28 @@ def decision_point(
   if _OPTIMIZER_TYPE.value == 'dm_acme':
     optimizer_obj = optimizer.get_instance()
     selected_action = optimizer_obj.decision_point(sight)
+    chosen_action = {}
+    chosen_action[
+        sight.widget_decision_state['decision_episode_fn'].action_attrs[0]
+    ] = selected_action
+
 
   # selected_action will be same for all calls of decision point in these
   # optimizers. As such, it is cached as the constant action.
   elif _OPTIMIZER_TYPE.value in ['vizier', 'genetic_algorithm', 'exhaustive_search']:
     optimizer_obj = optimizer.get_instance()
-    selected_action = optimizer_obj.decision_point(sight, req)
-    sight.widget_decision_state['constant_action'] = {
-      sight.widget_decision_state['decision_episode_fn'].action_attrs[0] : selected_action
-    }
+    chosen_action = optimizer_obj.decision_point(sight, req)
+    sight.widget_decision_state['constant_action'] = chosen_action
   elif _OPTIMIZER_TYPE.value == 'llm_gemini':
     optimizer_obj = optimizer.get_instance()
     # logging.info('sight.widget_decision_state=%s', sight.widget_decision_state)
     if 'outcome_value' in sight.widget_decision_state:
       req.decision_outcome.outcome_value = sight.widget_decision_state['outcome_value']
       req.decision_outcome.discount = sight.widget_decision_state['discount']
-    selected_action = optimizer_obj.decision_point(sight, req)
-    logging.info('selected action : %s', selected_action)
+    chosen_action = optimizer_obj.decision_point(sight, req)
 
-  chosen_action = {}
-  chosen_action[
-      sight.widget_decision_state['decision_episode_fn'].action_attrs[0]
-  ] = selected_action
-  logging.info('sight.widget_decision_state[\'decision_episode_fn\'].action_attrs=%s', sight.widget_decision_state['decision_episode_fn'].action_attrs)
-  logging.info('chosen_action=%s', chosen_action)
-
+  # logging.info('sight.widget_decision_state[\'decision_episode_fn\'].action_attrs=%s', sight.widget_decision_state['decision_episode_fn'].action_attrs)
+  # logging.info('chosen_action=%s', chosen_action)
 
   choice_params: List[sight_pb2.DecisionParam] = []
   for attr in sight.widget_decision_state['decision_episode_fn'].action_attrs:
@@ -650,7 +647,7 @@ def decision_outcome(
   sight.widget_decision_state['discount'] = discount
   sight.widget_decision_state['outcome_value'] = outcome_value
   sight.widget_decision_state['sum_outcome'] += outcome_value
-  logging.info('decision_outcome() outcome_value=%s, sum_outcome=%s', outcome_value, sight.widget_decision_state['sum_outcome'])
+  # logging.info('decision_outcome() outcome_value=%s, sum_outcome=%s', outcome_value, sight.widget_decision_state['sum_outcome'])
 
   sight.log_object(
       sight_pb2.Object(
@@ -682,7 +679,7 @@ def finalize_episode(sight):  # , optimizer_obj
   method_name = 'finalize_episode'
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-  logging.info('Finalize sight.widget_decision_state=%s', sight.widget_decision_state)
+  # logging.info('Finalize sight.widget_decision_state=%s', sight.widget_decision_state)
   _rewards.append(round(sight.widget_decision_state['sum_outcome'], 2))
   print('rewards : ', _rewards, len(_rewards))
 

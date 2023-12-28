@@ -776,7 +776,7 @@ class Sight(object):
 
     if self.text_log:
       self.text_log.write(text_val)
-    # logging.info(text_val)
+      # logging.info(text_val)
 
   def is_binary_logged(self) -> bool:
     """Returns whether a binary proto representation is being logged."""
