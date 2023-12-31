@@ -551,8 +551,16 @@ message DecisionConfigurationStart {
   message ExhaustiveSearchConfig {}
 
   message LLMConfig {
+    enum LLMAlgorithm {
+      LA_UNKNOWN = 0;
+      LA_TEXT_BISON = 1;
+      LA_CHAT_BISON = 2;
+      LA_GEMINI_PRO = 3;
+    }
+    LLMAlgorithm algorithm = 1;
+
     // LLM-readable description of the program to be driven by the LLM.  
-    string description = 1;
+    string description = 2;
   }
 
   message ChoiceConfig {

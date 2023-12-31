@@ -70,7 +70,8 @@ _DEPLOYMENT_MODE = flags.DEFINE_enum(
 _OPTIMIZER_TYPE = flags.DEFINE_enum(
     'optimizer_type',
     None,
-    ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search', 'llm_gemini'],
+    ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search', 
+     'llm_text_bison', 'llm_chat_bison', 'llm_gemini_pro'],
     'The optimizer to use',
 )
 _NUM_TRAIN_WORKERS = flags.DEFINE_integer(
@@ -286,8 +287,10 @@ def run(
       max_population_size = _NUM_TRAIN_WORKERS.value, sight=sight)
   elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
     optimizer.obj = SingleActionOptimizerClient(sight, sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH)
-  elif _OPTIMIZER_TYPE.value == 'llm_gemini':
-    optimizer.obj = LLMOptimizerClient(description, sight)
+  elif _OPTIMIZER_TYPE.value.startswith('llm_'):
+    optimizer.obj = LLMOptimizerClient(_OPTIMIZER_TYPE.value.partition('llm_')[2], description, sight)
+  else:
+    raise ValueError(f'Unknown optimizer type {_OPTIMIZER_TYPE.value}')
 
   if state_attrs == {}:
     state_attrs = state_to_dict(env.observation_spec(), 'state')
@@ -587,7 +590,7 @@ def decision_point(
     optimizer_obj = optimizer.get_instance()
     chosen_action = optimizer_obj.decision_point(sight, req)
     sight.widget_decision_state['constant_action'] = chosen_action
-  elif _OPTIMIZER_TYPE.value == 'llm_gemini':
+  elif _OPTIMIZER_TYPE.value.startswith('llm_'):
     optimizer_obj = optimizer.get_instance()
     # logging.info('sight.widget_decision_state=%s', sight.widget_decision_state)
     if 'outcome_value' in sight.widget_decision_state:
@@ -712,7 +715,7 @@ def finalize_episode(sight):  # , optimizer_obj
       req.decision_outcome.CopyFrom(decision_outcome)
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight, req)
-    elif _OPTIMIZER_TYPE.value in ['genetic_algorithm', 'exhaustive_search', 'llm_gemini']:
+    elif _OPTIMIZER_TYPE.value in ['genetic_algorithm', 'exhaustive_search'] or _OPTIMIZER_TYPE.value.startswith('llm_'):
       decision_outcome = sight_pb2.DecisionOutcome(
           outcome_label='outcome',
           outcome_value=sight.widget_decision_state['sum_outcome'],

@@ -41,7 +41,7 @@ class LLM(OptimizerInstance):
   def __init__(self):
     super().__init__()
     genai.configure(api_key='AIzaSyCTXpaCJfIlWY4QO-QgpPf15dIbVFWKysI')
-    self.model = genai.GenerativeModel('gemini-pro')
+    #self.model = genai.GenerativeModel('gemini-pro')
     self.intro = ''
     self.history = []
     self._history_len_for_prompt = 20
@@ -53,23 +53,23 @@ class LLM(OptimizerInstance):
       self, request: service_pb2.LaunchRequest
   ) -> service_pb2.LaunchResponse:
     response = super(LLM, self).launch(request)
-    llm_config = request.decision_config_params.choice_config[request.label].llm_config
+    self._llm_config = request.decision_config_params.choice_config[request.label].llm_config
 
     self.intro = 'You are controlling an agent that is trying to reach a goal. The agent is described as follows.\n'
-    self.intro += f'"{llm_config.description}"\n'
-    self.intro += 'The simulation will periodically report its state and then ask you ' + \
-                  'to select an action for it to perform. After it has performed this ' + \
-                  'action it will report back the numeric outcome of the this action. ' + \
-                  'Higher outcome values are better than low outcome values beause higher outcomes mean that the temperature of the shower is closer to the ideal comfortable temperature. Your job ' + \
-                  'is to choose actions that maximize the outcome values.\n' + \
-                  'The state of the simulation consists of the following attributes: \n'
-    self.intro += '    {' + ', '.join([
-          f'"{key}": {{ "description": {p.description}, "min_value": {p.min_value}, "max_value": {p.max_value} }},\n'
+    self.intro += f'"{self._llm_config.description}"\n'
+    #self.intro += 'The simulation will periodically report its state and then ask you ' + \
+    #              'to select an action for it to perform. After it has performed this ' + \
+    #              'action it will report back the numeric outcome of the this action. ' + \
+    #              'Higher outcome values are better than low outcome values. Your job ' + \
+    #              'is to choose actions that maximize the outcome values.\n'
+    self.intro += 'The state of the simulation consists of the following attributes: \n'
+    self.intro += '  {\n    ' + '\n    '.join([
+          f'"{key}": {{ "description": {p.description}, "min_value": {p.min_value}, "max_value": {p.max_value} }},'
           for key, p in self.state.items()
         ]) + '}\n'
     self.intro += 'The possible actions you need to select are: \n'
-    self.intro += '    {' + ', '.join([
-          f'"{key}": {{ "description": {p.description}, "min_value": {p.min_value}, "max_value": {p.max_value} }},\n'
+    self.intro += '  {\n    ' + '\n    '.join([
+          f'"{key}": {{ "description": {p.description}, "min_value": {p.min_value}, "max_value": {p.max_value} }},'
           for key, p in self.actions.items()
         ]) + '}\n'
     self.intro += '========================\n'
@@ -78,12 +78,27 @@ class LLM(OptimizerInstance):
     logging.info('self.intro=%s', self.intro)
     return response
 
+  def _random_state(self) -> Dict[str, float]:
+    """Returns a random state."""
+    s = {}
+    for key, p in self.state.items():
+      s[key] = (p.max_value - p.min_value) * random.random() + p.min_value
+    return s
+
   def _random_action(self) -> Dict[str, float]:
     """Returns a random action."""
     a = {}
     for key, p in self.actions.items():
       a[key] = (p.max_value - p.min_value) * random.random() + p.min_value
     return a
+
+  def _random_event(self) -> Dict[str, Any]:
+    return ({
+      'state': self._random_state(),
+      'action': self._random_action(),
+      'outcome': random.random(),
+    })
+
 
   def _filtered_history(self) -> List[Any]:
     ordered_history = self.history[0:-1]
@@ -92,6 +107,11 @@ class LLM(OptimizerInstance):
     if len(ordered_history) > self._history_len_for_prompt:
       ordered_history = ordered_history[0:self._history_len_for_prompt-1]
     random.shuffle(ordered_history)
+
+    # If this is the first question, add a random event to serve as an example of the format.
+    if len(ordered_history)==0:
+      ordered_history.append(self._random_event())
+
     logging.info('ordered_history[#%d]=%s', len(ordered_history), [h['outcome'] for h in ordered_history])
     return ordered_history+[self.history[-1]]
 
@@ -177,7 +197,9 @@ class LLM(OptimizerInstance):
               'Content-Type': 'application/json; charset=utf-8',
           }
   
-  def _ask_palm2_text(self) -> Dict[str, float]:
+  def _ask_text_bison(self) -> Dict[str, float]:
+    logging.info('ask_text_bison')
+    logging.info(self.intro + self._history_to_text())
     while True:
       response = requests.post(
           f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ['PROJECT_ID']}/locations/us-central1/publishers/google/models/text-bison-32k:predict",
@@ -207,15 +229,19 @@ class LLM(OptimizerInstance):
       logging.info('response=%s', response)
       if 'error' in response or response['predictions'][0]['content'].strip() == '':
         continue
-      text = response['predictions'][0]['content'].split('\n')[0].strip()
-      logging.info('history: %s', self._history_to_text())
+      text = response['predictions'][0]['content'].strip()
+      logging.info('text=[%s]', text)
+      #text = text.removeprefix('```json\n')
+      #logging.info('text=[%s]', text)
+      text = text.strip('`').split('\n')[0]
+      #text = text.split('\n')[0].strip()
       logging.info('text=[%s]', text)
       try:
         return json.loads(text)
       except json.decoder.JSONDecodeError:
         continue
 
-  def _ask_palm2_chat(self) -> Dict[str, float]:
+  def _ask_chat_bison(self) -> Dict[str, float]:
     while True:
       response = requests.post(
           f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ['PROJECT_ID']}/locations/us-central1/publishers/google/models/chat-bison-32k:predict",
@@ -224,7 +250,7 @@ class LLM(OptimizerInstance):
               "instances": [
                 {
                   "context":  self.intro,
-                  "messages": self.__history_to_chat(),
+                  "messages": self._history_to_chat(),
                 },
               ],
               "parameters": {
@@ -244,9 +270,10 @@ class LLM(OptimizerInstance):
             }),
             headers=self._get_req_headers()).json()
       logging.info('response=%s', response)
-      if 'error' in response or response['predictions'][0]['content'].strip() == '':
-        continue
-      text = response['predictions'][0]['content'].split('\n')[0].strip()
+      logging.info("response['predictions']=%s", response['predictions'][0]['candidates'])
+      #if 'error' in response or response['predictions'][0]['content'].strip() == '':
+      #  continue
+      text = response['predictions'][0]['candidates'][0]['content'].strip()
       logging.info('history: %s', self._history_to_text())
       logging.info('text=[%s]', text)
       try:
@@ -256,6 +283,10 @@ class LLM(OptimizerInstance):
 
   def _ask_geminipro(self) -> Dict[str, float]:
     while True:
+
+
+      logging.info('ask_geminipro')
+      logging.info(self.intro + self._history_to_text())
       response = requests.post(
           f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ['PROJECT_ID']}/locations/us-central1/publishers/google/models/gemini-pro:streamGenerateContent", 
           data= json.dumps(
@@ -271,9 +302,9 @@ class LLM(OptimizerInstance):
               "threshold": "BLOCK_LOW_AND_ABOVE"
           },
           "generation_config": {
-              "temperature": 0.3,
-              "topP": 0.8,
-              "topK": 3,
+              "temperature": 0.9,
+              "topP": 1,
+              "topK": 1,
               "maxOutputTokens": 8192,
               # "stopSequences": [".", "?", "!"]
           }
@@ -283,15 +314,15 @@ class LLM(OptimizerInstance):
       # if 'error' in response or response['predictions'][0]['content'].strip() == '':
       if len(response) == 0:
         continue
-      logging.info('history: %s', self._history_to_text())
-      logging.info('text=%s', response[0]['candidates'][0]['content']['parts'][0]['text'])
       text = ''
       for r in response:
-        text += r['candidates'][0]['content']['parts'][0]['text']
-      if text == '':
+        if 'parts' in r['candidates'][0]['content']:
+          text += r['candidates'][0]['content']['parts'][0]['text']
+      text = text.strip()
+      if text=='':
         continue
-      if text[-1] != '}':
-        text += '}'
+      logging.info('text=[%s]', text.split('\n'))
+      text = text.split('\n')[0]
       logging.info('text=[%s]', text)
       try:
         return json.loads(text)
@@ -302,7 +333,7 @@ class LLM(OptimizerInstance):
   def decision_point(
       self, request: service_pb2.DecisionPointRequest
   ) -> service_pb2.DecisionPointResponse:
-    # logging.info('DecisionPoint request=%s', request)
+    logging.info('DecisionPoint request=%s', request)
     # self._append_outcome(request.decision_outcome.outcome_value)
     if len(self.history)>0:
       self.history[-1]['outcome'] = request.decision_outcome.outcome_value
@@ -319,11 +350,18 @@ class LLM(OptimizerInstance):
       'outcome': None,
     })
 
-    if random.random() > .5:
+    print('ALGORITHM=%s' % self._llm_config.algorithm) 
+    # Peridically try a random action, but not on the first trial in case the user just wants a single
+    # reasonable recommendation.
+    if len(self.history)>1 and random.random() > .5:
       logging.info('##########################\n##### RANDOM ######\n##########################')
       selected_actions = self._random_action()
-    else:
-      selected_actions = self._ask_palm2_text()
+    elif self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_TEXT_BISON:
+      selected_actions = self._ask_text_bison()
+    elif self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_CHAT_BISON:
+      selected_actions = self._ask_chat_bison()
+    elif self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO:
+      selected_actions = self._ask_geminipro()
       
     self.history[-1]['action'] = selected_actions
 
@@ -361,3 +399,4 @@ class LLM(OptimizerInstance):
       self, request: service_pb2.CurrentStatusRequest
   ) -> service_pb2.CurrentStatusResponse:
     return service_pb2.CurrentStatusResponse(response_str=f'[LLM: script={self.intro + self._history_to_text()}\n')
+

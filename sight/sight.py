@@ -250,9 +250,9 @@ class Sight(object):
           )
         else:
           self.avro_schema = load_schema('sight/proto/avroSchema.avsc')
-          self.avro_log = io.BytesIO()
-          self.avro_record_counter = 0
-          self.avro_file_counter = 0
+        self.avro_log = io.BytesIO()
+        self.avro_record_counter = 0
+        self.avro_file_counter = 0
 
       if self.params.text_output:
         self.text_log_file_path = self.path_prefix + '.txt'

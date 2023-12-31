@@ -26,9 +26,18 @@ from overrides import override
 class LLMOptimizerClient (OptimizerClient):
   """LLM client for the Sight service."""
 
-  def __init__(self, description: str, sight):
+  def __init__(self, llm_name: str, description: str, sight):
     super().__init__(sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM) 
+    if llm_name == 'text_bison':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_TEXT_BISON
+    elif llm_name == 'chat_bison':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_CHAT_BISON
+    elif llm_name == 'gemini_pro':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO
+    else:
+      raise ValueError(f'Unknown LLM Algorithm {llm_name}')
     self._description = description
+
     self._sight = sight
     self._worker_id = None
   
@@ -37,6 +46,7 @@ class LLMOptimizerClient (OptimizerClient):
     choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig(
     )
     llm_config = sight_pb2.DecisionConfigurationStart.LLMConfig(
+        algorithm=self._algorithm,
         description=self._description
       )
     choice_config.llm_config.CopyFrom(llm_config)
