@@ -12,30 +12,34 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Client for exhaustive search optimizer to communicate with server."""
+"""Client for optimizers that are called once per episode to communicate with server."""
 from typing import Optional, Sequence, Tuple
-from absl import flags
+
+from service import service_pb2
 from sight import service
+from sight.proto import sight_pb2
+from sight.widgets.decision.optimizer_client import OptimizerClient
+from overrides import override
 
-FLAGS = flags.FLAGS
 
+class SingleActionOptimizerClient(OptimizerClient):
+  """Single-action Client for the Sight service."""
 
-class ExhaustiveSearch:
-  """Exhaustive search Client for the Sight service."""
-
-  def __init__(self, sight):
+  def __init__(self, optimizer_type: sight_pb2.DecisionConfigurationStart.OptimizerType, sight):
+    super().__init__(optimizer_type) 
     self._sight = sight
-    self._worker_id = None
-
-  def decision_point(self, sight, request):
+  
+  @override
+  def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
     )
     print("response **************: ",response)
 
-    return response.action[0].value.double_value
+    return self._get_dp_action(response)
 
-  def finalize_episode(self, sight, request):
+  @override
+  def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
     print('##############################################################')
     response = service.call(
         lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)

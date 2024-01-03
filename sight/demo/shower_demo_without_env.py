@@ -46,14 +46,14 @@ def main(argv: Sequence[str]) -> None:
             "Temperature": sight_pb2.DecisionConfigurationStart.AttrProps(
                 min_value=0,
                 max_value=100,
-                step_size=1,
+                # step_size=1,
             ),
         },
         action_attrs={
             "Direction": sight_pb2.DecisionConfigurationStart.AttrProps(
-                min_value=0,
+                min_value=-2,
                 max_value=2,
-                step_size=1,
+                # step_size=1,
             ),
         },
     )

@@ -16,7 +16,7 @@
 
 # using base image
 FROM python:3.9
-LABEL Maintainer="bronovetsky@google.com"
+LABEL Maintainer="bronevet@google.com"
 
 # set up working directory in container
 WORKDIR /src

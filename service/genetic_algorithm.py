@@ -51,10 +51,8 @@ class GeneticAlgorithm(OptimizerInstance):
     logging.info(
         'request.genetic_algorithm_config=%s', request.genetic_algorithm_config
     )
-    if request.genetic_algorithm_config.max_population_size:
-      self.max_population_size = max(
-          3, request.genetic_algorithm_config.max_population_size
-      )
+    ga_config = request.decision_config_params.choice_config[request.label].genetic_algorithm_config
+    self.max_population_size = ga_config.max_population_size
     return response
 
   def find_best_worst(

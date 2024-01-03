@@ -16,22 +16,20 @@
 import math
 import logging
 from typing import Optional, Sequence, Tuple
-from absl import flags
-from acme import core
 from acme import specs
-from acme import types
-from acme.jax import utils
 from acme.jax.experiments import config
 import dm_env
-from gym import spaces
 import jax
 import numpy as np
 import reverb
+from service import service_pb2
+from sight.proto import sight_pb2
 from sight.widgets.decision.acme import sight_adder
 from sight.widgets.decision.acme import sight_variable_source
 from sight.widgets.decision.acme.build_actor import build_actor_config
+from sight.widgets.decision.optimizer_client import OptimizerClient
+from overrides import override
 
-FLAGS = flags.FLAGS
 _file_name = "acme_optimizer_client.py"
 
 
@@ -68,10 +66,11 @@ def generate_spec_details(attr_dict):
   )
 
 
-class Acme:
+class AcmeOptimizerClient (OptimizerClient):
   """Acme client for the Sight service."""
 
   def __init__(self, sight):
+    super().__init__(sight_pb2.DecisionConfigurationStart.OptimizerType.OT_ACME) 
     self._sight = sight
     self._actor = None
     self._adder = None
@@ -84,6 +83,29 @@ class Acme:
     self._replay_client = None
     self._dataset = None
     self._learner = None
+  
+  @override
+  def create_config(self) -> sight_pb2.DecisionConfigurationStart.ChoiceConfig:
+    choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig()
+    (
+        state_min,
+        state_max,
+        state_param_length,
+        action_min,
+        action_max,
+        action_param_length,
+        possible_actions,
+    ) = self.generate_spec_details(
+        self._sight.widget_decision_state['decision_episode_fn']
+    )
+    choice_config.acme_config.state_min.extend(state_min)
+    choice_config.acme_config.state_max.extend(state_max)
+    choice_config.acme_config.state_param_length = state_param_length
+    choice_config.acme_config.action_min.extend(action_min)
+    choice_config.acme_config.action_max.extend(action_max)
+    choice_config.acme_config.action_param_length = action_param_length
+    choice_config.acme_config.possible_actions = possible_actions
+    return choice_config
 
   def generate_env_spec(
       self,
@@ -93,7 +115,7 @@ class Acme:
       action_min,
       action_max,
       action_param_length,
-  ):
+  ) -> specs.EnvironmentSpec:
     """Generates the environment spec for the environment."""
 
     method_name = "generate_env_spec"
@@ -144,32 +166,27 @@ class Acme:
     method_name = "create_new_actor"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-    if FLAGS.env_name:
-      experiment = build_actor_config(env_name=FLAGS.env_name)
-      environment = experiment.environment_factory()
-      environment_spec = specs.make_environment_spec(environment)
-    else:
-      (
-          state_min,
-          state_max,
-          state_param_length,
-          action_min,
-          action_max,
-          action_param_length,
-          possible_actions,
-      ) = generate_spec_details(
-          self._sight.widget_decision_state["decision_episode_fn"]
-      )
-      print('possible_actions : ', possible_actions)
-      experiment = build_actor_config(possible_action_values=possible_actions)
-      environment_spec = self.generate_env_spec(
-          state_min,
-          state_max,
-          state_param_length,
-          action_min,
-          action_max,
-          action_param_length,
-      )
+    (
+        state_min,
+        state_max,
+        state_param_length,
+        action_min,
+        action_max,
+        action_param_length,
+        possible_actions,
+    ) = generate_spec_details(
+        self._sight.widget_decision_state['decision_episode_fn']
+    )
+    print('possible_actions : ', possible_actions)
+    experiment = build_actor_config(possible_action_values=possible_actions)
+    environment_spec = self.generate_env_spec(
+        state_min,
+        state_max,
+        state_param_length,
+        action_min,
+        action_max,
+        action_param_length,
+    )
 
     networks = experiment.network_factory(environment_spec)
     policy = config.make_policy(
@@ -195,7 +212,8 @@ class Acme:
         adder=self._adder,
     )
 
-  def decision_point(self, sight):
+  @override
+  def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     """communicates with decision_point method on server.
 
     Stores the trajectories locally, after storing 50 trajectories, calls
@@ -220,7 +238,6 @@ class Acme:
       # create actor, if not there
       if self._actor is None:
         print("no actor found, creating new one.....")
-        # if flags.FLAGS.distributed_actor:
         self._actor = self.create_new_actor()
         # update will fetch the latest weights from learner into actor policy
         self._actor.update(wait=True)
@@ -256,7 +273,8 @@ class Acme:
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return self._last_acme_action
 
-  def finalize_episode(self, sight):
+  @override
+  def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
     """completes episode and stores remaining local trajectories to server.
 
     Args:

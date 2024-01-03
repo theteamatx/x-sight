@@ -18,6 +18,7 @@ import os
 from absl import app
 from absl import flags
 import numpy as np
+import pandas as pd
 from sight import data_structures
 from sight.attribute import Attribute
 from sight.block import Block
@@ -42,52 +43,60 @@ def main(argv):
 
   with get_sight_instance() as sight:
     with Block("A", sight):
-      sight.text("A preText")
-      with Attribute("key", "A", sight):
-        with Block("A1", sight):
-          with Block("A1.1", sight):
-            sight.text("A1.1 text")
-      sight.text("A postText")
-
-    with Block("B", sight):
-      sight.text("B preText")
-      with Attribute("key", "B", sight):
-        with Attribute("key1", "B", sight):
-          with Attribute("key2", "B", sight):
-            with Attribute("key3", "B", sight):
-              sight.text("B1 preText")
-              with Block("B1", sight):
-                with Block("B1.1", sight):
-                  sight.text("B1.1 text")
-              sight.text("B1 postText")
-
-            with Block("B2", sight):
-              with Attribute("keyin", "X", sight):
-                with Attribute("keyin1", "X", sight):
-                  with Attribute("keyin2", "X", sight):
-                    with Attribute("keyin3", "X", sight):
-                      with Block("B2.1", sight):
-                        sight.text("B2.1 text")
-
-            with Block("B3", sight):
-              with Block("B3.1", sight):
-                sight.text("B3.1 text")
-      sight.text("B postText")
-
-    with Block("C", sight):
-      data = list(range(0, 60))
       data_structures.log(
-          {
-              "x": 1,
-              (1, 2, 3): ["a", "b", {1: 2}],
-              1: [1, 2],
-              "1d": np.array(data),
-              "2d": np.array(data).reshape((12, 5)),
-              "3d": np.array(data).reshape((3, 4, 5)),
-              "4d": np.array(data).reshape((3, 2, 2, 5)),
-          },
-          sight,
+        pd.DataFrame([['Alice', 25], ['Bob', 30], ['Carol', 35]], columns=['name', 'age']),
+        sight,
       )
+      data_structures.log(
+        ['abc', 'def', 'ghi', 'jkl', 'mno', 'pqr', 'stu', 'vwx', 'yz'],
+        sight,
+      )
+    #   sight.text("A preText")
+    #   with Attribute("key", "A", sight):
+    #     with Block("A1", sight):
+    #       with Block("A1.1", sight):
+    #         sight.text("A1.1 text")
+    #   sight.text("A postText")
+
+    # with Block("B", sight):
+    #   sight.text("B preText")
+    #   with Attribute("key", "B", sight):
+    #     with Attribute("key1", "B", sight):
+    #       with Attribute("key2", "B", sight):
+    #         with Attribute("key3", "B", sight):
+    #           sight.text("B1 preText")
+    #           with Block("B1", sight):
+    #             with Block("B1.1", sight):
+    #               sight.text("B1.1 text")
+    #           sight.text("B1 postText")
+
+    #         with Block("B2", sight):
+    #           with Attribute("keyin", "X", sight):
+    #             with Attribute("keyin1", "X", sight):
+    #               with Attribute("keyin2", "X", sight):
+    #                 with Attribute("keyin3", "X", sight):
+    #                   with Block("B2.1", sight):
+    #                     sight.text("B2.1 text")
+
+    #         with Block("B3", sight):
+    #           with Block("B3.1", sight):
+    #             sight.text("B3.1 text")
+    #   sight.text("B postText")
+
+    # with Block("C", sight):
+    #   data = list(range(0, 60))
+    #   data_structures.log(
+    #       {
+    #           "x": 1,
+    #           (1, 2, 3): ["a", "b", {1: 2}],
+    #           1: [1, 2],
+    #           "1d": np.array(data),
+    #           "2d": np.array(data).reshape((12, 5)),
+    #           "3d": np.array(data).reshape((3, 4, 5)),
+    #           "4d": np.array(data).reshape((3, 2, 2, 5)),
+    #       },
+    #       sight,
+    #   )
 
 
 if __name__ == "__main__":
