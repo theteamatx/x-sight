@@ -559,8 +559,15 @@ message DecisionConfigurationStart {
     }
     LLMAlgorithm algorithm = 1;
 
+    enum LLMGoal {
+      LM_UNKNOWN = 0;
+      LM_OPTIMIZE = 1;
+      LM_RECOMMEND = 2;
+    }
+    LLMGoal goal = 2;
+
     // LLM-readable description of the program to be driven by the LLM.  
-    string description = 2;
+    string description = 3;
   }
 
   message ChoiceConfig {

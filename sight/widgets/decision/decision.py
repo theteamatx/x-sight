@@ -71,7 +71,8 @@ _OPTIMIZER_TYPE = flags.DEFINE_enum(
     'optimizer_type',
     None,
     ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search', 
-     'llm_text_bison', 'llm_chat_bison', 'llm_gemini_pro'],
+     'llm_text_bison_optimize', 'llm_chat_bison_optimize', 'llm_gemini_pro_optimize',
+     'llm_text_bison_recommend', 'llm_chat_bison_recommend', 'llm_gemini_pro_recommend'],
     'The optimizer to use',
 )
 _NUM_TRAIN_WORKERS = flags.DEFINE_integer(
@@ -292,10 +293,11 @@ def run(
   else:
     raise ValueError(f'Unknown optimizer type {_OPTIMIZER_TYPE.value}')
 
-  if state_attrs == {}:
-    state_attrs = state_to_dict(env.observation_spec(), 'state')
-  if action_attrs == {}:
-    action_attrs = state_to_dict(env.action_spec(), 'action')
+  if env is not None:
+    if state_attrs == {}:
+      state_attrs = state_to_dict(env.observation_spec(), 'state')
+    if action_attrs == {}:
+      action_attrs = state_to_dict(env.action_spec(), 'action')
 
   decision_configuration = sight_pb2.DecisionConfigurationStart()
   decision_configuration.optimizer_type = optimizer.obj.optimizer_type()

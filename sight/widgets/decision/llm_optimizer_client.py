@@ -28,14 +28,22 @@ class LLMOptimizerClient (OptimizerClient):
 
   def __init__(self, llm_name: str, description: str, sight):
     super().__init__(sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM) 
-    if llm_name == 'text_bison':
+    if llm_name.startswith('text_bison'):
       self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_TEXT_BISON
-    elif llm_name == 'chat_bison':
+    elif llm_name.startswith('chat_bison'):
       self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_CHAT_BISON
-    elif llm_name == 'gemini_pro':
+    elif llm_name.startswith('gemini_pro'):
       self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO
     else:
       raise ValueError(f'Unknown LLM Algorithm {llm_name}')
+    
+    if llm_name.endswith('_optmize'):
+      self._goal = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE
+    elif llm_name.endswith('_recommend'):
+      self._goal = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_RECOMMEND
+    else:
+      raise ValueError(f'Unknown LLM Goal {llm_name}')
+
     self._description = description
 
     self._sight = sight
