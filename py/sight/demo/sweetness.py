@@ -12,24 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-"""Demo of using the Sight Decision API to train an inverted pendulum controller."""
+"""Demo of using the Sight Decision API to train sweetness controller."""
 
-# import sys
-# print("PYTHONPATH here is ", sys.path)
-
+import os
 import random
 from typing import Sequence
 
 from absl import app
 from absl import flags
-from absl import logging
-
-from sight.proto import sight_pb2
 from sight import data_structures
+from sight.proto import sight_pb2
 from sight.sight import Sight
-from sight.block import Block
 from sight.widgets.decision import decision
 
+FLAGS = flags.FLAGS
 
 def driver(sight: Sight) -> None:
   """Executes the logic of searching for a value.
@@ -37,55 +33,57 @@ def driver(sight: Sight) -> None:
   Args:
     sight: The Sight logger object used to drive decisions.
   """
-  print("In driver function of sweetness.........................")
-
   sweet_tooth = random.randrange(0, 10)
-  data_structures.log_var('sweet_tooth', sweet_tooth, sight)
+  print("current value of sweet_tooth : ", sweet_tooth)
+  data_structures.log_var("sweet_tooth", sweet_tooth, sight)
 
   for _ in range(1):
-    choice = decision.decision_point('candy', sight)
-    print("choice after dicision point: ", choice)
+    choice = decision.decision_point("candy", sight)
+    sight.text(
+        "sweet_tooth=%s, choice=%s, joy=%s"
+        % (
+            sweet_tooth,
+            choice["sweetness"],
+            float(choice["sweetness"]) * sweet_tooth,
+        )
+    )
 
-    logging.info('sweet_tooth=%s, choice=%s, joy=%s', sweet_tooth,
-                 choice['sweetness'], float(choice['sweetness']) * sweet_tooth)
-    
-    decision.decision_outcome('joy', float(choice['sweetness']) * sweet_tooth, sight)
-  print("Exiting driver function of sweetness........................")
+    reward = float(choice["sweetness"]) * sweet_tooth
 
+    decision.decision_outcome("joy", reward, sight)
+
+def get_sight_instance():
+  params = sight_pb2.Params(
+      label='sweetness_experiment',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+  )
+  sight_obj = Sight(params)
+  return sight_obj
 
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
-    raise app.UsageError('Too many command-line arguments.')
+    raise app.UsageError("Too many command-line arguments.")
 
-  
-  params = sight_pb2.Params(
-      label="dummy_worker",
-      log_owner="user@domain.com",
-      local=True,
-      text_output=True,
-      capacitor_output=False,
-      avro_output=True,
-      log_dir_path="/tmp/",
-      project_id = "cameltrain",
-      bucket_name = "sight-meet",
-      gcp_path = "workerData/",
-      file_format = ".avro",
-      dataset_name = "dsub",
-      external_file_format = "AVRO",
-      external_file_uri = "gs://"
-      )
-
-  with Sight(params) as sight:
-    # with Block("worker", sight):
+  with get_sight_instance() as sight:
     decision.run(
         driver_fn=driver,
         state_attrs={
-            'sweet_tooth': (0, 10),
+            "sweet_tooth": sight_pb2.DecisionConfigurationStart.AttrProps(
+                min_value=0,
+                max_value=10,
+                step_size=1,
+            ),
         },
         action_attrs={
-            'sweetness': (0, 10),
+            "sweetness": sight_pb2.DecisionConfigurationStart.AttrProps(
+                min_value=0,
+                max_value=3,
+                step_size=1,
+            ),
         },
-        sight=sight)
+        sight=sight,
+    )
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
   app.run(main)

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 """Tests for py.sight."""
 import inspect
 from typing import Sequence
@@ -24,11 +23,15 @@ from sight.sight import Sight
 from sight.sight import text
 from tensorflow.python.util.protobuf import compare
 from absl.testing import absltest
+
+
 class SightTest(absltest.TestCase):
+
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
     cls.test_path = 'googlex/cortex/sight/py/sight_test.py'
+
   @staticmethod
   def _read_text_file(file_path: str):
     read_text = ''
@@ -36,6 +39,7 @@ class SightTest(absltest.TestCase):
       for line in fp:
         read_text += line
     return read_text
+
   # @staticmethod
   # def _read_capacitor_file(file_path: str):
   #   protos = []
@@ -44,22 +48,29 @@ class SightTest(absltest.TestCase):
   #   protos.extend(record_reader.IterRecords())
   #   return sorted(protos, key=lambda x: x.index)
   @staticmethod
-  def _create_attributes(base_attributes: Sequence[sight_pb2.Attribute],
-                         sight: Sight) -> Sequence[sight_pb2.Attribute]:
+  def _create_attributes(
+      base_attributes: Sequence[sight_pb2.Attribute], sight: Sight
+  ) -> Sequence[sight_pb2.Attribute]:
     attribute = []
     if hasattr(sight, 'change_list_number'):
       attribute.append(
           sight_pb2.Attribute(
-              key='change_list_number', value=str(sight.change_list_number)))
+              key='change_list_number', value=str(sight.change_list_number)
+          )
+      )
     if hasattr(sight, 'citc_snapshot'):
       attribute.append(
           sight_pb2.Attribute(
-              key='citc_snapshot', value=str(sight.citc_snapshot)))
+              key='citc_snapshot', value=str(sight.citc_snapshot)
+          )
+      )
     attribute.extend(base_attributes)
     return attribute
+
   @staticmethod
-  def _create_attributes_text(base_attributes: Sequence[sight_pb2.Attribute],
-                              sight: Sight) -> str:
+  def _create_attributes_text(
+      base_attributes: Sequence[sight_pb2.Attribute], sight: Sight
+  ) -> str:
     attribute = []
     if hasattr(sight, 'change_list_number'):
       attribute.append(f'change_list_number={sight.change_list_number}')
@@ -67,6 +78,7 @@ class SightTest(absltest.TestCase):
       attribute.append(f'citc_snapshot={sight.citc_snapshot}')
     attribute.extend([f'{a.key}={a.value}' for a in base_attributes])
     return ','.join(attribute)
+
   def testLogTextToTextFile(self):
     # SETUP
     params = sight_pb2.Params()
@@ -86,14 +98,25 @@ class SightTest(absltest.TestCase):
       block_attrs = '| ' + self._create_attributes_text([], sight)
     expected_log = """textAtextB%s:%d/%s textLine1%s
 %s:%d/%s textLine2%s\n""" % (
-    self.test_path, frameinfo.lineno + 4, frameinfo.function, block_attrs,
-    self.test_path, frameinfo.lineno + 5, frameinfo.function, block_attrs)
-    actual_log = self._read_text_file(params.log_dir_path +
-                                      '/testLogTextToTextFile.txt')
+        self.test_path,
+        frameinfo.lineno + 4,
+        frameinfo.function,
+        block_attrs,
+        self.test_path,
+        frameinfo.lineno + 5,
+        frameinfo.function,
+        block_attrs,
+    )
+    actual_log = self._read_text_file(
+        params.log_dir_path + '/testLogTextToTextFile.txt'
+    )
     self.assertEqual(
-        expected_log, actual_log,
+        expected_log,
+        actual_log,
         'Target code and generated logs are different. Expected log:\n%s\n'
-        'Actual log:\n%s\n' % (expected_log, actual_log))
+        'Actual log:\n%s\n' % (expected_log, actual_log),
+    )
+
   def testLogTextToCapacitorFile(self):
     # SETUP
     params = sight_pb2.Params()
@@ -120,7 +143,8 @@ class SightTest(absltest.TestCase):
             func=frameinfo.function,
             ancestor_start_location=['0000000000'],
             sub_type=sight_pb2.Object.ST_TEXT,
-            text=sight_pb2.Text(sub_type=sight_pb2.Text.ST_TEXT, text='textA')),
+            text=sight_pb2.Text(sub_type=sight_pb2.Text.ST_TEXT, text='textA'),
+        ),
         sight_pb2.Object(
             location='0000000001',
             index=1,
@@ -130,7 +154,8 @@ class SightTest(absltest.TestCase):
             func=frameinfo.function,
             ancestor_start_location=['0000000001'],
             sub_type=sight_pb2.Object.ST_TEXT,
-            text=sight_pb2.Text(sub_type=sight_pb2.Text.ST_TEXT, text='textB')),
+            text=sight_pb2.Text(sub_type=sight_pb2.Text.ST_TEXT, text='textB'),
+        ),
         sight_pb2.Object(
             location='0000000002',
             index=2,
@@ -141,7 +166,9 @@ class SightTest(absltest.TestCase):
             ancestor_start_location=['0000000002'],
             sub_type=sight_pb2.Object.ST_TEXT,
             text=sight_pb2.Text(
-                sub_type=sight_pb2.Text.ST_TEXT, text='textLine1\n')),
+                sub_type=sight_pb2.Text.ST_TEXT, text='textLine1\n'
+            ),
+        ),
         sight_pb2.Object(
             location='0000000003',
             index=3,
@@ -152,16 +179,24 @@ class SightTest(absltest.TestCase):
             ancestor_start_location=['0000000003'],
             sub_type=sight_pb2.Object.ST_TEXT,
             text=sight_pb2.Text(
-                sub_type=sight_pb2.Text.ST_TEXT, text='textLine2\n'))
+                sub_type=sight_pb2.Text.ST_TEXT, text='textLine2\n'
+            ),
+        ),
     ]
     actual_log = self._read_capacitor_file(
-        params.log_dir_path + '/testLogTextToCapacitorFile.capacitor')
+        params.log_dir_path + '/testLogTextToCapacitorFile.capacitor'
+    )
     self.assertEqual(len(expected_log), len(actual_log))
     for i in range(0, len(expected_log)):
       compare.assertProtoEqual(
-          self, expected_log[i], actual_log[i],
-          'Target code and generated logs are different. Expected log[%d]:\n%s\n'
-          'Actual log[%d]:\n%s\n' % (i, expected_log[i], i, actual_log[i]))
+          self,
+          expected_log[i],
+          actual_log[i],
+          'Target code and generated logs are different. Expected'
+          ' log[%d]:\n%s\nActual log[%d]:\n%s\n'
+          % (i, expected_log[i], i, actual_log[i]),
+      )
+
   def testLogBlockTextToTextFile(self):
     # SETUP
     params = sight_pb2.Params()
@@ -180,14 +215,24 @@ class SightTest(absltest.TestCase):
     expected_log = """block<<<%s
 %s:%d/%s block: text%s
 block>>>%s
-""" % (block_attrs, self.test_path, frameinfo.lineno + 3, frameinfo.function,
-       block_attrs, block_attrs)
-    actual_log = self._read_text_file(params.log_dir_path +
-                                      '/testLogBlockTextToTextFile.txt')
+""" % (
+        block_attrs,
+        self.test_path,
+        frameinfo.lineno + 3,
+        frameinfo.function,
+        block_attrs,
+        block_attrs,
+    )
+    actual_log = self._read_text_file(
+        params.log_dir_path + '/testLogBlockTextToTextFile.txt'
+    )
     self.assertEqual(
-        expected_log, actual_log,
+        expected_log,
+        actual_log,
         'Target code and generated logs are different. Expected log:\n%s\n'
-        'Actual log:\n%s\n' % (expected_log, actual_log))
+        'Actual log:\n%s\n' % (expected_log, actual_log),
+    )
+
   def testLogBlockTextToCapacitorFile(self):
     # SETUP
     params = sight_pb2.Params()
@@ -212,7 +257,8 @@ block>>>%s
             func=frameinfo.function,
             ancestor_start_location=['0000000000'],
             sub_type=sight_pb2.Object.ST_BLOCK_START,
-            block_start=sight_pb2.BlockStart(label='block')),
+            block_start=sight_pb2.BlockStart(label='block'),
+        ),
         sight_pb2.Object(
             location='0000000000:0000000000',
             index=1,
@@ -222,8 +268,8 @@ block>>>%s
             func=frameinfo.function,
             ancestor_start_location=['0000000000', '0000000000:0000000000'],
             sub_type=sight_pb2.Object.ST_TEXT,
-            text=sight_pb2.Text(sub_type=sight_pb2.Text.ST_TEXT,
-                                text='text\n')),
+            text=sight_pb2.Text(sub_type=sight_pb2.Text.ST_TEXT, text='text\n'),
+        ),
         sight_pb2.Object(
             location='0000000001',
             index=2,
@@ -237,16 +283,24 @@ block>>>%s
                 label='block',
                 location_of_block_start='0000000000',
                 num_direct_contents=1,
-                num_transitive_contents=1))
+                num_transitive_contents=1,
+            ),
+        ),
     ]
     actual_log = self._read_capacitor_file(
-        params.log_dir_path + '/testLogBlockTextToCapacitorFile.capacitor')
+        params.log_dir_path + '/testLogBlockTextToCapacitorFile.capacitor'
+    )
     self.assertEqual(len(expected_log), len(actual_log))
     for i in range(0, len(expected_log)):
       compare.assertProtoEqual(
-          self, expected_log[i], actual_log[i],
-          'Target code and generated logs are different. Expected log[%d]:\n%s\n'
-          'Actual log[%d]:\n%s\n' % (i, expected_log[i], i, actual_log[i]))
+          self,
+          expected_log[i],
+          actual_log[i],
+          'Target code and generated logs are different. Expected'
+          ' log[%d]:\n%s\nActual log[%d]:\n%s\n'
+          % (i, expected_log[i], i, actual_log[i]),
+      )
+
   def testLogNestedBlockTextToTextFile(self):
     # SETUP
     params = sight_pb2.Params()
@@ -272,16 +326,34 @@ outerBlock: innerBlock<<<%s
 outerBlock: innerBlock>>>%s
 %s:%d/%s outerBlock: postText%s
 outerBlock>>>%s
-""" % (block_attrs, self.test_path, frameinfo.lineno + 3, frameinfo.function,
-       block_attrs, block_attrs, self.test_path, frameinfo.lineno + 5,
-       frameinfo.function, block_attrs, block_attrs, self.test_path,
-       frameinfo.lineno + 6, frameinfo.function, block_attrs, block_attrs)
-    actual_log = self._read_text_file(params.log_dir_path +
-                                      '/testLogNestedBlockTextToTextFile.txt')
+""" % (
+        block_attrs,
+        self.test_path,
+        frameinfo.lineno + 3,
+        frameinfo.function,
+        block_attrs,
+        block_attrs,
+        self.test_path,
+        frameinfo.lineno + 5,
+        frameinfo.function,
+        block_attrs,
+        block_attrs,
+        self.test_path,
+        frameinfo.lineno + 6,
+        frameinfo.function,
+        block_attrs,
+        block_attrs,
+    )
+    actual_log = self._read_text_file(
+        params.log_dir_path + '/testLogNestedBlockTextToTextFile.txt'
+    )
     self.assertEqual(
-        expected_log, actual_log,
+        expected_log,
+        actual_log,
         'Target code and generated logs are different. Expected log:\n%s\n'
-        'Actual log:\n%s\n' % (expected_log, actual_log))
+        'Actual log:\n%s\n' % (expected_log, actual_log),
+    )
+
   def testLogNestedBlockTextToCapacitorFile(self):
     # SETUP
     params = sight_pb2.Params()
@@ -309,7 +381,8 @@ outerBlock>>>%s
             func=frameinfo.function,
             ancestor_start_location=['0000000000'],
             sub_type=sight_pb2.Object.ST_BLOCK_START,
-            block_start=sight_pb2.BlockStart(label='outerBlock')),
+            block_start=sight_pb2.BlockStart(label='outerBlock'),
+        ),
         sight_pb2.Object(
             location='0000000000:0000000000',
             index=1,
@@ -320,7 +393,9 @@ outerBlock>>>%s
             ancestor_start_location=['0000000000', '0000000000:0000000000'],
             sub_type=sight_pb2.Object.ST_TEXT,
             text=sight_pb2.Text(
-                sub_type=sight_pb2.Text.ST_TEXT, text='preText\n')),
+                sub_type=sight_pb2.Text.ST_TEXT, text='preText\n'
+            ),
+        ),
         sight_pb2.Object(
             location='0000000000:0000000001',
             index=2,
@@ -330,7 +405,8 @@ outerBlock>>>%s
             func=frameinfo.function,
             ancestor_start_location=['0000000000', '0000000000:0000000001'],
             sub_type=sight_pb2.Object.ST_BLOCK_START,
-            block_start=sight_pb2.BlockStart(label='innerBlock')),
+            block_start=sight_pb2.BlockStart(label='innerBlock'),
+        ),
         sight_pb2.Object(
             location='0000000000:0000000001:0000000000',
             index=3,
@@ -339,12 +415,15 @@ outerBlock>>>%s
             line=frameinfo.lineno + 5,
             func=frameinfo.function,
             ancestor_start_location=[
-                '0000000000', '0000000000:0000000001',
-                '0000000000:0000000001:0000000000'
+                '0000000000',
+                '0000000000:0000000001',
+                '0000000000:0000000001:0000000000',
             ],
             sub_type=sight_pb2.Object.ST_TEXT,
             text=sight_pb2.Text(
-                sub_type=sight_pb2.Text.ST_TEXT, text='inText\n')),
+                sub_type=sight_pb2.Text.ST_TEXT, text='inText\n'
+            ),
+        ),
         sight_pb2.Object(
             location='0000000000:0000000002',
             index=4,
@@ -358,7 +437,9 @@ outerBlock>>>%s
                 label='innerBlock',
                 location_of_block_start='0000000000:0000000001',
                 num_direct_contents=1,
-                num_transitive_contents=1)),
+                num_transitive_contents=1,
+            ),
+        ),
         sight_pb2.Object(
             location='0000000000:0000000003',
             index=5,
@@ -369,7 +450,9 @@ outerBlock>>>%s
             ancestor_start_location=['0000000000', '0000000000:0000000003'],
             sub_type=sight_pb2.Object.ST_TEXT,
             text=sight_pb2.Text(
-                sub_type=sight_pb2.Text.ST_TEXT, text='postText\n')),
+                sub_type=sight_pb2.Text.ST_TEXT, text='postText\n'
+            ),
+        ),
         sight_pb2.Object(
             location='0000000001',
             index=6,
@@ -383,17 +466,24 @@ outerBlock>>>%s
                 label='outerBlock',
                 location_of_block_start='0000000000',
                 num_direct_contents=3,
-                num_transitive_contents=5))
+                num_transitive_contents=5,
+            ),
+        ),
     ]
     actual_log = self._read_capacitor_file(
-        params.log_dir_path +
-        '/testLogNestedBlockTextToCapacitorFile.capacitor')
+        params.log_dir_path + '/testLogNestedBlockTextToCapacitorFile.capacitor'
+    )
     self.assertEqual(len(expected_log), len(actual_log))
     for i in range(0, len(expected_log)):
       compare.assertProtoEqual(
-          self, expected_log[i], actual_log[i],
-          'Target code and generated logs are different. Expected log[%d]:\n%s\n'
-          'Actual log[%d]:\n%s\n' % (i, expected_log[i], i, actual_log[i]))
+          self,
+          expected_log[i],
+          actual_log[i],
+          'Target code and generated logs are different. Expected'
+          ' log[%d]:\n%s\nActual log[%d]:\n%s\n'
+          % (i, expected_log[i], i, actual_log[i]),
+      )
+
   def testLogAttributesToTextFile(self):
     # SETUP
     params = sight_pb2.Params()
@@ -408,16 +498,24 @@ outerBlock>>>%s
       with Attribute('key', 'val', sight):
         text('text', sight)
     # ASSERT
-    expected_log = ('%s:%d/%s text| %s\n') % (
-        self.test_path, frameinfo.lineno + 3, frameinfo.function,
+    expected_log = '%s:%d/%s text| %s\n' % (
+        self.test_path,
+        frameinfo.lineno + 3,
+        frameinfo.function,
         self._create_attributes_text(
-            [sight_pb2.Attribute(key='key', value='val')], sight))
-    actual_log = self._read_text_file(params.log_dir_path +
-                                      '/testLogAttributesToTextFile.txt')
+            [sight_pb2.Attribute(key='key', value='val')], sight
+        ),
+    )
+    actual_log = self._read_text_file(
+        params.log_dir_path + '/testLogAttributesToTextFile.txt'
+    )
     self.assertEqual(
-        expected_log, actual_log,
+        expected_log,
+        actual_log,
         'Target code and generated logs are different. Expected log:\n%s\n'
-        'Actual log:\n%s\n' % (expected_log, actual_log))
+        'Actual log:\n%s\n' % (expected_log, actual_log),
+    )
+
   def testLogAttributesToCapacitorFile(self):
     # SETUP
     params = sight_pb2.Params()
@@ -437,21 +535,30 @@ outerBlock>>>%s
             location='0000000000',
             index=0,
             attribute=self._create_attributes(
-                [sight_pb2.Attribute(key='key', value='val')], sight),
+                [sight_pb2.Attribute(key='key', value='val')], sight
+            ),
             file=self.test_path,
             line=frameinfo.lineno + 3,
             func=frameinfo.function,
             ancestor_start_location=['0000000000'],
             sub_type=sight_pb2.Object.ST_TEXT,
-            text=sight_pb2.Text(sub_type=sight_pb2.Text.ST_TEXT, text='text\n'))
+            text=sight_pb2.Text(sub_type=sight_pb2.Text.ST_TEXT, text='text\n'),
+        )
     ]
     actual_log = self._read_capacitor_file(
-        params.log_dir_path + '/testLogAttributesToCapacitorFile.capacitor')
+        params.log_dir_path + '/testLogAttributesToCapacitorFile.capacitor'
+    )
     self.assertEqual(len(expected_log), len(actual_log))
     for i in range(0, len(expected_log)):
       compare.assertProtoEqual(
-          self, expected_log[i], actual_log[i],
-          'Target code and generated logs are different. Expected log[%d]:\n%s\n'
-          'Actual log[%d]:\n%s\n' % (i, expected_log[i], i, actual_log[i]))
+          self,
+          expected_log[i],
+          actual_log[i],
+          'Target code and generated logs are different. Expected'
+          ' log[%d]:\n%s\nActual log[%d]:\n%s\n'
+          % (i, expected_log[i], i, actual_log[i]),
+      )
+
+
 if __name__ == '__main__':
   absltest.main()

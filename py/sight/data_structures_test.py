@@ -16,13 +16,13 @@
 
 import inspect
 
+from absl.testing import absltest
 import numpy as np
-
-from google3.analysis.dremel.core.capacitor.public.python import pywrap_record_reader
 from sight.proto import sight_pb2
 from sight.py import data_structures
 from sight.sight import Sight
-from absl.testing import absltest
+
+from google3.analysis.dremel.core.capacitor.public.python import pywrap_record_reader
 
 
 class DataStructuresTest(absltest.TestCase):
@@ -31,7 +31,8 @@ class DataStructuresTest(absltest.TestCase):
   def _read_capacitor_file(file_path: str):
     protos = []
     record_reader = pywrap_record_reader.RecordReader.CreateFromPath(
-        file_path, ['*'], 60.0)
+        file_path, ['*'], 60.0
+    )
     protos.extend(record_reader.IterRecords())
     return sorted(protos, key=lambda x: x.index)
 
@@ -55,8 +56,9 @@ class DataStructuresTest(absltest.TestCase):
       data_structures.log(None, sight, frame)
 
     # ASSERT
-    actual_log = self._read_capacitor_file(params.log_dir_path +
-                                           '/testBaseTypeLogging.capacitor')
+    actual_log = self._read_capacitor_file(
+        params.log_dir_path + '/testBaseTypeLogging.capacitor'
+    )
 
     self.assertEqual('abc', data_structures.from_log([actual_log[0]]))
     self.assertEqual(b'xyz', data_structures.from_log([actual_log[1]]))
@@ -82,15 +84,22 @@ class DataStructuresTest(absltest.TestCase):
       data_structures.log({'abc', b'xyz', 5, 2.5, True, None}, sight, frame)
 
     # ASSERT
-    actual_log = self._read_capacitor_file(params.log_dir_path +
-                                           '/testSequenceLogging.capacitor')
+    actual_log = self._read_capacitor_file(
+        params.log_dir_path + '/testSequenceLogging.capacitor'
+    )
 
-    self.assertEqual(['abc', b'xyz', 5, 2.5, True, None],
-                     data_structures.from_log(list(actual_log[0:8])))
-    self.assertEqual(('abc', b'xyz', 5, 2.5, True, None),
-                     data_structures.from_log(list(actual_log[8:16])))
-    self.assertEqual({'abc', b'xyz', 5, 2.5, True, None},
-                     data_structures.from_log(list(actual_log[16:24])))
+    self.assertEqual(
+        ['abc', b'xyz', 5, 2.5, True, None],
+        data_structures.from_log(list(actual_log[0:8])),
+    )
+    self.assertEqual(
+        ('abc', b'xyz', 5, 2.5, True, None),
+        data_structures.from_log(list(actual_log[8:16])),
+    )
+    self.assertEqual(
+        {'abc', b'xyz', 5, 2.5, True, None},
+        data_structures.from_log(list(actual_log[16:24])),
+    )
 
   def testDictLogging(self):
     # SETUP
@@ -107,14 +116,14 @@ class DataStructuresTest(absltest.TestCase):
       data_structures.log({'abc': b'xyz', 5: 2.5, True: None}, sight, frame)
 
     # ASSERT
-    actual_log = self._read_capacitor_file(params.log_dir_path +
-                                           '/testDictLogging.capacitor')
+    actual_log = self._read_capacitor_file(
+        params.log_dir_path + '/testDictLogging.capacitor'
+    )
 
-    self.assertEqual({
-        'abc': b'xyz',
-        5: 2.5,
-        True: None
-    }, data_structures.from_log(actual_log))
+    self.assertEqual(
+        {'abc': b'xyz', 5: 2.5, True: None},
+        data_structures.from_log(actual_log),
+    )
 
   def testNamedValueDictLogging(self):
     # SETUP
@@ -128,21 +137,19 @@ class DataStructuresTest(absltest.TestCase):
     # ACT
     frame = inspect.currentframe()
     with Sight(params) as sight:
-      data_structures.log_var('map', {
-          'abc': b'xyz',
-          5: 2.5,
-          True: None
-      }, sight, frame)
+      data_structures.log_var(
+          'map', {'abc': b'xyz', 5: 2.5, True: None}, sight, frame
+      )
 
     # ASSERT
     actual_log = self._read_capacitor_file(
-        params.log_dir_path + '/testNamedValueDictLogging.capacitor')
+        params.log_dir_path + '/testNamedValueDictLogging.capacitor'
+    )
 
-    self.assertEqual(('map', {
-        'abc': b'xyz',
-        5: 2.5,
-        True: None
-    }), data_structures.from_log(actual_log))
+    self.assertEqual(
+        ('map', {'abc': b'xyz', 5: 2.5, True: None}),
+        data_structures.from_log(actual_log),
+    )
 
   def testTensorInt64Logging(self):
     # SETUP
@@ -159,12 +166,13 @@ class DataStructuresTest(absltest.TestCase):
       data_structures.log(np.array([[1, 2], [3, 4], [5, 6]]), sight, frame)
 
     # ASSERT
-    actual_log = self._read_capacitor_file(params.log_dir_path +
-                                           '/testTensorInt64Logging.capacitor')
+    actual_log = self._read_capacitor_file(
+        params.log_dir_path + '/testTensorInt64Logging.capacitor'
+    )
 
     np.testing.assert_array_almost_equal(
-        np.array([[1, 2], [3, 4], [5, 6]]),
-        data_structures.from_log(actual_log))
+        np.array([[1, 2], [3, 4], [5, 6]]), data_structures.from_log(actual_log)
+    )
 
   def testTensorDoubleLogging(self):
     # SETUP
@@ -179,15 +187,18 @@ class DataStructuresTest(absltest.TestCase):
     frame = inspect.currentframe()
     with Sight(params) as sight:
       data_structures.log(
-          np.array([[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]]), sight, frame)
+          np.array([[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]]), sight, frame
+      )
 
     # ASSERT
-    actual_log = self._read_capacitor_file(params.log_dir_path +
-                                           '/testTensorDoubleLogging.capacitor')
+    actual_log = self._read_capacitor_file(
+        params.log_dir_path + '/testTensorDoubleLogging.capacitor'
+    )
 
     np.testing.assert_array_almost_equal(
         np.array([[1.1, 2.2], [3.3, 4.4], [5.5, 6.6]]),
-        data_structures.from_log(actual_log))
+        data_structures.from_log(actual_log),
+    )
 
 
 if __name__ == '__main__':

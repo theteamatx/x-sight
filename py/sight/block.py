@@ -17,15 +17,9 @@
 import inspect
 from typing import Dict, Optional, Text
 from absl import logging
-
-# from google3.googlex.cortex.sight.proto import sight_pb2
-# from google3.googlex.cortex.sight.py.exception import exception
-# from google3.googlex.cortex.sight.py.location import Location
-# from google3.googlex.cortex.sight.py.sight import Sight
-
-from sight.proto import sight_pb2
 from sight.exception import exception
 from sight.location import Location
+from sight.proto import sight_pb2
 from sight.sight import Sight
 
 
@@ -55,7 +49,8 @@ class Block(object):
       self,
       label: str,
       sight: Sight,
-      attributes: Optional[Dict[Text, Text]] = None) -> Optional[Location]:
+      attributes: Optional[Dict[Text, Text]] = None,
+  ) -> Optional[Location]:
     """Creates and enters a block with a given label and attributes.
 
     Args:
@@ -83,8 +78,9 @@ class Block(object):
     for key in sorted(self.attributes.keys()):
       self.sight.set_attribute(key, self.attributes.get(key))
     # pytype: disable=attribute-error
-    return self.sight.enter_block(self.label, sight_pb2.Object(),
-                                  inspect.currentframe().f_back.f_back)
+    return self.sight.enter_block(
+        self.label, sight_pb2.Object(), inspect.currentframe().f_back.f_back
+    )
     # pytype: enable=attribute-error
 
   def __enter__(self):
@@ -99,8 +95,9 @@ class Block(object):
 
     if exc_type is not None:
       # pytype: disable=attribute-error
-      exception(exc_type, value, traceback, self.sight,
-                inspect.currentframe().f_back)
+      exception(
+          exc_type, value, traceback, self.sight, inspect.currentframe().f_back
+      )
       # pytype: enable=attribute-error
 
     if self.sight is None:
@@ -108,8 +105,9 @@ class Block(object):
       return
 
     # pytype: disable=attribute-error
-    self.sight.exit_block(self.label, sight_pb2.Object(),
-                          inspect.currentframe().f_back)
+    self.sight.exit_block(
+        self.label, sight_pb2.Object(), inspect.currentframe().f_back
+    )
     # pytype: enable=attribute-error
 
     for key in sorted(self.attributes.keys(), reverse=True):

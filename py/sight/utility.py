@@ -12,19 +12,18 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from google.protobuf.json_format import _Printer as BasePrinter 
-from google.protobuf.json_format import SerializeToJsonError
-from google.protobuf.internal import type_checkers
-from google.protobuf import descriptor
-from google.protobuf.json_format import _INT64_TYPES
-from google.protobuf.json_format import _FLOAT_TYPES
-from google.protobuf.json_format import _INFINITY
-from google.protobuf.json_format import _NEG_INFINITY
-from google.protobuf.json_format import _NAN
-
-
 import base64
 import math
+
+from google.protobuf import descriptor
+from google.protobuf.internal import type_checkers
+from google.protobuf.json_format import _FLOAT_TYPES
+from google.protobuf.json_format import _INFINITY
+from google.protobuf.json_format import _INT64_TYPES
+from google.protobuf.json_format import _NAN
+from google.protobuf.json_format import _NEG_INFINITY
+from google.protobuf.json_format import _Printer as BasePrinter
+from google.protobuf.json_format import SerializeToJsonError
 
 
 def MessageToJson(
@@ -36,27 +35,28 @@ def MessageToJson(
     use_integers_for_enums=False,
     descriptor_pool=None,
     float_precision=None,
-    ensure_ascii=True):
+    ensure_ascii=True,
+):
   """Converts protobuf message to JSON format.
 
   Args:
     message: The protocol buffers message instance to serialize.
-    including_default_value_fields: If True, singular primitive fields,
-        repeated fields, and map fields will always be serialized.  If
-        False, only serialize non-empty fields.  Singular message fields
-        and oneof fields are not affected by this option.
-    preserving_proto_field_name: If True, use the original proto field
-        names as defined in the .proto file. If False, convert the field
-        names to lowerCamelCase.
-    indent: The JSON object will be pretty-printed with this indent level.
-        An indent level of 0 or negative will only insert newlines.
+    including_default_value_fields: If True, singular primitive fields, repeated
+      fields, and map fields will always be serialized.  If False, only
+      serialize non-empty fields.  Singular message fields and oneof fields are
+      not affected by this option.
+    preserving_proto_field_name: If True, use the original proto field names as
+      defined in the .proto file. If False, convert the field names to
+      lowerCamelCase.
+    indent: The JSON object will be pretty-printed with this indent level. An
+      indent level of 0 or negative will only insert newlines.
     sort_keys: If True, then the output will be sorted by field names.
     use_integers_for_enums: If true, print integers instead of enum names.
     descriptor_pool: A Descriptor Pool for resolving types. If None use the
-        default.
+      default.
     float_precision: If set, use this to specify float field valid digits.
-    ensure_ascii: If True, strings with non-ASCII characters are escaped.
-        If False, Unicode strings are returned unchanged.
+    ensure_ascii: If True, strings with non-ASCII characters are escaped. If
+      False, Unicode strings are returned unchanged.
 
   Returns:
     A string containing the JSON formatted protocol buffer message.
@@ -66,8 +66,10 @@ def MessageToJson(
       preserving_proto_field_name,
       use_integers_for_enums,
       descriptor_pool,
-      float_precision=float_precision)
+      float_precision=float_precision,
+  )
   return printer.ToJsonString(message, indent, sort_keys, ensure_ascii)
+
 
 def MessageToDict(
     message,
@@ -75,23 +77,24 @@ def MessageToDict(
     preserving_proto_field_name=False,
     use_integers_for_enums=False,
     descriptor_pool=None,
-    float_precision=None):
+    float_precision=None,
+):
   """Converts protobuf message to a dictionary.
 
   When the dictionary is encoded to JSON, it conforms to proto3 JSON spec.
 
   Args:
     message: The protocol buffers message instance to serialize.
-    including_default_value_fields: If True, singular primitive fields,
-        repeated fields, and map fields will always be serialized.  If
-        False, only serialize non-empty fields.  Singular message fields
-        and oneof fields are not affected by this option.
-    preserving_proto_field_name: If True, use the original proto field
-        names as defined in the .proto file. If False, convert the field
-        names to lowerCamelCase.
+    including_default_value_fields: If True, singular primitive fields, repeated
+      fields, and map fields will always be serialized.  If False, only
+      serialize non-empty fields.  Singular message fields and oneof fields are
+      not affected by this option.
+    preserving_proto_field_name: If True, use the original proto field names as
+      defined in the .proto file. If False, convert the field names to
+      lowerCamelCase.
     use_integers_for_enums: If true, print integers instead of enum names.
     descriptor_pool: A Descriptor Pool for resolving types. If None use the
-        default.
+      default.
     float_precision: If set, use this to specify float field valid digits.
 
   Returns:
@@ -104,11 +107,14 @@ def MessageToDict(
       preserving_proto_field_name,
       use_integers_for_enums,
       descriptor_pool,
-      float_precision=float_precision)
+      float_precision=float_precision,
+  )
   # pylint: disable=protected-access
   return printer._MessageToJsonObject(message)
 
+
 class _Printer(BasePrinter):
+
   def _FieldToJsonObject(self, field, value):
     """Converts field value according to Proto3 JSON Specification."""
     if field.cpp_type == descriptor.FieldDescriptor.CPPTYPE_MESSAGE:
@@ -124,8 +130,10 @@ class _Printer(BasePrinter):
       else:
         if field.file.syntax == 'proto3':
           return value
-        raise SerializeToJsonError('Enum field contains an integer value '
-                                   'which can not mapped to an enum value.')
+        raise SerializeToJsonError(
+            'Enum field contains an integer value '
+            'which can not mapped to an enum value.'
+        )
     elif field.cpp_type == descriptor.FieldDescriptor.CPPTYPE_STRING:
       if field.type == descriptor.FieldDescriptor.TYPE_BYTES:
         # Use base64 Data encoding for bytes

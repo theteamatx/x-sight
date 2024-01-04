@@ -38,7 +38,8 @@ def _read_text_file(file_path: str) -> str:
 def _read_capacitor_file(file_path: str) -> Sequence[Any]:
   protos = []
   record_reader = pywrap_record_reader.RecordReader.CreateFromPath(
-      file_path, ['*'], 60.0)
+      file_path, ['*'], 60.0
+  )
   protos.extend(record_reader.IterRecords())
   return sorted(protos, key=lambda x: x.index)
 
@@ -48,11 +49,13 @@ def _create_attributes(sight: Sight) -> Sequence[sight_pb2.Attribute]:
   if hasattr(sight, 'change_list_number'):
     attribute.append(
         sight_pb2.Attribute(
-            key='change_list_number', value=str(sight.change_list_number)))
+            key='change_list_number', value=str(sight.change_list_number)
+        )
+    )
   if hasattr(sight, 'citc_snapshot'):
     attribute.append(
-        sight_pb2.Attribute(
-            key='citc_snapshot', value=str(sight.citc_snapshot)))
+        sight_pb2.Attribute(key='citc_snapshot', value=str(sight.citc_snapshot))
+    )
   return attribute
 
 
@@ -61,7 +64,9 @@ class NumpySightTest(absltest.TestCase):
   @classmethod
   def setUpClass(cls):
     super().setUpClass()
-    cls.test_path = 'googlex/cortex/sight/py/widgets/numpy_sight/numpy_sight_test.py'
+    cls.test_path = (
+        'googlex/cortex/sight/py/widgets/numpy_sight/numpy_sight_test.py'
+    )
 
   def testLogFloatArrayToText(self):
     # SETUP
@@ -75,17 +80,22 @@ class NumpySightTest(absltest.TestCase):
     # ACT
     with Sight(params) as sight:
       numpy_sight.log(
-          'array', np.array([[1, 2.2, 3.333], [4.1, 5, 6.2]], dtype=np.float32),
-          sight)
+          'array',
+          np.array([[1, 2.2, 3.333], [4.1, 5, 6.2]], dtype=np.float32),
+          sight,
+      )
 
     # ASSERT
     expected_log = ''
-    actual_log = _read_text_file(params.log_dir_path +
-                                 '/testLogFloatArrayToText.txt')
+    actual_log = _read_text_file(
+        params.log_dir_path + '/testLogFloatArrayToText.txt'
+    )
     self.assertEqual(
-        expected_log, actual_log,
+        expected_log,
+        actual_log,
         'Target code and generated logs are different. Expected log:\n%s\n'
-        'Actual log:\n%s\n' % (expected_log, actual_log))
+        'Actual log:\n%s\n' % (expected_log, actual_log),
+    )
 
   def testLogFloatArrayToCapacitorFile(self):
     # SETUP
@@ -99,9 +109,9 @@ class NumpySightTest(absltest.TestCase):
     # ACT
     frameinfo = inspect.getframeinfo(inspect.currentframe())
     with Sight(params) as sight:
-      numpy_sight.log('array',
-                      np.array([[1, 2.5, 3], [4, 5.5, 6]], dtype=np.float32),
-                      sight)
+      numpy_sight.log(
+          'array', np.array([[1, 2.5, 3], [4, 5.5, 6]], dtype=np.float32), sight
+      )
 
     # ASSERT
     expected_log = [
@@ -119,19 +129,27 @@ class NumpySightTest(absltest.TestCase):
                 label='array',
                 shape=[2, 3],
                 double_values=sight_pb2.Tensor.DoubleValues(
-                    value=[1, 2.5, 3, 4, 5.5, 6])))
+                    value=[1, 2.5, 3, 4, 5.5, 6]
+                ),
+            ),
+        )
     ]
 
     actual_log = _read_capacitor_file(
-        params.log_dir_path + '/testLogFloatArrayToCapacitorFile.capacitor')
+        params.log_dir_path + '/testLogFloatArrayToCapacitorFile.capacitor'
+    )
 
     self.assertEqual(len(expected_log), len(actual_log))
     for i in range(0, len(expected_log)):
       compare.assertProtoEqual(
-          self, expected_log[i], actual_log[i],
-          'Target code and generated logs are different. Expected log[%d]:\n%s\n'
-          'Actual log[%d]:\n%s\n' % (i, expected_log[i], i, actual_log[i]),
-          ignored_fields=['line'])
+          self,
+          expected_log[i],
+          actual_log[i],
+          'Target code and generated logs are different. Expected'
+          ' log[%d]:\n%s\nActual log[%d]:\n%s\n'
+          % (i, expected_log[i], i, actual_log[i]),
+          ignored_fields=['line'],
+      )
 
   def testLogIntArrayToCapacitorFile(self):
     # SETUP
@@ -145,8 +163,9 @@ class NumpySightTest(absltest.TestCase):
     # ACT
     frameinfo = inspect.getframeinfo(inspect.currentframe())
     with Sight(params) as sight:
-      numpy_sight.log('array', np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64),
-                      sight)
+      numpy_sight.log(
+          'array', np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64), sight
+      )
 
     # ASSERT
     expected_log = [
@@ -164,19 +183,27 @@ class NumpySightTest(absltest.TestCase):
                 label='array',
                 shape=[2, 3],
                 int64_values=sight_pb2.Tensor.Int64Values(
-                    value=[1, 2, 3, 4, 5, 6])))
+                    value=[1, 2, 3, 4, 5, 6]
+                ),
+            ),
+        )
     ]
 
     actual_log = _read_capacitor_file(
-        params.log_dir_path + '/testLogIntArrayToCapacitorFile.capacitor')
+        params.log_dir_path + '/testLogIntArrayToCapacitorFile.capacitor'
+    )
 
     self.assertEqual(len(expected_log), len(actual_log))
     for i in range(0, len(expected_log)):
       compare.assertProtoEqual(
-          self, expected_log[i], actual_log[i],
-          'Target code and generated logs are different. Expected log[%d]:\n%s\n'
-          'Actual log[%d]:\n%s\n' % (i, expected_log[i], i, actual_log[i]),
-          ignored_fields=['line'])
+          self,
+          expected_log[i],
+          actual_log[i],
+          'Target code and generated logs are different. Expected'
+          ' log[%d]:\n%s\nActual log[%d]:\n%s\n'
+          % (i, expected_log[i], i, actual_log[i]),
+          ignored_fields=['line'],
+      )
 
 
 if __name__ == '__main__':

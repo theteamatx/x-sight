@@ -14,8 +14,8 @@
 
 """Hierarchical attribute annotations in the sight log."""
 
-# from google3.googlex.cortex.sight.py.sight import Sight
 from sight.sight import Sight
+
 
 class Attribute(object):
   """Encapsulates start and stop points where an attribute is set to a value."""

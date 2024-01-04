@@ -49,8 +49,8 @@ class Simulation(object):
       sight: The logger instance to which the block is logged.
       parameters: Key-value pairs that identify this block and all of its
         contained objects.
-      reference_trace_file_path: Path of the file that contains the Sight
-        log of a reference simulation run to compare this run to.
+      reference_trace_file_path: Path of the file that contains the Sight log of
+        a reference simulation run to compare this run to.
     """
     self.sight = sight
     if sight is None:
@@ -67,17 +67,22 @@ class Simulation(object):
 
     if reference_trace_file_path:
       sight.widget_simulation_state.reference_trace = Trace(
-          trace_file_path=reference_trace_file_path)
+          trace_file_path=reference_trace_file_path
+      )
       sight.widget_simulation_state.reference_trace.advance_to_within_block(
-          [sight_pb2.Object.ST_BLOCK_START, sight_pb2.BlockStart.ST_SIMULATION])
+          [sight_pb2.Object.ST_BLOCK_START, sight_pb2.BlockStart.ST_SIMULATION]
+      )
 
     # pytype: disable=attribute-error
     self.sight.enter_block(
         self.label,
         sight_pb2.Object(
             block_start=sight_pb2.BlockStart(
-                sub_type=sight_pb2.BlockStart.ST_SIMULATION)),
-        inspect.currentframe().f_back.f_back)
+                sub_type=sight_pb2.BlockStart.ST_SIMULATION
+            )
+        ),
+        inspect.currentframe().f_back.f_back,
+    )
     # pytype: enable=attribute-error
     if parameters:
       with SimulationParameters(parameters, sight):
@@ -95,8 +100,9 @@ class Simulation(object):
 
     if exc_type is not None:
       # pytype: disable=attribute-error
-      exception(exc_type, value, traceback, self.sight,
-                inspect.currentframe().f_back)
+      exception(
+          exc_type, value, traceback, self.sight, inspect.currentframe().f_back
+      )
       # pytype: enable=attribute-error
 
     # logging.info('>>> %s', self.label)
@@ -112,8 +118,9 @@ class Simulation(object):
     self.sight.widget_simulation_state.state = {}
 
     # pytype: disable=attribute-error
-    self.sight.exit_block(self.label, sight_pb2.Object(),
-                          inspect.currentframe().f_back)
+    self.sight.exit_block(
+        self.label, sight_pb2.Object(), inspect.currentframe().f_back
+    )
     # pytype: enable=attribute-error
 
   @classmethod
@@ -155,4 +162,5 @@ class Simulation(object):
         driver_fn=run,
         state_attrs=state_attrs.copy(),
         action_attrs=action_attrs,
-        sight=sight)
+        sight=sight,
+    )

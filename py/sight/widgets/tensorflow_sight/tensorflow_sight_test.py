@@ -39,7 +39,8 @@ def _read_text_file(file_path: str) -> str:
 def _read_capacitor_file(file_path: str) -> Optional[Any]:
   protos = []
   record_reader = pywrap_record_reader.RecordReader.CreateFromPath(
-      file_path, ['*'], 60.0)
+      file_path, ['*'], 60.0
+  )
   protos.extend(record_reader.IterRecords())
   return sorted(protos, key=lambda x: x.index)
 
@@ -49,16 +50,19 @@ def _create_attributes(sight: Sight) -> Sequence[sight_pb2.Attribute]:
   if hasattr(sight, 'change_list_number'):
     attribute.append(
         sight_pb2.Attribute(
-            key='change_list_number', value=str(sight.change_list_number)))
+            key='change_list_number', value=str(sight.change_list_number)
+        )
+    )
   if hasattr(sight, 'citc_snapshot'):
     attribute.append(
-        sight_pb2.Attribute(
-            key='citc_snapshot', value=str(sight.citc_snapshot)))
+        sight_pb2.Attribute(key='citc_snapshot', value=str(sight.citc_snapshot))
+    )
   return attribute
 
 
-def _create_attributes_text(base_attributes: Sequence[sight_pb2.Attribute],
-                            sight: Sight) -> str:
+def _create_attributes_text(
+    base_attributes: Sequence[sight_pb2.Attribute], sight: Sight
+) -> str:
   attribute = []
   if hasattr(sight, 'change_list_number'):
     attribute.append(f'change_list_number={sight.change_list_number}')
@@ -90,20 +94,25 @@ class TensorflowSightTest(absltest.TestCase):
         tensorflow_sight.log(
             'tensor',
             tf.convert_to_tensor(
-                np.array([[1, 2.2, 3.333], [4.1, 5, 6.2]], dtype=np.float32)),
-            sight)
+                np.array([[1, 2.2, 3.333], [4.1, 5, 6.2]], dtype=np.float32)
+            ),
+            sight,
+        )
 
       # ASSERT
       block_attrs = '| ' + _create_attributes_text([], sight)
     expected_log = """Model Application<<<%s
 Model Application>>>%s
 """ % (block_attrs, block_attrs)
-    actual_log = _read_text_file(params.log_dir_path +
-                                 '/testLogFloatArrayToText.txt')
+    actual_log = _read_text_file(
+        params.log_dir_path + '/testLogFloatArrayToText.txt'
+    )
     self.assertEqual(
-        expected_log, actual_log,
+        expected_log,
+        actual_log,
         'Target code and generated logs are different. Expected log:\n%s\n'
-        'Actual log:\n%s\n' % (expected_log, actual_log))
+        'Actual log:\n%s\n' % (expected_log, actual_log),
+    )
 
   def testLogFloatArrayToCapacitorFile(self):
     # SETUP
@@ -121,7 +130,10 @@ Model Application>>>%s
         tensorflow_sight.log(
             'tensor',
             tf.convert_to_tensor(
-                np.array([[1, 2.5, 3], [4, 5.5, 6]], dtype=np.float32)), sight)
+                np.array([[1, 2.5, 3], [4, 5.5, 6]], dtype=np.float32)
+            ),
+            sight,
+        )
 
     # ASSERT
     expected_log = [
@@ -136,7 +148,9 @@ Model Application>>>%s
             sub_type=sight_pb2.Object.ST_BLOCK_START,
             block_start=sight_pb2.BlockStart(
                 label='Model Application',
-                sub_type=sight_pb2.BlockStart.ST_TENSORFLOW_MODEL_APPLICATION)),
+                sub_type=sight_pb2.BlockStart.ST_TENSORFLOW_MODEL_APPLICATION,
+            ),
+        ),
         sight_pb2.Object(
             location='0000000000:0000000000',
             index=1,
@@ -151,7 +165,10 @@ Model Application>>>%s
                 label='tensor',
                 shape=[2, 3],
                 double_values=sight_pb2.Tensor.DoubleValues(
-                    value=[1, 2.5, 3, 4, 5.5, 6]))),
+                    value=[1, 2.5, 3, 4, 5.5, 6]
+                ),
+            ),
+        ),
         sight_pb2.Object(
             location='0000000001',
             index=2,
@@ -166,19 +183,26 @@ Model Application>>>%s
                 sub_type=sight_pb2.BlockEnd.ST_TENSORFLOW_MODEL_APPLICATION,
                 location_of_block_start='0000000000',
                 num_direct_contents=1,
-                num_transitive_contents=1))
+                num_transitive_contents=1,
+            ),
+        ),
     ]
 
     actual_log = _read_capacitor_file(
-        params.log_dir_path + '/testLogFloatArrayToCapacitorFile.capacitor')
+        params.log_dir_path + '/testLogFloatArrayToCapacitorFile.capacitor'
+    )
 
     self.assertEqual(len(expected_log), len(actual_log))
     for i in range(0, len(expected_log)):
       compare.assertProtoEqual(
-          self, expected_log[i], actual_log[i],
-          'Target code and generated logs are different. Expected log[%d]:\n%s\n'
-          'Actual log[%d]:\n%s\n' % (i, expected_log[i], i, actual_log[i]),
-          ignored_fields=['line'])
+          self,
+          expected_log[i],
+          actual_log[i],
+          'Target code and generated logs are different. Expected'
+          ' log[%d]:\n%s\nActual log[%d]:\n%s\n'
+          % (i, expected_log[i], i, actual_log[i]),
+          ignored_fields=['line'],
+      )
 
   def testLogIntArrayToCapacitorFile(self):
     # SETUP
@@ -196,7 +220,10 @@ Model Application>>>%s
         tensorflow_sight.log(
             'tensor',
             tf.convert_to_tensor(
-                np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64)), sight)
+                np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64)
+            ),
+            sight,
+        )
 
     # ASSERT
     expected_log = [
@@ -211,7 +238,9 @@ Model Application>>>%s
             sub_type=sight_pb2.Object.ST_BLOCK_START,
             block_start=sight_pb2.BlockStart(
                 label='Model Application',
-                sub_type=sight_pb2.BlockStart.ST_TENSORFLOW_MODEL_APPLICATION)),
+                sub_type=sight_pb2.BlockStart.ST_TENSORFLOW_MODEL_APPLICATION,
+            ),
+        ),
         sight_pb2.Object(
             location='0000000000:0000000000',
             index=1,
@@ -226,7 +255,10 @@ Model Application>>>%s
                 label='tensor',
                 shape=[2, 3],
                 int64_values=sight_pb2.Tensor.Int64Values(
-                    value=[1, 2, 3, 4, 5, 6]))),
+                    value=[1, 2, 3, 4, 5, 6]
+                ),
+            ),
+        ),
         sight_pb2.Object(
             location='0000000001',
             index=2,
@@ -241,19 +273,26 @@ Model Application>>>%s
                 sub_type=sight_pb2.BlockEnd.ST_TENSORFLOW_MODEL_APPLICATION,
                 location_of_block_start='0000000000',
                 num_direct_contents=1,
-                num_transitive_contents=1))
+                num_transitive_contents=1,
+            ),
+        ),
     ]
 
     actual_log = _read_capacitor_file(
-        params.log_dir_path + '/testLogIntArrayToCapacitorFile.capacitor')
+        params.log_dir_path + '/testLogIntArrayToCapacitorFile.capacitor'
+    )
 
     self.assertEqual(len(expected_log), len(actual_log))
     for i in range(0, len(expected_log)):
       compare.assertProtoEqual(
-          self, expected_log[i], actual_log[i],
-          'Target code and generated logs are different. Expected log[%d]:\n%s\n'
-          'Actual log[%d]:\n%s\n' % (i, expected_log[i], i, actual_log[i]),
-          ignored_fields=['line'])
+          self,
+          expected_log[i],
+          actual_log[i],
+          'Target code and generated logs are different. Expected'
+          ' log[%d]:\n%s\nActual log[%d]:\n%s\n'
+          % (i, expected_log[i], i, actual_log[i]),
+          ignored_fields=['line'],
+      )
 
 
 if __name__ == '__main__':

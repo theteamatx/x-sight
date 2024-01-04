@@ -34,23 +34,30 @@ def main(argv):
       label="Demo",
       # local=True,
       # text_output=True,
-      log_owner="user@domain.com",
+      log_owner="bronevet@google.com",
       capacitor_output=True,
-      log_dir_path="/tmp/")
+      log_dir_path="/tmp/",
+  )
 
   with Sight(params) as sight:
     with tensorflow_sight.TfModelTraining(label="Model Training", sight=sight):
       for epoch in range(0, 3):
         with tensorflow_sight.TfModelTrainingEpoch(
-            label="Model Epoch", epoch_num=epoch, batch_size=10, sight=sight):
+            label="Model Epoch", epoch_num=epoch, batch_size=10, sight=sight
+        ):
           sight.text("hello")
           with tensorflow_sight.TfModelApplication("Model Application", sight):
-            a = np.array([[1 + epoch, 2.2 + epoch, 3.333 + epoch],
-                          [4.1 + epoch, 5 + epoch, 6.2 + epoch]],
-                         dtype=np.float32)
+            a = np.array(
+                [
+                    [1 + epoch, 2.2 + epoch, 3.333 + epoch],
+                    [4.1 + epoch, 5 + epoch, 6.2 + epoch],
+                ],
+                dtype=np.float32,
+            )
             for i in range(0, 5):
-              tensorflow_sight.log(("tensor %d" % i), tf.convert_to_tensor(a),
-                                   sight)
+              tensorflow_sight.log(
+                  "tensor %d" % i, tf.convert_to_tensor(a), sight
+              )
               a = a * 2
 
 

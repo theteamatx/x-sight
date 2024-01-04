@@ -56,19 +56,12 @@ sudo docker run hello-world
 sudo usermod -aG docker $USER
 ```
 
-#### Get code from gerrit:
-
-If you haven't generated a new identifier required for a partner-code domain in
-a while, Please generate a new identifier using this
-[link](https://partner-code.googlesource.com/new-password) and paste it in
-terminal to refresh the credentials.
+#### Get code from github:
 
 ```bash
 #clone and fetch latest sigh code from gerrit
 cd ~/
-git clone https://partner-code.googlesource.com/x-sight
-cd x-sight
-git fetch https://partner-code.googlesource.com/x-sight refs/changes/63/609763/2 && git checkout -b change-609763 FETCH_HEAD
+git clone https://github.com/theteamatx/x-sight.git
 ```
 
 #### Create virtual env:
@@ -83,28 +76,36 @@ virtualenv sight_env --python=python3.10
 source ~/venvs/sight_env/bin/activate
 
 # Install necessary dependencies from requirement.txt file
-pip install -r ~/x-sight/sight/requirements.txt
+pip install -r ~/x-sight/py/sight/requirements.txt
 ```
+Note : if error ```ModuleNotFoundError: No module named 'virtualenv'``` occurs, try installing virtualenv using pip,
+```sudo pip install virtualenv```
 
 ```bash
 # Set python path to x-sight directory and reload the bashrc file
-echo 'export PYTHONPATH="$HOME/x-sight:$PYTHONPATH"' >> ~/.bashrc
+echo 'export PYTHONPATH="$HOME/x-sight/py:$HOME/x-sight:$PYTHONPATH"' >> ~/.bashrc
 source  ~/.bashrc
 source ~/venvs/sight_env/bin/activate
-cd ~/x-sight
+cd ~/sight
 ```
 
 ### User Permissions:
 
-For completing rest of the task from prerequisites, either one needs owner role
+Note : all the follow up commands using $PROJECT_ID assumes you have it already set to your gcp project id. If not, set it via
+```bash
+export PROJECT_ID=YOUR_ACTUAL_PROJECT_ID
+```
+
+
+For completing rest of the task from prerequisites, one needs either owner role
 and directly continue to [this](#heading=h.gmwxj9f1df9f) section or one can
-create Sight Manager role as following and assign that role to any user to
+create Sight Manager role as following and assign that role to any user and
 delegate the remaining tasks from prerequisites.
 
 #### Creating Sight Manager role:
 
 ```bash
-gcloud iam roles create sight_manager --project=$PROJECT_ID --file=sight-manager-role.yaml
+gcloud iam roles create sight_manager --project=$PROJECT_ID --file=infra/sight-manager-role.yaml
 ```
 
 #### Assigning role to User:
@@ -132,7 +133,7 @@ Make sure following APIs are enabled in your gcp project
 
 1)  Create a custom role for User working with Sight from the sight-user-role.yaml file available in the root directory of repo.
     ```bash
-    gcloud iam roles create sight_user --project=$PROJECT_ID --file=sight-user-role.yaml
+    gcloud iam roles create sight_user --project=$PROJECT_ID --file=infra/sight-user-role.yaml
     ```
 
 2)  Assign the custom role to user.
@@ -156,7 +157,7 @@ work with Sight from the sight-service-account-role.yaml file available in the
 root directory of repo.
 
     ```bash
-    gcloud iam roles create sight_service_account --project=$PROJECT_ID --file=sight-service-account-role.yaml
+    gcloud iam roles create sight_service_account --project=$PROJECT_ID --file=infra/sight-service-account-role.yaml
     ```
 
 3) Assign the custom role to the newly created service account so that this service
@@ -179,7 +180,7 @@ account can have required permissions.
 2) Create service image from the code and host it on [gcr.io](http://gcr.io)
 
     ```bash
-    docker build --tag gcr.io/$PROJECT_ID/sight-service-default -f service/Dockerfile .
+    docker build --tag gcr.io/$PROJECT_ID/sight-service-default -f sight_service/Dockerfile .
 
     gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
 
@@ -198,7 +199,7 @@ Host the worker image in a cloud which will be used as default image by the
 workers spawned using sight unless specified otherwise.
 
 ```bash
-docker build --tag gcr.io/$PROJECT_ID/sight-worker -f sight_all/Dockerfile .
+docker build --tag gcr.io/$PROJECT_ID/sight-worker -f py/Dockerfile .
 
 gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
 
@@ -556,7 +557,7 @@ following flags to control the training process:
 Once the ML model has been trained users can use this model to guide ordinary
 application runs by executing the application's binary while setting the command
 line flag: ```--decision_mode``` as ```run``` and ```--trained_model_log_id``` as ```$log_id``` of generated
-sight run while training).
+sight run while training.
 
 ### Example demo applications:
 
@@ -589,7 +590,7 @@ To use the sight for training optimizer, without any environment, run following
 command with all the mandatory flags mentioned [here](#running-decision-api-enabled-applications-on-the-command-line):
 
 ```python
-python sight/demo/shower_demo_without_env.py \
+python py/sight/demo/shower_demo_without_env.py \
 --decision_mode=train \
 --deployment_mode=distributed \
 --optimizer_type=dm_acme \
@@ -605,14 +606,13 @@ in addition to all the mandatory flags for any other dm_env type environment, no
 need to pass env_name flag:
 
 ```python
-python sight/demo/gym_demo_env.py \
+python py/sight/demo/gym_demo_env.py \
 --decision_mode=train \
 --deployment_mode=distributed \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
 --docker_image=gcr.io/$PROJECT_ID/sight-worker \
---project_id=$PROJECT_ID \
 --env_name=CartPole-v1
 ```
 
@@ -622,7 +622,7 @@ To use sight with vertex AI vizier for hyperparameter turning one can use the
 following
 
 ```python
-python sight/demo/sweetness.py \
+python py/sight/demo/sweetness.py \
 --decision_mode=train \
 --deployment_mode=distributed \
 --optimizer_type=vizier \
@@ -634,7 +634,7 @@ python sight/demo/sweetness.py \
 #### Exhaustive Search:
 
 ```python
-python sight/demo/sweetness.py \
+python py/sight/demo/sweetness.py \
 --decision_mode=train \
 --deployment_mode=distributed \
 --optimizer_type=exhaustive_search \
@@ -653,7 +653,7 @@ This file calls the server and gets the latest status of the experiment. User
 can run this file as follows:
 
 ```python
-python sight/widgets/decision/current_status.py --project_id=$PROJECT_ID --log_id=SIGHT_LOG_ID
+python py/sight/widgets/decision/current_status.py --project_id=$PROJECT_ID --log_id=SIGHT_LOG_ID
 ```
 
 ### Private server
@@ -671,9 +671,9 @@ Taking example from [here](#with-environment), and adding above mentioned
 flags:
 
 ```python
-python sight/demo/gym_demo_env.py \
+python py/sight/demo/gym_demo_env.py \
 --service_name=new-service \
---service_docker_file=service/Dockerfile \
+--service_docker_file=server/Dockerfile \
 --decision_mode=train \
 --deployment_mode=distributed \
 --optimizer_type=dm_acme \
@@ -682,3 +682,15 @@ python sight/demo/gym_demo_env.py \
 --docker_image=gcr.io/cameltrain/sight-worker-meet \
 --env_name=CartPole-v1
 ```
+
+### Local server
+
+Instead of running sight service on cloudrun, we can run it locally on the same machine where we are running the root process. This helps in faster development and testing and saves time required to create the service image and deploying it on cloud run after each minor change in server-side logic.
+
+For this, we can start our service_root file from one terminal session
+
+```python
+cd ~/x-sight
+python sight_service/service_root.py
+```
+And from another terminal session, User can run any valid command from this section and change the flag ```--deployment_mode=local``` to indicate that sight_service is running locally.

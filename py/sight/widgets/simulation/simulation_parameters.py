@@ -52,7 +52,7 @@ class SimulationParameters(object):
     if sight.widget_simulation_state.reference_trace:
       sight.widget_simulation_state.reference_trace.advance_to_within_block([
           sight_pb2.Object.ST_BLOCK_START,
-          sight_pb2.BlockStart.ST_SIMULATION_PARAMETERS
+          sight_pb2.BlockStart.ST_SIMULATION_PARAMETERS,
       ])
       sight.widget_simulation_state.reference_trace.collect_current_block()
 
@@ -61,14 +61,18 @@ class SimulationParameters(object):
         'SimulationParameters',
         sight_pb2.Object(
             block_start=sight_pb2.BlockStart(
-                sub_type=sight_pb2.BlockStart.ST_SIMULATION_PARAMETERS)),
-        inspect.currentframe().f_back.f_back)
+                sub_type=sight_pb2.BlockStart.ST_SIMULATION_PARAMETERS
+            )
+        ),
+        inspect.currentframe().f_back.f_back,
+    )
     # pytype: enable=attribute-error
 
     for key, value in parameters.items():
       # pytype: disable=attribute-error
-      data_structures.log_var(key, value, sight,
-                              inspect.currentframe().f_back.f_back)
+      data_structures.log_var(
+          key, value, sight, inspect.currentframe().f_back.f_back
+      )
       # pytype: enable=attribute-error
       self.parameters[key] = value
 
@@ -84,8 +88,9 @@ class SimulationParameters(object):
 
     if exc_type is not None:
       # pytype: disable=attribute-error
-      exception(exc_type, value, traceback, self.sight,
-                inspect.currentframe().f_back)
+      exception(
+          exc_type, value, traceback, self.sight, inspect.currentframe().f_back
+      )
       # pytype: enable=attribute-error
 
     if self.sight is None:
@@ -100,6 +105,9 @@ class SimulationParameters(object):
         'SimulationParameters',
         sight_pb2.Object(
             block_end=sight_pb2.BlockEnd(
-                sub_type=sight_pb2.BlockEnd.ST_SIMULATION_PARAMETERS)),
-        inspect.currentframe().f_back)
+                sub_type=sight_pb2.BlockEnd.ST_SIMULATION_PARAMETERS
+            )
+        ),
+        inspect.currentframe().f_back,
+    )
     # pytype: enable=attribute-error
