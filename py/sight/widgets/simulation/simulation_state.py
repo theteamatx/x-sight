@@ -52,7 +52,7 @@ class SimulationState(object):
     if sight.widget_simulation_state.reference_trace:
       sight.widget_simulation_state.reference_trace.advance_to_within_block([
           sight_pb2.Object.ST_BLOCK_START,
-          sight_pb2.BlockStart.ST_SIMULATION_STATE
+          sight_pb2.BlockStart.ST_SIMULATION_STATE,
       ])
 
     # pytype: disable=attribute-error
@@ -60,14 +60,18 @@ class SimulationState(object):
         'SimulationState',
         sight_pb2.Object(
             block_start=sight_pb2.BlockStart(
-                sub_type=sight_pb2.BlockStart.ST_SIMULATION_STATE)),
-        inspect.currentframe().f_back.f_back)
+                sub_type=sight_pb2.BlockStart.ST_SIMULATION_STATE
+            )
+        ),
+        inspect.currentframe().f_back.f_back,
+    )
     # pytype: enable=attribute-error
 
     for key, value in state.items():
       # pytype: disable=attribute-error
-      data_structures.log_var(key, value, sight,
-                              inspect.currentframe().f_back.f_back)
+      data_structures.log_var(
+          key, value, sight, inspect.currentframe().f_back.f_back
+      )
       # pytype: enable=attribute-error
 
   def __enter__(self):
@@ -82,8 +86,9 @@ class SimulationState(object):
 
     if exc_type is not None:
       # pytype: disable=attribute-error
-      exception(exc_type, value, traceback, self.sight,
-                inspect.currentframe().f_back)
+      exception(
+          exc_type, value, traceback, self.sight, inspect.currentframe().f_back
+      )
       # pytype: enable=attribute-error
 
     if self.sight is None:
@@ -95,8 +100,11 @@ class SimulationState(object):
         'SimulationState',
         sight_pb2.Object(
             block_end=sight_pb2.BlockEnd(
-                sub_type=sight_pb2.BlockEnd.ST_SIMULATION_STATE)),
-        inspect.currentframe().f_back)
+                sub_type=sight_pb2.BlockEnd.ST_SIMULATION_STATE
+            )
+        ),
+        inspect.currentframe().f_back,
+    )
     # pytype: enable=attribute-error
 
     # If there is a reference trace, report the difference between
@@ -106,31 +114,45 @@ class SimulationState(object):
       reference_state = {}
       while True:
         cur_named_var = reference_trace.advance_to_within_block([
-            sight_pb2.Object.ST_BLOCK_START, sight_pb2.BlockStart.ST_NAMED_VALUE
+            sight_pb2.Object.ST_BLOCK_START,
+            sight_pb2.BlockStart.ST_NAMED_VALUE,
         ])
         if not cur_named_var:
           break
         name, value = data_structures.from_ordered_log(
-            reference_trace.collect_current_block())
+            reference_trace.collect_current_block()
+        )
         reference_state[name] = value
 
       observed_state_vars = reference_state.keys()
       sum_relative_errors = 0
       num_vars = 0
       for name in observed_state_vars:
-        if max(
-            abs(self.sight.widget_simulation_state.state[name]),
-            abs(reference_state[name])) > 0:
+        if (
+            max(
+                abs(self.sight.widget_simulation_state.state[name]),
+                abs(reference_state[name]),
+            )
+            > 0
+        ):
           sum_relative_errors += abs(
-              (self.sight.widget_simulation_state.state[name] -
-               reference_state[name]) / max(
-                   abs(self.sight.widget_simulation_state.state[name]),
-                   abs(reference_state[name])))
+              (
+                  self.sight.widget_simulation_state.state[name]
+                  - reference_state[name]
+              )
+              / max(
+                  abs(self.sight.widget_simulation_state.state[name]),
+                  abs(reference_state[name]),
+              )
+          )
           num_vars += 1
 
-      error_relative_to_reference_run = sum_relative_errors / num_vars if num_vars > 0 else 0
-      decision.decision_outcome('distance', 0 - error_relative_to_reference_run,
-                                self.sight)
+      error_relative_to_reference_run = (
+          sum_relative_errors / num_vars if num_vars > 0 else 0
+      )
+      decision.decision_outcome(
+          'distance', 0 - error_relative_to_reference_run, self.sight
+      )
 
     # Unregister this simulation state object with Sight.
     if self.sight.widget_simulation_state.reference_trace:
@@ -150,5 +172,8 @@ def state_updated(
     obj_to_log: The value of the state variable.
     sight: Instance of a Sight logger.
   """
-  if sight.widget_simulation_state and sight.widget_simulation_state.simulation_state:
+  if (
+      sight.widget_simulation_state
+      and sight.widget_simulation_state.simulation_state
+  ):
     sight.widget_simulation_state.state[name] = obj_to_log

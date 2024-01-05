@@ -57,7 +57,8 @@ class LocationTest(absltest.TestCase):
 
     # ASSERT
     self.assertEqual(
-        str(loc), '0000000000:0000000001:0000000002:0000000003:0000000004')
+        str(loc), '0000000000:0000000001:0000000002:0000000003:0000000004'
+    )
 
     for i in range(4, 0, -1):
       # ACT
@@ -85,7 +86,8 @@ class LocationTest(absltest.TestCase):
 
     # ASSERT
     self.assertEqual(
-        str(loc), '0000000000:0000000005:0000000006:0000000007:0000000008')
+        str(loc), '0000000000:0000000005:0000000006:0000000007:0000000008'
+    )
 
   def testNextAllLocation(self):
     # SETUP
@@ -99,7 +101,8 @@ class LocationTest(absltest.TestCase):
 
     # ASSERT
     self.assertEqual(
-        str(loc), '0000000001:0000000002:0000000003:0000000004:0000000005')
+        str(loc), '0000000001:0000000002:0000000003:0000000004:0000000005'
+    )
 
     for i in range(4, 0, -1):
       # ACT

@@ -14,41 +14,45 @@
 
 """Demo for the python bindings to the Sight logging library."""
 
+import os
 from absl import app
 from absl import flags
 import numpy as np
-
-from sight.proto import sight_pb2
+import pandas as pd
 from sight import data_structures
 from sight.attribute import Attribute
 from sight.block import Block
+from sight.proto import sight_pb2
 from sight.sight import Sight
 
 FLAGS = flags.FLAGS
+
+
+def get_sight_instance():
+  params = sight_pb2.Params(
+      label='demo file',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+  )
+  sight_obj = Sight(params)
+  return sight_obj
 
 
 def main(argv):
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  params = sight_pb2.Params(
-      label="test_meet001",
-      log_owner="user@domain.com",
-      local=True,
-      text_output=True,
-      capacitor_output=False,
-      avro_output=True,
-      log_dir_path="/tmp/",
-      project_id = "cameltrain",
-      bucket_name = "sight-meet",
-      gcp_path = "workerData/",
-      file_format = ".avro",
-      dataset_name = "sight",
-      external_file_format = "AVRO",
-      external_file_uri = "gs://"
-      )
+  # with get_sight_instance() as sight:
+  #   with Block("A-pd", sight):
+  #     data_structures.log(
+  #       pd.DataFrame([['Alice', 25], ['Bob', 30], ['Carol', 35]], columns=['name', 'age']),
+  #       sight,
+  #     )
+  #     data_structures.log(
+  #       ['abc', 'def', 'ghi', 'jkl', 'mno', 'pqr', 'stu', 'vwx', 'yz'],
+  #       sight,
+  #     )
 
-  with Sight(params) as sight:
+  with get_sight_instance() as sight:
     with Block("A", sight):
       sight.text("A preText")
       with Attribute("key", "A", sight):
@@ -87,9 +91,7 @@ def main(argv):
       data_structures.log(
           {
               "x": 1,
-              (1, 2, 3): ["a", "b", {
-                  1: 2
-              }],
+              (1, 2, 3): ["a", "b", {1: 2}],
               1: [1, 2],
               "1d": np.array(data),
               "2d": np.array(data).reshape((12, 5)),
@@ -98,6 +100,7 @@ def main(argv):
           },
           sight,
       )
+
 
 if __name__ == "__main__":
   app.run(main)

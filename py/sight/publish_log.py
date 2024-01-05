@@ -22,13 +22,16 @@ from google3.googlex.cortex.sight.py.sight import Sight
 from google3.pyglib.contrib.gpathlib import gpath_flag
 
 _LOG_FILE = gpath_flag.DEFINE_path(
-    'log_file', None, 'File that contains the Sight log.', required=True)
+    'log_file', None, 'File that contains the Sight log.', required=True
+)
 
 _LOG_OWNER = flags.DEFINE_string(
-    'log_owner', None, ('The owner of the published log.'), required=True)
+    'log_owner', None, 'The owner of the published log.', required=True
+)
 
-_LOG_LABEL = flags.DEFINE_string('log_label', 'Sight Log',
-                                 ('The descriptive label of this log.'))
+_LOG_LABEL = flags.DEFINE_string(
+    'log_label', 'Sight Log', 'The descriptive label of this log.'
+)
 
 FLAGS = flags.FLAGS
 
@@ -41,9 +44,12 @@ def main(argv):
       sight_pb2.Params(
           label=_LOG_LABEL.value,
           log_owner=_LOG_OWNER.value,
-          capacitor_output=True)) as sight:
+          capacitor_output=True,
+      )
+  ) as sight:
     record_reader = pywrap_record_reader.RecordReader.CreateFromPath(
-        _LOG_FILE.value, '*', 60)
+        _LOG_FILE.value, '*', 60
+    )
     for obj in record_reader.IterRecords():
       sight.log_object(obj)
 

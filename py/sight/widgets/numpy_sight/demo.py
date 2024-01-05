@@ -33,9 +33,10 @@ def main(argv):
       label="Demo",
       # local=True,
       # text_output=True,
-      log_owner="user@domain.com",
+      log_owner="bronevet@google.com",
       capacitor_output=True,
-      log_dir_path="/tmp/")
+      log_dir_path="/tmp/",
+  )
 
   with Sight(params) as sight:
     a = np.array([[1, 2.2, 3.333], [4.1, 5, 6.2]], dtype=np.float32)

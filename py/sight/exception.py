@@ -29,8 +29,12 @@ def exception(exc_type, value, traceback, sight, frame):
       not being used.
     frame: The call stack frame that contains the calling context information.
   """
-  logging.exception('Exception: exc_type=%s, value=%s, traceback=%s',
-                    str(exc_type), str(value), str(traceback))
+  logging.exception(
+      'Exception: exc_type=%s, value=%s, traceback=%s',
+      str(exc_type),
+      str(value),
+      str(traceback),
+  )
   if sight is not None:
     sight.enter_block('Exception', sight_pb2.Object(), frame=frame)
     sight.text_block('exc_type', str(exc_type), frame=frame)

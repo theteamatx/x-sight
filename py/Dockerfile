@@ -13,21 +13,23 @@
 # limitations under the License.
 
 FROM google/cloud-sdk:latest as cloud_base
+LABEL Maintainer="bronevet@google.com"
 
 USER root
-RUN apt-get -y update && apt-get install -y
+RUN apt-get -y update
 RUN apt-get -y install apt-transport-https ca-certificates gnupg
-RUN apt-get -y install python3.9
+RUN apt-get -y install python3.10
 
 RUN apt-get -y install virtualenv
 RUN apt-get -y install python3-pip
 RUN apt-get -y install vim
 
-#WORKDIR /project
-COPY sight /project/sight
-COPY service /project/service
-WORKDIR /project
+WORKDIR /x-sight
+COPY py/sight/requirements.txt py/sight/requirements.txt
+RUN pip install -r py/sight/requirements.txt
 
-ENV PYTHONPATH  "${PYTHONPATH}:/project"
+COPY py py
+COPY sight_service sight_service
+COPY .env .env
 
-RUN pip install -r /project/sight/requirements.txt
+ENV PYTHONPATH "$HOME/x-sight:$HOME/x-sight/py:${PYTHONPATH}"

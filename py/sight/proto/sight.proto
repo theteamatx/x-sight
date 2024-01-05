@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 syntax = "proto3";
 
 package sight.x.proto;
 
-import "sight/proto/widgets/pipeline/flume/flume.proto";
 import "sight/proto/example.proto";
+import "sight/proto/widgets/pipeline/flume/flume.proto";
 
 // A mapping from some key to a value.
 // Next Tag: 3
@@ -290,8 +291,7 @@ message BlockStart {
   oneof sub_type_message {
     widgets.flume.proto.FlumeDoFnCreate flume_do_fn_create = 3;
     widgets.flume.proto.FlumeDoFnStartDo flume_do_fn_start_do = 4;
-    widgets.flume.proto.FlumeCompareFnCreate flume_compare_fn_create =
-        5;
+    widgets.flume.proto.FlumeCompareFnCreate flume_compare_fn_create = 5;
     widgets.flume.proto.FlumeCompareFnStartCompare
         flume_compare_fn_start_compare = 6;
     ListStart list = 7;
@@ -357,10 +357,9 @@ message BlockEnd {
   oneof sub_type_message {
     widgets.flume.proto.FlumeDoFnComplete flume_do_fn_complete = 7;
     widgets.flume.proto.FlumeDoFnEndDo flume_do_fn_end_do = 8;
-    widgets.flume.proto.FlumeCompareFnComplete
-        flume_compare_fn_complete = 9;
-    widgets.flume.proto.FlumeCompareFnEndCompare
-        flume_compare_fn_end_compare = 10;
+    widgets.flume.proto.FlumeCompareFnComplete flume_compare_fn_complete = 9;
+    widgets.flume.proto.FlumeCompareFnEndCompare flume_compare_fn_end_compare =
+        10;
   }
 
   // Encapsulates meta-data that tracks the dynamic behavior of the system
@@ -468,7 +467,7 @@ message Params {
   // Project ID in GCS to store the log files
   string project_id = 14;
 
-  // Bucket name in GCS project 
+  // Bucket name in GCS project
   string bucket_name = 15;
 
   // complete path in GCS bucket to store the log files
@@ -480,12 +479,12 @@ message Params {
   // BigQuery dataset name in which table will be created
   string dataset_name = 18;
 
-  // Indicates file format of the file stored in GCS bucket, from which external table will be creted 
+  // Indicates file format of the file stored in GCS bucket, from which external
+  // table will be created
   string external_file_format = 19;
-  
-  // File URI specifing all the files to map with single table in BQ
-  string external_file_uri = 20;
 
+  // File URI specifying all the files to map with single table in BQ
+  string external_file_uri = 20;
 }
 
 message SimulationStart {}
@@ -523,77 +522,90 @@ message SimulationTimeStepStart {
 // *************************************
 
 message DecisionConfigurationStart {
-  // Algorithm that specifies a single fixed outcome for the choice.
-  message FixedChoiceAlgorithm {
-    string chosen_option = 1;
-    map<string, string> chosen_parameters = 2;
+  enum OptimizerType {
+    OT_UNKNOWN = 0;
+    OT_VIZIER = 1;
+    OT_ACME = 2;
+    OT_GENETIC_ALGORITHM = 3;
+    OT_EXHAUSTIVE_SEARCH = 4;
+    OT_LLM = 5;
   }
 
-  // Encoding of a Scikit Learn model that predicts the outcome of a decision.
-  message ScikitLearnAlgorithm {
-    bytes model_encoding = 1;
-    repeated string input_fields = 2;
+  message VizierConfig {}
+
+  message AcmeConfig {
+    string env_name = 1;
+    repeated float state_min = 2;
+    repeated float state_max = 3;
+    int64 state_param_length = 4;
+    repeated float action_min = 5;
+    repeated float action_max = 6;
+    int64 action_param_length = 7;
+    int64 possible_actions = 8;
   }
 
-  // Encoding of a TF Agents Reinforcement Learning.
-  message TfAgentsAlgorithm {
-    bytes model_encoding = 1;
-    repeated string input_fields = 2;
+  message GeneticAlgorithmConfig {
+    int64 max_population_size = 1;
   }
 
-  // Encoding of a differentiable model that approximates the relationship
-  // from earlier states and decision points to later states and outcomes.
-  message DifferentiableSurrogate {
-    message KerasModel {
-      string structure_json = 1;
+  message ExhaustiveSearchConfig {}
 
-      // Weights are recorded as ST_NAMED_VALUE objects contained within the
-      // configuration block.
+  message LLMConfig {
+    enum LLMAlgorithm {
+      LA_UNKNOWN = 0;
+      LA_TEXT_BISON = 1;
+      LA_CHAT_BISON = 2;
+      LA_GEMINI_PRO = 3;
     }
+    LLMAlgorithm algorithm = 1;
 
-    oneof choice_model {
-      KerasModel keras_model = 1;
-    }
-
-    message MinMaxNormalizer {
-      message AttrProps {
-        string attr_name = 1;
-        float attr_min = 2;
-        float attr_max = 3;
-      }
-      repeated AttrProps attr_props = 1;
-    }
-
-    oneof choice_input_normalizer {
-      MinMaxNormalizer min_max_input_normalizer = 2;
-    }
-
-    oneof choice_output_normalizer {
-      MinMaxNormalizer min_max_output_normalizer = 3;
-    }
+    // LLM-readable description of the program to be driven by the LLM.
+    string description = 2;
   }
 
-  message ChoiceAlgorithm {
-    oneof choice_algorithms {
-      FixedChoiceAlgorithm fixed_choice = 1;
-      ScikitLearnAlgorithm scikit_learn = 2;
-      TfAgentsAlgorithm tf_agents = 3;
-      DifferentiableSurrogate differentiable_surrogate = 4;
+  message ChoiceConfig {
+    oneof choice_config {
+      VizierConfig vizier_config = 1;
+      AcmeConfig acme_config = 2;
+      GeneticAlgorithmConfig genetic_algorithm_config = 3;
+      ExhaustiveSearchConfig exhaustive_search_config = 4;
+      LLMConfig llm_config = 5;
     }
   }
 
-  // Maps each choice label to the algorithm to be used to choose the option.
-  map<string, ChoiceAlgorithm> choice_algorithm = 1;
+  OptimizerType optimizer_type = 4;
+
+
+  // Maps each choice label to the configuration of the algorithm to be used to choose the option.
+  map<string, ChoiceConfig> choice_config = 1;
 
   // Properties of and constraints on attributes.
   message AttrProps {
     float min_value = 1;
     float max_value = 2;
+
+    // The size of a discrete valid quantum of values between min_value and
+    // max_value (if step_size > 0).
+    // Valid values are: min_value, min_value + step_size, min_value +
+    // step_size*2, ... max_value is only a valid value of max_value - min_value
+    // is divisible by step_size.
+    float step_size = 3;
+
+    // Possible float-type values of this attribute.
+    repeated float valid_float_values = 4;
+
+    // The human-/LLM-readable description of this attribute.
+    string description = 5;
   }
 
   // The attributes of application's state
   map<string, AttrProps> state_attrs = 2;
   map<string, AttrProps> action_attrs = 3;
+}
+
+message DecisionParam {
+  string key = 1;
+  Value value = 2;
 }
 
 message DecisionPoint {
@@ -604,15 +616,13 @@ message DecisionPoint {
   string chosen_option = 2;
 
   // The parameters that characterize the chosen option.
-  map<string, string> choice_params = 3;
-
-  map<string, int64> state_params = 4;
-  map<string, int64> action_params = 5;
+  repeated DecisionParam choice_params = 3;
+  repeated DecisionParam state_params = 4;
 }
 
 message DecisionOutcome {
   string outcome_label = 1;
-
   // The numeric value of this outcome, with higher values being more desirable.
   float outcome_value = 2;
+  float discount = 3;
 }

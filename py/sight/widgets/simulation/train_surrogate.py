@@ -36,14 +36,19 @@ from proto import example_pb2
 _IN_LOG_FILE = flags.DEFINE_list(
     'in_log_file',
     None,
-    'Input file(s) that contain the Sight log that documents the simulation run.',
-    required=True)
+    (
+        'Input file(s) that contain the Sight log that documents the simulation'
+        ' run.'
+    ),
+    required=True,
+)
 
 _OUT_FILE = gpath_flag.DEFINE_path(
     'out_file',
     None,
     'Input file that contains the Sight log that documents the simulation run.',
-    required=True)
+    required=True,
+)
 
 FLAGS = flags.FLAGS
 
@@ -71,14 +76,24 @@ class BigExamplesToSingleOutputRows(beam.DoFn):
     if task.tensor_flow_example.input_example:
       for feat_name in task.tensor_flow_example.input_example.features.feature:
         # if feat_name in {'tai', 'fiald', 'dcph'}:
-        input_row.append(task.tensor_flow_example.input_example.features
-                         .feature[feat_name].float_list.value[0])
+        input_row.append(
+            task.tensor_flow_example.input_example.features.feature[
+                feat_name
+            ].float_list.value[0]
+        )
 
     # Emit a single output for each output feature.
     if task.tensor_flow_example.output_example:
       for feat_key in task.tensor_flow_example.output_example.features.feature:
-        yield (feat_key, (input_row, task.tensor_flow_example.output_example
-                          .features.feature[feat_key].float_list.value[0]))
+        yield (
+            feat_key,
+            (
+                input_row,
+                task.tensor_flow_example.output_example.features.feature[
+                    feat_key
+                ].float_list.value[0],
+            ),
+        )
 
 
 class TrainModel(beam.DoFn):
@@ -102,11 +117,13 @@ class TrainModel(beam.DoFn):
     model = learner.fit(input_array, output_array)
     predicted_array = model.predict(input_array)
     logging.info(
-        '%s: mae=%s, rmse=%s', task[0],
-        metrics.mean_absolute_error(output_array, predicted_array) /
-        np.mean(output_array),
-        math.sqrt(metrics.mean_squared_error(output_array, predicted_array)) /
-        np.mean(output_array))
+        '%s: mae=%s, rmse=%s',
+        task[0],
+        metrics.mean_absolute_error(output_array, predicted_array)
+        / np.mean(output_array),
+        math.sqrt(metrics.mean_squared_error(output_array, predicted_array))
+        / np.mean(output_array),
+    )
 
 
 def main(argv):
@@ -114,7 +131,8 @@ def main(argv):
     raise app.UsageError('Too many command-line arguments.')
 
   root = beam.Pipeline(
-      runner=runner.FlumeRunner())  # beam.runners.DirectRunner())
+      runner=runner.FlumeRunner()
+  )  # beam.runners.DirectRunner())
 
   reads = []
   for file_path in _IN_LOG_FILE.value:
@@ -123,20 +141,29 @@ def main(argv):
         for cur_file_path in inputs_f:
           logging.info('cur_file_path=%s', cur_file_path)
           reads.append(
-              root | f'Read {cur_file_path}' >> capacitorio.ReadFromCapacitor(
-                  cur_file_path, ['*'], beam.coders.ProtoCoder(
-                      sight_pb2.Object)))
+              root
+              | f'Read {cur_file_path}'
+              >> capacitorio.ReadFromCapacitor(
+                  cur_file_path, ['*'], beam.coders.ProtoCoder(sight_pb2.Object)
+              )
+          )
     else:
       logging.info('file_path=%s', file_path)
-      reads.append(root | f'Read {file_path}' >> capacitorio.ReadFromCapacitor(
-          file_path, ['*'], beam.coders.ProtoCoder(sight_pb2.Object)))
+      reads.append(
+          root
+          | f'Read {file_path}'
+          >> capacitorio.ReadFromCapacitor(
+              file_path, ['*'], beam.coders.ProtoCoder(sight_pb2.Object)
+          )
+      )
 
     log = reads | beam.Flatten()
     _ = (
         log
         | beam.ParDo(BigExamplesToSingleOutputRows())
         | beam.GroupByKey()
-        | beam.ParDo(TrainModel()))
+        | beam.ParDo(TrainModel())
+    )
 
   results = root.run()
   results.wait_until_finish()
