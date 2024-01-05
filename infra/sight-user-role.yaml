@@ -14,6 +14,7 @@ includedPermissions:
 - run.routes.invoke
 - run.services.create
 - run.services.get
+- run.services.update
 - storage.buckets.create
 - storage.buckets.get
 - storage.objects.create

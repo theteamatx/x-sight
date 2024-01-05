@@ -86,7 +86,7 @@ Note : if error ```ModuleNotFoundError: No module named 'virtualenv'``` occurs, 
 echo 'export PYTHONPATH="$HOME/x-sight/py:$HOME/x-sight:$PYTHONPATH"' >> ~/.bashrc
 source  ~/.bashrc
 source ~/venvs/sight_env/bin/activate
-cd ~/sight
+cd ~/x-sight
 ```
 
 ### User Permissions:
@@ -175,6 +175,7 @@ account can have required permissions.
 
     ```bash
     echo "PROJECT_ID=$PROJECT_ID" >> .env
+    echo "GENAI_API_KEY=$YOUR_ACTUAL_KEY" >> .env
     ```
 
 2) Create service image from the code and host it on [gcr.io](http://gcr.io)

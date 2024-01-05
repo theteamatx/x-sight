@@ -13,6 +13,7 @@
 # limitations under the License.
 
 FROM google/cloud-sdk:latest as cloud_base
+LABEL Maintainer="bronevet@google.com"
 
 USER root
 RUN apt-get -y update
