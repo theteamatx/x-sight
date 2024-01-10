@@ -12,24 +12,31 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# using base image
 FROM google/cloud-sdk:latest as cloud_base
 LABEL Maintainer="bronevet@google.com"
 
 USER root
-RUN apt-get -y update
+
+# Basic Installation
+RUN set -xe && apt-get -y update
 RUN apt-get -y install apt-transport-https ca-certificates gnupg
 RUN apt-get -y install python3.10
-
 RUN apt-get -y install virtualenv
 RUN apt-get -y install python3-pip
-RUN apt-get -y install vim
 
+# set up working directory in container
 WORKDIR /x-sight
+
+# download necessary dependency in container
 COPY py/sight/requirements.txt py/sight/requirements.txt
+RUN pip3 install --upgrade pip
 RUN pip install -r py/sight/requirements.txt
 
-COPY py py
-COPY sight_service sight_service
+# copy sight code
+COPY py/ py/
+COPY sight_service/ sight_service/
 COPY .env .env
 
+# updating PYTHONPATH to resolve relative imports
 ENV PYTHONPATH "$HOME/x-sight:$HOME/x-sight/py:${PYTHONPATH}"
