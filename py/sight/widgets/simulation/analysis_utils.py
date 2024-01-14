@@ -20,8 +20,8 @@ from absl import logging
 import apache_beam as beam
 import numpy as np
 
-from proto import sight_pb2
-from py import data_structures
+from sight import data_structures
+from sight.proto import sight_pb2
 
 Log = Sequence[sight_pb2.Object]
 AnyObjMap = Dict[str, Any]

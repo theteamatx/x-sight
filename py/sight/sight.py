@@ -38,6 +38,7 @@ from sight.proto import sight_pb2
 from sight.service_utils import finalize_server
 from sight.utility import MessageToDict
 from sight.widgets.decision import decision
+from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
 
 load_dotenv()
 FLAGS = flags.FLAGS
@@ -138,7 +139,8 @@ class Sight(object):
   # The API Key for the BQ Sight service
   # SIGHT_API_KEY = 'AKfycbz35qrsrKUmm2FITMsLW9vSbKoBxEYv4EggM_m1Q2H3' #cameltrain
   # SIGHT_API_KEY = 'AKfycbw9eY9dk-JstxeAizfMfJZ8qwHm6BVmOZEgBUey-HPL' #catan-(now generalized)
-  SIGHT_API_KEY = 'AKfycbxHmmutVP-o1rsv3bLEUWQhbTG4uzTN_7VwR6sGUpOdvhrVQbtoOFcQtHbBeO0un3BfiQ'
+  #SIGHT_API_KEY = 'AKfycbxHmmutVP-o1rsv3bLEUWQhbTG4uzTN_7VwR6sGUpOdvhrVQbtoOFcQtHbBeO0un3BfiQ'
+  SIGHT_API_KEY = 'AKfycbw9eY9dk-JstxeAizfMfJZ8qwHm6BVmOZEgBUey-HPL'
 
   def __init__(
       self,
@@ -155,7 +157,7 @@ class Sight(object):
 
     # Initialize each widget's state to make sure its state field is created.
     self.widget_decision_state = defaultdict(dict)
-    # self.widget_simulation_state = SimulationWidgetState()
+    self.widget_simulation_state = SimulationWidgetState()
     # self._configure(configuration)
     if self.params.silent_logger:
       return
@@ -355,15 +357,16 @@ class Sight(object):
         # if this is the only avro file, table has not been created yet
         if self.avro_file_counter == 1:
           create_external_bq_table(self.params, self.file_name, self.id)
-          logging.info(
-              'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-              'log_id=%s.%s&log_owner=%s&project_id=%s',
-              self.SIGHT_API_KEY,
-              self.params.dataset_name,
-              self.file_name,
-              self.params.log_owner,
-              os.environ['PROJECT_ID']
-          )
+        logging.info(
+            #'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+            'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
+            'log_id=%s.%s&log_owner=%s&project_id=%s',
+            self.SIGHT_API_KEY,
+            self.params.dataset_name,
+            self.file_name,
+            self.params.log_owner,
+            os.environ['PROJECT_ID']
+        )
       self.avro_log.close()
       logging.info('stream successfully completed')
 
@@ -371,7 +374,8 @@ class Sight(object):
       # time.sleep(1)
       logging.info(
           (
-              'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
+              #'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
+              'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
           ),
           self.SIGHT_API_KEY,

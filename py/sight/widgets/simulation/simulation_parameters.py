@@ -18,9 +18,9 @@ import inspect
 from typing import Any, Dict, Text
 from absl import logging
 
-from proto import sight_pb2
-from py import data_structures
-from py.exception import exception
+from sight import data_structures
+from sight.exception import exception
+from sight.proto import sight_pb2
 
 
 class SimulationParameters(object):

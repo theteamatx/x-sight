@@ -47,6 +47,13 @@ from sight_service.acme_optimizer import Acme
 from sight_service.llm import LLM
 from readerwriterlock import rwlock
 
+from flask import Flask
+
+flask_app = Flask(__name__)
+
+@flask_app.route("/")
+def hello_world():
+    return "<p>Root!</p>"
 
 _file_name = "server.py"
 _resolve_times = []
@@ -220,8 +227,9 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
     return service_pb2.CreateResponse(id=unique_id, path_prefix="/tmp/")
 
-
+server = None
 def serve():
+  global server
   """Main method that listens on port 8080 and handle requests received from client.
   """
   method_name = "serve"
@@ -229,10 +237,11 @@ def serve():
 
   server = grpc.server(futures.ThreadPoolExecutor(max_workers=500))
   service_pb2_grpc.add_SightServiceServicer_to_server(SightService(), server)
-  server.add_insecure_port("[::]:8080")
+  server.add_insecure_port("[::]:9999")
   server.start()
-  logging.info("server is up and running on port : 8080")
+  logging.info("server is up and running on port : 9999")
 
+  flask_app.run(debug=True, host="0.0.0.0", port=8080)
   server.wait_for_termination()
   logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
@@ -246,3 +255,4 @@ if __name__ == "__main__":
     logging.error("Error occurred : ")
     logging.error(e)
   logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+  

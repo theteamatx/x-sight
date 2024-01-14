@@ -18,8 +18,8 @@ import inspect
 from typing import Any, Sequence
 from absl import logging
 
-from proto import sight_pb2
-from py.exception import exception
+from sight.exception import exception
+from sight.proto import sight_pb2
 
 
 class SimulationTimeStep(object):

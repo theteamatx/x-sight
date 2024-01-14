@@ -91,6 +91,7 @@ def _service_addr() -> str:
             'gcloud run services describe'
             f" sight-service-{get_service_id()} --region us-central1 --format='value(status.url)'"
         )
+      service_url += ':9999'
       print("service url : ", service_url)
       _UNIQUE_STRING =  re.search(r'https://.*-(\w+)-uc\.a\.run\.app', service_url).group(1)
       print("_UNIQUE_STRING : ", _UNIQUE_STRING)
@@ -399,7 +400,7 @@ def generate_metadata():
 
   if flags.FLAGS.deployment_mode == 'local':
     channel = grpc.insecure_channel(
-        'localhost:8080'
+        'localhost:9999'
     )  # localhost #10.138.0.17:8080
     sight_service = service_pb2_grpc.SightServiceStub(channel)
     metadata = []
