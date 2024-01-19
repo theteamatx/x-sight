@@ -23,8 +23,8 @@ from typing import Any, Callable, Dict, List, Optional, Text
 
 from absl import flags
 from absl import logging
-from sight.service_utils import service_pb2
-from sight import service_utils as service
+from service import service_pb2
+from sight import service
 from sight.proto import sight_pb2
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
 from sight.widgets.decision.single_action_optimizer_client import SingleActionOptimizerClient
@@ -70,8 +70,9 @@ _DEPLOYMENT_MODE = flags.DEFINE_enum(
 _OPTIMIZER_TYPE = flags.DEFINE_enum(
     'optimizer_type',
     None,
-    ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search',
-     'llm_text_bison', 'llm_chat_bison', 'llm_gemini_pro'],
+    ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search', 
+     'llm_text_bison_optimize', 'llm_chat_bison_optimize', 'llm_gemini_pro_optimize',
+     'llm_text_bison_recommend', 'llm_chat_bison_recommend', 'llm_gemini_pro_recommend'],
     'The optimizer to use',
 )
 _NUM_TRAIN_WORKERS = flags.DEFINE_integer(
@@ -278,41 +279,32 @@ def run(
   method_name = 'run'
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-
-  if state_attrs == {}:
-    state_attrs = state_to_dict(env.observation_spec(), 'state')
-  if action_attrs == {}:
-    action_attrs = state_to_dict(env.action_spec(), 'action')
-
-  sight.widget_decision_state['decision_episode_fn'] = (
-      decision_episode_fn.DecisionEpisodeFn(
-          driver_fn, state_attrs, action_attrs
-      )
-  )
-
   if _OPTIMIZER_TYPE.value == 'dm_acme':
     optimizer.obj = AcmeOptimizerClient(sight)
   elif _OPTIMIZER_TYPE.value == 'vizier':
-    optimizer.obj = SingleActionOptimizerClient(sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER, sight)
+    optimizer.obj = SingleActionOptimizerClient(sight, sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER)
   elif _OPTIMIZER_TYPE.value == 'genetic_algorithm':
     optimizer.obj = GeneticAlgorithmOptimizerClient(
       max_population_size = _NUM_TRAIN_WORKERS.value, sight=sight)
   elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
-    optimizer.obj = SingleActionOptimizerClient(sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH, sight)
+    optimizer.obj = SingleActionOptimizerClient(sight, sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH)
   elif _OPTIMIZER_TYPE.value.startswith('llm_'):
     optimizer.obj = LLMOptimizerClient(_OPTIMIZER_TYPE.value.partition('llm_')[2], description, sight)
   else:
     raise ValueError(f'Unknown optimizer type {_OPTIMIZER_TYPE.value}')
 
-
+  if env is not None:
+    if state_attrs == {}:
+      state_attrs = state_to_dict(env.observation_spec(), 'state')
+    if action_attrs == {}:
+      action_attrs = state_to_dict(env.action_spec(), 'action')
 
   decision_configuration = sight_pb2.DecisionConfigurationStart()
   decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
-
+  
   decision_configuration.choice_config[sight.params.label].CopyFrom(optimizer.obj.create_config())
   _attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
   _attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
-  # print('action_attrs : ', decision_configuration)
 
   sight.enter_block(
       'Decision Configuration',
@@ -329,12 +321,11 @@ def run(
   sight.exit_block('Decision Configuration', sight_pb2.Object())
   sight.widget_decision_state['num_decision_points'] = 0
 
-  # sight.widget_decision_state['decision_episode_fn'] = (
-  #     decision_episode_fn.DecisionEpisodeFn(
-  #         driver_fn, state_attrs, action_attrs
-  #     )
-  # )
-
+  sight.widget_decision_state['decision_episode_fn'] = (
+      decision_episode_fn.DecisionEpisodeFn(
+          driver_fn, state_attrs, action_attrs
+      )
+  )
   sight.widget_decision_state['proposed_actions'] = []
 
   if _DECISON_MODE.value == 'run':
@@ -358,6 +349,7 @@ def run(
         lambda s, meta: s.FetchOptimalAction(req, 300, metadata=meta)
     )
     print('response : ', response.response_str)
+
 
 
   elif _DECISON_MODE.value == 'configured_run':
@@ -404,12 +396,10 @@ def run(
   elif _DECISON_MODE.value == 'train':
     details = sight.widget_decision_state['decision_episode_fn']
     # print('details.action_min : ', details.action_min.values(), list(details.action_min.values())[0])
-
-    if(_OPTIMIZER_TYPE.value == 'exhaustive_search'):
-      possible_actions = list(details.action_max.values())[0] - list(details.action_min.values())[0] + 2
-      print(possible_actions)
-      if(_OPTIMIZER_TYPE.value == 'exhaustive_search' and possible_actions < (_NUM_TRIALS.value or int(os.environ['num_samples']))):
-        raise ValueError(f"max possible value for num_trials is : {possible_actions}")
+    possible_actions = list(details.action_max.values())[0] - list(details.action_min.values())[0] + 2
+    print(possible_actions)
+    if(_OPTIMIZER_TYPE.value == 'exhaustive_search' and possible_actions < _NUM_TRIALS.value):
+      raise ValueError(f"max possible value for num_trials is : {possible_actions}")
 
     print('_DECISON_MODE.value : ', _DECISON_MODE.value)
     if _DEPLOYMENT_MODE.value == 'distributed':
@@ -588,21 +578,19 @@ def decision_point(
   req.worker_id = f'client_{client_id}_worker_{worker_location}'
 
   if _OPTIMIZER_TYPE.value == 'dm_acme':
-
     optimizer_obj = optimizer.get_instance()
-    selected_action = optimizer_obj.decision_point(sight, req)
+    selected_action = optimizer_obj.decision_point(sight)
     chosen_action = {}
     chosen_action[
         sight.widget_decision_state['decision_episode_fn'].action_attrs[0]
     ] = selected_action
 
+
   # selected_action will be same for all calls of decision point in these
   # optimizers. As such, it is cached as the constant action.
   elif _OPTIMIZER_TYPE.value in ['vizier', 'genetic_algorithm', 'exhaustive_search']:
-
     optimizer_obj = optimizer.get_instance()
     chosen_action = optimizer_obj.decision_point(sight, req)
-
     sight.widget_decision_state['constant_action'] = chosen_action
   elif _OPTIMIZER_TYPE.value.startswith('llm_'):
     optimizer_obj = optimizer.get_instance()
@@ -612,6 +600,8 @@ def decision_point(
       req.decision_outcome.discount = sight.widget_decision_state['discount']
     chosen_action = optimizer_obj.decision_point(sight, req)
 
+  # logging.info('sight.widget_decision_state[\'decision_episode_fn\'].action_attrs=%s', sight.widget_decision_state['decision_episode_fn'].action_attrs)
+  # logging.info('chosen_action=%s', chosen_action)
 
   choice_params: List[sight_pb2.DecisionParam] = []
   for attr in sight.widget_decision_state['decision_episode_fn'].action_attrs:
@@ -636,7 +626,7 @@ def decision_point(
   obj.decision_point.choice_params.extend(choice_params)
   sight.log_object(obj, inspect.currentframe().f_back.f_back)
 
-  logging.debug('<<<< Out %s of %s', method_name, _file_name)
+  logging.debug('<<<<  Out %s of %s', method_name, _file_name)
   return chosen_action
 
 
@@ -662,6 +652,7 @@ def decision_outcome(
   sight.widget_decision_state['discount'] = discount
   sight.widget_decision_state['outcome_value'] = outcome_value
   sight.widget_decision_state['sum_outcome'] += outcome_value
+  # logging.info('decision_outcome() outcome_value=%s, sum_outcome=%s', outcome_value, sight.widget_decision_state['sum_outcome'])
 
   sight.log_object(
       sight_pb2.Object(
@@ -693,6 +684,7 @@ def finalize_episode(sight):  # , optimizer_obj
   method_name = 'finalize_episode'
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
+  # logging.info('Finalize sight.widget_decision_state=%s', sight.widget_decision_state)
   _rewards.append(round(sight.widget_decision_state['sum_outcome'], 2))
   print('rewards : ', _rewards, len(_rewards))
 
@@ -733,7 +725,7 @@ def finalize_episode(sight):  # , optimizer_obj
       req.decision_outcome.CopyFrom(decision_outcome)
     elif _OPTIMIZER_TYPE.value == 'dm_acme':
       optimizer_obj = optimizer.get_instance()
-      optimizer_obj.finalize_episode(sight, req)
+      optimizer_obj.finalize_episode(sight)
 
     #! not calling finalize episode to server
     # response = service.call(

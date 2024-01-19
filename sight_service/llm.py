@@ -20,9 +20,9 @@ from overrides import overrides
 from typing import Any, Dict, List, Tuple
 
 import google.generativeai as genai
-from sight_service.proto import service_pb2
-from sight_service.optimizer_instance import param_dict_to_proto
-from sight_service.optimizer_instance import OptimizerInstance
+from service import service_pb2
+from service.optimizer_instance import param_dict_to_proto
+from service.optimizer_instance import OptimizerInstance
 from sight.proto import sight_pb2
 import random
 import requests
@@ -35,6 +35,7 @@ _GENAI_API_KEY = os.environ['GENAI_API_KEY']
 
 class LLM(OptimizerInstance):
   """Uses an LLM to choose the parameters of the code.
+
   Attributes:
     script: The script of the conversation accrued so far.
   """
@@ -56,15 +57,19 @@ class LLM(OptimizerInstance):
     response = super(LLM, self).launch(request)
     self._llm_config = request.decision_config_params.choice_config[request.label].llm_config
 
-    self.intro = 'You are controlling an agent that is trying to reach a goal. The agent is described as follows.\n'
+    self.intro += ''
+    if self._llm_config.goal == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE:
+      self.intro = 'You are controlling an agent that is trying to reach a goal. The agent is described as follows.\n'
     self.intro += f'"{self._llm_config.description}"\n'
-    #self.intro += 'The simulation will periodically report its state and then ask you ' + \
-    #              'to select an action for it to perform. After it has performed this ' + \
-    #              'action it will report back the numeric outcome of the this action. ' + \
-    #              'Higher outcome values are better than low outcome values. Your job ' + \
-    #              'is to choose actions that maximize the outcome values.\n'
-    self.intro += 'The state of the simulation consists of the following attributes: \n'
-    self.intro += '  {\n    ' + '\n    '.join([
+    if self._llm_config.goal == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE:
+      self.intro += 'The simulation will periodically report its state and then ask you ' + \
+                    'to select an action for it to perform. After it has performed this ' + \
+                    'action it will report back the numeric outcome of the this action. ' + \
+                    'Higher outcome values are better than low outcome values. Your job ' + \
+                    'is to choose actions that maximize the outcome values.\n'
+    if len(self.state) > 0:
+      self.intro += 'The state of the simulation consists of the following attributes: \n'
+      self.intro += '  {\n    ' + '\n    '.join([
           f'"{key}": {{ "description": {p.description}, "min_value": {p.min_value}, "max_value": {p.max_value} }},'
           for key, p in self.state.items()
         ]) + '}\n'
@@ -74,6 +79,25 @@ class LLM(OptimizerInstance):
           for key, p in self.actions.items()
         ]) + '}\n'
     self.intro += '========================\n'
+ 
+    detail_prompt = 'Please summarize everything you know about these parameters for the above application area, detail the steps that need to be taken to create a good estimate these parameters.\n'
+    if self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_TEXT_BISON:
+      text = self._ask_text_bison(self.intro + detail_prompt)
+    elif self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_CHAT_BISON:
+      text = self._ask_chat_bison(self.intro + detail_prompt)
+    elif self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO:
+      text = self._ask_gemini_pro(self.intro + detail_prompt)
+    self.intro += detail_prompt + text + '\n'
+
+    detail_prompt = 'Based on this plan describe the most reasonable estimate of these parameters\n'
+    if self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_TEXT_BISON:
+      text = self._ask_text_bison(self.intro + detail_prompt)
+    elif self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_CHAT_BISON:
+      text = self._ask_chat_bison(self.intro + detail_prompt)
+    elif self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO:
+      text = self._ask_gemini_pro(self.intro + detail_prompt)
+    self.intro += detail_prompt + text + '\n'
+
 
     response.display_string = 'LLM SUCCESS! '+self.intro
     logging.info('self.intro=%s', self.intro)
@@ -179,14 +203,14 @@ class LLM(OptimizerInstance):
           else:
             last_outcome_message += '  This is a similar outcome to the last time.\n'
     return chat
-
+  
   def _params_to_dict(self, dp: sight_pb2) -> Dict[str, float]:
     """Returns the dict representation of a DecisionParams proto"""
     d = {}
     for a in dp:
       d[a.key] = a.value.double_value
     return d
-
+  
   def _get_creds(self) -> Any:
     creds, project = google.auth.default()
     auth_req = google.auth.transport.requests.Request()
@@ -197,10 +221,8 @@ class LLM(OptimizerInstance):
               'Authorization': f'Bearer {self._get_creds().token}',
               'Content-Type': 'application/json; charset=utf-8',
           }
-
-  def _ask_text_bison(self) -> Dict[str, float]:
-    logging.info('ask_text_bison')
-    logging.info(self.intro + self._history_to_text())
+  
+  def _ask_text_bison(self, prompt) -> str:
     while True:
       response = requests.post(
           f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ['PROJECT_ID']}/locations/us-central1/publishers/google/models/text-bison-32k:predict",
@@ -208,7 +230,7 @@ class LLM(OptimizerInstance):
             {
               "instances": [
                 {
-                  "prompt": self.intro + self._history_to_text()
+                  "prompt": prompt
                 }
               ],
               "parameters": {
@@ -230,7 +252,13 @@ class LLM(OptimizerInstance):
       logging.info('response=%s', response)
       if 'error' in response or response['predictions'][0]['content'].strip() == '':
         continue
-      text = response['predictions'][0]['content'].strip()
+      return response['predictions'][0]['content'].strip()
+
+  def _action_from_text_bison(self) -> Dict[str, float]:
+    logging.info('ask_text_bison')
+    logging.info(self.intro + self._history_to_text())
+    while True:
+      text = self._ask_text_bison(self.intro + self._history_to_text())
       logging.info('text=[%s]', text)
       #text = text.removeprefix('```json\n')
       #logging.info('text=[%s]', text)
@@ -242,16 +270,15 @@ class LLM(OptimizerInstance):
       except json.decoder.JSONDecodeError:
         continue
 
-  def _ask_chat_bison(self) -> Dict[str, float]:
-    while True:
+  def _ask_chat_bison(self, prompt, message) -> str:
       response = requests.post(
           f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ['PROJECT_ID']}/locations/us-central1/publishers/google/models/chat-bison-32k:predict",
           data = json.dumps(
             {
               "instances": [
                 {
-                  "context":  self.intro,
-                  "messages": self._history_to_chat(),
+                  "context":  prompt,
+                  "messages": message,
                 },
               ],
               "parameters": {
@@ -274,28 +301,27 @@ class LLM(OptimizerInstance):
       logging.info("response['predictions']=%s", response['predictions'][0]['candidates'])
       #if 'error' in response or response['predictions'][0]['content'].strip() == '':
       #  continue
-      text = response['predictions'][0]['candidates'][0]['content'].strip()
-      logging.info('history: %s', self._history_to_text())
+      return response['predictions'][0]['candidates'][0]['content'].strip()
+
+  def _action_from_chat_bison(self) -> Dict[str, float]:
+    while True:
+      text = self._ask_chat_bison(self.intro, self._history_to_chat())
       logging.info('text=[%s]', text)
       try:
         return json.loads(text)
       except json.decoder.JSONDecodeError:
         continue
 
-  def _ask_geminipro(self) -> Dict[str, float]:
-    while True:
-
-
-      logging.info('ask_geminipro')
-      logging.info(self.intro + self._history_to_text())
+  def _ask_gemini_pro(self, prompt) -> str:
+    while True: 
       response = requests.post(
-          f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ['PROJECT_ID']}/locations/us-central1/publishers/google/models/gemini-pro:streamGenerateContent",
+          f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ['PROJECT_ID']}/locations/us-central1/publishers/google/models/gemini-pro:streamGenerateContent", 
           data= json.dumps(
             {
           "contents": {
               "role": "user",
               "parts": {
-                  "text": self.intro + self._history_to_text()
+                  "text": prompt
               },
           },
           "safety_settings": {
@@ -309,10 +335,8 @@ class LLM(OptimizerInstance):
               "maxOutputTokens": 8192,
               # "stopSequences": [".", "?", "!"]
           }
-          }),
+          }),    
           headers=self._get_req_headers()).json()
-      logging.info('response=%s', response)
-      # if 'error' in response or response['predictions'][0]['content'].strip() == '':
       if len(response) == 0:
         continue
       text = ''
@@ -322,6 +346,13 @@ class LLM(OptimizerInstance):
       text = text.strip()
       if text=='':
         continue
+      return text
+
+  def _action_from_gemini_pro(self) -> Dict[str, float]:
+    while True:
+      logging.info('ask_geminipro')
+      logging.info(self.intro + self._history_to_text())
+      text = self._ask_gemini_pro(self.intro + self._history_to_text())
       logging.info('text=[%s]', text.split('\n'))
       text = text.split('\n')[0]
       logging.info('text=[%s]', text)
@@ -351,26 +382,26 @@ class LLM(OptimizerInstance):
       'outcome': None,
     })
 
-    print('ALGORITHM=%s' % self._llm_config.algorithm)
+    print('ALGORITHM=%s' % self._llm_config.algorithm) 
     # Peridically try a random action, but not on the first trial in case the user just wants a single
     # reasonable recommendation.
     if len(self.history)>1 and random.random() > .5:
       logging.info('##########################\n##### RANDOM ######\n##########################')
       selected_actions = self._random_action()
     elif self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_TEXT_BISON:
-      selected_actions = self._ask_text_bison()
+      selected_actions = self._action_from_text_bison()
     elif self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_CHAT_BISON:
-      selected_actions = self._ask_chat_bison()
+      selected_actions = self._action_from_chat_bison()
     elif self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO:
-      selected_actions = self._ask_geminipro()
-
+      selected_actions = self._action_from_gemini_pro()
+      
     self.history[-1]['action'] = selected_actions
 
     # self.script += '    {' + ', '.join([
     #     f'"{key}": {value}'
     #       for key, value in selected_actions.items()
     #     ]) + '}\n'
-
+    
     dp_response = service_pb2.DecisionPointResponse()
     for key, value in selected_actions.items():
       a = dp_response.action.add()
