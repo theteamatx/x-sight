@@ -83,14 +83,14 @@ class OptimizerInstance:
     state_keys.sort()
     for k in state_keys:
       self.state[k] = request.decision_config_params.state_attrs[k]
-    print(f"<<<<<<<<<  Out {method_name} of {_file_name}.")
+    # print(f"<<<<<<<<<  Out {method_name} of {_file_name}.")
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return service_pb2.LaunchResponse()
 
-  def get_weights(
-      self, request: service_pb2.GetWeightsRequest
-  ) -> service_pb2.GetWeightsResponse:
-    return service_pb2.GetWeightsResponse()
+  # def get_weights(
+  #     self, request: service_pb2.GetWeightsRequest
+  # ) -> service_pb2.GetWeightsResponse:
+  #   return service_pb2.GetWeightsResponse()
 
   def decision_point(
       self, request: service_pb2.DecisionPointRequest

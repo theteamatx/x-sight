@@ -1,40 +1,102 @@
+// to generate any binary(.pb) or python clients (_pb2.py/_pb2_grpc.py),
+// you must have googleapi (https://github.com/googleapis/googleapis)
+// cloned on your system
+
+// git clone https://github.com/googleapis/googleapis
+// GOOGLEAPIS_DIR=<your-local-googleapis-folder> (/usr/local/google/home/meetashah/googleapis)
+
+// and then run protoc like this from x-sight directory:
+// python -m grpc_tools.protoc \
+// --include_imports \
+// --include_source_info \
+// --proto_path=${GOOGLEAPIS_DIR} \
+// --proto_path="py/" \
+// --proto_path=. \
+// --python_out=. \
+// --grpc_python_out=. \
+// --descriptor_set_out=api_descriptor.pb \
+// sight_service/proto/service.proto
+
+// for writing http rules, can take reference from here :
+// https://cloud.google.com/service-infrastructure/docs/service-management/reference/rpc/google.api#google.api.HttpRule
+
 // The Interface for the Sight service.
 syntax = "proto3";
 package sight.x.service;
 import "sight/proto/sight.proto";
 import "sight_service/proto/numproto/protobuf/ndarray.proto";
+import "google/api/annotations.proto";
 
 // This API manages Sight logs, their creation and access to them.
 service SightService {
   // A test request to validate that the service is up.
-  rpc Test(TestRequest) returns (TestResponse) {}
-  rpc PrintInsertionTime(TestRequest) returns (TestResponse) {}
+  rpc Test(TestRequest) returns (TestResponse) {
+    // Client example (Assuming your service is hosted at the given 'DOMAIN_NAME'):
+    //   curl http://DOMAIN_NAME/v1/test/{client_id}
+    option (google.api.http) = {
+      get: "/v1/test/{client_id}"
+      // body: ""
+    };
+  }
+  // rpc PrintInsertionTime(TestRequest) returns (TestResponse) {}
   // Creates a new Sight log.
-  rpc Create(CreateRequest) returns (CreateResponse) {}
-  rpc Launch(LaunchRequest) returns (LaunchResponse) {}
-  rpc GetWeights(GetWeightsRequest) returns (GetWeightsResponse) {}
-  rpc DecisionPoint(DecisionPointRequest) returns (DecisionPointResponse) {}
+  rpc Create(CreateRequest) returns (CreateResponse) {
+    // Client example:
+    //   curl http://DOMAIN_NAME/v1/create
+    option (google.api.http) = { get: "/v1/create" };
+  }
+  rpc Launch(LaunchRequest) returns (LaunchResponse) {
+    //   curl http://DOMAIN_NAME/v1/launch/{client_id}/{label}
+    option (google.api.http) = {
+      post: "/v1/launch/{client_id}/{label}"
+      body: "decision_config_params"
+    };
+  }
+  // rpc GetWeights(GetWeightsRequest) returns (GetWeightsResponse) {}
+  rpc DecisionPoint(DecisionPointRequest) returns (DecisionPointResponse) {
+    //   curl http://DOMAIN_NAME/v1/decision_point/{client_id}/{worker_id}
+    option (google.api.http) = {
+      post: "/v1/decision_point/{client_id}/{worker_id}"
+      body: "acme_config"
+    };
+  }
   // rpc DecisionOutcome(DecisionOutcomeRequest)
   //     returns (DecisionOutcomeResponse) {}
-  rpc CopyDataToReplayServer(CopyDataToReplayServerRequest) returns (CopyDataToReplayServerResponse) {}
-  rpc CurrentStatus(CurrentStatusRequest) returns (CurrentStatusResponse) {}
-  rpc FetchOptimalAction(FetchOptimalActionRequest) returns (FetchOptimalActionResponse) {}
+  // rpc CopyDataToReplayServer(CopyDataToReplayServerRequest) returns (CopyDataToReplayServerResponse) {}
+  rpc CurrentStatus(CurrentStatusRequest) returns (CurrentStatusResponse) {
+    //   curl http://DOMAIN_NAME/v1/current_status/{client_id}/{worker_id}
+    option (google.api.http) = {
+      get: "/v1/current_status/{client_id}/{worker_id}"
+    };
+  }
+  rpc FetchOptimalAction(FetchOptimalActionRequest) returns (FetchOptimalActionResponse) {
+    //   curl http://DOMAIN_NAME/v1/fetch_optimal_action/{client_id}/{worker_id}
+    option (google.api.http) = {
+      get: "/v1/fetch_optimal_action/{client_id}/{worker_id}"
+    };
+  }
   rpc ProposeAction(ProposeActionRequest) returns (ProposeActionResponse) {}
-  rpc FinalizeEpisode(FinalizeEpisodeRequest)
-      returns (FinalizeEpisodeResponse) {}
+  rpc FinalizeEpisode(FinalizeEpisodeRequest) returns (FinalizeEpisodeResponse) {
+    //   curl http://DOMAIN_NAME/v1/finalize_episode/{client_id}/{worker_id}
+    option (google.api.http) = {
+      post: "/v1/finalize_episode/{client_id}/{worker_id}"
+      body: "acme_config"
+    };
+  }
 }
-message CopyDataToReplayServerRequest {
-  string client_id = 1;
-  string worker_id = 2;
-  numproto.protobuf.NDArray observation = 3;
-  numproto.protobuf.NDArray action = 4;
-  numproto.protobuf.NDArray reward = 5;
-  numproto.protobuf.NDArray discount = 6;
-  numproto.protobuf.NDArray next_observation = 7;
-}
-message CopyDataToReplayServerResponse {
-  string response_str = 1;
-}
+// message CopyDataToReplayServerRequest {
+//   string client_id = 1;
+//   string worker_id = 2;
+//   numproto.protobuf.NDArray observation = 3;
+//   numproto.protobuf.NDArray action = 4;
+//   numproto.protobuf.NDArray reward = 5;
+//   numproto.protobuf.NDArray discount = 6;
+//   numproto.protobuf.NDArray next_observation = 7;
+// }
+// message CopyDataToReplayServerResponse {
+//   string response_str = 1;
+// }
+
 // message AddObsRequest {
 //   enum StepType{
 //     DEFAULT = 0;
@@ -55,37 +117,40 @@ message CopyDataToReplayServerResponse {
 // message AddObsResponse {
 //   string response_str = 1;
 // }
-message GetWeightsRequest {
-  enum StepType{
-    DEFAULT = 0;
-    FIRST = 1;
-    MID = 2;
-    LAST = 3;
-  }
-  message Observation{
-    numproto.protobuf.NDArray action = 1;
-    StepType steptype = 2;
-    numproto.protobuf.NDArray reward = 3;
-    numproto.protobuf.NDArray discount = 4;
-    numproto.protobuf.NDArray observation = 5;
-  }
-  string client_id = 1;
-  string worker_id = 2;
-  repeated Observation episode_observations = 3;
-}
-message GetWeightsResponse {
-  message Layer {
-    message WeightsData {
-        repeated float b = 1;
-        // repeated float w = 2;
-        // NDArray b = 1;
-        numproto.protobuf.NDArray w = 2;
-    }
-    string name = 1;
-    WeightsData weights = 2;
-  }
-  repeated Layer layers = 1;
-}
+
+// message GetWeightsRequest {
+//   enum StepType{
+//     DEFAULT = 0;
+//     FIRST = 1;
+//     MID = 2;
+//     LAST = 3;
+//   }
+//   message Observation{
+//     numproto.protobuf.NDArray action = 1;
+//     StepType steptype = 2;
+//     numproto.protobuf.NDArray reward = 3;
+//     numproto.protobuf.NDArray discount = 4;
+//     numproto.protobuf.NDArray observation = 5;
+//   }
+//   string client_id = 1;
+//   string worker_id = 2;
+//   repeated Observation episode_observations = 3;
+// }
+
+// // not using most probably
+// message GetWeightsResponse {
+//   message Layer {
+//     message WeightsData {
+//         repeated float b = 1;
+//         // repeated float w = 2;
+//         // NDArray b = 1;
+//         numproto.protobuf.NDArray w = 2;
+//     }
+//     string name = 1;
+//     WeightsData weights = 2;
+//   }
+//   repeated Layer layers = 1;
+// }
 
 message Acme_Request {
   enum StepType{
@@ -101,15 +166,18 @@ message Acme_Request {
     numproto.protobuf.NDArray discount = 4;
     numproto.protobuf.NDArray observation = 5;
   }
-  string client_id = 1;
-  string worker_id = 2;
-  repeated Observation episode_observations = 3;
+  // string client_id = 1;
+  // string worker_id = 2;
+  repeated Observation episode_observations = 1;
+  repeated string learner_keys = 2;
 }
 message Acme_Response {
   message Layer {
     message WeightsData {
         repeated float b = 1;
         numproto.protobuf.NDArray w = 2;
+        repeated float offset = 3;
+        repeated float scale = 4;
     }
     string name = 1;
     WeightsData weights = 2;
@@ -119,13 +187,14 @@ message Acme_Response {
 message DecisionPointRequest {
   string client_id = 1;
   string worker_id = 2;
-  sight.x.proto.DecisionPoint decision_point = 3;
-  sight.x.proto.DecisionOutcome decision_outcome = 4;
-  Acme_Request acme_decision_point = 5;
+  // sight.x.proto.DecisionPoint decision_point = 3;
+  // sight.x.proto.DecisionOutcome decision_outcome = 4;
+  Acme_Request acme_config = 5;
 }
 message DecisionPointResponse {
   repeated sight.x.proto.DecisionParam action = 1;
-  Acme_Response acme_response = 2;
+  // repeated Acme_Response acme_response = 2;
+  bytes weights = 2; // acme_response required
 }
 // message DecisionOutcomeRequest {
 //   sight.x.proto.DecisionOutcome decision_outcome = 1;
@@ -138,6 +207,7 @@ message DecisionPointResponse {
 // message DecisionOutcomeResponse {
 //   string response_str = 1;
 // }
+
 message FetchOptimalActionRequest {
   string client_id = 1;
   string worker_id = 2;
@@ -145,6 +215,7 @@ message FetchOptimalActionRequest {
 message FetchOptimalActionResponse {
   string response_str = 1;
 }
+
 message CurrentStatusRequest {
   string client_id = 1;
   string worker_id = 2;
@@ -162,6 +233,7 @@ message LaunchRequest {
 message LaunchResponse {
   string display_string = 1;
 }
+
 message ProposeActionRequest {
   string client_id = 1;
   string worker_id = 2;
@@ -171,12 +243,14 @@ message ProposeActionRequest {
 message ProposeActionResponse {
   string response_str = 1;
 }
+
 message FinalizeEpisodeRequest {
   string client_id = 1;
   string worker_id = 2;
-  sight.x.proto.DecisionPoint decision_point = 3;
-  sight.x.proto.DecisionOutcome decision_outcome = 4;
-  sight.x.proto.DecisionConfigurationStart.OptimizerType optimizer_type = 5;
+  // sight.x.proto.DecisionPoint decision_point = 3;
+  // sight.x.proto.DecisionOutcome decision_outcome = 4;
+  // sight.x.proto.DecisionConfigurationStart.OptimizerType optimizer_type = 5;
+  Acme_Request acme_config  = 6;
 }
 
 message FinalizeEpisodeResponse {
@@ -203,16 +277,16 @@ enum LogFormat {
 }
 // Request message for SightService.Create.
 message CreateRequest {
-  // The format in which the log data is stored.
-  LogFormat format = 1;
-  // The path of the directory where log files are stored.
-  string log_dir_path = 2;
-  // The user or group that owns this log data.
-  string log_owner = 3;
-  // Meaningful label that describes the contents of the log to a human.
-  string label = 4;
-  // Attributes that describe this log.
-  repeated sight.x.proto.Attribute attribute = 5;
+  // // The format in which the log data is stored.
+  // LogFormat format = 1;
+  // // The path of the directory where log files are stored.
+  // string log_dir_path = 2;
+  // // The user or group that owns this log data.
+  // string log_owner = 3;
+  // // Meaningful label that describes the contents of the log to a human.
+  // string label = 4;
+  // // Attributes that describe this log.
+  // repeated sight.x.proto.Attribute attribute = 5;
 }
 // Response message for SightService.Create.
 message CreateResponse {

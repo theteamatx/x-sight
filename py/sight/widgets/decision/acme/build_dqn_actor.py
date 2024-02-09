@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Setting up configuration for DQN Experiment."""
+
 from absl import flags
 from acme import specs
 from acme import wrappers
@@ -25,20 +26,26 @@ import gym
 import haiku as hk
 
 
-def build_learner_config(env_name: str = '', possible_action_values: int = 1):
+SEED = flags.DEFINE_integer('seed', 0, 'Random seed.')
+NUM_STEPS = flags.DEFINE_integer(
+    'num_steps', 10, 'Number of env steps to run.'  # 1_000_000
+)
+
+
+def build_dqn_config(env_name: str = '', possible_action_values: int = 1):
   """Builds DQN experiment config which can be executed in different ways."""
 
   def env_factory():
-    if(env_name):
+    if env_name:
       return wrappers.GymWrapper(gym.make(env_name))
     else:
       return None
 
   def net_factory(environment_spec: specs.EnvironmentSpec) -> dqn.DQNNetworks:
-    """Creates networks for training DQN."""
+    """Creates networks for training DQN on Gym Env."""
 
     def network(inputs):
-      if(env_name):
+      if env_name:
         model = hk.Sequential([
             hk.nets.MLP([512, 128, environment_spec.actions.num_values]),
         ])
@@ -56,17 +63,12 @@ def build_learner_config(env_name: str = '', possible_action_values: int = 1):
     typed_network = networks_lib.non_stochastic_network_to_typed(network)
     return dqn.DQNNetworks(policy_network=typed_network)
 
+  # Construct the agent.
   config = dqn.DQNConfig(
       discount=0.99,
-      learning_rate=1e-3,
       n_step=1,
-      epsilon=0.1,
-      min_replay_size=20,
-      max_replay_size=1_000_000,
-      batch_size=32,  # 256
-      samples_per_insert=1,  # 0.5
+      epsilon=0.1
   )
-
   loss_fn = losses.QLearning(discount=config.discount, max_abs_reward=1.0)
 
   dqn_builder = dqn.DQNBuilder(config, loss_fn=loss_fn)
@@ -75,6 +77,6 @@ def build_learner_config(env_name: str = '', possible_action_values: int = 1):
       builder=dqn_builder,
       environment_factory=env_factory,
       network_factory=net_factory,
-      seed=0,
-      max_num_actor_steps=5,
+      seed=SEED.value,
+      max_num_actor_steps=NUM_STEPS.value,
   )

@@ -663,6 +663,7 @@ python py/sight/demo/shower_demo_without_env.py \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
+--acme_agent=dqn \
 --docker_image=gcr.io/$PROJECT_ID/sight-worker
 ```
 
@@ -679,6 +680,7 @@ python py/sight/demo/gym_demo_env.py \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
+--acme_agent=dqn \
 --docker_image=gcr.io/$PROJECT_ID/sight-worker \
 --env_name=CartPole-v1
 ```

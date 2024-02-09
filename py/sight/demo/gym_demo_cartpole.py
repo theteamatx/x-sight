@@ -25,6 +25,8 @@ warnings.warn = warn
 
 import os
 import gym
+import logging
+# import logging
 from typing import Sequence
 from absl import app
 from absl import flags
@@ -54,4 +56,6 @@ def main(argv: Sequence[str]) -> None:
 
 
 if __name__ == "__main__":
+  logging.basicConfig(level=logging.DEBUG,)
+  # print(logging.getLogger(__name__))
   app.run(main)

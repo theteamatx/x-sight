@@ -1,0 +1,18 @@
+# The configuration schema is defined by the service.proto file.
+# https://github.com/googleapis/googleapis/blob/master/google/api/service.proto
+
+type: google.api.Service
+config_version: 3
+name: sight-service-espv2-dq7fdwqgbq-uc.a.run.app
+title: Sight Endpoints + Backend
+apis:
+  - name: sight.x.service.SightService
+usage:
+  rules:
+  # Test method can be called without an API Key.
+  - selector: sight.x.service.SightService.Test
+    allow_unregistered_calls: true
+backend:
+  rules:
+    - selector: "*"
+      address: grpcs://sight-service-grpc-backend-dq7fdwqgbq-uc.a.run.app

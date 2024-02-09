@@ -398,8 +398,13 @@ def generate_metadata():
   """Generate metadata to call service with authentication."""
 
   if flags.FLAGS.deployment_mode == 'local':
+    channel_opts = [
+      ('grpc.max_send_message_length', 512 * 1024 * 1024),
+      ('grpc.max_receive_message_length', 512 * 1024 * 1024),
+    ]
     channel = grpc.insecure_channel(
-        'localhost:8080'
+        'localhost:8080',
+        options=channel_opts
     )  # localhost #10.138.0.17:8080
     sight_service = service_pb2_grpc.SightServiceStub(channel)
     metadata = []

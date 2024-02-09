@@ -77,9 +77,10 @@ class SightAdder(base.Adder):
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return obs
 
-  def fetch_and_reset_observation_list(self, sight_client_id, sight_worker_id):
+  def fetch_and_reset_observation_list(self, sight_client_id, sight_worker_id, learner_keys):
     method_name = "fetch_and_reset_observation_list"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    final_observation = False
     request = service_pb2.DecisionPointRequest()
     request.client_id = str(sight_client_id)
     request.worker_id = str(sight_worker_id)
@@ -89,11 +90,16 @@ class SightAdder(base.Adder):
       for episode_obs in self._observation_list:
         obs = self.observation_to_proto(episode_obs)
         acme_config.episode_observations.append(obs)
+    # print("learner_keys : ", learner_keys)
 
-    request.acme_decision_point.CopyFrom(acme_config)
+    if(learner_keys!=['']):
+      for key in learner_keys:
+        acme_config.learner_keys.append(key)
+
+    request.acme_config.CopyFrom(acme_config)
     self.reset()
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return request
+    return request, final_observation
 
   def add_first(self, timestep: dm_env.TimeStep):
     """Record the first observation of a trajectory."""

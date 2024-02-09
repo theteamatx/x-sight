@@ -212,10 +212,10 @@ class Sight(object):
           else:
             # logging.info('calling generate metadata')
             req = service_pb2.CreateRequest(
-                log_owner=self.params.log_owner,
-                label=self.params.label,
-                log_dir_path=self.params.log_dir_path,
-                format='LF_AVRO',
+                # log_owner=self.params.log_owner,
+                # label=self.params.label,
+                # log_dir_path=self.params.log_dir_path,
+                # format='LF_AVRO',
             )
             response = service.call(
                 lambda s, meta: s.Create(req, 300, metadata=meta)

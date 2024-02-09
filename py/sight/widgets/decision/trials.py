@@ -23,7 +23,7 @@ import time
 from typing import Any, Dict, Optional
 
 from absl import flags
-from absl import logging
+import logging
 import grpc
 from sight_service.proto import service_pb2
 
@@ -108,7 +108,7 @@ def launch(
   """
   method_name = 'launch'
   logging.debug('>>>>>>>>>  In %s method of %s file.', method_name, _file_name)
-  logging.info('decision_configuration=%s' % decision_configuration)
+  # logging.info('decision_configuration=%s' % decision_configuration)
 
   req = service_pb2.LaunchRequest()
 
@@ -121,6 +121,8 @@ def launch(
 
   req.label = sight.params.label
   req.client_id = str(sight.id)
+  # print("req for launch : ", req)
+  # raise SystemError
 
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
   logging.info('##### Launch response=%s #####', response)

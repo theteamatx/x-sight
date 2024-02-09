@@ -36,7 +36,6 @@ class OptimizerClient:
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
     )
-    print("response **************: ",response)
 
     return self._get_dp_action(response)
 

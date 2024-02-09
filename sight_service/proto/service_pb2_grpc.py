@@ -20,11 +20,6 @@ class SightServiceStub(object):
                 request_serializer=sight__service_dot_proto_dot_service__pb2.TestRequest.SerializeToString,
                 response_deserializer=sight__service_dot_proto_dot_service__pb2.TestResponse.FromString,
                 )
-        self.PrintInsertionTime = channel.unary_unary(
-                '/sight.x.service.SightService/PrintInsertionTime',
-                request_serializer=sight__service_dot_proto_dot_service__pb2.TestRequest.SerializeToString,
-                response_deserializer=sight__service_dot_proto_dot_service__pb2.TestResponse.FromString,
-                )
         self.Create = channel.unary_unary(
                 '/sight.x.service.SightService/Create',
                 request_serializer=sight__service_dot_proto_dot_service__pb2.CreateRequest.SerializeToString,
@@ -35,20 +30,10 @@ class SightServiceStub(object):
                 request_serializer=sight__service_dot_proto_dot_service__pb2.LaunchRequest.SerializeToString,
                 response_deserializer=sight__service_dot_proto_dot_service__pb2.LaunchResponse.FromString,
                 )
-        self.GetWeights = channel.unary_unary(
-                '/sight.x.service.SightService/GetWeights',
-                request_serializer=sight__service_dot_proto_dot_service__pb2.GetWeightsRequest.SerializeToString,
-                response_deserializer=sight__service_dot_proto_dot_service__pb2.GetWeightsResponse.FromString,
-                )
         self.DecisionPoint = channel.unary_unary(
                 '/sight.x.service.SightService/DecisionPoint',
                 request_serializer=sight__service_dot_proto_dot_service__pb2.DecisionPointRequest.SerializeToString,
                 response_deserializer=sight__service_dot_proto_dot_service__pb2.DecisionPointResponse.FromString,
-                )
-        self.CopyDataToReplayServer = channel.unary_unary(
-                '/sight.x.service.SightService/CopyDataToReplayServer',
-                request_serializer=sight__service_dot_proto_dot_service__pb2.CopyDataToReplayServerRequest.SerializeToString,
-                response_deserializer=sight__service_dot_proto_dot_service__pb2.CopyDataToReplayServerResponse.FromString,
                 )
         self.CurrentStatus = channel.unary_unary(
                 '/sight.x.service.SightService/CurrentStatus',
@@ -83,14 +68,9 @@ class SightServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def PrintInsertionTime(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def Create(self, request, context):
-        """Creates a new Sight log.
+        """rpc PrintInsertionTime(TestRequest) returns (TestResponse) {}
+        Creates a new Sight log.
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -102,28 +82,18 @@ class SightServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def GetWeights(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
     def DecisionPoint(self, request, context):
-        """Missing associated documentation comment in .proto file."""
-        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
-
-    def CopyDataToReplayServer(self, request, context):
-        """rpc DecisionOutcome(DecisionOutcomeRequest)
-        returns (DecisionOutcomeResponse) {}
+        """rpc GetWeights(GetWeightsRequest) returns (GetWeightsResponse) {}
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
     def CurrentStatus(self, request, context):
-        """Missing associated documentation comment in .proto file."""
+        """rpc DecisionOutcome(DecisionOutcomeRequest)
+        returns (DecisionOutcomeResponse) {}
+        rpc CopyDataToReplayServer(CopyDataToReplayServerRequest) returns (CopyDataToReplayServerResponse) {}
+        """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -154,11 +124,6 @@ def add_SightServiceServicer_to_server(servicer, server):
                     request_deserializer=sight__service_dot_proto_dot_service__pb2.TestRequest.FromString,
                     response_serializer=sight__service_dot_proto_dot_service__pb2.TestResponse.SerializeToString,
             ),
-            'PrintInsertionTime': grpc.unary_unary_rpc_method_handler(
-                    servicer.PrintInsertionTime,
-                    request_deserializer=sight__service_dot_proto_dot_service__pb2.TestRequest.FromString,
-                    response_serializer=sight__service_dot_proto_dot_service__pb2.TestResponse.SerializeToString,
-            ),
             'Create': grpc.unary_unary_rpc_method_handler(
                     servicer.Create,
                     request_deserializer=sight__service_dot_proto_dot_service__pb2.CreateRequest.FromString,
@@ -169,20 +134,10 @@ def add_SightServiceServicer_to_server(servicer, server):
                     request_deserializer=sight__service_dot_proto_dot_service__pb2.LaunchRequest.FromString,
                     response_serializer=sight__service_dot_proto_dot_service__pb2.LaunchResponse.SerializeToString,
             ),
-            'GetWeights': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetWeights,
-                    request_deserializer=sight__service_dot_proto_dot_service__pb2.GetWeightsRequest.FromString,
-                    response_serializer=sight__service_dot_proto_dot_service__pb2.GetWeightsResponse.SerializeToString,
-            ),
             'DecisionPoint': grpc.unary_unary_rpc_method_handler(
                     servicer.DecisionPoint,
                     request_deserializer=sight__service_dot_proto_dot_service__pb2.DecisionPointRequest.FromString,
                     response_serializer=sight__service_dot_proto_dot_service__pb2.DecisionPointResponse.SerializeToString,
-            ),
-            'CopyDataToReplayServer': grpc.unary_unary_rpc_method_handler(
-                    servicer.CopyDataToReplayServer,
-                    request_deserializer=sight__service_dot_proto_dot_service__pb2.CopyDataToReplayServerRequest.FromString,
-                    response_serializer=sight__service_dot_proto_dot_service__pb2.CopyDataToReplayServerResponse.SerializeToString,
             ),
             'CurrentStatus': grpc.unary_unary_rpc_method_handler(
                     servicer.CurrentStatus,
@@ -233,23 +188,6 @@ class SightService(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def PrintInsertionTime(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/PrintInsertionTime',
-            sight__service_dot_proto_dot_service__pb2.TestRequest.SerializeToString,
-            sight__service_dot_proto_dot_service__pb2.TestResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
     def Create(request,
             target,
             options=(),
@@ -284,23 +222,6 @@ class SightService(object):
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 
     @staticmethod
-    def GetWeights(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/GetWeights',
-            sight__service_dot_proto_dot_service__pb2.GetWeightsRequest.SerializeToString,
-            sight__service_dot_proto_dot_service__pb2.GetWeightsResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
     def DecisionPoint(request,
             target,
             options=(),
@@ -314,23 +235,6 @@ class SightService(object):
         return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/DecisionPoint',
             sight__service_dot_proto_dot_service__pb2.DecisionPointRequest.SerializeToString,
             sight__service_dot_proto_dot_service__pb2.DecisionPointResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
-
-    @staticmethod
-    def CopyDataToReplayServer(request,
-            target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/CopyDataToReplayServer',
-            sight__service_dot_proto_dot_service__pb2.CopyDataToReplayServerRequest.SerializeToString,
-            sight__service_dot_proto_dot_service__pb2.CopyDataToReplayServerResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

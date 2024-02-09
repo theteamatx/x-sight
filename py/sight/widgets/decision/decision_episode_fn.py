@@ -44,6 +44,9 @@ class DecisionEpisodeFn:
   state_min: Dict[str, float]
   state_max: Dict[str, float]
 
+  # datatype of state attrs
+  state_dtype: None
+
   # The TFAgents schema of the observation space.
   # observation_spec: array_spec.BoundedArraySpec
 
@@ -56,6 +59,12 @@ class DecisionEpisodeFn:
   # Mapping from all the action variables to their minimum and maximum values.
   action_min: Dict[str, float]
   action_max: Dict[str, float]
+
+  # datatype of action attrs
+  action_dtype: None
+
+  # possible valid values of action attrs
+  valid_action_values: int
 
   # The TFAgents schema of the action space.
   # action_spec: array_spec.BoundedArraySpec
@@ -85,6 +94,12 @@ class DecisionEpisodeFn:
     self.state_max = {
         attr: min_max.max_value for attr, min_max in state_attrs.items()
     }
+
+    for attr, val in state_attrs.items():
+      self.state_dtype = val.datatype
+      break
+
+
     # self.observation_spec = array_spec.BoundedArraySpec(
     #     shape=(len(state_attrs),),
     #     dtype=np.float32,
@@ -103,6 +118,14 @@ class DecisionEpisodeFn:
     self.action_max = {
         attr: min_max.max_value for attr, min_max in action_attrs.items()
     }
+
+    for action, attributes in action_attrs.items():
+      if (attributes.valid_int_values):
+        self.valid_action_values = attributes.valid_int_values
+
+    for attr, val in action_attrs.items():
+      self.action_dtype = val.datatype
+      break
     # if len(self.action_attrs) == 1:
     #   self.action_spec = array_spec.BoundedArraySpec(
     #       shape=(),

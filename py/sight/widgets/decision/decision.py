@@ -22,16 +22,22 @@ import numpy as np
 from typing import Any, Callable, Dict, List, Optional, Text
 
 from absl import flags
-from absl import logging
+# import logging
+import logging
+
+
 from sight.service_utils import service_pb2
 from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
 from sight.widgets.decision.single_action_optimizer_client import SingleActionOptimizerClient
 from sight.widgets.decision.acme.acme_optimizer_client import AcmeOptimizerClient
-from sight.widgets.decision.driver import driver_fn
+from sight.widgets.decision.env_driver import driver_fn
+# from sight.widgets.decision.cartpole_driver import driver_fn
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
+
+logging.basicConfig(level=logging.DEBUG)
 
 _DECISON_MODE = flags.DEFINE_enum(
     'decision_mode',
@@ -126,7 +132,7 @@ _DISTRIBUTED_ACTOR = flags.DEFINE_bool(
 _ENV_NAME = flags.DEFINE_enum(
     'env_name',
     None,
-    ['CartPole-v1', 'MountainCar-v0', 'Acrobot-v1', 'None'],
+    ['CartPole-v1', 'MountainCar-v0', 'Acrobot-v1', 'Pendulum-v1', 'None'],
     'What environment to run',
 )
 
@@ -187,8 +193,8 @@ def _attr_dict_to_proto(
     attrs_proto: Any,
 ):
   """Converts a dict of attribute constraints to its proto representation."""
-  for attr_name, attr_range in attrs.items():
-    attrs_proto[attr_name].CopyFrom(attr_range)
+  for attr_name, attr_details in attrs.items():
+    attrs_proto[attr_name].CopyFrom(attr_details)
 
 class Optimizer:
 
@@ -202,29 +208,53 @@ class Optimizer:
 optimizer = Optimizer()
 
 
-def state_to_dict(array, param):
-  """Converts a bounded array to a dict of attribute constraints.
+def attr_to_dict(attr, array):
+  """Converts a spec type array to a dict of attribute constraints.
 
   Args:
-    array: The bounded array to be converted.
-    param: The name of the attribute.
+    array: The spec array to be converted.
+    attr: The name of the attribute.
 
   Returns:
     A dict of attribute constraints.
   """
   result = {}
-  method_name = 'state_to_dict'
+  method_name = 'attr_to_dict'
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-  if isinstance(array, dm_env.specs.BoundedArray):
-    minimum = array.minimum
-    maximum = array.maximum
+  minimum = array.minimum
+  maximum = array.maximum
+  if(array.dtype == np.float32):
+    dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
+  elif(array.dtype == np.int64):
+    dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_INT64
 
-    if array.shape == () or array.shape ==(1,):
-      key = f'{param}_{1}'
+  if isinstance(array, dm_env.specs.DiscreteArray):
+    num_values = array.num_values
+    if array.shape == ():
+      key = f'{attr}_{1}'
+      result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
+            min_value=float(minimum),
+            max_value=float(maximum),
+            datatype=dtype,
+            valid_int_values=num_values
+        )
+
+  elif isinstance(array, dm_env.specs.BoundedArray):
+
+    if array.shape == ():
+      key = f'{attr}_{1}'
       result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
           min_value=float(minimum),
           max_value=float(maximum),
+          datatype=dtype
+      )
+    elif array.shape ==(1,):
+      key = f'{attr}_{1}'
+      result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
+          min_value=float(minimum[0]),
+          max_value=float(maximum[0]),
+          datatype=dtype
       )
     else:
       # if bounded array minimum are same int instead of list of int
@@ -234,14 +264,16 @@ def state_to_dict(array, param):
         maximum = np.repeat(maximum, array.shape[0])
 
       for i in range(array.shape[0]):
-        key = f'{param}_{i + 1}'
+        key = f'{attr}_{i + 1}'
         result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
             min_value=minimum[i],
             max_value=maximum[i],
+            datatype=dtype
         )
+  # todo : need to handle this case when specs are in different form
   else:
     for i in range(array.shape[0]):
-      key = f'{param}_{i + 1}'
+      key = f'{attr}_{i + 1}'
       result[key] = sight_pb2.DecisionConfigurationStart.AttrProps()
 
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
@@ -278,17 +310,21 @@ def run(
   method_name = 'run'
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-
+  # when gym env passed, fetch state and action from env directly
   if state_attrs == {}:
-    state_attrs = state_to_dict(env.observation_spec(), 'state')
+    state_attrs = attr_to_dict('state', env.observation_spec())
+  # print('state_attrs : ', state_attrs)
   if action_attrs == {}:
-    action_attrs = state_to_dict(env.action_spec(), 'action')
+    action_attrs = attr_to_dict('action', env.action_spec())
+  # print('action_Attr : ', action_attrs)
 
   sight.widget_decision_state['decision_episode_fn'] = (
       decision_episode_fn.DecisionEpisodeFn(
           driver_fn, state_attrs, action_attrs
       )
   )
+  # print(sight.widget_decision_state['decision_episode_fn'])
+  # raise SystemError
 
   if _OPTIMIZER_TYPE.value == 'dm_acme':
     optimizer.obj = AcmeOptimizerClient(sight)
@@ -312,7 +348,9 @@ def run(
   decision_configuration.choice_config[sight.params.label].CopyFrom(optimizer.obj.create_config())
   _attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
   _attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
-  # print('action_attrs : ', decision_configuration)
+
+  # print('decision_configuration : ', decision_configuration)
+
 
   sight.enter_block(
       'Decision Configuration',
@@ -416,6 +454,7 @@ def run(
       logging.info('_DEPLOYMENT_MODE.value == distributed')
       if(not _DOCKER_IMAGE.value):
         raise ValueError("docker_image must be provided for distributed mode")
+      print("decision_config : ", decision_configuration)
       trials.launch(
           optimizer.obj,
           decision_configuration,
@@ -498,6 +537,7 @@ def run(
 
           if env:
             driver_fn(env, sight)
+            # user have to pass dm_env type environment
           else:
             driver_fn(sight)
 
@@ -584,17 +624,29 @@ def decision_point(
     client_id = os.environ['PARENT_LOG_ID']
     worker_location = os.environ['worker_location']
 
-  req.client_id = client_id
-  req.worker_id = f'client_{client_id}_worker_{worker_location}'
+  # req.client_id = client_id
+  # req.worker_id = f'client_{client_id}_worker_{worker_location}'
 
   if _OPTIMIZER_TYPE.value == 'dm_acme':
 
     optimizer_obj = optimizer.get_instance()
     selected_action = optimizer_obj.decision_point(sight, req)
+    # print("selected_action : ", selected_action, type(selected_action), selected_action.shape, )
+    # raise SystemError
+
     chosen_action = {}
-    chosen_action[
-        sight.widget_decision_state['decision_episode_fn'].action_attrs[0]
-    ] = selected_action
+    #? when action space is scalar (DQN agent - cartpole)
+    if(selected_action.shape == ()):
+      chosen_action[
+            sight.widget_decision_state['decision_episode_fn'].action_attrs[0]
+        ] = selected_action[()]
+    #? when action space is 1d array (D4pg agent - pendulum)
+    else:
+      for i in range(len(sight.widget_decision_state['decision_episode_fn'].action_attrs)):
+        chosen_action[
+            sight.widget_decision_state['decision_episode_fn'].action_attrs[i]
+        ] = selected_action[i]
+    # print("chosen_action : ", chosen_action)
 
   # selected_action will be same for all calls of decision point in these
   # optimizers. As such, it is cached as the constant action.
@@ -612,7 +664,7 @@ def decision_point(
       req.decision_outcome.discount = sight.widget_decision_state['discount']
     chosen_action = optimizer_obj.decision_point(sight, req)
 
-
+  #? keep this might need to change sub_type of deicision param value
   choice_params: List[sight_pb2.DecisionParam] = []
   for attr in sight.widget_decision_state['decision_episode_fn'].action_attrs:
     choice_params.append(
@@ -624,7 +676,6 @@ def decision_point(
             ),
         )
     )
-
   # pytype: disable=attribute-error
   obj = sight_pb2.Object(
       sub_type=sight_pb2.Object.ST_DECISION_POINT,
@@ -637,7 +688,8 @@ def decision_point(
   sight.log_object(obj, inspect.currentframe().f_back.f_back)
 
   logging.debug('<<<< Out %s of %s', method_name, _file_name)
-  return chosen_action
+  return selected_action
+
 
 
 def decision_outcome(
