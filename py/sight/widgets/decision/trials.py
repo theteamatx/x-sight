@@ -31,7 +31,6 @@ from dotenv import load_dotenv
 from sight import service_utils as service
 
 from sight.proto import sight_pb2
-from sight.widgets.decision.acme import acme_optimizer_client
 from sight.widgets.decision.optimizer_client import OptimizerClient
 
 load_dotenv()

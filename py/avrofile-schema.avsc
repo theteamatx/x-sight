@@ -878,6 +878,11 @@
                     "name": "none_value",
                     "type": [ "null", "boolean" ],
                     "doc": ""
+                },
+                {
+                    "name": "mime_type",
+                    "type": [ "null", "string" ],
+                    "doc": ""
                 }
             ]
           }],

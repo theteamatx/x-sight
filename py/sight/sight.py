@@ -136,9 +136,8 @@ class Sight(object):
   # PROTODB_PATH = 'google3/googlex/cortex/sight/proto2/sight_proto2db.protodb'
 
   # The API Key for the BQ Sight service
-  # SIGHT_API_KEY = 'AKfycbz35qrsrKUmm2FITMsLW9vSbKoBxEYv4EggM_m1Q2H3' #cameltrain
-  # SIGHT_API_KEY = 'AKfycbw9eY9dk-JstxeAizfMfJZ8qwHm6BVmOZEgBUey-HPL' #catan-(now generalized)
-  SIGHT_API_KEY = 'AKfycbxHmmutVP-o1rsv3bLEUWQhbTG4uzTN_7VwR6sGUpOdvhrVQbtoOFcQtHbBeO0un3BfiQ'
+  #SIGHT_API_KEY = 'AKfycbw9eY9dk-JstxeAizfMfJZ8qwHm6BVmOZEgBUey-HPL/dev'
+  SIGHT_API_KEY = 'AKfycbylvLcxs2i60qBrQOKXe2BQPQf2JKYleDEfDnfuVuaH34XDIgvkdH0T0YUNfEIZ6gRRqA/exec'
 
   def __init__(
       self,
@@ -356,7 +355,7 @@ class Sight(object):
         if self.avro_file_counter == 1:
           create_external_bq_table(self.params, self.file_name, self.id)
           logging.info(
-              'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+              'Log GUI : https://script.google.com/a/google.com/macros/s/%s?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
               self.SIGHT_API_KEY,
               self.params.dataset_name,
@@ -371,7 +370,7 @@ class Sight(object):
       # time.sleep(1)
       logging.info(
           (
-              'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
+              'Log : https://script.google.com/a/google.com/macros/s/%s?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
           ),
           self.SIGHT_API_KEY,

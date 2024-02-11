@@ -79,13 +79,13 @@ def log(
     nv_start_obj = sight_pb2.Object()
     nv_start_obj.sub_type = sight_pb2.Object.SubType.ST_BLOCK_START
     nv_start_obj.block_start.sub_type = sight_pb2.BlockStart.ST_NAMED_VALUE
-    sight.enter_block(df.columns[i], nv_start_obj, frame)
+    sight.enter_block(str(df.columns[i]), nv_start_obj, frame)
 
     obj = sight_pb2.Object()
     sight.set_object_code_loc(obj, frame)
 
     obj.sub_type = sight_pb2.Object.SubType.ST_TENSOR
-    obj.tensor.label = df.columns[i]
+    obj.tensor.label = str(df.columns[i])
     obj.tensor.shape.append(df.shape[0])
     if (
         df.dtypes[i] == float
@@ -106,7 +106,7 @@ def log(
       obj.tensor.sub_type = sight_pb2.Tensor.ST_STRING
       obj.tensor.string_values.value.extend(
         [str(v) for v in df[df.columns[i]].tolist()])
-    obj.tensor.dim_label.append(df.columns[i])
+    obj.tensor.dim_label.append(str(df.columns[i]))
 
     sight.log_object(obj, True)
 
