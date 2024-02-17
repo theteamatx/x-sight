@@ -32,27 +32,27 @@ NUM_STEPS = flags.DEFINE_integer(
 )
 
 
-def build_dqn_config(env_name: str = '', possible_action_values: int = 1):
+def build_dqn_config():
   """Builds DQN experiment config which can be executed in different ways."""
 
   def env_factory():
-    if env_name:
-      return wrappers.GymWrapper(gym.make(env_name))
-    else:
-      return None
+    # if env_name:
+    #   return wrappers.GymWrapper(gym.make(env_name))
+    # else:
+    return None
 
   def net_factory(environment_spec: specs.EnvironmentSpec) -> dqn.DQNNetworks:
     """Creates networks for training DQN on Gym Env."""
 
     def network(inputs):
-      if env_name:
-        model = hk.Sequential([
-            hk.nets.MLP([512, 128, environment_spec.actions.num_values]),
-        ])
-      else:
-        model = hk.Sequential([
-            hk.nets.MLP([512, 128, possible_action_values]),
-        ])
+      # if env_name:
+      model = hk.Sequential([
+          hk.nets.MLP([512, 128, environment_spec.actions.num_values]),
+      ])
+      # else:
+      #   model = hk.Sequential([
+      #       hk.nets.MLP([512, 128, possible_action_values]),
+      #   ])
       return model(inputs)
 
     network_hk = hk.without_apply_rng(hk.transform(network))

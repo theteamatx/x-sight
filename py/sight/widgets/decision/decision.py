@@ -221,54 +221,46 @@ def attr_to_dict(attr, array):
   result = {}
   method_name = 'attr_to_dict'
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
+  # if(array.dtype == np.float32):
+  #   dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
+  # elif(array.dtype == np.int64):
+  #   dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_INT64
 
-  minimum = array.minimum
-  maximum = array.maximum
-  if(array.dtype == np.float32):
-    dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
-  elif(array.dtype == np.int64):
-    dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_INT64
+  # default
+  # dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
 
   if isinstance(array, dm_env.specs.DiscreteArray):
-    num_values = array.num_values
+    valid_values = []
+    for i in range(array.num_values):
+      valid_values.append(i)
     if array.shape == ():
       key = f'{attr}_{1}'
       result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
-            min_value=float(minimum),
-            max_value=float(maximum),
-            datatype=dtype,
-            valid_int_values=num_values
+            valid_int_values=valid_values
         )
 
   elif isinstance(array, dm_env.specs.BoundedArray):
-
-    if array.shape == ():
+    if array.shape == () or array.shape == (1,):
+      # minimum = float(array.minimum if array.minimum.size == 1 else array.minimum[0])
+      # maximum = float(array.maximum if array.maximum.size == 1 else array.maximum[0])
+      minimum = float(array.minimum[0])
+      maximum = float(array.maximum[0])
       key = f'{attr}_{1}'
       result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
-          min_value=float(minimum),
-          max_value=float(maximum),
-          datatype=dtype
-      )
-    elif array.shape ==(1,):
-      key = f'{attr}_{1}'
-      result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
-          min_value=float(minimum[0]),
-          max_value=float(maximum[0]),
-          datatype=dtype
+          min_value=minimum,
+          max_value=maximum,
+          # datatype=dtype
       )
     else:
-      # if bounded array minimum are same int instead of list of int
-      if (minimum.size == 1):
-        minimum = np.repeat(minimum, array.shape[0])
-      if (maximum.size == 1):
-        maximum = np.repeat(maximum, array.shape[0])
+      minimum = np.repeat(array.minimum, array.shape[0]) if array.minimum.size == 1 else array.minimum
+      maximum = np.repeat(array.maximum, array.shape[0]) if array.maximum.size == 1 else array.maximum
 
       for i in range(array.shape[0]):
         key = f'{attr}_{i + 1}'
         result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
-            min_value=minimum[i],
-            max_value=maximum[i],
-            datatype=dtype
+            min_value=float(minimum[i]),
+            max_value=float(maximum[i]),
+            # datatype=dtype
         )
   # todo : need to handle this case when specs are in different form
   else:
@@ -277,6 +269,8 @@ def attr_to_dict(attr, array):
       result[key] = sight_pb2.DecisionConfigurationStart.AttrProps()
 
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+  # print(result)
+
   return result
 
 
@@ -348,8 +342,8 @@ def run(
   decision_configuration.choice_config[sight.params.label].CopyFrom(optimizer.obj.create_config())
   _attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
   _attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
-
-  # print('decision_configuration : ', decision_configuration)
+  # print('decision_config : ', decision_configuration)
+  # raise SystemError
 
 
   sight.enter_block(

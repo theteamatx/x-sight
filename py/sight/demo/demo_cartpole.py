@@ -58,31 +58,23 @@ def main(argv: Sequence[str]) -> None:
             "Cart Position": sight_pb2.DecisionConfigurationStart.AttrProps(
                 min_value=-4.8,
                 max_value=4.8,
-                datatype=sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32,
             ),
             "Cart Velocity": sight_pb2.DecisionConfigurationStart.AttrProps(
                 min_value=-3.40,
                 max_value=3.40,
-                datatype=sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32,
             ),
             "Pole Angle": sight_pb2.DecisionConfigurationStart.AttrProps(
                 min_value=-0.418,
                 max_value=0.418,
-                datatype=sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32,
             ),
             "Pole Angular Velocity": sight_pb2.DecisionConfigurationStart.AttrProps(
                 min_value=-3.40,
                 max_value=3.40,
-                datatype=sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32,
             ),
         },
         action_attrs={
             "direction": sight_pb2.DecisionConfigurationStart.AttrProps(
-                min_value=0,
-                max_value=1,
-                valid_int_values=2,
-                # keep float default
-                datatype=sight_pb2.DecisionConfigurationStart.DataType.DT_INT64,
+                valid_int_values=[0,1],
             ),
         },
         env=wrappers.GymWrapper(gym.make('CartPole-v1')),

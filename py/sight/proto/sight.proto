@@ -605,14 +605,14 @@ message DecisionConfigurationStart {
     // Possible float-type values of this attribute.
     repeated float valid_float_values = 4;
     // Possible int-type values of this attribute.
-    int64 valid_int_values = 8;
+    repeated int64 valid_int_values = 8;
 
     // The human-/LLM-readable description of this attribute.
     string description = 5;
 
     // Details related to attributes
     // int64 shape = 6;
-    DataType datatype = 7;
+    // DataType datatype = 7;
   }
 
   // The attributes of application's state

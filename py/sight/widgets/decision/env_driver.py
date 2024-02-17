@@ -33,8 +33,6 @@ def driver_fn(env, sight) -> None:
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
   timestep = env.reset()
-  # print('timestep : ', timestep)
-  # raise SystemError
 
   state_attrs = decision.get_state_attrs(sight)
   for i in range(len(state_attrs)):
@@ -42,17 +40,8 @@ def driver_fn(env, sight) -> None:
 
   while not timestep.last():
     chosen_action = decision.decision_point("DP_label", sight)
-    # print("chosen_action : ", chosen_action, type(chosen_action), chosen_action.shape)
-    # raise SystemError
 
-    # action_received = np.array(chosen_action["action_1"], dtype=np.int64)
-    # todo : meetashah - dtype changed from np.int64 to np.float64 and added ndmin for d4pg
-    # action_received = np.array(chosen_action["action_1"], dtype=np.float32, ndmin=1)
-    # action_received = chosen_action[0]
-
-    # timestep = env.step(action_received)
     timestep = env.step(chosen_action)
-    # print("timestep :", timestep)
 
     for i in range(len(state_attrs)):
       data_structures.log_var(state_attrs[i], timestep.observation[i], sight)

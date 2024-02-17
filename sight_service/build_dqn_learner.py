@@ -25,7 +25,7 @@ import gym
 import haiku as hk
 
 
-def build_dqn_config(env_name: str = '', possible_action_values: int = 1):
+def build_dqn_config():
   """Builds DQN experiment config which can be executed in different ways."""
 
   def env_factory():

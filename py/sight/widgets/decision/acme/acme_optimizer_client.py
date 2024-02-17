@@ -158,42 +158,49 @@ class AcmeOptimizerClient (OptimizerClient):
     method_name = "generate_env_spec"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-    dtype_mapping = {
-        sight_pb2.DecisionConfigurationStart.DataType.DT_INT32: np.int32,
-        sight_pb2.DecisionConfigurationStart.DataType.DT_INT64: np.int64,
-        sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32: np.float32,
-        sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT64: np.float64,
-    }
+    # dtype_mapping = {
+    #     sight_pb2.DecisionConfigurationStart.DataType.DT_INT32: np.int32,
+    #     sight_pb2.DecisionConfigurationStart.DataType.DT_INT64: np.int64,
+    #     sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32: np.float32,
+    #     sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT64: np.float64,
+    # }
 
+    default_dtype = np.float32
     state_min = np.array(list(attr_dict.state_min.values()))
     state_max = np.array(list(attr_dict.state_max.values()))
     state_param_length = len(attr_dict.state_attrs)
-    state_dtype = dtype_mapping[attr_dict.state_dtype]
+    # state_dtype = dtype_mapping[attr_dict.state_dtype]
     observations = specs.BoundedArray(
             shape=(state_param_length,),
-            dtype=state_dtype,
+            # dtype=state_dtype,
+            dtype=default_dtype,
             name="observation",
             minimum=state_min,
             maximum=state_max,
         ),
 
-    action_min = np.array(list(attr_dict.action_min.values()))
-    action_max = np.array(list(attr_dict.action_max.values()))
     action_param_length = len(attr_dict.action_attrs)
-    action_dtype = dtype_mapping[attr_dict.action_dtype]
+    # if(attr_dict.action_min):
+    action_min = np.array(list(attr_dict.action_min.values()))
+    # if(attr_dict.action_max):
+    action_max = np.array(list(attr_dict.action_max.values()))
+    # if(attr_dict.action_dtype):
+    #   action_dtype = dtype_mapping[attr_dict.action_dtype]
 
     # create discrete spec
     if(attr_dict.valid_action_values):
+      possible_values_list = list(attr_dict.valid_action_values.values())[0]
       actions = specs.DiscreteArray(
-        num_values=attr_dict.valid_action_values,
-        dtype=action_dtype,
+        num_values=len(possible_values_list),
+        dtype=np.int64,
         name="action",
       )
     # create bounded spec
     else:
       actions = specs.BoundedArray(
               shape=(action_param_length,),
-              dtype=action_dtype,
+              # dtype=action_dtype,
+              dtype=default_dtype,
               name="action",
               minimum=action_min,
               maximum=action_max,
@@ -234,10 +241,9 @@ class AcmeOptimizerClient (OptimizerClient):
     attr_dict = self._sight.widget_decision_state['decision_episode_fn']
 
     if(FLAGS.acme_agent == 'dqn'):
-      possible_actions=attr_dict.valid_action_values
-      experiment = build_dqn_config(possible_action_values=possible_actions)
-    # elif(FLAGS.acme_agent == sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_D4PG):
-    else:
+      experiment = build_dqn_config()
+    elif(FLAGS.acme_agent == 'd4pg'):
+    # else:
       experiment = build_d4pg_config()
 
     # (
