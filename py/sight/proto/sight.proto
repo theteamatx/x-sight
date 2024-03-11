@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 syntax = "proto3";
 
 package sight.x.proto;
@@ -521,6 +520,17 @@ message SimulationTimeStepStart {
 // **** DECISONS AND THEIR OUTCOMES ****
 // *************************************
 
+message ContinuousProbDist {
+  message Gaussian {
+    float mean = 1;
+    float stdev = 2;
+  }
+
+  oneof dist {
+    Gaussian gaussian = 1;
+  }
+}
+
 message DecisionConfigurationStart {
   enum OptimizerType {
     OT_UNKNOWN = 0;
@@ -529,6 +539,9 @@ message DecisionConfigurationStart {
     OT_GENETIC_ALGORITHM = 3;
     OT_EXHAUSTIVE_SEARCH = 4;
     OT_LLM = 5;
+    OT_BAYESIAN_OPT = 6;
+    OT_SENSITIVITY_ANALYSIS = 7;
+    OT_NEVERGRAD = 8;
   }
 
   message VizierConfig {}
@@ -559,9 +572,22 @@ message DecisionConfigurationStart {
     }
     LLMAlgorithm algorithm = 1;
 
+    enum LLMGoal {
+      LM_UNKNOWN = 0;
+      LM_OPTIMIZE = 1;
+      LM_RECOMMEND = 2;
+    }
+    LLMGoal goal = 2;
+
     // LLM-readable description of the program to be driven by the LLM.
-    string description = 2;
+    string description = 3;
   }
+
+  message BayesianOptConfig {}
+
+  message SensitivityAnalysisConfig {}
+
+  message NeverGradConfig {}
 
   message ChoiceConfig {
     oneof choice_config {
@@ -570,13 +596,16 @@ message DecisionConfigurationStart {
       GeneticAlgorithmConfig genetic_algorithm_config = 3;
       ExhaustiveSearchConfig exhaustive_search_config = 4;
       LLMConfig llm_config = 5;
+      BayesianOptConfig bayesian_opt_config = 6;
+      SensitivityAnalysisConfig sensitivity_analysis_config = 7;
+      NeverGradConfig never_grad_config = 8;
     }
   }
 
   OptimizerType optimizer_type = 4;
 
-
-  // Maps each choice label to the configuration of the algorithm to be used to choose the option.
+  // Maps each choice label to the configuration of the algorithm to be used to
+  // choose the option.
   map<string, ChoiceConfig> choice_config = 1;
 
   // Properties of and constraints on attributes.
@@ -596,6 +625,9 @@ message DecisionConfigurationStart {
 
     // The human-/LLM-readable description of this attribute.
     string description = 5;
+
+    // Distribution of possible values
+    ContinuousProbDist continuous_prob_dist = 6;
   }
 
   // The attributes of application's state

@@ -17,11 +17,11 @@
 import dataclasses
 from typing import Any, Dict, Optional
 
-from py.trace import Trace
-from py.widgets.simulation.simulation import Simulation
-from py.widgets.simulation.simulation_parameters import SimulationParameters
-from py.widgets.simulation.simulation_state import SimulationState
-from py.widgets.simulation.simulation_time_step import SimulationTimeStep
+from sight.trace import Trace
+from sight.widgets.simulation.simulation import Simulation
+from sight.widgets.simulation.simulation_parameters import SimulationParameters
+from sight.widgets.simulation.simulation_state import SimulationState
+from sight.widgets.simulation.simulation_time_step import SimulationTimeStep
 
 
 @dataclasses.dataclass

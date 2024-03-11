@@ -75,7 +75,6 @@ def log(
   _df_start(label, sight, frame)
 
   for i in range(df.shape[1]):
-    # logging.info('%s: %s: %s', i, df.columns[i], df.dtypes[i])
     nv_start_obj = sight_pb2.Object()
     nv_start_obj.sub_type = sight_pb2.Object.SubType.ST_BLOCK_START
     nv_start_obj.block_start.sub_type = sight_pb2.BlockStart.ST_NAMED_VALUE
@@ -88,17 +87,17 @@ def log(
     obj.tensor.label = df.columns[i]
     obj.tensor.shape.append(df.shape[0])
     if (
-        df.dtypes[i] == float
-        or df.dtypes[i] == np.float32
-        or df.dtypes[i] == np.float64
+        df.dtypes[df.columns[i]] == float
+        or df.dtypes[df.columns[i]] == np.float32
+        or df.dtypes[df.columns[i]] == np.float64
     ):
       obj.tensor.sub_type = sight_pb2.Tensor.ST_DOUBLE
       obj.tensor.double_values.value.extend(df[df.columns[i]].tolist())
     elif (
-        # df.dtypes[i] == np.int
+        # df.dtypes[df.columns[i]] == np.int
         # or
-        df.dtypes[i] == np.int32
-        or df.dtypes[i] == np.int64
+        df.dtypes[df.columns[i]] == np.int32
+        or df.dtypes[df.columns[i]] == np.int64
     ):
       obj.tensor.sub_type = sight_pb2.Tensor.ST_INT64
       obj.tensor.int64_values.value.extend(df[df.columns[i]].tolist())

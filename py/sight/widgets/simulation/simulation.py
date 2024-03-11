@@ -18,11 +18,11 @@ import inspect
 from typing import Any, Callable, Dict, Optional, Text, Tuple
 from absl import logging
 
-from proto import sight_pb2
-from py.exception import exception
-from py.trace import Trace
-from py.widgets.decision import decision
-from py.widgets.simulation.simulation_parameters import SimulationParameters
+from sight.proto import sight_pb2
+from sight.exception import exception
+from sight.trace import Trace
+from sight.widgets.decision import decision
+from sight.widgets.simulation.simulation_parameters import SimulationParameters
 
 
 class Simulation(object):

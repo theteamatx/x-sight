@@ -38,6 +38,7 @@ from sight.proto import sight_pb2
 from sight.service_utils import finalize_server
 from sight.utility import MessageToDict
 from sight.widgets.decision import decision
+from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
 
 load_dotenv()
 FLAGS = flags.FLAGS
@@ -50,7 +51,6 @@ def generate_default_sight_params():
   If user has provided values for some of them while initializing, it will be
   used, otherwise this value are passed.
   """
-  print("default params taken here.......")
   default_prams = sight_pb2.Params(
       label='default_sight',
       log_owner='bronovetsky@google.com',
@@ -138,7 +138,7 @@ class Sight(object):
   # The API Key for the BQ Sight service
   # SIGHT_API_KEY = 'AKfycbz35qrsrKUmm2FITMsLW9vSbKoBxEYv4EggM_m1Q2H3' #cameltrain
   # SIGHT_API_KEY = 'AKfycbw9eY9dk-JstxeAizfMfJZ8qwHm6BVmOZEgBUey-HPL' #catan-(now generalized)
-  SIGHT_API_KEY = 'AKfycbxHmmutVP-o1rsv3bLEUWQhbTG4uzTN_7VwR6sGUpOdvhrVQbtoOFcQtHbBeO0un3BfiQ'
+  SIGHT_API_KEY = 'AKfycbzU74yRL1Dc0Xu5--oJricaD-H50UgF3FKM_E8_CMP7uNesQEk-k3cm57R3vTsjbWCcxA'
 
   def __init__(
       self,
@@ -155,7 +155,7 @@ class Sight(object):
 
     # Initialize each widget's state to make sure its state field is created.
     self.widget_decision_state = defaultdict(dict)
-    # self.widget_simulation_state = SimulationWidgetState()
+    self.widget_simulation_state = SimulationWidgetState()
     # self._configure(configuration)
     if self.params.silent_logger:
       return
@@ -365,10 +365,8 @@ class Sight(object):
               os.environ['PROJECT_ID']
           )
       self.avro_log.close()
-      logging.info('stream successfully completed')
 
     if not self.params.local and not self.params.in_memory:
-      # time.sleep(1)
       logging.info(
           (
               'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
@@ -735,17 +733,15 @@ class Sight(object):
           )
           if self.avro_file_counter == 1:
             create_external_bq_table(self.params, self.file_name, self.id)
-            # logging.info(
-            #     'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
-            #     'log_id=%s.%s&log_owner=%s&project_id=%s',
-            #     self.SIGHT_API_KEY,
-            #     self.params.dataset_name,
-            #     self.file_name,
-            #     self.params.log_owner,
-            #     os.environ['PROJECT_ID'],
-            # )
-            # print("now sleeping for 5 minutes...")
-            # time.sleep(300)
+            logging.info(
+                'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+                'log_id=%s.%s&log_owner=%s&project_id=%s',
+                self.SIGHT_API_KEY,
+                self.params.dataset_name,
+                self.file_name,
+                self.params.log_owner,
+                os.environ['PROJECT_ID']
+            )
           self.avro_log.close()
           self.avro_log = io.BytesIO()
 
