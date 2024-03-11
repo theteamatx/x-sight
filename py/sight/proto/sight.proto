@@ -520,6 +520,17 @@ message SimulationTimeStepStart {
 // **** DECISONS AND THEIR OUTCOMES ****
 // *************************************
 
+message ContinuousProbDist {
+  message Gaussian {
+    float mean = 1;
+    float stdev = 2;
+  }
+
+  oneof dist {
+    Gaussian gaussian = 1;
+  }
+}
+
 message DecisionConfigurationStart {
   enum OptimizerType {
     OT_UNKNOWN = 0;
@@ -528,6 +539,9 @@ message DecisionConfigurationStart {
     OT_GENETIC_ALGORITHM = 3;
     OT_EXHAUSTIVE_SEARCH = 4;
     OT_LLM = 5;
+    OT_BAYESIAN_OPT = 6;
+    OT_SENSITIVITY_ANALYSIS = 7;
+    OT_NEVERGRAD = 8;
   }
 
   message VizierConfig {}
@@ -569,6 +583,12 @@ message DecisionConfigurationStart {
     string description = 3;
   }
 
+  message BayesianOptConfig {}
+
+  message SensitivityAnalysisConfig {}
+
+  message NeverGradConfig {}
+
   message ChoiceConfig {
     oneof choice_config {
       VizierConfig vizier_config = 1;
@@ -576,6 +596,9 @@ message DecisionConfigurationStart {
       GeneticAlgorithmConfig genetic_algorithm_config = 3;
       ExhaustiveSearchConfig exhaustive_search_config = 4;
       LLMConfig llm_config = 5;
+      BayesianOptConfig bayesian_opt_config = 6;
+      SensitivityAnalysisConfig sensitivity_analysis_config = 7;
+      NeverGradConfig never_grad_config = 8;
     }
   }
 
@@ -602,6 +625,9 @@ message DecisionConfigurationStart {
 
     // The human-/LLM-readable description of this attribute.
     string description = 5;
+
+    // Distribution of possible values
+    ContinuousProbDist continuous_prob_dist = 6;
   }
 
   // The attributes of application's state

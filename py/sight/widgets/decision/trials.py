@@ -108,7 +108,6 @@ def launch(
   """
   method_name = 'launch'
   logging.debug('>>>>>>>>>  In %s method of %s file.', method_name, _file_name)
-  logging.info('decision_configuration=%s' % decision_configuration)
 
   req = service_pb2.LaunchRequest()
 
@@ -163,6 +162,7 @@ def start_job_in_docker(
   os.makedirs('/tmp/sight_script', exist_ok=True)
   with open('/tmp/sight_script/sight_decision_command.sh', 'w') as f:
     f.write('#!/bin/bash\n')
+    f.write('echo "$PYTHONPATH"')
     f.write(
         '/usr/bin/python3'
         f' /project/{binary_path.split("/")[-1]} --decision_mode={decision_mode} --deployment_mode={deployment_mode}'
@@ -186,8 +186,8 @@ def start_job_in_docker(
       f'{FLAGS.gcloud_dir_path}:/project/.config/gcloud:ro',
       '--env',
       'GOOGLE_APPLICATION_CREDENTIALS=/project/.config/gcloud/application_default_credentials.json',
-      '--env',
-      'PYTHONPATH=/project',
+      # '--env',
+      # 'PYTHONPATH=/project',
       '--env',
       f'GOOGLE_CLOUD_PROJECT={_PROJECT_ID.value}',
       '--env',
@@ -270,8 +270,9 @@ def start_jobs(
 
   # provider = 'local' if deployment_mode == 'local' else 'google-cls-v2'
 
+  # cd /x-sight && 
   command = (
-      'cd /x-sight && python3 "${SCRIPT}"'
+      'ls -l && echo "${SCRIPT}" && echo "${PYTHONPATH}" && python3 "${SCRIPT}"'
       + f' --decision_mode={decision_mode}'
       + f' --deployment_mode={deployment_mode}'
       + f' --worker_mode={worker_mode}'
@@ -385,8 +386,8 @@ def start_job_in_dsub_local(
       + f'{FLAGS.gcloud_dir_path}/application_default_credentials.json',
       '--env',
       f'PARENT_LOG_ID={sight.id}',
-      '--env',
-      'PYTHONPATH=/project',
+      # '--env',
+      # 'PYTHONPATH=/project',
       '--env',
       f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
       '--input',

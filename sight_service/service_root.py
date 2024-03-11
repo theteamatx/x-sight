@@ -37,14 +37,17 @@ import time
 
 from sight_service import service_utils
 from sight.proto import sight_pb2
+from sight_service.acme_optimizer import Acme
+from sight_service.bayesian_opt import BayesianOpt
+from sight_service.exhaustive_search import ExhaustiveSearch
+from sight_service.genetic_algorithm import GeneticAlgorithm
+from sight_service.llm import LLM
+from sight_service.nevergrad_opt import NeverGradOpt
+from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
 from sight_service.proto import service_pb2_grpc
-from sight_service.genetic_algorithm import GeneticAlgorithm
-from sight_service.exhaustive_search import ExhaustiveSearch
-from sight_service.optimizer_instance import OptimizerInstance
+from sight_service.sensitivity_analysis import SensitivityAnalysis
 from sight_service.vizier import Vizier
-from sight_service.acme_optimizer import Acme
-from sight_service.llm import LLM
 from readerwriterlock import rwlock
 
 
@@ -88,9 +91,9 @@ class Optimizers:
     """Creates more specific optimizer and use them while responding to clients accordingly.
     """
     method_name = "launch"
-    logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
     optimizer_type = request.decision_config_params.optimizer_type
+    logging.debug(">>>>>>>  In %s method of %s file. optimizer_type=%s", method_name, _file_name, optimizer_type)
     with self.instances_lock.gen_wlock():
       if optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER:
         self.instances[request.client_id] = Vizier()
@@ -108,6 +111,18 @@ class Optimizers:
         return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM:
         self.instances[request.client_id] = LLM()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT:
+        self.instances[request.client_id] = BayesianOpt()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SENSITIVITY_ANALYSIS:
+        self.instances[request.client_id] = SensitivityAnalysis()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_NEVER_GRAD:
+        self.instances[request.client_id] = NeverGradOpt()
         obj = self.instances[request.client_id].launch(request)
         return obj
       else:
@@ -191,7 +206,7 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
   def FinalizeEpisode(self, request, context):
-    method_name = "FinalizeEpisode"
+    method_name = "`FinalizeEpisode`"
     logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
     obj = self.optimizers.get_instance(request.client_id).finalize_episode(

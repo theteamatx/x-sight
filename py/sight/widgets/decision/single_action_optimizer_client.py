@@ -13,6 +13,7 @@
 # limitations under the License.
 
 """Client for optimizers that are called once per episode to communicate with server."""
+from absl import logging
 from typing import Optional, Sequence, Tuple
 from sight_service.proto import service_pb2
 from sight import service_utils as service
@@ -27,18 +28,22 @@ class SingleActionOptimizerClient(OptimizerClient):
   def __init__(self, optimizer_type: sight_pb2.DecisionConfigurationStart.OptimizerType, sight):
     super().__init__(optimizer_type)
     self._sight = sight
+    self._last_action = None
 
   @override
   def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
     )
-    print("response: ",response)
+    self._last_action = response.action
 
     return self._get_dp_action(response)
 
   @override
   def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
+    if self._last_action:
+      for a in self._last_action:
+        request.decision_point.choice_params.append(a)
     response = service.call(
         lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)
     )

@@ -231,8 +231,8 @@ def _find_or_deploy_server() -> str:
           '--allow-unauthenticated',
           f'--service-account={flags.FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com',
           '--concurrency=default',
-          '--cpu=2',
-          '--memory=8Gi',
+          '--cpu=4',
+          '--memory=16Gi',
           '--min-instances=1',
           '--max-instances=1',
           '--no-cpu-throttling',
@@ -327,7 +327,7 @@ def generate_id_token():
   # fetch id-token of service account from which we spawned D-SUB
   # worker in cloud
 
-  if flags.FLAGS.worker_mode == 'dsub_cloud_worker':
+  if 'worker_mode' in flags.FLAGS and flags.FLAGS.worker_mode == 'dsub_cloud_worker':
     # print(
     #     'using credentials of service account for : https://' + _service_addr()
     # )
@@ -343,7 +343,7 @@ def generate_id_token():
     creds.refresh(auth_req)
     # impersonating service-account if passed in parameter
 
-    if flags.FLAGS.service_account != None:
+    if 'service_account' in flags.FLAGS and flags.FLAGS.service_account != None:
       # print("using service account's credentils..... :")
       user_access_token = creds.token
       service_account = f'{flags.FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com'
@@ -397,7 +397,7 @@ def obtain_secure_channel():
 def generate_metadata():
   """Generate metadata to call service with authentication."""
 
-  if flags.FLAGS.deployment_mode == 'local':
+  if 'deployment_mode' in flags.FLAGS and flags.FLAGS.deployment_mode == 'local':
     channel = grpc.insecure_channel(
         'localhost:8080'
     )  # localhost #10.138.0.17:8080

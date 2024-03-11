@@ -17,8 +17,8 @@
 from typing import Optional, Sequence, Tuple
 
 from absl import logging
-from service import service_pb2
-from sight import service
+from sight_service.proto import service_pb2
+from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from overrides import override
@@ -37,7 +37,7 @@ class LLMOptimizerClient (OptimizerClient):
     else:
       raise ValueError(f'Unknown LLM Algorithm {llm_name}')
     
-    if llm_name.endswith('_optmize'):
+    if llm_name.endswith('_optimize'):
       self._goal = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE
     elif llm_name.endswith('_recommend'):
       self._goal = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_RECOMMEND
@@ -71,6 +71,7 @@ class LLMOptimizerClient (OptimizerClient):
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
     )
+    logging.info('decision_point() response=%s' % response)
     return self._get_dp_action(response)
 
   @override
