@@ -32,16 +32,13 @@ import haiku as hk
 # )
 
 
-def build_d4pg_config(env_name: str = '', possible_action_values: int = 1):
+def build_d4pg_config():
   """Builds D4PG experiment config which can be executed in different ways."""
 
   def env_factory():
-    if env_name:
-      env =  wrappers.GymWrapper(gym.make(env_name))
-      # env = wrappers.CanonicalSpecWrapper(env, clip=True)
-      # env = wrappers.SinglePrecisionWrapper(env)
-      return env
-    else:
+    # if env_name:
+    #   return  wrappers.GymWrapper(gym.make(env_name))
+    # else:
       return None
 
   vmax_values = {

@@ -45,14 +45,9 @@ def build_dqn_config():
     """Creates networks for training DQN on Gym Env."""
 
     def network(inputs):
-      # if env_name:
       model = hk.Sequential([
           hk.nets.MLP([512, 128, environment_spec.actions.num_values]),
       ])
-      # else:
-      #   model = hk.Sequential([
-      #       hk.nets.MLP([512, 128, possible_action_values]),
-      #   ])
       return model(inputs)
 
     network_hk = hk.without_apply_rng(hk.transform(network))

@@ -17,6 +17,7 @@ import os
 import time
 import numpy as np
 import json
+import pickle
 from typing import Any, List, Sequence
 from absl import flags, logging
 from acme import core
@@ -109,7 +110,7 @@ class SightVariableSource(core.VariableSource):
 
   def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
     method_name = "get_variables"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    # logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
     if flags.FLAGS.deployment_mode == "local" or flags.FLAGS.trained_model_log_id:
       self._worker_id = 0
@@ -132,19 +133,11 @@ class SightVariableSource(core.VariableSource):
       response = service.call(
           lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
       )
-    # self.calculate_response_time(start_time)
 
-    # print("response : ", response)
-    # learner_weights = response.acme_response
-    # print("learner_weights : ", learner_weights)
-    # raise SystemExit
+    # weights = json.loads(response.weights.decode('utf-8'), object_hook=convert_list_to_np)
+    weights = pickle.loads(response.weights)
+    # print("learner_weights : ", weights)
 
-    # latest_weights = self.proto_to_weights(response)
-
-    weights = json.loads(response.weights.decode('utf-8'), object_hook=convert_list_to_np)
-    # weights = self.postprocess_data(latest_weights)
-    # it returns weights as list
-    # print('weights : ', weights)
-    # raise SystemExit
     # logging.info("<<<<  Out %s of %s", method_name, _file_name)
-    return weights[0]
+    # return weights[0]
+    return weights

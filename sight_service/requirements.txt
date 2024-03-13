@@ -10,8 +10,8 @@ tensorflow==2.8.0
 gym==0.25.0
 matplotlib==3.7.0
 dm-reverb==0.7.2
-jax==0.4.23
-jaxlib==0.4.23
+jax==0.4.13
+jaxlib==0.4.13
 chex==0.1.82
 dm-haiku==0.0.11
 tensorflow-probability==0.15.0

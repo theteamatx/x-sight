@@ -65,6 +65,9 @@ class DecisionEpisodeFn:
     # possible valid values of action attrs
     valid_action_values: Dict[str, int]
 
+    # possible valid values of action attrs
+    step_size: Dict[str, int]
+
     # The TFAgents schema of the action space.
     # action_spec: array_spec.BoundedArraySpec
 
@@ -126,6 +129,12 @@ class DecisionEpisodeFn:
             attr: attr_val.valid_int_values
             for attr, attr_val in action_attrs.items()
             if attr_val.valid_int_values
+        }
+
+        self.step_size = {
+            attr: attr_val.step_size
+            for attr, attr_val in action_attrs.items()
+            if attr_val.step_size
         }
 
         # for action, attributes in action_attrs.items():

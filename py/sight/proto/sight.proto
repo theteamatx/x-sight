@@ -538,6 +538,13 @@ message DecisionConfigurationStart {
       AA_UNKNOWN = 0;
       AA_DQN = 1;
       AA_D4PG = 2;
+      AA_IMPALA = 3;
+      AA_MDQN=4;
+      AA_QRDQN=5;
+      AA_PPO=6;
+      AA_MPO=7;
+      AA_SAC=8;
+      AA_TD3=9;
     }
 
     // acme agents

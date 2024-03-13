@@ -17,6 +17,7 @@ import concurrent.futures
 import logging
 import time
 import json
+import pickle
 from acme import specs
 from acme.adders import reverb as adders_reverb
 from acme.jax import utils
@@ -32,6 +33,13 @@ from sight_service.proto import service_pb2
 # from service import server_utils
 from sight_service.build_dqn_learner import build_dqn_config
 from sight_service.build_d4pg_learner import build_d4pg_config
+# from sight_service.build_impala_learner import build_impala_config
+from sight_service.build_mdqn_learner import build_mdqn_config
+from sight_service.build_qrdqn_learner import build_qrdqn_config
+# from sight_service.build_ppo_learner import build_ppo_config
+# from sight_service.build_mpo_learner import build_mpo_config
+# from sight_service.build_sac_learner import build_sac_config
+from sight_service.build_td3_learner import build_td3_config
 from sight_service.proto.numproto.numproto import ndarray_to_proto
 from sight_service.proto.numproto.numproto import proto_to_ndarray
 from sight_service.optimizer_instance import OptimizerInstance
@@ -253,6 +261,8 @@ class Acme(OptimizerInstance):
                                           dtype=np.int64,
                                           name="action")
         else:
+            if(attr_props.step_size):
+              default_dtype=np.int64
             actions = specs.BoundedArray(shape=(len(action_max), ),
                                           dtype=default_dtype,
                                           name='action',
@@ -283,14 +293,36 @@ class Acme(OptimizerInstance):
         method_name = "create_learner"
         logging.info(">>>>  In %s of %s", method_name, _file_name)
 
+
+        environment_spec = self.generate_env_spec(state_attrs, action_attrs)
+
         if (acme_config.acme_agent ==
                 sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_DQN):
             self._experiment = build_dqn_config()
         elif (acme_config.acme_agent ==
               sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_D4PG):
             self._experiment = build_d4pg_config()
-
-        environment_spec = self.generate_env_spec(state_attrs, action_attrs)
+        # elif (acme_config.acme_agent ==
+        #       sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_IMPALA):
+        #     self._experiment = build_impala_config()
+        elif (acme_config.acme_agent ==
+              sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_MDQN):
+            self._experiment = build_mdqn_config()
+        elif (acme_config.acme_agent ==
+              sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_QRDQN):
+            self._experiment = build_qrdqn_config()
+        # elif (acme_config.acme_agent ==
+        #       sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_PPO):
+        #     self._experiment = build_ppo_config()
+        # elif (acme_config.acme_agent ==
+        #       sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_MPO):
+        #     self._experiment = build_mpo_config()
+        # elif (acme_config.acme_agent ==
+        #       sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_SAC):
+        #     self._experiment = build_sac_config(environment_spec)
+        elif (acme_config.acme_agent ==
+              sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_TD3):
+            self._experiment = build_td3_config()
 
         # print('Else environment_spec : ', environment_spec)
 
@@ -415,8 +447,12 @@ class Acme(OptimizerInstance):
             return obj
 
         # directly serializing the weights structure
-        serialized_weights = json.dumps(
-            latest_weights, default=convert_np_to_list).encode('utf-8')
+        # serialized_weights = json.dumps(
+        #     latest_weights, default=convert_np_to_list).encode('utf-8')
+        serialized_weights = pickle.dumps(
+            latest_weights)
+
+
         response.weights = serialized_weights
 
         logging.info("<<<<  Out %s of %s", method_name, _file_name)

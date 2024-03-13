@@ -35,6 +35,7 @@ from acme import wrappers
 from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
+from sight.demo.cartpole.driver_cartpole import driver_fn
 
 FLAGS = flags.FLAGS
 
@@ -73,11 +74,17 @@ def main(argv: Sequence[str]) -> None:
             ),
         },
         action_attrs={
+            # "direction": sight_pb2.DecisionConfigurationStart.AttrProps(
+            #     valid_int_values=[0,1],
+            # ),
             "direction": sight_pb2.DecisionConfigurationStart.AttrProps(
-                valid_int_values=[0,1],
+                min_value=0,
+                max_value=1,
+                # step_size=1
             ),
         },
-        env=wrappers.GymWrapper(gym.make('CartPole-v1')),
+        # env=wrappers.GymWrapper(gym.make('CartPole-v1')),
+        driver_fn=driver_fn,
         sight=sight,
     )
 

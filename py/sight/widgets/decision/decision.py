@@ -132,7 +132,7 @@ _DISTRIBUTED_ACTOR = flags.DEFINE_bool(
 _ENV_NAME = flags.DEFINE_enum(
     'env_name',
     None,
-    ['CartPole-v1', 'MountainCar-v0', 'Acrobot-v1', 'Pendulum-v1', 'None'],
+    ['CartPole-v1', 'MountainCar-v0', 'Pendulum-v1', 'ALE/Pong-v5', 'None'],
     'What environment to run',
 )
 
@@ -221,6 +221,7 @@ def attr_to_dict(attr, array):
   result = {}
   method_name = 'attr_to_dict'
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
+  # print('Array : ', array)
   # if(array.dtype == np.float32):
   #   dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
   # elif(array.dtype == np.int64):

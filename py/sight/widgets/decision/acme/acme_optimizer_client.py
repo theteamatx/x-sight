@@ -29,13 +29,20 @@ from sight.widgets.decision.acme import sight_adder
 from sight.widgets.decision.acme import sight_variable_source
 from sight.widgets.decision.acme.build_dqn_actor import build_dqn_config
 from sight.widgets.decision.acme.build_d4pg_actor import build_d4pg_config
+# from sight.widgets.decision.acme.build_impala_actor import build_impala_config
+from sight.widgets.decision.acme.build_mdqn_actor import build_mdqn_config
+from sight.widgets.decision.acme.build_qrdqn_actor import build_qrdqn_config
+# from sight.widgets.decision.acme.build_ppo_actor import build_ppo_config
+# from sight.widgets.decision.acme.build_mpo_actor import build_mpo_config
+# from sight.widgets.decision.acme.build_sac_actor import build_sac_config
+from sight.widgets.decision.acme.build_td3_actor import build_td3_config
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from overrides import override
 
 _ACME_AGENT = flags.DEFINE_enum(
     'acme_agent',
     None,
-    ['dqn', 'd4pg'],
+    ['dqn', 'd4pg', 'impala', 'mdqn', 'qrdqn', 'ppo', 'mpo', 'sac', 'td3'],
     'The acme provided jax agent to use',
 )
 
@@ -114,6 +121,23 @@ class AcmeOptimizerClient (OptimizerClient):
       choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_DQN
     elif(FLAGS.acme_agent == 'd4pg'):
       choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_D4PG
+    # elif(FLAGS.acme_agent == 'impala'):
+    #   choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_IMPALA
+    elif(FLAGS.acme_agent == 'mdqn'):
+      choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_MDQN
+    elif(FLAGS.acme_agent == 'qrdqn'):
+      choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_QRDQN
+    # elif(FLAGS.acme_agent == 'ppo'):
+    #   choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_PPO
+    # elif(FLAGS.acme_agent == 'mpo'):
+    #   choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_MPO
+    # elif(FLAGS.acme_agent == 'sac'):
+    #   choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_SAC
+    elif(FLAGS.acme_agent == 'td3'):
+      choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_TD3
+
+
+
 
     # possible_actions = fetch_possible_actions(self._sight.widget_decision_state['decision_episode_fn'])
     # choice_config.acme_config.possible_actions = possible_actions
@@ -197,6 +221,8 @@ class AcmeOptimizerClient (OptimizerClient):
       )
     # create bounded spec
     else:
+      if(attr_dict.step_size):
+          default_dtype=np.int64
       actions = specs.BoundedArray(
               shape=(action_param_length,),
               # dtype=action_dtype,
@@ -239,12 +265,29 @@ class AcmeOptimizerClient (OptimizerClient):
 
     # else:
     attr_dict = self._sight.widget_decision_state['decision_episode_fn']
+    environment_spec = self.generate_env_spec(
+      attr_dict
+    )
 
     if(FLAGS.acme_agent == 'dqn'):
       experiment = build_dqn_config()
     elif(FLAGS.acme_agent == 'd4pg'):
-    # else:
       experiment = build_d4pg_config()
+    # elif(FLAGS.acme_agent == 'impala'):
+    #   experiment = build_impala_config()
+    elif(FLAGS.acme_agent == 'mdqn'):
+      experiment = build_mdqn_config()
+    elif(FLAGS.acme_agent == 'qrdqn'):
+      experiment = build_qrdqn_config()
+    # elif(FLAGS.acme_agent == 'ppo'):
+    #   experiment = build_ppo_config()
+    # elif(FLAGS.acme_agent == 'mpo'):
+    #   experiment = build_mpo_config()
+    # elif(FLAGS.acme_agent == 'sac'):
+    #   experiment = build_sac_config(environment_spec)
+    elif(FLAGS.acme_agent == 'td3'):
+      experiment = build_td3_config()
+
 
     # (
     #   state_min,
@@ -259,15 +302,6 @@ class AcmeOptimizerClient (OptimizerClient):
     # ) = generate_spec_details(
     #     self._sight.widget_decision_state['decision_episode_fn']
     # )
-    environment_spec = self.generate_env_spec(
-        # state_min,
-        # state_max,
-        # state_param_length,
-        # action_min,
-        # action_max,
-        # action_param_length,
-      attr_dict
-    )
 
     # print('environment_spec : ', environment_spec)
 
