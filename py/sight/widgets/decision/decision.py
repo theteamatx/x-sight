@@ -70,7 +70,7 @@ _DEPLOYMENT_MODE = flags.DEFINE_enum(
 _OPTIMIZER_TYPE = flags.DEFINE_enum(
     'optimizer_type',
     None,
-    ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search', 
+    ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search',
      'llm_text_bison_optimize', 'llm_chat_bison_optimize', 'llm_gemini_pro_optimize',
      'llm_text_bison_recommend', 'llm_chat_bison_recommend', 'llm_gemini_pro_recommend',
      'bayesian_opt', 'sensitivity_analysis', 'nevergrad'],
@@ -278,38 +278,41 @@ def run(
   """
 
   method_name = 'run'
-  logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
+  logging.info('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-  if _OPTIMIZER_TYPE.value == 'dm_acme':
-    optimizer.obj = AcmeOptimizerClient(sight)
-  elif _OPTIMIZER_TYPE.value == 'vizier':
-    optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER, 
-        sight)
-  elif _OPTIMIZER_TYPE.value == 'genetic_algorithm':
-    optimizer.obj = GeneticAlgorithmOptimizerClient(
-      max_population_size = _NUM_TRAIN_WORKERS.value, sight=sight)
-  elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
-    optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH, 
-        sight)
-  elif _OPTIMIZER_TYPE.value.startswith('llm_'):
-    optimizer.obj = LLMOptimizerClient(
-        _OPTIMIZER_TYPE.value.partition('llm_')[2], description, sight)
-  elif _OPTIMIZER_TYPE.value == 'bayesian_opt':
-    optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT, 
-        sight)
-  elif _OPTIMIZER_TYPE.value == 'sensitivity_analysis':
-    optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SENSITIVITY_ANALYSIS, 
-        sight)
-  elif _OPTIMIZER_TYPE.value == 'nevergrad':
-    optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_NEVER_GRAD, 
-        sight)
+  if(_OPTIMIZER_TYPE.value):
+    if _OPTIMIZER_TYPE.value == 'dm_acme':
+      optimizer.obj = AcmeOptimizerClient(sight)
+    elif _OPTIMIZER_TYPE.value == 'vizier':
+      optimizer.obj = SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER,
+          sight)
+    elif _OPTIMIZER_TYPE.value == 'genetic_algorithm':
+      optimizer.obj = GeneticAlgorithmOptimizerClient(
+        max_population_size = _NUM_TRAIN_WORKERS.value, sight=sight)
+    elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
+      optimizer.obj = SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH,
+          sight)
+    elif _OPTIMIZER_TYPE.value.startswith('llm_'):
+      optimizer.obj = LLMOptimizerClient(
+          _OPTIMIZER_TYPE.value.partition('llm_')[2], description, sight)
+    elif _OPTIMIZER_TYPE.value == 'bayesian_opt':
+      optimizer.obj = SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT,
+          sight)
+    elif _OPTIMIZER_TYPE.value == 'sensitivity_analysis':
+      optimizer.obj = SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SENSITIVITY_ANALYSIS,
+          sight)
+    elif _OPTIMIZER_TYPE.value == 'nevergrad':
+      optimizer.obj = SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_NEVER_GRAD,
+          sight)
+    else:
+      raise ValueError(f'Unknown optimizer type {_OPTIMIZER_TYPE.value}')
   else:
-    raise ValueError(f'Unknown optimizer type {_OPTIMIZER_TYPE.value}')
+    raise ValueError(f'_OPTIMIZER_TYPE flag must be provided')
 
   if env is not None:
     if state_attrs == {}:
@@ -319,7 +322,7 @@ def run(
 
   decision_configuration = sight_pb2.DecisionConfigurationStart()
   decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
-  
+
   decision_configuration.choice_config[sight.params.label].CopyFrom(
       optimizer.obj.create_config())
   _attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
@@ -346,6 +349,7 @@ def run(
       )
   )
   sight.widget_decision_state['proposed_actions'] = []
+
 
   if _DECISON_MODE.value == 'run':
     logging.info('_DECISON_MODE.value == run')
@@ -414,7 +418,7 @@ def run(
     details = sight.widget_decision_state['decision_episode_fn']
     # print('details.action_min : ', details.action_min.values(), list(details.action_min.values())[0])
     possible_actions = list(details.action_max.values())[0] - list(details.action_min.values())[0] + 2
-    print(possible_actions)
+    # print(possible_actions)
     if(_OPTIMIZER_TYPE.value == 'exhaustive_search' and possible_actions < _NUM_TRIALS.value):
       raise ValueError(f"max possible value for num_trials is : {possible_actions}")
 
@@ -705,7 +709,7 @@ def finalize_episode(sight):  # , optimizer_obj
 
   # logging.info('Finalize sight.widget_decision_state=%s', sight.widget_decision_state)
   _rewards.append(round(sight.widget_decision_state['sum_outcome'], 5))
-  print('rewards : ', _rewards, len(_rewards))
+  # print('rewards : ', _rewards, len(_rewards))
 
   if (
       _DEPLOYMENT_MODE.value == 'local'

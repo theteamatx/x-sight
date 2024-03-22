@@ -53,7 +53,7 @@ class BayesianOpt(OptimizerInstance):
       allow_duplicate_points=True,
       # random_state=1,
     )
-    self._utility = UtilityFunction(kind='ucb', kappa=2.5, xi=0.0)
+    self._utility = UtilityFunction(kind='ucb', kappa=1.96, xi=0.01)
     response.display_string = 'BayesianOpt Start'
     return response
 
@@ -63,7 +63,7 @@ class BayesianOpt(OptimizerInstance):
     for a in dp:
       d[a.key] = a.value.double_value
     return d
-  
+
   @overrides
   def decision_point(
       self, request: service_pb2.DecisionPointRequest
@@ -96,11 +96,11 @@ class BayesianOpt(OptimizerInstance):
     d = {}
     for a in request.decision_point.choice_params:
       d[a.key] = a.value.double_value
-    
+
     self._lock.acquire()
     logging.info('FinalizeEpisode outcome=%s / %s', request.decision_outcome.outcome_value, d)
     self._optimizer.register(
-        params=d, 
+        params=d,
         target=request.decision_outcome.outcome_value)
     self._lock.release()
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')

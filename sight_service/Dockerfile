@@ -27,17 +27,18 @@ RUN set -xe \
     && apt-get install -y python3-pip
 
 # download necessary dependency in container
-COPY x-sight/sight_service/requirements.txt sight_service/requirements.txt
+# COPY sight_service/requirements.txt sight_service/requirements.txt
+COPY py/sight/requirements.txt sight_service/requirements.txt
 RUN pip3 install --upgrade pip
 RUN pip3 install -r sight_service/requirements.txt
 
-COPY x-sight/.env .env
+COPY .env .env
 
 # copy all files from proto/ recursively  in container
-COPY x-sight/py/sight/proto/ py/sight/proto/
+COPY py/sight/proto/ py/sight/proto/
 
 # copy all files from sight_service/ recursively in container
-COPY x-sight/sight_service/ sight_service/
+COPY sight_service/ sight_service/
 
 # updating PYTHONPATH so, imports in server.py code works correctly
 ENV PYTHONPATH "$HOME/x-sight:$HOME/x-sight/py:${PYTHONPATH}"
