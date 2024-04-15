@@ -13,6 +13,14 @@
 # limitations under the License.
 
 """Demo of using the Sight Decision API to train sweetness controller."""
+import warnings
+
+
+def warn(*args, **kwargs):
+  pass
+
+
+warnings.warn = warn
 
 import os
 import random

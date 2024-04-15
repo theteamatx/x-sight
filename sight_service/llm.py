@@ -466,9 +466,13 @@ class LLM(OptimizerInstance):
     })
 
     print('ALGORITHM=%s' % self._llm_config.algorithm)
-    # Periodically try a random action, but not on the first trial in case the 
+    # Periodically try a random action, but not on the first trial in case the
     # user just wants a single reasonable recommendation.
-    if len(self.history[request.worker_id]) > 1 and random.random() > 0.1:
+
+    #? giving same actions in each iteration
+    # if len(self.history[request.worker_id]) > 1 and random.random() > 1.1:
+    if len(self.history[request.worker_id]) > 1 and random.random() > 0.5:
+    # if len(self.history[request.worker_id]) > 1 and random.random() > 0.1:
       logging.info(
           '##########################\n##### RANDOM'
           ' ######\n##########################'

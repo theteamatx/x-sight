@@ -27,7 +27,7 @@ RUN set -xe \
     && apt-get install -y python3-pip
 
 # download necessary dependency in container
-# COPY sight_service/requirements.txt sight_service/requirements.txt
+# COPY x-sight/sight_service/requirements.txt sight_service/requirements.txt
 COPY py/sight/requirements.txt sight_service/requirements.txt
 RUN pip3 install --upgrade pip
 RUN pip3 install -r sight_service/requirements.txt

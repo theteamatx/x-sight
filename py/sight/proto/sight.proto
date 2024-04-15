@@ -541,7 +541,7 @@ message DecisionConfigurationStart {
     OT_LLM = 5;
     OT_BAYESIAN_OPT = 6;
     OT_SENSITIVITY_ANALYSIS = 7;
-    OT_NEVERGRAD = 8;
+    OT_NEVER_GRAD = 8;
   }
 
   message VizierConfig {}
@@ -587,7 +587,19 @@ message DecisionConfigurationStart {
 
   message SensitivityAnalysisConfig {}
 
-  message NeverGradConfig {}
+  message NeverGradConfig {
+    enum NeverGradAlgorithm {
+      NG_UNKNOWN = 0;
+      NG_AUTO = 1;
+      NG_BO = 2;
+      NG_CMA = 3;
+      NG_TwoPointsDE = 4;
+      NG_RandomSearch = 5;
+      NG_PSO = 6;
+      NG_ScrHammersleySearch = 7;
+    }
+    NeverGradAlgorithm algorithm = 1;
+  }
 
   message ChoiceConfig {
     oneof choice_config {

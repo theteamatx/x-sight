@@ -25,10 +25,39 @@ from overrides import override
 class SingleActionOptimizerClient(OptimizerClient):
   """Single-action Client for the Sight service."""
 
-  def __init__(self, optimizer_type: sight_pb2.DecisionConfigurationStart.OptimizerType, sight):
+  def __init__(self, optimizer_type: sight_pb2.DecisionConfigurationStart.OptimizerType, sight, algorithm=None):
     super().__init__(optimizer_type)
     self._sight = sight
     self._last_action = None
+    if(algorithm == None):
+      self._algorithm = algorithm
+    elif algorithm == 'auto':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_AUTO
+    elif algorithm == 'bo':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_BO
+    elif algorithm == 'cma':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_CMA
+    elif algorithm == 'two_points_de':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_TwoPointsDE
+    elif algorithm == 'random_search':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_RandomSearch
+    elif algorithm == 'pso':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_PSO
+    elif algorithm == 'scr_hammersley_search':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_ScrHammersleySearch
+    else:
+      raise ValueError(f'Unsupported NeverGrad Algorithm {algorithm}')
+
+  @override
+  def create_config(self) -> sight_pb2.DecisionConfigurationStart.ChoiceConfig:
+    choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig(
+    )
+    if(self._algorithm):
+      ng_config = sight_pb2.DecisionConfigurationStart.NeverGradConfig(
+          algorithm=self._algorithm
+        )
+      choice_config.never_grad_config.CopyFrom(ng_config)
+    return choice_config
 
   @override
   def decision_point(self, sight, request: service_pb2.DecisionPointRequest):

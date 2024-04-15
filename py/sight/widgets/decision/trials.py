@@ -270,7 +270,7 @@ def start_jobs(
 
   # provider = 'local' if deployment_mode == 'local' else 'google-cls-v2'
 
-  # cd /x-sight && 
+  # cd /x-sight &&
   command = (
       'ls -l && echo "${SCRIPT}" && echo "${PYTHONPATH}" && python3 "${SCRIPT}"'
       + f' --decision_mode={decision_mode}'

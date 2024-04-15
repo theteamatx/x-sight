@@ -27,7 +27,7 @@ class LLMOptimizerClient (OptimizerClient):
   """LLM client for the Sight service."""
 
   def __init__(self, llm_name: str, description: str, sight):
-    super().__init__(sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM) 
+    super().__init__(sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM)
     if llm_name.startswith('text_bison'):
       self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_TEXT_BISON
     elif llm_name.startswith('chat_bison'):
@@ -36,7 +36,7 @@ class LLMOptimizerClient (OptimizerClient):
       self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO
     else:
       raise ValueError(f'Unknown LLM Algorithm {llm_name}')
-    
+
     if llm_name.endswith('_optimize'):
       self._goal = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE
     elif llm_name.endswith('_recommend'):
@@ -48,13 +48,14 @@ class LLMOptimizerClient (OptimizerClient):
 
     self._sight = sight
     self._worker_id = None
-  
+
   @override
   def create_config(self) -> sight_pb2.DecisionConfigurationStart.ChoiceConfig:
     choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig(
     )
     llm_config = sight_pb2.DecisionConfigurationStart.LLMConfig(
         algorithm=self._algorithm,
+        goal=self._goal,
         description=self._description
       )
     choice_config.llm_config.CopyFrom(llm_config)
