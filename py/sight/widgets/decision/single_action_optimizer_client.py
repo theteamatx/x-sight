@@ -45,6 +45,24 @@ class SingleActionOptimizerClient(OptimizerClient):
       self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_PSO
     elif algorithm == 'scr_hammersley_search':
       self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_ScrHammersleySearch
+    elif algorithm == 'de':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_DE
+    elif algorithm == 'cga':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_CGA
+    elif algorithm == 'es':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_ES
+    elif algorithm == 'dl_opo':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_DL_OPO
+    elif algorithm == 'dde':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_DDE
+    elif algorithm == 'nmm':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_NMM
+    elif algorithm == 'tiny_spsa':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_TINY_SPSA
+    elif algorithm == 'voronoi_de':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_VORONOI_DE
+    elif algorithm == 'cma_small':
+      self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_CMA_SMALL
     else:
       raise ValueError(f'Unsupported NeverGrad Algorithm {algorithm}')
 

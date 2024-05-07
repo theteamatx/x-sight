@@ -46,16 +46,20 @@ class NeverGradOpt(OptimizerInstance):
         self.complete_samples = {}
         self.possible_values = {}
         self._lock = threading.RLock()
+        self._total_count = 0
+        self._completed_count = 0
 
     @overrides
     def launch(
             self,
             request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
         response = super(NeverGradOpt, self).launch(request)
-        # print('request : ', request)
+        logging.info('request : %s', request)
         self._ng_config = request.decision_config_params.choice_config[
             request.label].never_grad_config
         # print ('ng=%s' % ng.__dict__)
+
+        self._total_count = request.decision_config_params.num_trials
 
         self.possible_values = {}
         for i, key in enumerate(sorted(self.actions.keys())):
@@ -82,10 +86,13 @@ class NeverGradOpt(OptimizerInstance):
                 params[key] = ng.p.Scalar(lower=p.min_value, upper=p.max_value)
 
         # print('here params are  : ', params)
-        # raise SystemExit
+        # # print('here **params are : ', **params)
+        # print('here ng.p.Dict is : ', ng.p.Dict(**params))
+        # print('here ng.p.Instrumentation is : ', ng.p.Instrumentation(ng.p.Dict(**params)))
+        # # raise SystemExit
 
         parametrization = ng.p.Instrumentation(ng.p.Dict(**params))
-        budget = 10000
+        budget = 1000
 
         if (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart.
                 NeverGradConfig.NeverGradAlgorithm.NG_AUTO):
@@ -116,6 +123,43 @@ class NeverGradOpt(OptimizerInstance):
               .NeverGradConfig.NeverGradAlgorithm.NG_ScrHammersleySearch):
             self._optimizer = ng.optimizers.ScrHammersleySearch(parametrization=parametrization,
                                                budget=budget)
+        elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
+              .NeverGradConfig.NeverGradAlgorithm.NG_DE):
+            self._optimizer = ng.optimizers.DE(parametrization=parametrization,
+                                               budget=budget)
+        elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
+              .NeverGradConfig.NeverGradAlgorithm.NG_CGA):
+            self._optimizer = ng.optimizers.cGA(parametrization=parametrization,
+                                               budget=budget)
+        elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
+              .NeverGradConfig.NeverGradAlgorithm.NG_ES):
+            self._optimizer = ng.optimizers.ES(parametrization=parametrization,
+                                               budget=budget)
+        elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
+              .NeverGradConfig.NeverGradAlgorithm.NG_DL_OPO):
+            self._optimizer = ng.optimizers.DiscreteLenglerOnePlusOne(parametrization=parametrization,
+                                               budget=budget)
+        elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
+              .NeverGradConfig.NeverGradAlgorithm.NG_DDE):
+            self._optimizer = ng.optimizers.DiscreteDE(parametrization=parametrization,
+                                               budget=budget)
+        elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
+              .NeverGradConfig.NeverGradAlgorithm.NG_NMM):
+            self._optimizer = ng.optimizers.NeuralMetaModel(parametrization=parametrization,
+                                               budget=budget)
+        elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
+              .NeverGradConfig.NeverGradAlgorithm.NG_TINY_SPSA):
+            self._optimizer = ng.optimizers.TinySPSA(parametrization=parametrization,
+                                               budget=budget)
+        elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
+              .NeverGradConfig.NeverGradAlgorithm.NG_VORONOI_DE):
+            self._optimizer = ng.optimizers.VoronoiDE(parametrization=parametrization,
+                                               budget=budget)
+        elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
+              .NeverGradConfig.NeverGradAlgorithm.NG_CMA_SMALL):
+            self._optimizer = ng.optimizers.CMAsmall(parametrization=parametrization,
+                                               budget=budget)
+
 
         print(self._optimizer, type(self._optimizer))
 
@@ -135,17 +179,18 @@ class NeverGradOpt(OptimizerInstance):
     def decision_point(
         self, request: service_pb2.DecisionPointRequest
     ) -> service_pb2.DecisionPointResponse:
-        logging.info('DecisionPoint request=%s', request)
-        print('DecisionPoint request=%s' % request)
+        # logging.info('DecisionPoint request=%s', request)
+        # print('DecisionPoint request=%s' % request)
 
         self._lock.acquire()
         selected_actions = self._optimizer.ask()
         logging.info('selected_actions=%s', selected_actions.args)
-        logging.info('selected_actions=%s', selected_actions.kwargs)
+        # logging.info('selected_actions=%s', selected_actions.kwargs)
         self.active_samples[request.worker_id] = {
             'action': selected_actions.args[0],
             'sample_num': self.num_samples_issued,
         }
+        # print('self.active_samples : ', self.active_samples)
         self.last_action = selected_actions
         self.num_samples_issued += 1
         self._lock.release()
@@ -164,7 +209,7 @@ class NeverGradOpt(OptimizerInstance):
     def finalize_episode(
         self, request: service_pb2.FinalizeEpisodeRequest
     ) -> service_pb2.FinalizeEpisodeResponse:
-        logging.info('FinalizeEpisode request=%s', request)
+        # logging.info('FinalizeEpisode request=%s', request)
         # self._append_outcome(request.decision_outcome.outcome_value)
         # self.history[-1]['outcome'] = request.decision_outcome.outcome_value
         # self.last_outcome = request.decision_outcome.outcome_value
@@ -181,11 +226,15 @@ class NeverGradOpt(OptimizerInstance):
                 'outcome': request.decision_outcome.outcome_value,
                 'action': self.active_samples[request.worker_id]['action'],
             }
+        # print('self.complete_samples : ', self.complete_samples)
         del self.active_samples[request.worker_id]
 
         logging.info('FinalizeEpisode outcome=%s / %s',
                      request.decision_outcome.outcome_value, d)
         self._optimizer.tell(d, 0 - request.decision_outcome.outcome_value)
+        # self._optimizer.tell(d, request.decision_outcome.outcome_value)
+        self._completed_count += 1
+
         del self.last_action
         self._lock.release()
         return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
@@ -217,4 +266,14 @@ class NeverGradOpt(OptimizerInstance):
         response += ']\n'
         self._lock.release()
 
-        return service_pb2.CurrentStatusResponse(response_str=response)
+        # print('self._total_count was : ', self._total_count)
+        # print('self._completed_count is now : ', self._completed_count)
+
+        if(self._completed_count == self._total_count):
+          status = service_pb2.CurrentStatusResponse.Status.SUCCESS
+        elif(self._completed_count < self._total_count):
+          status = service_pb2.CurrentStatusResponse.Status.IN_PROGRESS
+        else:
+          status = service_pb2.CurrentStatusResponse.Status.FAILURE
+
+        return service_pb2.CurrentStatusResponse(response_str=response, status=status)

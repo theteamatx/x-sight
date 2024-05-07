@@ -151,6 +151,13 @@ message CurrentStatusRequest {
 }
 message CurrentStatusResponse {
   string response_str = 1;
+  enum Status{
+    DEFAULT = 0;
+    IN_PROGRESS = 1;
+    SUCCESS = 2;
+    FAILURE = 3;
+  }
+  Status status = 2;
 }
 
 message LaunchRequest {

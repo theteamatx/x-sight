@@ -120,6 +120,7 @@ def launch(
 
   req.label = sight.params.label
   req.client_id = str(sight.id)
+  # print('req : ', req)
 
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
   logging.info('##### Launch response=%s #####', response)

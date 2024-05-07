@@ -53,9 +53,20 @@ def main(argv: Sequence[str]) -> None:
   response = service.call(
       lambda s, meta: s.CurrentStatus(req, 300, metadata=meta)
   )
-  # sight_service, metadata = generate_metadata()
-  # response = sight_service.CurrentStatus(req, 300, metadata=metadata)
-  print(response.response_str)
+
+  # print('response :', response.response_str)
+
+
+  if response.status == service_pb2.CurrentStatusResponse.Status.DEFAULT :
+    print('Experiment is in Default state')
+  elif response.status == service_pb2.CurrentStatusResponse.Status.IN_PROGRESS :
+    print('Experiment is in-progress state')
+  elif response.status == service_pb2.CurrentStatusResponse.Status.SUCCESS :
+    print('Experiment is in Success state')
+  elif response.status == service_pb2.CurrentStatusResponse.Status.FAILURE :
+    print('Experiment is in Failure state')
+  else:
+    print('response.status = ', response.status)
 
 
 if __name__ == "__main__":

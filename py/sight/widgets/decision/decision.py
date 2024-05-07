@@ -68,7 +68,8 @@ _OPTIMIZER_TYPE = flags.DEFINE_enum(
         'llm_chat_bison_recommend', 'llm_gemini_pro_recommend', 'bayesian_opt',
         'sensitivity_analysis', 'ng_auto', 'ng_bo', 'ng_cma',
         'ng_two_points_de', 'ng_random_search', 'ng_pso',
-        'ng_scr_hammersley_search'
+        'ng_scr_hammersley_search', 'ng_de', 'ng_cga', 'ng_es', 'ng_dl_opo',
+        'ng_dde', 'ng_nmm', 'ng_tiny_spsa', 'ng_voronoi_de', 'ng_cma_small'
     ],
     'The optimizer to use',
 )
@@ -309,6 +310,7 @@ def run(
 
     decision_configuration = sight_pb2.DecisionConfigurationStart()
     decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
+    decision_configuration.num_trials = _NUM_TRIALS.value
 
     decision_configuration.choice_config[sight.params.label].CopyFrom(
         optimizer.obj.create_config())
@@ -402,7 +404,7 @@ def run(
         # print('details.action_min : ', details.action_min.values(), list(details.action_min.values())[0])
         possible_actions = list(details.action_max.values())[0] - list(
             details.action_min.values())[0] + 2
-        print('possible_actions : ', possible_actions)
+        # print('possible_actions : ', possible_actions)
         if (_OPTIMIZER_TYPE.value == 'exhaustive_search'
                 and possible_actions < _NUM_TRIALS.value):
             raise ValueError(
@@ -659,7 +661,7 @@ def decision_outcome(
 
     sight.widget_decision_state['discount'] = discount
     sight.widget_decision_state['outcome_value'] = outcome_value
-    sight.widget_decision_state['sum_outcome'] += outcome_value
+    # sight.widget_decision_state['sum_outcome'] += outcome_value
     # logging.info('decision_outcome() outcome_value=%s, sum_outcome=%s', outcome_value, sight.widget_decision_state['sum_outcome'])
 
     obj = sight_pb2.Object(
@@ -716,10 +718,11 @@ def finalize_episode(sight):  # , optimizer_obj
         if _OPTIMIZER_TYPE.value in [
                 'genetic_algorithm', 'exhaustive_search', 'vizier',
                 'bayesian_opt', 'sensitivity_analysis', 'nevergrad'
-        ] or _OPTIMIZER_TYPE.value.startswith('llm_'):
+        ] or _OPTIMIZER_TYPE.value.startswith(
+                'llm_') or _OPTIMIZER_TYPE.value.startswith('ng_'):
             decision_outcome = sight_pb2.DecisionOutcome(
                 outcome_label='outcome',
-                outcome_value=sight.widget_decision_state['sum_outcome'],
+                outcome_value=sight.widget_decision_state['outcome_value'],
             )
             req.decision_outcome.CopyFrom(decision_outcome)
             optimizer_obj = optimizer.get_instance()

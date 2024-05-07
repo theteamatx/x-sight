@@ -226,6 +226,7 @@ class Sight(object):
             self.path_prefix = (
                 self.params.label + '_' + str(response.id) + '_' + 'log'
             )
+
         except Exception as e:
           logging.info('RPC ERROR: %s', e)
           if not self.params.log_dir_path:
@@ -246,6 +247,9 @@ class Sight(object):
             + self.path_prefix
             # 'client_' + str(self.id) + '/' + self.path_prefix
         )
+        self.file_name = self.avro_log_file_path.split('/')[-1]
+        self.table_name = self.params.label + '_' + str(self.id) + '_' + 'log'
+
         if 'SIGHT_PATH' in os.environ:
           self.avro_schema = load_schema(
               f'{os.environ["SIGHT_PATH"]}/../avrofile-schema.avsc'
@@ -360,10 +364,11 @@ class Sight(object):
               'log_id=%s.%s&log_owner=%s&project_id=%s',
               self.SIGHT_API_KEY,
               self.params.dataset_name,
-              self.file_name,
+              self.table_name,
               self.params.log_owner,
               os.environ['PROJECT_ID']
           )
+          print(f'table generated : {self.params.dataset_name}.{self.table_name}')
       self.avro_log.close()
 
     if not self.params.local and not self.params.in_memory:
@@ -374,7 +379,7 @@ class Sight(object):
           ),
           self.SIGHT_API_KEY,
           self.params.dataset_name,
-          self.file_name,
+          self.table_name,
           self.params.log_owner,
           os.environ['PROJECT_ID']
       )
@@ -721,8 +726,10 @@ class Sight(object):
         dict_obj = MessageToDict(obj, preserving_proto_field_name=True)
         fastavro.writer(self.avro_log, self.avro_schema, [dict_obj])
         self.avro_record_counter += 1
-        self.file_name = self.avro_log_file_path.split('/')[-1]
-        if self.avro_record_counter % 10000 == 0:
+        # print('self.avro_log_file_path : ', self.avro_log_file_path)
+        # self.file_name = self.avro_log_file_path.split('/')[-1]
+        # print('&&&&&&&&&&&&&&&&&&&&&&&self.file_name : ', self.file_name)
+        if self.avro_record_counter % 100 == 0:
           self.avro_file_counter += 1
           upload_blob_from_stream(
               self.params.bucket_name,
@@ -738,10 +745,11 @@ class Sight(object):
                 'log_id=%s.%s&log_owner=%s&project_id=%s',
                 self.SIGHT_API_KEY,
                 self.params.dataset_name,
-                self.file_name,
+                self.table_name,
                 self.params.log_owner,
                 os.environ['PROJECT_ID']
             )
+            print(f'table generated : {self.params.dataset_name}.{self.table_name}')
           self.avro_log.close()
           self.avro_log = io.BytesIO()
 

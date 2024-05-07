@@ -597,6 +597,15 @@ message DecisionConfigurationStart {
       NG_RandomSearch = 5;
       NG_PSO = 6;
       NG_ScrHammersleySearch = 7;
+      NG_DE = 8;
+      NG_CGA = 9;
+      NG_ES = 10;
+      NG_DL_OPO = 11;
+      NG_DDE = 12;
+      NG_NMM = 13;
+      NG_TINY_SPSA = 14;
+      NG_VORONOI_DE = 15;
+      NG_CMA_SMALL = 16;
     }
     NeverGradAlgorithm algorithm = 1;
   }
@@ -645,6 +654,8 @@ message DecisionConfigurationStart {
   // The attributes of application's state
   map<string, AttrProps> state_attrs = 2;
   map<string, AttrProps> action_attrs = 3;
+
+  int64 num_trials = 5;
 }
 
 message DecisionParam {
