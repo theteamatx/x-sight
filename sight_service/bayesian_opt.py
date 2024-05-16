@@ -40,12 +40,15 @@ class BayesianOpt(OptimizerInstance):
   def __init__(self):
     super().__init__()
     self._lock = threading.RLock()
+    self._total_count = 0
+    self._completed_count = 0
 
   @overrides
   def launch(
       self, request: service_pb2.LaunchRequest
   ) -> service_pb2.LaunchResponse:
     response = super(BayesianOpt, self).launch(request)
+    self._total_count = request.decision_config_params.num_trials
     self._optimizer = BayesianOptimization(
       f=None,
       pbounds={key: (p.min_value, p.max_value) for key, p in self.actions.items()},
@@ -102,6 +105,7 @@ class BayesianOpt(OptimizerInstance):
     self._optimizer.register(
         params=d,
         target=request.decision_outcome.outcome_value)
+    self._completed_count += 1
     self._lock.release()
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
 
@@ -113,4 +117,12 @@ class BayesianOpt(OptimizerInstance):
     for trial in sorted(self._optimizer.res, key=lambda x: x['target'], reverse=True):
       output += '   '+str(trial) + '\n'
     output += ']\n'
-    return service_pb2.CurrentStatusResponse(response_str=output)
+
+    if(self._completed_count == self._total_count):
+      status = service_pb2.CurrentStatusResponse.Status.SUCCESS
+    elif(self._completed_count < self._total_count):
+      status = service_pb2.CurrentStatusResponse.Status.IN_PROGRESS
+    else:
+      status = service_pb2.CurrentStatusResponse.Status.FAILURE
+
+    return service_pb2.CurrentStatusResponse(response_str=output, status=status)

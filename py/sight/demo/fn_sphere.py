@@ -33,6 +33,7 @@ from sight.sight import Sight
 from sight.widgets.decision import decision
 import numpy as np
 import json
+import inspect
 
 FLAGS = flags.FLAGS
 
@@ -81,11 +82,21 @@ def main(argv: Sequence[str]) -> None:
       )
 
     with get_sight_instance() as sight:
-        decision.run(
-            driver_fn=driver,
-            action_attrs=action_attrs,
-            sight=sight,
-        )
+
+      if(FLAGS.parent_id):
+        sight_obj = sight_pb2.Object()
+        sight_obj.sub_type = sight_pb2.Object.SubType.ST_LINK
+        sight_obj.link.linked_sight_id = FLAGS.parent_id
+        sight_obj.link.link_type = sight_pb2.Link.LinkType.LT_CHILD_TO_PARENT
+        frame = inspect.currentframe().f_back.f_back.f_back
+        sight.set_object_code_loc(sight_obj, frame)
+        sight.log_object(sight_obj, True)
+
+      decision.run(
+          driver_fn=driver,
+          action_attrs=action_attrs,
+          sight=sight,
+      )
 
 
 if __name__ == "__main__":

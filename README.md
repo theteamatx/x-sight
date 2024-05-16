@@ -181,17 +181,17 @@ account can have required permissions.
 2) Create service image from the code and host it on [gcr.io](http://gcr.io)
 
     ```bash
-    docker build --tag gcr.io/$PROJECT_ID/sight-service-default -f sight_service/Dockerfile .
+    docker build --tag gcr.io/$PROJECT_ID/sight-default -f sight_service/Dockerfile .
 
     gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
 
-    docker push gcr.io/$PROJECT_ID/sight-service-default
+    docker push gcr.io/$PROJECT_ID/sight-default
     ```
 
 3) With the help of the image, launch cloud run service
 
     ```bash
-    gcloud run deploy sight-service-default --image=gcr.io/$PROJECT_ID/sight-service-default:latest --allow-unauthenticated --service-account=sight-service-account@$PROJECT_ID.iam.gserviceaccount.com --concurrency=default --cpu=2 --memory=8Gi --min-instances=1 --max-instances=1 --no-cpu-throttling --region=us-central1 --project=$PROJECT_ID
+    gcloud run deploy sight-default --image=gcr.io/$PROJECT_ID/sight-default:latest --allow-unauthenticated --service-account=sight-service-account@$PROJECT_ID.iam.gserviceaccount.com --concurrency=default --cpu=2 --memory=8Gi --min-instances=1 --max-instances=1 --no-cpu-throttling --region=us-central1 --project=$PROJECT_ID
     ```
 
 ### Hosting worker image:

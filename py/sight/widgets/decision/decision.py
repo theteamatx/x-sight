@@ -310,7 +310,10 @@ def run(
 
     decision_configuration = sight_pb2.DecisionConfigurationStart()
     decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
-    decision_configuration.num_trials = _NUM_TRIALS.value
+    if _DEPLOYMENT_MODE.value == 'worker_mode':
+        decision_configuration.num_trials = int(os.environ['num_samples'])
+    else:
+        decision_configuration.num_trials = _NUM_TRIALS.value
 
     decision_configuration.choice_config[sight.params.label].CopyFrom(
         optimizer.obj.create_config())

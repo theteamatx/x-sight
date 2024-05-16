@@ -41,6 +41,8 @@ from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
 
 load_dotenv()
+_PARENT_ID = flags.DEFINE_string(
+    'parent_id', None, 'Sight log Id of super script')
 FLAGS = flags.FLAGS
 current_script_directory = os.path.dirname(os.path.abspath(__file__))
 _SCHEMA_FILE_PATH = os.path.join(current_script_directory, '..', 'avrofile-schema.avsc')
@@ -248,13 +250,15 @@ class Sight(object):
             # 'client_' + str(self.id) + '/' + self.path_prefix
         )
         self.file_name = self.avro_log_file_path.split('/')[-1]
-        self.table_name = self.params.label + '_' + str(self.id) + '_' + 'log'
+        # self.table_name = self.params.label + '_' + str(self.id) + '_' + 'log'
+        self.table_name = str(self.id) + '_' + 'log'
 
         if 'SIGHT_PATH' in os.environ:
           self.avro_schema = load_schema(
               f'{os.environ["SIGHT_PATH"]}/../avrofile-schema.avsc'
           )
         else:
+          # print('avro-schema path is : ', _SCHEMA_FILE_PATH)
           self.avro_schema = load_schema(_SCHEMA_FILE_PATH)
         self.avro_log = io.BytesIO()
         self.avro_record_counter = 0
@@ -358,7 +362,7 @@ class Sight(object):
         )
         # if this is the only avro file, table has not been created yet
         if self.avro_file_counter == 1:
-          create_external_bq_table(self.params, self.file_name, self.id)
+          create_external_bq_table(self.params, self.table_name, self.id)
           logging.info(
               'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
@@ -739,7 +743,7 @@ class Sight(object):
               self.avro_file_counter,
           )
           if self.avro_file_counter == 1:
-            create_external_bq_table(self.params, self.file_name, self.id)
+            create_external_bq_table(self.params, self.table_name, self.id)
             logging.info(
                 'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
                 'log_id=%s.%s&log_owner=%s&project_id=%s',

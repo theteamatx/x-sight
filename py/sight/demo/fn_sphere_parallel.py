@@ -33,9 +33,12 @@ from sight.proto import sight_pb2
 from sight.sight import Sight
 import time
 import os
+import inspect
 
 from sight_service.proto import service_pb2
 from sight import service_utils as service
+from sight.attribute import Attribute
+from sight.block import Block
 
 FLAGS = flags.FLAGS
 
@@ -121,14 +124,15 @@ def delete_service(service_name):
         print(f'Error deleting Cloud Run service: {result.stderr}')
 
 
-def run_experiment(optimizer_value, image_id, table_queue):
+def run_experiment(sight_id, optimizer_value, image_id, table_queue):
     cmd_args = [
         'python', 'py/sight/demo/fn_sphere.py', '--decision_mode', 'train',
         '--deployment_mode', 'distributed', '--num_train_workers', '1',
         '--num_trials', '10', '--optimizer_type', optimizer_value,
         '--docker_image', 'gcr.io/cameltrain/sight-worker',
         # '--service_docker_file', 'sight_service/Dockerfile'
-        '--service_docker_img', image_id
+        '--service_docker_img', image_id,
+        '--parent_id', sight_id
     ]
     result = subprocess.run(args=cmd_args, capture_output=True, text=True)
     # print('here result is  : ', result.stdout)
@@ -173,22 +177,25 @@ def main(argv: Sequence[str]) -> None:
     with get_sight_instance() as sight:
       image_id = build_push_service_img(str(sight.id))
       print('image_id : ', image_id)
+      sight.text(image_id)
 
       # optimizer_values = ['ng_random_search', 'ng_pso', 'ng_cga']
       # optimizer_values = ['ng_random_search', 'ng_pso', 'ng_cga', 'ng_es', 'ng_dl_opo', 'ng_dde']
       # optimizer_values = ['ng_cga']
+      # optimizer_values = ['bayesian_opt']
 
       optimizer_values = [
           'ng_random_search', 'ng_pso', 'ng_de', 'ng_cga', 'ng_es', 'ng_dl_opo', 'ng_dde',
           'ng_nmm', 'ng_tiny_spsa', 'ng_scr_hammersley_search',
-          'ng_two_points_de', 'ng_cma_small', 'ng_cma', 'ng_auto'
+          'ng_two_points_de', 'ng_cma_small', 'ng_cma', 'ng_auto',
+          'bayesian_opt'
       ]
       table_queue = multiprocessing.Queue()
       processes = []
 
       for optimizer_value in optimizer_values:
           process = multiprocessing.Process(target=run_experiment,
-                                            args=(optimizer_value, image_id, table_queue))
+                                            args=(str(sight.id), optimizer_value, image_id, table_queue))
           processes.append(process)
           process.start()
       print('all process started.....')
@@ -201,10 +208,22 @@ def main(argv: Sequence[str]) -> None:
 
       experiment_details = {}
       while not table_queue.empty():
-          optimizer_value, table_name, service_name = table_queue.get()
-          sight_id_match = re.search(r'(?<=_)([^_]+)_log$', table_name)
-          sight_id = sight_id_match.group(1)
-          experiment_details[optimizer_value] = [sight_id,table_name,service_name]
+        optimizer_value, table_name, service_name = table_queue.get()
+        with Block("Superscript Experiment Details", sight):
+          with Attribute("optimizer", optimizer_value, sight):
+            sight_id_match = re.search(r'\.(.*?)_log$', table_name)
+            exp_sight_id = sight_id_match.group(1)
+            # with Attribute("sight_id", exp_sight_id, sight):
+            #   with Attribute("table_name", table_name, sight):
+                # sight.text(f"{optimizer_value}:{exp_sight_id}")
+            sight_obj = sight_pb2.Object()
+            sight_obj.sub_type = sight_pb2.Object.SubType.ST_LINK
+            sight_obj.link.linked_sight_id = str(exp_sight_id)
+            sight_obj.link.link_type = sight_pb2.Link.LinkType.LT_PARENT_TO_CHILD
+            frame = inspect.currentframe().f_back.f_back.f_back
+            sight.set_object_code_loc(sight_obj, frame)
+            sight.log_object(sight_obj, True)
+            experiment_details[optimizer_value] = [exp_sight_id,table_name,service_name]
 
       print('experiment_details : ', experiment_details)
 
@@ -225,7 +244,7 @@ def main(argv: Sequence[str]) -> None:
             v = experiment_details[k]
             if check_exp_status(v[0], v[2]):
                 service_name = v[2]
-                sight_id = v[0]
+                # sight_id = v[0]
                 completed_services.append(service_name)
                 del experiment_details[k]
                 delete_service(service_name)
