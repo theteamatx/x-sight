@@ -15,6 +15,9 @@
 """Custom implementation of core variable_source."""
 import os
 import time
+import numpy as np
+import json
+import pickle
 from typing import Any, List, Sequence
 from absl import flags, logging
 from acme import core
@@ -28,6 +31,13 @@ from sight import service_utils as service
 from sight.widgets.decision.acme import sight_adder
 
 _file_name = "custom_variable_source.py"
+
+
+# Convert lists back to NumPy arrays during deserialization
+def convert_list_to_np(obj):
+  if 'data' in obj and 'shape' in obj:
+      return np.array(obj['data']).reshape(obj['shape'])
+  return obj
 
 
 class SightVariableSource(core.VariableSource):
@@ -45,7 +55,7 @@ class SightVariableSource(core.VariableSource):
     self._response_time = []
     self._sight = sight
 
-  def postprocess_data(self, latest_weights):
+  def postprocess_data(self, networks_weights):
     result_dict = {}
     for record in latest_weights:
       name = record["name"]
@@ -53,21 +63,43 @@ class SightVariableSource(core.VariableSource):
       result_dict[name] = weights
     return result_dict
 
-  def proto_to_weights(self, proto_weights):
+  def proto_to_weights(self, networks_weights):
     method_name = "observation_to_proto"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    # print("networks_weights : ", networks_weights)
+    # raise SystemExit
 
     updated_weights = []
-    for layer in proto_weights.layers:
-      layer_dict = {
-          "name": layer.name,
-          "weights": {
-              "b": jnp.array(layer.weights.b),
-              "w": jnp.array(proto_to_ndarray(layer.weights.w)),
-          },
-      }
-      updated_weights.append(layer_dict)
+    # for layer in proto_weights.layers:
+    for network in networks_weights.acme_response:
+      # to store inidividual network weights (policy/critic)
+      network_weight = []
+      for layer in network.layers:
+        layer_dict = {}
+        layer_dict['name'] = layer.name
+        # print("layer.name : ", layer.name)
+        layer_dict['weights'] = {}
+        if layer.weights.offset:
+          layer_dict['weights']['offset'] = jnp.array(layer.weights.offset)
+        if layer.weights.scale:
+          layer_dict['weights']['scale'] = jnp.array(layer.weights.scale)
+        if layer.weights.b:
+          layer_dict['weights']['b'] = jnp.array(layer.weights.b)
+        if layer.weights.w and len(layer.weights.w.ndarray) > 0:
+          layer_dict['weights']['w'] = jnp.array(proto_to_ndarray(layer.weights.w))
+      # layer_dict = {
+      #     "name": layer.name,
+      #     "weights": {
+      #         "b": jnp.array(layer.weights.b),
+      #         "w": jnp.array(proto_to_ndarray(layer.weights.w)),
+      #     },
+      # }
+        network_weight.append(layer_dict)
+      # print('network_weight : ', network_weight)
+      updated_weights.append(network_weight)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+    print('updated_weights : ', updated_weights)
+    # raise SystemExit
     return updated_weights
 
   # to measure the latency call
@@ -78,7 +110,7 @@ class SightVariableSource(core.VariableSource):
 
   def get_variables(self, names: Sequence[str]) -> List[types.NestedArray]:
     method_name = "get_variables"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    # logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
     if flags.FLAGS.deployment_mode == "local" or flags.FLAGS.trained_model_log_id:
       self._worker_id = 0
@@ -86,20 +118,26 @@ class SightVariableSource(core.VariableSource):
       self._worker_id = os.environ["worker_location"]
 
     # if len(self._adder._observation_list) > 0:
-    request = self._adder.fetch_and_reset_observation_list(
-        self._client_id, self._worker_id
+    request, final_observation = self._adder.fetch_and_reset_observation_list(
+        self._client_id, self._worker_id, names
     )
+    # print("request here is : ", request)
+    # raise SystemExit
 
     start_time = time.time()
-    response = service.call(
-        lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
-    )
-    # self.calculate_response_time(start_time)
+    if final_observation:
+      response = service.call(
+          lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)
+      )
+    else:
+      response = service.call(
+          lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
+      )
 
-    learner_weights = response.acme_response
+    # weights = json.loads(response.weights.decode('utf-8'), object_hook=convert_list_to_np)
+    weights = pickle.loads(response.weights)
+    # print("learner_weights : ", weights)
 
-    latest_weights = self.proto_to_weights(learner_weights)
-    weights = self.postprocess_data(latest_weights)
-    # print('weights : ', weights)
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+    # logging.info("<<<<  Out %s of %s", method_name, _file_name)
+    # return weights[0]
     return weights

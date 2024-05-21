@@ -29,12 +29,20 @@ from sight_service.proto import service_pb2_grpc
 from sight import service_utils as service
 
 from sight.proto import sight_pb2
-from py.sight.service_utils import generate_metadata
+from sight.service_utils import generate_metadata
 
 _LOG_ID = flags.DEFINE_string(
     "log_id", None, "ID of the Sight log that tracks this execution."
 )
-
+_DEPLOYMENT_MODE = flags.DEFINE_enum(
+    'deployment_mode',
+    None,
+    ['distributed', 'dsub_local', 'docker_local', 'local', 'worker_mode'],
+    (
+        'The procedure to use when training a model to drive applications that '
+        'use the Decision API.'
+    ),
+)
 
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
@@ -45,9 +53,20 @@ def main(argv: Sequence[str]) -> None:
   response = service.call(
       lambda s, meta: s.CurrentStatus(req, 300, metadata=meta)
   )
-  # sight_service, metadata = generate_metadata()
-  # response = sight_service.CurrentStatus(req, 300, metadata=metadata)
-  print(response.response_str)
+
+  # print('response :', response.response_str)
+
+
+  if response.status == service_pb2.CurrentStatusResponse.Status.DEFAULT :
+    print('Experiment is in Default state')
+  elif response.status == service_pb2.CurrentStatusResponse.Status.IN_PROGRESS :
+    print('Experiment is in-progress state')
+  elif response.status == service_pb2.CurrentStatusResponse.Status.SUCCESS :
+    print('Experiment is in Success state')
+  elif response.status == service_pb2.CurrentStatusResponse.Status.FAILURE :
+    print('Experiment is in Failure state')
+  else:
+    print('response.status = ', response.status)
 
 
 if __name__ == "__main__":

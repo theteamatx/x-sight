@@ -26,33 +26,22 @@ import gym
 import haiku as hk
 
 
-SEED = flags.DEFINE_integer('seed', 0, 'Random seed.')
-NUM_STEPS = flags.DEFINE_integer(
-    'num_steps', 10, 'Number of env steps to run.'  # 1_000_000
-)
+def build_mdqn_config():
+  """Builds MDQN experiment config which can be executed in different ways."""
 
-
-def build_actor_config(env_name: str = '', possible_action_values: int = 1):
-  """Builds DQN experiment config which can be executed in different ways."""
-
-  def env_factory():
-    if env_name:
-      return wrappers.GymWrapper(gym.make(env_name))
-    else:
-      return None
+  def env_factory(seed):
+    # del seed
+    # return helpers.make_atari_environment(
+    #     level=env_name, sticky_actions=True, zero_discount_on_life_loss=False)
+    return None
 
   def net_factory(environment_spec: specs.EnvironmentSpec) -> dqn.DQNNetworks:
     """Creates networks for training DQN on Gym Env."""
 
     def network(inputs):
-      if env_name:
-        model = hk.Sequential([
-            hk.nets.MLP([512, 128, environment_spec.actions.num_values]),
-        ])
-      else:
-        model = hk.Sequential([
-            hk.nets.MLP([512, 128, possible_action_values]),
-        ])
+      model = hk.Sequential([
+          hk.nets.MLP([512, 128, environment_spec.actions.num_values]),
+      ])
       return model(inputs)
 
     network_hk = hk.without_apply_rng(hk.transform(network))
@@ -63,13 +52,16 @@ def build_actor_config(env_name: str = '', possible_action_values: int = 1):
     typed_network = networks_lib.non_stochastic_network_to_typed(network)
     return dqn.DQNNetworks(policy_network=typed_network)
 
-  # Construct the agent.
+   # Construct the agent.
   config = dqn.DQNConfig(
       discount=0.99,
       n_step=1,
       epsilon=0.1
   )
-  loss_fn = losses.QLearning(discount=config.discount, max_abs_reward=1.0)
+
+  loss_fn = losses.MunchausenQLearning(
+      discount=config.discount, max_abs_reward=1., huber_loss_parameter=1.,
+      entropy_temperature=0.03, munchausen_coefficient=0.9)
 
   dqn_builder = dqn.DQNBuilder(config, loss_fn=loss_fn)
 
@@ -77,6 +69,6 @@ def build_actor_config(env_name: str = '', possible_action_values: int = 1):
       builder=dqn_builder,
       environment_factory=env_factory,
       network_factory=net_factory,
-      seed=SEED.value,
-      max_num_actor_steps=NUM_STEPS.value,
+      seed=0,
+      max_num_actor_steps=10,
   )

@@ -28,14 +28,22 @@ class LLMOptimizerClient (OptimizerClient):
 
   def __init__(self, llm_name: str, description: str, sight):
     super().__init__(sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM)
-    if llm_name == 'text_bison':
+    if llm_name.startswith('text_bison'):
       self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_TEXT_BISON
-    elif llm_name == 'chat_bison':
+    elif llm_name.startswith('chat_bison'):
       self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_CHAT_BISON
-    elif llm_name == 'gemini_pro':
+    elif llm_name.startswith('gemini_pro'):
       self._algorithm = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO
     else:
       raise ValueError(f'Unknown LLM Algorithm {llm_name}')
+
+    if llm_name.endswith('_optimize'):
+      self._goal = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE
+    elif llm_name.endswith('_recommend'):
+      self._goal = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_RECOMMEND
+    else:
+      raise ValueError(f'Unknown LLM Goal {llm_name}')
+
     self._description = description
 
     self._sight = sight
@@ -47,6 +55,7 @@ class LLMOptimizerClient (OptimizerClient):
     )
     llm_config = sight_pb2.DecisionConfigurationStart.LLMConfig(
         algorithm=self._algorithm,
+        goal=self._goal,
         description=self._description
       )
     choice_config.llm_config.CopyFrom(llm_config)
@@ -55,16 +64,15 @@ class LLMOptimizerClient (OptimizerClient):
   @override
   def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     for key, value in sight.widget_decision_state["state"].items():
-      # logging.info('key=%s / value=%s', key, value)
       param = request.decision_point.state_params.add()
       param.key = key
       param.value.sub_type
       param.value.double_value = value
-    # logging.info('request=%s', request)
 
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
     )
+    logging.info('decision_point() response=%s' % response)
     return self._get_dp_action(response)
 
   @override

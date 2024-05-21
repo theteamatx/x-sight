@@ -40,9 +40,9 @@ def driver_fn(env, sight) -> None:
 
   while not timestep.last():
     chosen_action = decision.decision_point("DP_label", sight)
-    action_received = np.array(chosen_action["action_1"], dtype=np.int64)
 
-    timestep = env.step(action_received)
+    timestep = env.step(chosen_action)
+
     for i in range(len(state_attrs)):
       data_structures.log_var(state_attrs[i], timestep.observation[i], sight)
 

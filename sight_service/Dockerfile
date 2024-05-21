@@ -15,31 +15,31 @@
 # syntax=docker/dockerfile:1
 
 # using base image
-FROM python:3.10
+# FROM python:3.10
+FROM google/cloud-sdk:latest as cloud_base
 LABEL Maintainer="bronevet@google.com"
+
+# Basic Installation
+RUN set -xe \
+    && apt-get update -y \
+    && apt-get install -y python3.10 \
+    && apt-get install -y python3-pip
 
 # set up working directory in container
 WORKDIR /x-sight
 
-# Installing pip
-RUN set -xe \
-    && apt-get update -y \
-    && apt-get install -y python3-pip
-
 # download necessary dependency in container
-COPY sight_service/requirements.txt sight_service/requirements.txt
+# COPY x-sight/sight_service/requirements.txt sight_service/requirements.txt
+COPY py/sight/requirements.txt sight_service/requirements.txt
 RUN pip3 install --upgrade pip
 RUN pip3 install -r sight_service/requirements.txt
 
+# copy sight code
+COPY py/sight/proto/ py/sight/proto/
+COPY sight_service/ sight_service/
 COPY .env .env
 
-# copy all files from proto/ recursively  in container
-COPY py/sight/proto/ py/sight/proto/
-
-# copy all files from sight_service/ recursively in container
-COPY sight_service/ sight_service/
-
-# updating PYTHONPATH so, imports in server.py code works correctly
+# updating PYTHONPATH to resolve relative imports
 ENV PYTHONPATH "$HOME/x-sight:$HOME/x-sight/py:${PYTHONPATH}"
 
 # run the python command

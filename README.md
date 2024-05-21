@@ -30,6 +30,29 @@ sudo apt-get install python3-pip
 
 #### Install docker:
 
+##### for Google-internal user (on cloudtop)
+
+```bash
+# Remove old docker-* packages (if installed)
+sudo apt remove docker-engine docker-runc docker-containerd
+
+sudo glinux-add-repo docker-ce-"$(lsb_release -cs)"
+sudo apt update
+sudo apt install docker-ce
+
+# If the previous command fails, you may need to clear your
+# docker lib (rm -rf /var/lib/docker) as well. Doing this will delete
+# all images on disk. Ensure that they are backed up somewhere
+# if you don't want this to happen.
+
+# Sudoless Docker
+sudo addgroup docker
+sudo usermod -aG docker $USER
+# In order for the above to take effect, logout and log back in (or reboot if that does not work), or use newgrp docker to change your primary group within a terminal.
+```
+
+##### for GCP (on VM)
+
 ```bash
 # Add Docker's official GPG key:
 sudo apt-get update
@@ -63,6 +86,49 @@ sudo usermod -aG docker $USER
 cd ~/
 git clone https://github.com/theteamatx/x-sight.git
 ```
+
+#### Python Version Compatibility
+
+This application is compatible with Python versions 3.9 and 3.10. If you don't have either of these versions installed, you can follow these steps to set up the supported Python version using pyenv:
+
+```bash
+# Install all the required packages
+sudo apt install curl git-core gcc make zlib1g-dev libbz2-dev libreadline-dev libsqlite3-dev libssl-dev libffi-dev lzma liblzma-dev
+
+# Grab the the latest pyenv source tree from its Github repository
+git clone https://github.com/pyenv/pyenv.git $HOME/.pyenv
+```
+
+```bash
+# Set the environment variable PYENV_ROOT
+vim $HOME/.bashrc
+```
+
+```bash
+## add pyenv configs in .bashrc file
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+
+if command -v pyenv 1>/dev/null 2>&1; then
+  eval "$(pyenv init -)"
+fi
+```
+
+```bash
+# source $HOME/.bashrc file or restart the shell
+source $HOME/.bashrc
+```
+
+```bash
+# Install supported python version
+pyenv versions
+pyenv install 3.10.12
+pyenv global 3.10.12
+source $HOME/.bashrc
+pyenv global
+```
+
+After installing the supported Python version (3.9 or 3.10), you can proceed with creating virtualenv and install required depencies.
 
 #### Create virtual env:
 
@@ -181,17 +247,17 @@ account can have required permissions.
 2) Create service image from the code and host it on [gcr.io](http://gcr.io)
 
     ```bash
-    docker build --tag gcr.io/$PROJECT_ID/sight-service-default -f sight_service/Dockerfile .
+    docker build --tag gcr.io/$PROJECT_ID/sight-default -f sight_service/Dockerfile .
 
     gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
 
-    docker push gcr.io/$PROJECT_ID/sight-service-default
+    docker push gcr.io/$PROJECT_ID/sight-default
     ```
 
 3) With the help of the image, launch cloud run service
 
     ```bash
-    gcloud run deploy sight-service-default --image=gcr.io/$PROJECT_ID/sight-service-default:latest --allow-unauthenticated --service-account=sight-service-account@$PROJECT_ID.iam.gserviceaccount.com --concurrency=default --cpu=2 --memory=8Gi --min-instances=1 --max-instances=1 --no-cpu-throttling --region=us-central1 --project=$PROJECT_ID
+    gcloud run deploy sight-default --image=gcr.io/$PROJECT_ID/sight-default:latest --allow-unauthenticated --service-account=sight-service-account@$PROJECT_ID.iam.gserviceaccount.com --concurrency=default --cpu=2 --memory=8Gi --min-instances=1 --max-instances=1 --no-cpu-throttling --region=us-central1 --project=$PROJECT_ID
     ```
 
 ### Hosting worker image:
@@ -597,6 +663,7 @@ python py/sight/demo/shower_demo_without_env.py \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
+--acme_agent=dqn \
 --docker_image=gcr.io/$PROJECT_ID/sight-worker
 ```
 
@@ -613,6 +680,7 @@ python py/sight/demo/gym_demo_env.py \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
+--acme_agent=dqn \
 --docker_image=gcr.io/$PROJECT_ID/sight-worker \
 --env_name=CartPole-v1
 ```
@@ -686,12 +754,12 @@ python py/sight/demo/gym_demo_env.py \
 
 ### Local server
 
-Instead of running sight service on cloudrun, we can run it locally on the same machine where we are running the root process. This helps in faster development and testing and saves time required to create the service image and deploying it on cloud run after each minor change in server-side logic.
+Instead of running sight service on cloudrun, User can run it locally on the same machine where we are running the root process. This helps in faster development, testing and saves time required to create the service image and deploying it on cloud run, after each minor change in server-side logic.
 
-For this, we can start our service_root file from one terminal session
+For this, User can run service_root script from one terminal session
 
 ```python
 cd ~/x-sight
 python sight_service/service_root.py
 ```
-And from another terminal session, User can run any valid command from this section and change the flag ```--deployment_mode=local``` to indicate that sight_service is running locally.
+And from another terminal session, User can run any valid command from [this](#example-training-invocation-commands) section and change the flag ```--deployment_mode=local``` to indicate that sight_service is running locally.

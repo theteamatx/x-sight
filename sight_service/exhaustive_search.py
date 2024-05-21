@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Tuple
 from sight_service.proto import service_pb2
 from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.optimizer_instance import OptimizerInstance
+import threading
 
 _file_name = "exhaustive_search.py"
 
@@ -41,6 +42,7 @@ class ExhaustiveSearch(OptimizerInstance):
     self.sweep_issue_done = False
     self.possible_values = {}
     self.max_reward_sample = {}
+    self._lock = threading.RLock()
 
   @overrides
   def launch(
@@ -56,10 +58,9 @@ class ExhaustiveSearch(OptimizerInstance):
 
     self.possible_values = {}
     for i, key in enumerate(sorted(self.actions.keys())):
-      logging.info('key=%s' % key)
       if self.actions[key].valid_float_values:
         self.possible_values[key] = list(self.actions[key].valid_float_values)
-      else:
+      elif self.actions[key].step_size:
         self.possible_values[key] = []
         cur = self.actions[key].min_value
         while cur <= self.actions[key].max_value:
@@ -94,6 +95,8 @@ class ExhaustiveSearch(OptimizerInstance):
     next_action = {}
     for i, key in enumerate(self.actions):
       next_action[key] = self.possible_values[key][self.next_sample_to_issue[i]]
+
+    self._lock.acquire()
     self.active_samples[request.worker_id] = {
         'action': next_action,
         'sample': tuple(self.next_sample_to_issue),
@@ -120,6 +123,7 @@ class ExhaustiveSearch(OptimizerInstance):
           num_dims_advanced += 1
 
       self.last_sample = num_dims_advanced == len(self.actions)
+    self._lock.release()
 
     logging.info('next_action=%s', next_action)
     response = service_pb2.DecisionPointResponse()
@@ -136,6 +140,7 @@ class ExhaustiveSearch(OptimizerInstance):
     # logging.info('Running for exhaustive search....')
 
     # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
+    self._lock.acquire()
     self.complete_samples[
         tuple(self.active_samples[request.worker_id]['sample'])
     ] = {
@@ -149,6 +154,7 @@ class ExhaustiveSearch(OptimizerInstance):
         'outcome': request.decision_outcome.outcome_value,
         'action': self.active_samples[request.worker_id]['action'],
     }
+    self._lock.release()
 
     del self.active_samples[request.worker_id]
     # logging.info('FinalizeEpisode active_samples=%s' % self.active_samples)
@@ -165,6 +171,7 @@ class ExhaustiveSearch(OptimizerInstance):
         '[ExhaustiveSearch: {"Done" if self.sweep_issue_done else "In'
         ' Progress"}\n'
     )
+    self._lock.acquire()
     response += f'  #active_samples={len(self.active_samples)}\n'
     response += '  completed_samples=\n'
     response += ', '.join(list(self.actions)) + ', outcome\n'
@@ -202,6 +209,7 @@ class ExhaustiveSearch(OptimizerInstance):
           cur[i] = 0
           if i == 0:
             reached_last = True
+    self._lock.release()
 
     response += ']'
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)

@@ -11,12 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Acme reinforcement learning for driving Sight applications."""
 
 import concurrent.futures
 import logging
 import time
+import json
+import pickle
 from acme import specs
 from acme.adders import reverb as adders_reverb
 from acme.jax import utils
@@ -27,9 +28,18 @@ import numpy as np
 from overrides import overrides
 from readerwriterlock import rwlock
 import reverb
+from sight.proto import sight_pb2
 from sight_service.proto import service_pb2
 # from service import server_utils
-from sight_service.build_learner import build_learner_config
+from sight_service.build_dqn_learner import build_dqn_config
+from sight_service.build_d4pg_learner import build_d4pg_config
+# from sight_service.build_impala_learner import build_impala_config
+from sight_service.build_mdqn_learner import build_mdqn_config
+from sight_service.build_qrdqn_learner import build_qrdqn_config
+# from sight_service.build_ppo_learner import build_ppo_config
+# from sight_service.build_mpo_learner import build_mpo_config
+# from sight_service.build_sac_learner import build_sac_config
+from sight_service.build_td3_learner import build_td3_config
 from sight_service.proto.numproto.numproto import ndarray_to_proto
 from sight_service.proto.numproto.numproto import proto_to_ndarray
 from sight_service.optimizer_instance import OptimizerInstance
@@ -39,7 +49,7 @@ _file_name = "acme_optimizer.py"
 
 
 class Acme(OptimizerInstance):
-  """Acme optimizer class to work with training methods.
+    """Acme optimizer class to work with training methods.
 
   Attributes:
     agents: Maps each worker_id to the Agent object that learns from the
@@ -57,347 +67,452 @@ class Acme(OptimizerInstance):
     _learner_checkpointer:
   """
 
-  def __init__(self):
-    super().__init__()
-    self._experiment = None
-    self._learner = None
-    self._learner_weights_lock = rwlock.RWLockFair()
-    self._learner_weights = None
-    self._replay_server = None
-    self._replay_client = None
-    self._dataset = None
-    self._learner_checkpointer = None
-    # self._last_updated_at = 0
-    self._avg_insertion_time = []
-    self._avg_updation_time = []
+    def __init__(self):
+        super().__init__()
+        self._experiment = None
+        self._learner = None
+        self._learner_weights_lock = rwlock.RWLockFair()
+        self._learner_weights = {}
+        self._replay_server = None
+        self._replay_client = None
+        self._dataset = None
+        self._learner_checkpointer = None
+        self._learner_keys = ["policy", "critic"]
+        # self._last_updated_at = 0
+        self._avg_insertion_time = []
+        self._avg_updation_time = []
 
-  def print_insertion_time(self):
-    logging.info("all insertion times : %s", self._avg_insertion_time)
+    def print_insertion_time(self):
+        logging.info("all insertion times : %s", self._avg_insertion_time)
 
-  def calculate_time(self, start_time, operation):
-    method_name = "calculate_time"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    def calculate_time(self, start_time, operation):
+        method_name = "calculate_time"
+        logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-    current_time = time.time() - start_time
-    if(operation == 'insert'):
-      self._avg_insertion_time.append(round(current_time,2))
-      avg_time = sum(self._avg_insertion_time) / len(self._avg_insertion_time)
-    elif(operation == 'update'):
-      self._avg_updation_time.append(current_time)
-      avg_time = sum(self._avg_updation_time) / len(self._avg_updation_time)
-    logging.info("%s Time: - latest time : %s and Average time : %s seconds",
-                 operation, round(current_time, 3), round(avg_time, 3))
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+        current_time = time.time() - start_time
+        if (operation == 'insert'):
+            self._avg_insertion_time.append(round(current_time, 2))
+            avg_time = sum(self._avg_insertion_time) / len(
+                self._avg_insertion_time)
+        elif (operation == 'update'):
+            self._avg_updation_time.append(current_time)
+            avg_time = sum(self._avg_updation_time) / len(
+                self._avg_updation_time)
+        logging.info(
+            "%s Time: - latest time : %s and Average time : %s seconds",
+            operation, round(current_time, 3), round(avg_time, 3))
+        logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+
+    def fetch_replay_table_size(self):
+        method_name = "fetch_replay_table_size"
+        logging.debug(">>>>  In %s of %s", method_name, _file_name)
+        table_info = self._replay_client.server_info()
+        table_size = table_info[
+            adders_reverb.
+            DEFAULT_PRIORITY_TABLE].rate_limiter_info.insert_stats.completed
+        logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+        return table_size
+
+    def update_learner(self):
+        method_name = "update_learner"
+        logging.info(">>>>  In %s of %s", method_name, _file_name)
+        try:
+            while True:
+                # If dataset iterator has enough data to sample
+                if self._dataset.ready():
+                    logging.info("updating learner................")
+                    start_time = time.time()
+                    self._learner.step()
+                    # self.calculate_time(start_time, 'update')
+
+                    # transfering updated learner weights to _learner_weights
+                    # variable with write lock
+                    with self._learner_weights_lock.gen_wlock():
+                        all_weights = self._learner.get_variables(
+                            self._learner_keys)
+                        for i in range(len(all_weights)):
+                            self._learner_weights[
+                                self._learner_keys[i]] = all_weights[i]
+            logging.info("<<<<  Out %s of %s", method_name, _file_name)
+        except Exception as e:
+            logging.exception("Exception in learner thread : %s", e)
+
+    def insert_to_replay(self, request):
+        method_name = "insert_to_replay"
+        logging.info(">>>>  In %s of %s", method_name, _file_name)
+        try:
+            if request.acme_config.episode_observations:
+                # logging.info(
+                #     "adding this many data into buffer via thread : %d",
+                #     len(request.acme_config.episode_observations),
+                # )
+
+                start_time = time.time()
+                adder = self._experiment.builder.make_adder(
+                    self._replay_client, self._environment_spec, self._policy)
+
+                episode_observations = request.acme_config.episode_observations
+                for episode_obs in episode_observations:
+                    if episode_obs.HasField("action"):
+                        action = proto_to_ndarray(episode_obs.action)
+                    else:
+                        action = np.array(0, dtype=np.int64)
+                        # todo : meetashah - changed dtyep from int64 to float64 for d4pg agent
+                        # action = np.array(0, dtype=np.float32)
+                    if episode_obs.HasField("reward"):
+                        reward = proto_to_ndarray(episode_obs.reward)
+                    if episode_obs.HasField("discount"):
+                        discount = proto_to_ndarray(episode_obs.discount)
+                    else:
+                        discount = np.array(0, dtype=np.float64)
+                    observation = proto_to_ndarray(episode_obs.observation)
+                    steptype = episode_obs.steptype
+
+                    if steptype == dm_env.StepType.FIRST:
+                        action = None
+                        timestep = dm_env.TimeStep(
+                            step_type=steptype,
+                            reward=None,
+                            discount=None,
+                            observation=observation,
+                        )
+                        # print("first timestep : ", timestep)
+                        # raise SystemExit
+                        adder.add_first(timestep)
+                    else:
+                        timestep = dm_env.TimeStep(
+                            step_type=steptype,
+                            reward=reward,
+                            discount=discount,
+                            observation=observation,
+                        )
+                        # print("mid timestep : ", timestep)
+                        # print("action : ", action, type(action), action.shape)
+                        # raise SystemExit
+                        adder.add(action, timestep)
+                # self.calculate_time(start_time, 'insert')
+                logging.info("table_size: %s", self.fetch_replay_table_size())
+            else:
+                logging.info("no data to insert.....")
+            logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+        except Exception as e:
+            logging.exception("Exception in thread : %s", e)
+
+    # @overrides
+    # def get_weights(
+    #     self, request: service_pb2.GetWeightsRequest
+    # ) -> service_pb2.GetWeightsResponse:
+    #   method_name = "get_weights"
+    #   logging.debug(">>>>  In %s of %s", method_name, _file_name)
+
+    #   executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    #   executor.submit(self.insert_to_replay, request)
+    #   # Manually shutdown the executor after submitting tasks
+    #   executor.shutdown(wait=False)
+
+    #   # logging.info("sending latest weights back to client")
+    #   with self._learner_weights_lock.gen_rlock():
+    #     latest_weights = self._learner_weights
+
+    #   weights_msg = service_pb2.GetWeightsResponse()
+    #   for layer_data in latest_weights:
+    #     for layer_name, layer_info in layer_data.items():
+    #       layer_msg = weights_msg.layers.add()
+    #       layer_msg.name = layer_name
+
+    #       weights_data_msg = layer_msg.weights
+    #       if "offset" in layer_info:
+    #         weights_data_msg.offset.extend(layer_info["offset"])
+    #       if "scale" in layer_info:
+    #         weights_data_msg.scale.extend(layer_info["scale"])
+    #       if "b" in layer_info:
+    #         weights_data_msg.b.extend(layer_info["b"])
+    #       if "w" in layer_info:
+    #         weights_data_msg.w.CopyFrom(ndarray_to_proto(layer_info["w"]))
+    #   # print(f"<<<<  Out {method_name} of {_file_name}")
+    #   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+    #   return weights_msg
+
+    def generate_env_spec(self, state_attrs, action_attrs):
+        method_name = "generate_env_spec"
+        logging.debug(">>>>  In %s of %s", method_name, _file_name)
+
+        default_dtype = np.float32
+
+        state_min = []
+        state_max = []
+        for key, attr_props in state_attrs.items():
+            state_min.append(attr_props.min_value)
+            state_max.append(attr_props.max_value)
+        observations = specs.BoundedArray(shape=(len(state_max), ),
+                                          dtype=default_dtype,
+                                          name='observation',
+                                          minimum=state_min,
+                                          maximum=state_max)
+        action_min = []
+        action_max = []
+        for key, attr_props in action_attrs.items():
+          action_min.append(attr_props.min_value)
+          action_max.append(attr_props.max_value)
+
+        if (attr_props.valid_int_values):
+            actions = specs.DiscreteArray(num_values=len(
+                attr_props.valid_int_values),
+                                          dtype=np.int64,
+                                          name="action")
+        else:
+            if(attr_props.step_size):
+              default_dtype=np.int64
+            actions = specs.BoundedArray(shape=(len(action_max), ),
+                                          dtype=default_dtype,
+                                          name='action',
+                                          minimum=action_min,
+                                          maximum=action_max)
+
+        # print(state_min, state_max, len(state_max), state_dtype)
+        # print(action_min, action_max, len(action_max), action_dtype)
+        # print('actions : ', actions)
+
+        new_env_spec = specs.EnvironmentSpec(
+            observations=observations,
+            actions=actions,
+            rewards=specs.Array(shape=(), dtype=np.float64, name='reward'),
+            discounts=specs.BoundedArray(shape=(),
+                                         dtype=np.float64,
+                                         name='discount',
+                                         minimum=0.0,
+                                         maximum=1.0))
+        # print('new_env_spec : ', new_env_spec)
+        # raise SystemError
+
+        logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+        return new_env_spec
+
+    def create_learner(self, client_id, acme_config, state_attrs,
+                       action_attrs):
+        method_name = "create_learner"
+        logging.info(">>>>  In %s of %s", method_name, _file_name)
 
 
+        environment_spec = self.generate_env_spec(state_attrs, action_attrs)
 
-  def fetch_replay_table_size(self):
-    method_name = "fetch_replay_table_size"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    table_info = self._replay_client.server_info()
-    table_size = table_info[
-        adders_reverb.DEFAULT_PRIORITY_TABLE
-    ].rate_limiter_info.insert_stats.completed
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return table_size
+        if (acme_config.acme_agent ==
+                sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_DQN):
+            self._experiment = build_dqn_config()
+        elif (acme_config.acme_agent ==
+              sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_D4PG):
+            self._experiment = build_d4pg_config()
+        # elif (acme_config.acme_agent ==
+        #       sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_IMPALA):
+        #     self._experiment = build_impala_config()
+        elif (acme_config.acme_agent ==
+              sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_MDQN):
+            self._experiment = build_mdqn_config()
+        elif (acme_config.acme_agent ==
+              sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_QRDQN):
+            self._experiment = build_qrdqn_config()
+        # elif (acme_config.acme_agent ==
+        #       sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_PPO):
+        #     self._experiment = build_ppo_config()
+        # elif (acme_config.acme_agent ==
+        #       sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_MPO):
+        #     self._experiment = build_mpo_config()
+        # elif (acme_config.acme_agent ==
+        #       sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_SAC):
+        #     self._experiment = build_sac_config(environment_spec)
+        elif (acme_config.acme_agent ==
+              sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_TD3):
+            self._experiment = build_td3_config()
 
-  def update_learner(self):
-    method_name = "update_learner"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    try:
-      while True:
-        # If dataset iterator has enough data to sample
-        if self._dataset.ready():
-          logging.info("updating learner................")
-          start_time = time.time()
-          self._learner.step()
-          # self.calculate_time(start_time, 'update')
+        # print('Else environment_spec : ', environment_spec)
 
-          # transfering updated learner weights to _learner_weights
-          # variable with write lock
-          with self._learner_weights_lock.gen_wlock():
-            self._learner_weights = self._learner.get_variables("")
-      logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    except Exception as e:
-      logging.exception("Exception in learner thread : %s", e)
+        networks = self._experiment.network_factory(environment_spec)
+        policy = config.make_policy(
+            experiment=self._experiment,
+            networks=networks,
+            environment_spec=environment_spec,
+            evaluation=False,
+        )
+        replay_tables = self._experiment.builder.make_replay_tables(
+            environment_spec, policy)
 
-  def insert_to_replay(self, request):
-    method_name = "insert_to_replay"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    try:
-      if request.acme_decision_point.episode_observations:
-        # logging.info(
-        #     "adding this many data into buffer via thread : %d",
-        #     len(request.acme_decision_point.episode_observations),
+        replay_server = reverb.Server(replay_tables, port=None)
+        replay_client = reverb.Client(f"localhost:{replay_server.port}")
+
+        dataset = self._experiment.builder.make_dataset_iterator(replay_client)
+        dataset = utils.prefetch(dataset, buffer_size=1)
+
+        key = jax.random.PRNGKey(0)
+        learner_key, key = jax.random.split(key)
+        learner = self._experiment.builder.make_learner(
+            random_key=learner_key,
+            networks=networks,
+            dataset=dataset,
+            logger_fn=self._experiment.logger_factory,
+            environment_spec=environment_spec,
+            replay_client=replay_client,
+        )
+        print("learner : ", learner)
+
+        self._learner = learner
+        self._replay_server = replay_server
+        self._replay_client = replay_client
+        self._dataset = dataset
+        self._environment_spec = environment_spec
+        self._policy = policy
+
+        # keeping weights in learner_weights dict so, future calls can directly get the 'at time updated weights'
+        with self._learner_weights_lock.gen_wlock():
+            all_weights = self._learner.get_variables(self._learner_keys)
+            for i in range(len(all_weights)):
+                self._learner_weights[self._learner_keys[i]] = all_weights[i]
+
+        # spinning a thread which update the learner when dataset iterator is ready
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        executor.submit(self.update_learner)
+        # Manually shutdown the executor after submitting tasks
+        executor.shutdown(wait=False)
+        logging.info("<<<<  Out %s of %s", method_name, _file_name)
+        # print(f"<<<<  Out {method_name} of {_file_name}")
+
+    @overrides
+    def launch(
+            self,
+            request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
+        method_name = "launch"
+        logging.debug(">>>>  In %s of %s", method_name, _file_name)
+        super(Acme, self).launch(request)
+
+        print('launch request : ', request)
+
+        # self.create_learner(request.client_id, request.acme_config.env_name)
+        # self.create_learner(request.client_id, request.acme_config)
+
+        self.create_learner(
+            request.client_id,
+            acme_config=request.decision_config_params.choice_config[
+                request.label].acme_config,
+            state_attrs=request.decision_config_params.state_attrs,
+            action_attrs=request.decision_config_params.action_attrs)
+
+        # TODO : meetashah : this is old version, might have to modify for now.
+        # storing client details in case server crashed - mid run
+        # client_details = {}
+        # client_details["sight_id"] = int(request.client_id)
+        # client_details["env"] = "CartPole-v1"
+        # client_details["network_path"] = (
+        #     f"gs://{FLAGS.project_id}-sight/learner/" + request.client_id + "/"
+        # )
+        # client_details["learner_path"] = (
+        #     f"gs://{FLAGS.project_id}-sight/learner/" + request.client_id + "/"
+        # )
+        # client_details["replay_address"] = "127.0.0.1"
+        # server_utils.Insert_In_ClientData_Table(
+        #     client_details, "sight-data", "sight_db", "ClientData"
         # )
 
-        start_time = time.time()
-        adder = self._experiment.builder.make_adder(
-            self._replay_client, self._environment_spec, self._policy
-        )
+        response = service_pb2.LaunchResponse()
+        response.display_string = "ACME SUCCESS!"
+        logging.info("<<<<  Out %s of %s", method_name, _file_name)
+        return response
 
-        episode_observations = request.acme_decision_point.episode_observations
-        for episode_obs in episode_observations:
-          if episode_obs.HasField("action"):
-            action = proto_to_ndarray(episode_obs.action)
-          else:
-            action = np.array(0, dtype=np.int64)
-          if episode_obs.HasField("reward"):
-            reward = proto_to_ndarray(episode_obs.reward)
-          if episode_obs.HasField("discount"):
-            discount = proto_to_ndarray(episode_obs.discount)
-          else:
-            discount = np.array(0, dtype=np.float64)
-          observation = proto_to_ndarray(episode_obs.observation)
-          steptype = episode_obs.steptype
+    @overrides
+    def decision_point(
+        self, request: service_pb2.DecisionPointRequest
+    ) -> service_pb2.DecisionPointResponse:
+        method_name = "decision_point"
+        logging.info(">>>>  In %s of %s", method_name, _file_name)
 
-          if steptype == dm_env.StepType.FIRST:
-            action = None
-            timestep = dm_env.TimeStep(
-                step_type=steptype,
-                reward=None,
-                discount=None,
-                observation=observation,
-            )
-            adder.add_first(timestep)
-          else:
-            timestep = dm_env.TimeStep(
-                step_type=steptype,
-                reward=reward,
-                discount=discount,
-                observation=observation,
-            )
-            adder.add(action, timestep)
-        # self.calculate_time(start_time, 'insert')
-        logging.info("table_size: %s", self.fetch_replay_table_size())
-      else:
-        logging.info("no data to insert.....")
-      logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    except Exception as e:
-      logging.exception("Exception in thread : %s", e)
+        #? start separate thread for the insertion to replay
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        executor.submit(self.insert_to_replay, request)
+        # Manually shutdown the executor after submitting tasks
+        executor.shutdown(wait=False)
 
-  @overrides
-  def get_weights(
-      self, request: service_pb2.GetWeightsRequest
-  ) -> service_pb2.GetWeightsResponse:
-    method_name = "get_weights"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
+        # logging.info("sending latest weights back to client")
+        latest_weights = []
+        with self._learner_weights_lock.gen_rlock():
+            if (len(request.acme_config.learner_keys) > 0):
+                for key in request.acme_config.learner_keys:
+                    latest_weights.append(self._learner_weights[key])
+            else:
+                latest_weights.append(self._learner_weights["policy"])
 
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    executor.submit(self.insert_to_replay, request)
-    # Manually shutdown the executor after submitting tasks
-    executor.shutdown(wait=False)
+        response = service_pb2.DecisionPointResponse()
 
-    # logging.info("sending latest weights back to client")
-    with self._learner_weights_lock.gen_rlock():
-      latest_weights = self._learner_weights
+        # Convert NumPy arrays to lists before serialization
+        def convert_np_to_list(obj):
+            if isinstance(obj, np.ndarray):
+                return {'data': obj.tolist(), 'shape': obj.shape}
+            return obj
 
-    weights_msg = service_pb2.GetWeightsResponse()
-    for layer_data in latest_weights:
-      for layer_name, layer_info in layer_data.items():
-        layer_msg = weights_msg.layers.add()
-        layer_msg.name = layer_name
+        # directly serializing the weights structure
+        # serialized_weights = json.dumps(
+        #     latest_weights, default=convert_np_to_list).encode('utf-8')
+        serialized_weights = pickle.dumps(
+            latest_weights)
 
-        weights_data_msg = layer_msg.weights
-        weights_data_msg.b.extend(layer_info["b"])
-        weights_data_msg.w.CopyFrom(ndarray_to_proto(layer_info["w"]))
-    # print(f"<<<<  Out {method_name} of {_file_name}")
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return weights_msg
 
-  def generate_env_spec(self, acme_config):
-    method_name = "generate_env_spec"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    state_min = np.array(list(acme_config.state_min))
-    state_max = np.array(list(acme_config.state_max))
-    state_param_length = acme_config.state_param_length
-    action_min = np.array(list(acme_config.action_min))
-    action_max = np.array(list(acme_config.action_max))
-    action_param_length = acme_config.action_param_length
+        response.weights = serialized_weights
 
-    new_env_spec = specs.EnvironmentSpec(
-      observations=specs.BoundedArray(shape=(state_param_length,), dtype=np.float32, name='observation', minimum=state_min, maximum=state_max),
-      # actions=specs.DiscreteArray(dtype=np.int64, name='action', num_values=possible_actions),
-      #? works for only 1 action parameter
-      actions=specs.BoundedArray(shape=(), dtype=int, name='action', minimum=action_min[0], maximum=action_max[0]),
-      rewards=specs.Array(shape=(), dtype=np.float64, name='reward'),
-      discounts=specs.BoundedArray(shape=(), dtype=np.float64, name='discount', minimum=0.0, maximum=1.0)
-    )
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return new_env_spec
+        logging.info("<<<<  Out %s of %s", method_name, _file_name)
+        return response
 
-  def create_learner(self, client_id, acme_config):
-    method_name = "create_learner"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    @overrides
+    def finalize_episode(
+        self, request: service_pb2.FinalizeEpisodeRequest
+    ) -> service_pb2.FinalizeEpisodeResponse:
+        method_name = "finalize_episode"
+        logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-    if(acme_config.env_name):
-      print("env found, using that to generate spec")
-      self._experiment = build_learner_config(env_name=acme_config.env_name)
-      environment = self._experiment.environment_factory()
-      print('environment : ', environment)
-      environment_spec = specs.make_environment_spec(environment)
-    else:
-      print("env not found, directly generating spec")
-      self._experiment = build_learner_config(possible_action_values=acme_config.possible_actions)
-      environment_spec = self.generate_env_spec(acme_config)
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+        executor.submit(self.insert_to_replay, request)
+        # Manually shutdown the executor after submitting tasks
+        executor.shutdown(wait=False)
 
-    networks = self._experiment.network_factory(environment_spec)
-    policy = config.make_policy(
-        experiment=self._experiment,
-        networks=networks,
-        environment_spec=environment_spec,
-        evaluation=False,
-    )
-    replay_tables = self._experiment.builder.make_replay_tables(
-        environment_spec, policy
-    )
+        # observation = np.array(
+        #     list(param_proto_to_dict(request.decision_point.state_params).values()),
+        #     dtype=np.float32,
+        # )
+        # # logging.info('observation : %s', observation)
+        # with self.last_action_lock.gen_wlock():
+        #   if request.worker_id in self.last_action:
+        #     action = self.last_action[request.worker_id]
 
-    replay_server = reverb.Server(replay_tables, port=None)
-    replay_client = reverb.Client(f"localhost:{replay_server.port}")
+        #     timestep = dm_env.TimeStep(
+        #         step_type=dm_env.StepType.LAST,
+        #         reward=np.array(
+        #             request.decision_outcome.outcome_value, dtype=np.float64
+        #         ),
+        #         discount=np.array(
+        #             request.decision_outcome.discount, dtype=np.float64
+        #         ),
+        #         observation=np.frombuffer(observation, dtype=np.float32),
+        #     )
 
-    dataset = self._experiment.builder.make_dataset_iterator(replay_client)
-    dataset = utils.prefetch(dataset, buffer_size=1)
-
-    key = jax.random.PRNGKey(0)
-    learner_key, key = jax.random.split(key)
-    learner = self._experiment.builder.make_learner(
-        random_key=learner_key,
-        networks=networks,
-        dataset=dataset,
-        logger_fn=self._experiment.logger_factory,
-        environment_spec=environment_spec,
-        replay_client=replay_client,
-    )
-
-    self._learner = learner
-    self._replay_server = replay_server
-    self._replay_client = replay_client
-    self._dataset = dataset
-    self._environment_spec = environment_spec
-    self._policy = policy
-
-    with self._learner_weights_lock.gen_wlock():
-      self._learner_weights = self._learner.get_variables("")
-
-    # spinning a thread which update the learner when dataset iterator is ready
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    executor.submit(self.update_learner)
-    # Manually shutdown the executor after submitting tasks
-    executor.shutdown(wait=False)
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    # print(f"<<<<  Out {method_name} of {_file_name}")
-
-  @overrides
-  def launch(
-      self, request: service_pb2.LaunchRequest
-  ) -> service_pb2.LaunchResponse:
-    method_name = "launch"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    super(Acme, self).launch(request)
-
-    # self.create_learner(request.client_id, request.acme_config.env_name)
-    # self.create_learner(request.client_id, request.acme_config)
-
-    self.create_learner(request.client_id,
-                        acme_config = request.decision_config_params.choice_config[request.label].acme_config)
-
-    # TODO : meetashah : this is old version, might have to modify for now.
-    # storing client details in case server crashed - mid run
-    # client_details = {}
-    # client_details["sight_id"] = int(request.client_id)
-    # client_details["env"] = "CartPole-v1"
-    # client_details["network_path"] = (
-    #     f"gs://{FLAGS.project_id}-sight/learner/" + request.client_id + "/"
-    # )
-    # client_details["learner_path"] = (
-    #     f"gs://{FLAGS.project_id}-sight/learner/" + request.client_id + "/"
-    # )
-    # client_details["replay_address"] = "127.0.0.1"
-    # server_utils.Insert_In_ClientData_Table(
-    #     client_details, "sight-data", "sight_db", "ClientData"
-    # )
-
-    response = service_pb2.LaunchResponse()
-    response.display_string = "ACME SUCCESS!"
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return response
-
-  @overrides
-  def decision_point(
-      self, request: service_pb2.DecisionPointRequest
-  ) -> service_pb2.DecisionPointResponse:
-    method_name = "decision_point"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    executor = concurrent.futures.ThreadPoolExecutor(max_workers=1)
-    executor.submit(self.insert_to_replay, request)
-    # Manually shutdown the executor after submitting tasks
-    executor.shutdown(wait=False)
-
-    # logging.info("sending latest weights back to client")
-    with self._learner_weights_lock.gen_rlock():
-      latest_weights = self._learner_weights
-
-    response = service_pb2.DecisionPointResponse()
-    weights_msg = service_pb2.Acme_Response()
-    for layer_data in latest_weights:
-      for layer_name, layer_info in layer_data.items():
-        layer_msg = weights_msg.layers.add()
-        layer_msg.name = layer_name
-
-        weights_data_msg = layer_msg.weights
-        weights_data_msg.b.extend(layer_info["b"])
-        weights_data_msg.w.CopyFrom(ndarray_to_proto(layer_info["w"]))
-    response.acme_response.CopyFrom(weights_msg)
-    # print(f"<<<<  Out {method_name} of {_file_name}")
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return response
-
-  @overrides
-  def finalize_episode(
-      self, request: service_pb2.FinalizeEpisodeRequest
-  ) -> service_pb2.FinalizeEpisodeResponse:
-    method_name = "finalize_episode"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
-
-    observation = np.array(
-        list(param_proto_to_dict(request.decision_point.state_params).values()),
-        dtype=np.float32,
-    )
-    # logging.info('observation : %s', observation)
-    with self.last_action_lock.gen_wlock():
-      if request.worker_id in self.last_action:
-        action = self.last_action[request.worker_id]
-
-        timestep = dm_env.TimeStep(
-            step_type=dm_env.StepType.LAST,
-            reward=np.array(
-                request.decision_outcome.outcome_value, dtype=np.float64
-            ),
-            discount=np.array(
-                request.decision_outcome.discount, dtype=np.float64
-            ),
-            observation=np.frombuffer(observation, dtype=np.float32),
-        )
-
-        with self.agents_lock.gen_rlock():
-          self.agents[request.worker_id].observe(
-              np.int64(action), next_timestep=timestep
-          )
-          self.agents[request.worker_id].update()
-        self._learner_checkpointer.save(force=True)
+        #     with self.agents_lock.gen_rlock():
+        #       self.agents[request.worker_id].observe(
+        #           np.int64(action), next_timestep=timestep
+        #       )
+        #
+        #       # self.agents[request.worker_id].observe(
+        #       #     np.float32(action), next_timestep=timestep
+        #       # )
+        #       self.agents[request.worker_id].update()
+        # self._learner_checkpointer.save(force=True)
 
         # Resetting last action for agent since it is the end of the episode.
-        del self.last_action[request.worker_id]
+        # del self.last_action[request.worker_id]
 
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return service_pb2.FinalizeEpisodeResponse(response_str="Success!")
+        logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+        return service_pb2.FinalizeEpisodeResponse(response_str="Success!")
 
-  @overrides
-  def current_status(
-      self, request: service_pb2.CurrentStatusRequest
-  ) -> service_pb2.CurrentStatusResponse:
-    method_name = "current_status"
-    logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    response = "[ACME]\n"
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return service_pb2.CurrentStatusResponse(response_str=response)
+    @overrides
+    def current_status(
+        self, request: service_pb2.CurrentStatusRequest
+    ) -> service_pb2.CurrentStatusResponse:
+        method_name = "current_status"
+        logging.debug(">>>>  In %s of %s", method_name, _file_name)
+        response = "[ACME]\n"
+        logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+        return service_pb2.CurrentStatusResponse(response_str=response)
