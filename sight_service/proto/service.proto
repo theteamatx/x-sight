@@ -187,8 +187,8 @@ message Acme_Response {
 message DecisionPointRequest {
   string client_id = 1;
   string worker_id = 2;
-  // sight.x.proto.DecisionPoint decision_point = 3;
-  // sight.x.proto.DecisionOutcome decision_outcome = 4;
+  sight.x.proto.DecisionPoint decision_point = 3;
+  sight.x.proto.DecisionOutcome decision_outcome = 4;
   Acme_Request acme_config = 5;
 }
 message DecisionPointResponse {
@@ -222,6 +222,13 @@ message CurrentStatusRequest {
 }
 message CurrentStatusResponse {
   string response_str = 1;
+  enum Status{
+    DEFAULT = 0;
+    IN_PROGRESS = 1;
+    SUCCESS = 2;
+    FAILURE = 3;
+  }
+  Status status = 2;
 }
 
 message LaunchRequest {
@@ -247,9 +254,9 @@ message ProposeActionResponse {
 message FinalizeEpisodeRequest {
   string client_id = 1;
   string worker_id = 2;
-  // sight.x.proto.DecisionPoint decision_point = 3;
-  // sight.x.proto.DecisionOutcome decision_outcome = 4;
-  // sight.x.proto.DecisionConfigurationStart.OptimizerType optimizer_type = 5;
+  sight.x.proto.DecisionPoint decision_point = 3;
+  sight.x.proto.DecisionOutcome decision_outcome = 4;
+  sight.x.proto.DecisionConfigurationStart.OptimizerType optimizer_type = 5;
   Acme_Request acme_config  = 6;
 }
 

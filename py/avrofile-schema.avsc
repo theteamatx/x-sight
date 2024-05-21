@@ -62,7 +62,8 @@
                 "ST_TENSORFLOW_EXAMPLE",
                 "ST_DECISION_POINT",
                 "ST_DECISION_OUTCOME",
-                "ST_GAP"
+                "ST_GAP",
+                "ST_LINK"
             ],
             "doc": "sub-type"
         }],
@@ -1780,6 +1781,37 @@
                 }
             ]
         }],
+        "doc": ""
+      },
+      {
+        "name": "link",
+        "type": [ "null", {
+            "namespace": "link",
+            "name": "type_link",
+            "type": "record",
+            "fields": [
+              {
+                "name": "linked_sight_id",
+                "type": [ "null", "string" ],
+                "doc": ""
+              },
+              {
+                    "name": "link_type",
+                    "type": [ "null", {
+                        "type": "enum",
+                        "name": "type_link_type",
+                        "symbols":
+                        [
+                            "LT_UNKNOWN",
+                            "LT_PARENT_TO_CHILD",
+                            "LT_CHILD_TO_PARENT"
+                        ],
+                        "doc": "link-type"
+                    }],
+                    "doc": ""
+                }
+            ]
+          }],
         "doc": ""
       },
       {

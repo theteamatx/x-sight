@@ -38,8 +38,11 @@ from sight.proto import sight_pb2
 from sight.service_utils import finalize_server
 from sight.utility import MessageToDict
 from sight.widgets.decision import decision
+from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
 
 load_dotenv()
+_PARENT_ID = flags.DEFINE_string(
+    'parent_id', None, 'Sight log Id of super script')
 FLAGS = flags.FLAGS
 current_script_directory = os.path.dirname(os.path.abspath(__file__))
 _SCHEMA_FILE_PATH = os.path.join(current_script_directory, '..', 'avrofile-schema.avsc')
@@ -50,7 +53,6 @@ def generate_default_sight_params():
   If user has provided values for some of them while initializing, it will be
   used, otherwise this value are passed.
   """
-  print("default params taken here.......")
   default_prams = sight_pb2.Params(
       label='default_sight',
       log_owner='bronovetsky@google.com',
@@ -138,7 +140,7 @@ class Sight(object):
   # The API Key for the BQ Sight service
   # SIGHT_API_KEY = 'AKfycbz35qrsrKUmm2FITMsLW9vSbKoBxEYv4EggM_m1Q2H3' #cameltrain
   # SIGHT_API_KEY = 'AKfycbw9eY9dk-JstxeAizfMfJZ8qwHm6BVmOZEgBUey-HPL' #catan-(now generalized)
-  SIGHT_API_KEY = 'AKfycbxHmmutVP-o1rsv3bLEUWQhbTG4uzTN_7VwR6sGUpOdvhrVQbtoOFcQtHbBeO0un3BfiQ'
+  SIGHT_API_KEY = 'AKfycbzU74yRL1Dc0Xu5--oJricaD-H50UgF3FKM_E8_CMP7uNesQEk-k3cm57R3vTsjbWCcxA'
 
   def __init__(
       self,
@@ -155,7 +157,7 @@ class Sight(object):
 
     # Initialize each widget's state to make sure its state field is created.
     self.widget_decision_state = defaultdict(dict)
-    # self.widget_simulation_state = SimulationWidgetState()
+    self.widget_simulation_state = SimulationWidgetState()
     # self._configure(configuration)
     if self.params.silent_logger:
       return
@@ -226,6 +228,7 @@ class Sight(object):
             self.path_prefix = (
                 self.params.label + '_' + str(response.id) + '_' + 'log'
             )
+
         except Exception as e:
           logging.info('RPC ERROR: %s', e)
           if not self.params.log_dir_path:
@@ -246,11 +249,16 @@ class Sight(object):
             + self.path_prefix
             # 'client_' + str(self.id) + '/' + self.path_prefix
         )
+        self.file_name = self.avro_log_file_path.split('/')[-1]
+        # self.table_name = self.params.label + '_' + str(self.id) + '_' + 'log'
+        self.table_name = str(self.id) + '_' + 'log'
+
         if 'SIGHT_PATH' in os.environ:
           self.avro_schema = load_schema(
               f'{os.environ["SIGHT_PATH"]}/../avrofile-schema.avsc'
           )
         else:
+          # print('avro-schema path is : ', _SCHEMA_FILE_PATH)
           self.avro_schema = load_schema(_SCHEMA_FILE_PATH)
         self.avro_log = io.BytesIO()
         self.avro_record_counter = 0
@@ -354,21 +362,20 @@ class Sight(object):
         )
         # if this is the only avro file, table has not been created yet
         if self.avro_file_counter == 1:
-          create_external_bq_table(self.params, self.file_name, self.id)
+          create_external_bq_table(self.params, self.table_name, self.id)
           logging.info(
               'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
               self.SIGHT_API_KEY,
               self.params.dataset_name,
-              self.file_name,
+              self.table_name,
               self.params.log_owner,
               os.environ['PROJECT_ID']
           )
+          print(f'table generated : {self.params.dataset_name}.{self.table_name}')
       self.avro_log.close()
-      logging.info('stream successfully completed')
 
     if not self.params.local and not self.params.in_memory:
-      # time.sleep(1)
       logging.info(
           (
               'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
@@ -376,7 +383,7 @@ class Sight(object):
           ),
           self.SIGHT_API_KEY,
           self.params.dataset_name,
-          self.file_name,
+          self.table_name,
           self.params.log_owner,
           os.environ['PROJECT_ID']
       )
@@ -723,8 +730,10 @@ class Sight(object):
         dict_obj = MessageToDict(obj, preserving_proto_field_name=True)
         fastavro.writer(self.avro_log, self.avro_schema, [dict_obj])
         self.avro_record_counter += 1
-        self.file_name = self.avro_log_file_path.split('/')[-1]
-        if self.avro_record_counter % 10000 == 0:
+        # print('self.avro_log_file_path : ', self.avro_log_file_path)
+        # self.file_name = self.avro_log_file_path.split('/')[-1]
+        # print('&&&&&&&&&&&&&&&&&&&&&&&self.file_name : ', self.file_name)
+        if self.avro_record_counter % 100 == 0:
           self.avro_file_counter += 1
           upload_blob_from_stream(
               self.params.bucket_name,
@@ -734,18 +743,17 @@ class Sight(object):
               self.avro_file_counter,
           )
           if self.avro_file_counter == 1:
-            create_external_bq_table(self.params, self.file_name, self.id)
-            # logging.info(
-            #     'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
-            #     'log_id=%s.%s&log_owner=%s&project_id=%s',
-            #     self.SIGHT_API_KEY,
-            #     self.params.dataset_name,
-            #     self.file_name,
-            #     self.params.log_owner,
-            #     os.environ['PROJECT_ID'],
-            # )
-            # print("now sleeping for 5 minutes...")
-            # time.sleep(300)
+            create_external_bq_table(self.params, self.table_name, self.id)
+            logging.info(
+                'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+                'log_id=%s.%s&log_owner=%s&project_id=%s',
+                self.SIGHT_API_KEY,
+                self.params.dataset_name,
+                self.table_name,
+                self.params.log_owner,
+                os.environ['PROJECT_ID']
+            )
+            print(f'table generated : {self.params.dataset_name}.{self.table_name}')
           self.avro_log.close()
           self.avro_log = io.BytesIO()
 

@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
 syntax = "proto3";
 
 package sight.x.proto;
@@ -66,6 +65,7 @@ message Object {
     ST_DECISION_OUTCOME = 14;
     // A dummy object that does not have semantic content from the user.
     ST_GAP = 11;
+    ST_LINK = 15;
   }
   SubType sub_type = 4;
 
@@ -83,6 +83,7 @@ message Object {
     TensorFlowExample tensor_flow_example = 21;
     DecisionPoint decision_point = 22;
     DecisionOutcome decision_outcome = 23;
+    Link link = 25;
   }
 
   string file = 10;
@@ -180,6 +181,18 @@ message Tensor {
 
     BoolValues bool_values = 8;
   }
+}
+
+message Link {
+  string linked_sight_id = 1;
+  enum LinkType {
+    LT_UNKNOWN = 0;
+    LT_PARENT_TO_CHILD = 1;
+    LT_CHILD_TO_PARENT = 2;
+  }
+  LinkType link_type = 2;
+  // string table_name = 3;
+  // string optimizer = 4;
 }
 
 // Contains a single example with both input and output data
@@ -521,6 +534,17 @@ message SimulationTimeStepStart {
 // **** DECISONS AND THEIR OUTCOMES ****
 // *************************************
 
+message ContinuousProbDist {
+  message Gaussian {
+    float mean = 1;
+    float stdev = 2;
+  }
+
+  oneof dist {
+    Gaussian gaussian = 1;
+  }
+}
+
 message DecisionConfigurationStart {
   enum OptimizerType {
     OT_UNKNOWN = 0;
@@ -529,6 +553,9 @@ message DecisionConfigurationStart {
     OT_GENETIC_ALGORITHM = 3;
     OT_EXHAUSTIVE_SEARCH = 4;
     OT_LLM = 5;
+    OT_BAYESIAN_OPT = 6;
+    OT_SENSITIVITY_ANALYSIS = 7;
+    OT_NEVER_GRAD = 8;
   }
 
   message VizierConfig {}
@@ -569,8 +596,42 @@ message DecisionConfigurationStart {
     }
     LLMAlgorithm algorithm = 1;
 
+    enum LLMGoal {
+      LM_UNKNOWN = 0;
+      LM_OPTIMIZE = 1;
+      LM_RECOMMEND = 2;
+    }
+    LLMGoal goal = 2;
+
     // LLM-readable description of the program to be driven by the LLM.
-    string description = 2;
+    string description = 3;
+  }
+
+  message BayesianOptConfig {}
+
+  message SensitivityAnalysisConfig {}
+
+  message NeverGradConfig {
+    enum NeverGradAlgorithm {
+      NG_UNKNOWN = 0;
+      NG_AUTO = 1;
+      NG_BO = 2;
+      NG_CMA = 3;
+      NG_TwoPointsDE = 4;
+      NG_RandomSearch = 5;
+      NG_PSO = 6;
+      NG_ScrHammersleySearch = 7;
+      NG_DE = 8;
+      NG_CGA = 9;
+      NG_ES = 10;
+      NG_DL_OPO = 11;
+      NG_DDE = 12;
+      NG_NMM = 13;
+      NG_TINY_SPSA = 14;
+      NG_VORONOI_DE = 15;
+      NG_CMA_SMALL = 16;
+    }
+    NeverGradAlgorithm algorithm = 1;
   }
 
   message ChoiceConfig {
@@ -580,6 +641,9 @@ message DecisionConfigurationStart {
       GeneticAlgorithmConfig genetic_algorithm_config = 3;
       ExhaustiveSearchConfig exhaustive_search_config = 4;
       LLMConfig llm_config = 5;
+      BayesianOptConfig bayesian_opt_config = 6;
+      SensitivityAnalysisConfig sensitivity_analysis_config = 7;
+      NeverGradConfig never_grad_config = 8;
     }
   }
 
@@ -596,7 +660,6 @@ message DecisionConfigurationStart {
     DT_FLOAT32 = 3;
     DT_FLOAT64 = 4;
   }
-
   // Properties of and constraints on attributes.
   message AttrProps {
     float min_value = 1;
@@ -617,110 +680,16 @@ message DecisionConfigurationStart {
     // The human-/LLM-readable description of this attribute.
     string description = 5;
 
-    // Details related to attributes
-    // int64 shape = 6;
-    // DataType datatype = 7;
+    // Distribution of possible values
+    ContinuousProbDist continuous_prob_dist = 6;
   }
 
   // The attributes of application's state
   map<string, AttrProps> state_attrs = 3;
   map<string, AttrProps> action_attrs = 4;
+
+  int64 num_trials = 5;
 }
-// message DecisionConfigurationStart {
-//   enum OptimizerType {
-//     OT_UNKNOWN = 0;
-//     OT_VIZIER = 1;
-//     OT_ACME = 2;
-//     OT_GENETIC_ALGORITHM = 3;
-//     OT_EXHAUSTIVE_SEARCH = 4;
-//     OT_LLM = 5;
-//   }
-
-//   message VizierConfig {}
-
-//   message AcmeConfig {
-
-//     enum JaxAgent {
-//       JA_UNKNOWN = 0;
-//       JA_DQN = 1;
-//       JA_D4PG = 2;
-//     }
-
-//     string env_name = 1;
-//     // acme agents - jax dqn
-//     JaxAgent jax_agent = 2;
-//     // bytes env_spec = 3;
-
-//     #! common to all optimizer - combine this to external action and state attributes
-//     repeated float state_min = 9;
-//     repeated float state_max = 3;
-//     int64 state_param_length = 4;
-//     repeated float action_min = 5;
-//     repeated float action_max = 6;
-//     int64 action_param_length = 7;
-//     int64 possible_actions = 8;
-
-
-//   }
-
-//   message GeneticAlgorithmConfig {
-//     int64 max_population_size = 1;
-//   }
-
-//   message ExhaustiveSearchConfig {}
-
-//   message LLMConfig {
-//     enum LLMAlgorithm {
-//       LA_UNKNOWN = 0;
-//       LA_TEXT_BISON = 1;
-//       LA_CHAT_BISON = 2;
-//       LA_GEMINI_PRO = 3;
-//     }
-//     LLMAlgorithm algorithm = 1;
-
-//     // LLM-readable description of the program to be driven by the LLM.
-//     string description = 2;
-//   }
-
-//   message ChoiceConfig {
-//     oneof choice_config {
-//       VizierConfig vizier_config = 1;
-//       AcmeConfig acme_config = 2;
-//       GeneticAlgorithmConfig genetic_algorithm_config = 3;
-//       ExhaustiveSearchConfig exhaustive_search_config = 4;
-//       LLMConfig llm_config = 5;
-//     }
-//   }
-
-//   OptimizerType optimizer_type = 4;
-
-
-//   // Maps each choice label to the configuration of the algorithm to be used to choose the option.
-//   map<string, ChoiceConfig> choice_config = 1;
-
-//   // Properties of and constraints on attributes.
-//   message AttrProps {
-//     float min_value = 1;
-//     float max_value = 2;
-
-//     // The size of a discrete valid quantum of values between min_value and
-//     // max_value (if step_size > 0).
-//     // Valid values are: min_value, min_value + step_size, min_value +
-//     // step_size*2, ... max_value is only a valid value of max_value - min_value
-//     // is divisible by step_size.
-//     float step_size = 3;
-
-//     // Possible float-type values of this attribute.
-//     repeated float valid_float_values = 4;
-
-//     // The human-/LLM-readable description of this attribute.
-//     string description = 5;
-//   }
-
-//   // The attributes of application's state
-//   map<string, AttrProps> state_attrs = 2;
-//   map<string, AttrProps> action_attrs = 3;
-// }
 
 message DecisionParam {
   string key = 1;

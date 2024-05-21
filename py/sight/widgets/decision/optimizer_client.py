@@ -46,6 +46,10 @@ class OptimizerClient:
       d[a.key] = a.value.double_value
     return d
 
+  def _set_dp_action(self, dp: sight_pb2.DecisionPoint, action: Dict[str, float]) -> None:
+    """Add to dp the attributes of action."""
+    for key, val in action.items():
+      dp.value.add(sight_pb2.DecisionParam(key=key, value=sight_pb2.Value(double_value=val)))
 
   def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
     response = service.call(

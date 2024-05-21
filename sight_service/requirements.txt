@@ -20,3 +20,5 @@ readerwriterlock==1.0.9
 rlax==0.1.6
 optax==0.1.5
 google-generativeai==0.3.2
+bayesian-optimization==1.4.3
+nevergrad==1.0.2
