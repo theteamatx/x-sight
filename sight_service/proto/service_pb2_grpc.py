@@ -35,6 +35,16 @@ class SightServiceStub(object):
                 request_serializer=sight__service_dot_proto_dot_service__pb2.DecisionPointRequest.SerializeToString,
                 response_deserializer=sight__service_dot_proto_dot_service__pb2.DecisionPointResponse.FromString,
                 )
+        self.Tell = channel.unary_unary(
+                '/sight.x.service.SightService/Tell',
+                request_serializer=sight__service_dot_proto_dot_service__pb2.TellRequest.SerializeToString,
+                response_deserializer=sight__service_dot_proto_dot_service__pb2.TellResponse.FromString,
+                )
+        self.Listen = channel.unary_unary(
+                '/sight.x.service.SightService/Listen',
+                request_serializer=sight__service_dot_proto_dot_service__pb2.ListenRequest.SerializeToString,
+                response_deserializer=sight__service_dot_proto_dot_service__pb2.ListenResponse.FromString,
+                )
         self.CurrentStatus = channel.unary_unary(
                 '/sight.x.service.SightService/CurrentStatus',
                 request_serializer=sight__service_dot_proto_dot_service__pb2.CurrentStatusRequest.SerializeToString,
@@ -89,11 +99,23 @@ class SightServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
-    def CurrentStatus(self, request, context):
+    def Tell(self, request, context):
         """rpc DecisionOutcome(DecisionOutcomeRequest)
         returns (DecisionOutcomeResponse) {}
         rpc CopyDataToReplayServer(CopyDataToReplayServerRequest) returns (CopyDataToReplayServerResponse) {}
         """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Listen(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CurrentStatus(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -138,6 +160,16 @@ def add_SightServiceServicer_to_server(servicer, server):
                     servicer.DecisionPoint,
                     request_deserializer=sight__service_dot_proto_dot_service__pb2.DecisionPointRequest.FromString,
                     response_serializer=sight__service_dot_proto_dot_service__pb2.DecisionPointResponse.SerializeToString,
+            ),
+            'Tell': grpc.unary_unary_rpc_method_handler(
+                    servicer.Tell,
+                    request_deserializer=sight__service_dot_proto_dot_service__pb2.TellRequest.FromString,
+                    response_serializer=sight__service_dot_proto_dot_service__pb2.TellResponse.SerializeToString,
+            ),
+            'Listen': grpc.unary_unary_rpc_method_handler(
+                    servicer.Listen,
+                    request_deserializer=sight__service_dot_proto_dot_service__pb2.ListenRequest.FromString,
+                    response_serializer=sight__service_dot_proto_dot_service__pb2.ListenResponse.SerializeToString,
             ),
             'CurrentStatus': grpc.unary_unary_rpc_method_handler(
                     servicer.CurrentStatus,
@@ -235,6 +267,40 @@ class SightService(object):
         return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/DecisionPoint',
             sight__service_dot_proto_dot_service__pb2.DecisionPointRequest.SerializeToString,
             sight__service_dot_proto_dot_service__pb2.DecisionPointResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Tell(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/Tell',
+            sight__service_dot_proto_dot_service__pb2.TellRequest.SerializeToString,
+            sight__service_dot_proto_dot_service__pb2.TellResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Listen(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/Listen',
+            sight__service_dot_proto_dot_service__pb2.ListenRequest.SerializeToString,
+            sight__service_dot_proto_dot_service__pb2.ListenResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

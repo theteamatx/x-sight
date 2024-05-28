@@ -41,6 +41,7 @@ COPY .env .env
 
 # updating PYTHONPATH to resolve relative imports
 ENV PYTHONPATH "$HOME/x-sight:$HOME/x-sight/py:${PYTHONPATH}"
+ENV PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION python 
 
 # run the python command
 CMD [ "python3", "sight_service/service_root.py"]

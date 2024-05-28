@@ -31,7 +31,7 @@ from dotenv import load_dotenv
 from sight import service_utils as service
 
 from sight.proto import sight_pb2
-from sight.widgets.decision.acme import acme_optimizer_client
+# from sight.widgets.decision.acme import acme_optimizer_client
 from sight.widgets.decision.optimizer_client import OptimizerClient
 
 load_dotenv()
@@ -288,6 +288,7 @@ def start_jobs(
       'dsub',
       '--provider=google-cls-v2',
       f'--regions={_PROJECT_REGION.value}',
+      # f'--location={_PROJECT_REGION.value}',
       f'--image={docker_image}',
       f'--machine-type={_DSUB_MACHINE_TYPE.value}',
       f'--project={_PROJECT_ID.value}',

@@ -22,7 +22,9 @@
 
 // The Interface for the Sight service.
 syntax = "proto3";
+
 package sight.x.service;
+
 import "sight/proto/sight.proto";
 import "sight_service/proto/numproto/protobuf/ndarray.proto";
 import "google/api/annotations.proto";
@@ -63,6 +65,19 @@ service SightService {
   // rpc DecisionOutcome(DecisionOutcomeRequest)
   //     returns (DecisionOutcomeResponse) {}
   // rpc CopyDataToReplayServer(CopyDataToReplayServerRequest) returns (CopyDataToReplayServerResponse) {}
+  rpc Tell(TellRequest) returns (TellResponse) {
+    //   curl http://DOMAIN_NAME/v1/tell/{client_id}/{worker_id}
+    option (google.api.http) = {
+      post: "/v1/tell/{client_id}/{worker_id}"
+    };
+  }
+  rpc Listen(ListenRequest) returns (ListenResponse) {
+    //   curl http://DOMAIN_NAME/v1/listen/{client_id}/{worker_id}
+    option (google.api.http) = {
+      get: "/v1/listen/{client_id}/{worker_id}"
+    };
+  }
+
   rpc CurrentStatus(CurrentStatusRequest) returns (CurrentStatusResponse) {
     //   curl http://DOMAIN_NAME/v1/current_status/{client_id}/{worker_id}
     option (google.api.http) = {
@@ -153,13 +168,13 @@ service SightService {
 // }
 
 message Acme_Request {
-  enum StepType{
+  enum StepType {
     DEFAULT = 0;
     FIRST = 1;
     MID = 2;
     LAST = 3;
   }
-  message Observation{
+  message Observation {
     numproto.protobuf.NDArray action = 1;
     StepType steptype = 2;
     numproto.protobuf.NDArray reward = 3;
@@ -193,8 +208,19 @@ message DecisionPointRequest {
 }
 message DecisionPointResponse {
   repeated sight.x.proto.DecisionParam action = 1;
-  // repeated Acme_Response acme_response = 2;
-  bytes weights = 2; // acme_response required
+  Acme_Response acme_response = 2;
+  int64 response_idx = 3;
+
+  enum ActionType {
+    AT_UNKNOWN = 0;
+    // Tells the worker to perform the provided action.
+    AT_ACT = 1;
+    // Tells the worker that the server is finished providing actions.
+    AT_DONE = 2;
+    // Tells the worker to back off and try again soon.
+    AT_RETRY = 3;
+  }
+  ActionType action_type = 4;
 }
 // message DecisionOutcomeRequest {
 //   sight.x.proto.DecisionOutcome decision_outcome = 1;
@@ -214,6 +240,22 @@ message FetchOptimalActionRequest {
 }
 message FetchOptimalActionResponse {
   string response_str = 1;
+}
+
+message TellRequest {
+  string client_id = 1;
+  string message_str = 2;
+}
+message TellResponse {
+  string response_str = 1;
+}
+
+message ListenRequest {
+  string client_id = 1;
+}
+message ListenResponse {
+  bool response_ready = 1;
+  string response_str = 2;
 }
 
 message CurrentStatusRequest {
@@ -236,7 +278,6 @@ message LaunchRequest {
   string label = 3;
   string client_id = 4;
 }
-
 message LaunchResponse {
   string display_string = 1;
 }

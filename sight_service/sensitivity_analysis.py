@@ -80,14 +80,30 @@ class SensitivityAnalysis(OptimizerInstance):
             random.randint(0, len(self.possible_values[key]) - 1)
         ]
       elif self.actions[key].HasField('continuous_prob_dist'):
-        rand_val = random.gauss(self.actions[key].continuous_prob_dist.gaussian.mean, 
-                                self.actions[key].continuous_prob_dist.gaussian.stdev)
-        print ('self.actions[key].continuous_prob_dist=%s, rand_val=%s' % (self.actions[key].continuous_prob_dist, rand_val))
-        if rand_val < self.actions[key].min_value:
-          rand_val = self.actions[key].min_value
-        elif rand_val > self.actions[key].max_value:
-          rand_val = self.actions[key].max_value
-        next_action[key] = rand_val
+        if self.actions[key].continuous_prob_dist.HasField('gaussian'):
+          rand_val = random.gauss(self.actions[key].continuous_prob_dist.gaussian.mean, 
+                                  self.actions[key].continuous_prob_dist.gaussian.stdev)
+          print ('self.actions[key].continuous_prob_dist=%s, rand_val=%s' % (self.actions[key].continuous_prob_dist, rand_val))
+          if rand_val < self.actions[key].min_value:
+            rand_val = self.actions[key].min_value
+          elif rand_val > self.actions[key].max_value:
+            rand_val = self.actions[key].max_value
+          next_action[key] = rand_val
+        elif self.actions[key].continuous_prob_dist.HasField('uniform'):
+          rand_val = random.uniform(self.actions[key].continuous_prob_dist.uniform.min_val, 
+                                  self.actions[key].continuous_prob_dist.uniform.max_val)
+          print ('self.actions[key].continuous_prob_dist=%s, rand_val=%s' % (self.actions[key].continuous_prob_dist, rand_val))
+          next_action[key] = rand_val
+        else:
+          raise ValueError('Only support Gaussian continuous distribution.')
+      elif self.actions[key].HasField('discrete_prob_dist'):
+        if self.actions[key].discrete_prob_dist.HasField('uniform'):
+          rand_val = random.randint(self.actions[key].discrete_prob_dist.uniform.min_val, 
+                                    self.actions[key].discrete_prob_dist.uniform.max_val)
+          print ('self.actions[key].discrete_prob_dist=%s, rand_val=%s' % (self.actions[key].discrete_prob_dist, rand_val))
+          next_action[key] = rand_val
+        else:
+          raise ValueError('Only support Uniform discrete distribution.')
       else:
         next_action[key] = random.uniform(
             self.actions[key].min_value, self.actions[key].max_value
@@ -102,10 +118,11 @@ class SensitivityAnalysis(OptimizerInstance):
     self._lock.release()
 
     logging.info('next_action=%s', next_action)
-    response = service_pb2.DecisionPointResponse()
-    response.action.extend(param_dict_to_proto(next_action))
+    dp_response = service_pb2.DecisionPointdp_response()
+    dp_response.action.extend(param_dict_to_proto(next_action))
+    dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
     logging.debug('<<<<  Out %s of %s', method_name, _file_name)
-    return response
+    return dp_response
 
   @overrides
   def finalize_episode(

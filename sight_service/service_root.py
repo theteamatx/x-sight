@@ -20,7 +20,6 @@ warnings.warn = warn
 
 from concurrent import futures
 import logging
-import google.cloud.logging as log
 from absl import app
 
 import grpc
@@ -37,7 +36,7 @@ import time
 
 from sight_service import service_utils
 from sight.proto import sight_pb2
-from sight_service.acme_optimizer import Acme
+# from sight_service.acme_optimizer import Acme
 from sight_service.bayesian_opt import BayesianOpt
 from sight_service.exhaustive_search import ExhaustiveSearch
 from sight_service.genetic_algorithm import GeneticAlgorithm
@@ -47,6 +46,7 @@ from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
 from sight_service.proto import service_pb2_grpc
 from sight_service.sensitivity_analysis import SensitivityAnalysis
+from sight_service.smc_py import SMCPy
 from sight_service.vizier import Vizier
 from readerwriterlock import rwlock
 
@@ -105,11 +105,11 @@ class Optimizers:
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH:
         self.instances[request.client_id] = ExhaustiveSearch()
         return self.instances[request.client_id].launch(request)
-      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_ACME:
-        self.instances[request.client_id] = Acme()
-        obj = self.instances[request.client_id].launch(request)
-        # logging.info("self of optimizers class:  %s", str(self.__dict__))
-        return obj
+      # elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_ACME:
+      #   self.instances[request.client_id] = Acme()
+      #   obj = self.instances[request.client_id].launch(request)
+      #   # logging.info("self of optimizers class:  %s", str(self.__dict__))
+      #   return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM:
         self.instances[request.client_id] = LLM()
         obj = self.instances[request.client_id].launch(request)
@@ -126,6 +126,10 @@ class Optimizers:
         self.instances[request.client_id] = NeverGradOpt()
         obj = self.instances[request.client_id].launch(request)
         return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY:
+        self.instances[request.client_id] = SMCPy()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
       else:
         return service_pb2.LaunchResponse(
             display_string=f"OPTIMIZER '{optimizer_type}' NOT VALID!!"
@@ -134,12 +138,12 @@ class Optimizers:
 
 
   def get_instance(self, client_id: str) -> OptimizerInstance:
-    method_name = "get_instance"
-    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+    # method_name = "get_instance"
+    # logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
     with self.instances_lock.gen_rlock():
       instance_obj = self.instances[client_id]
       return instance_obj
-    logging.info("<<<<<< Out %s method of %s file.", method_name, _file_name)
+    # logging.debug("<<<<<< Out %s method of %s file.", method_name, _file_name)
 
 
 
@@ -177,6 +181,24 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     # calculate_resolve_time(start_time)
     logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
     return obj
+
+  def Tell(self, request, context):
+    method_name = "Tell"
+    logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+
+    return self.optimizers.get_instance(request.client_id).tell(
+        request
+    )
+    logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+
+  def Listen(self, request, context):
+    method_name = "Listen"
+    logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+
+    return self.optimizers.get_instance(request.client_id).listen(
+        request
+    )
+    logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
   def CurrentStatus(self, request, context):
     method_name = "CurrentStatus"

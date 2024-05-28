@@ -20,6 +20,7 @@ from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from overrides import override
+import time
 
 
 class SingleActionOptimizerClient(OptimizerClient):
@@ -79,15 +80,21 @@ class SingleActionOptimizerClient(OptimizerClient):
 
   @override
   def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
-    response = service.call(
-        lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
-    )
-    self._last_action = response.action
+    while True:
+      response = service.call(
+          lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
+      )
+      # logging.info('response: %s', response)
+      if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
+        self._last_action = response.action
 
-    return self._get_dp_action(response)
+        return self._get_dp_action(response)
+
+      time.sleep(5)
 
   @override
   def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
+    logging.info('SingleActionOptimizerClient() finalize_episode')
     if self._last_action:
       for a in self._last_action:
         request.decision_point.choice_params.append(a)

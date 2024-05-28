@@ -126,10 +126,11 @@ class ExhaustiveSearch(OptimizerInstance):
     self._lock.release()
 
     logging.info('next_action=%s', next_action)
-    response = service_pb2.DecisionPointResponse()
-    response.action.extend(param_dict_to_proto(next_action))
+    dp_response = service_pb2.DecisionPointResponse()
+    dp_response.action.extend(param_dict_to_proto(next_action))
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return response
+    dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
+    return dp_response
 
   @overrides
   def finalize_episode(

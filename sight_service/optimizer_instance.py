@@ -63,6 +63,7 @@ class OptimizerInstance:
   def __init__(self):
     self.actions = {}
     self.state = {}
+    self.outcomes = {}
 
   def launch(
       self, request: service_pb2.LaunchRequest
@@ -71,26 +72,29 @@ class OptimizerInstance:
     """
     method_name = "launch"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    logging.info('request.decision_config_params=%s', request.decision_config_params)
 
-    # sorting dict key wise to maintain consistency at for all call
+    # sorting dict key wise to maintain consistency at for all calls
     action_keys = list(request.decision_config_params.action_attrs.keys())
     action_keys.sort()
     for k in action_keys:
       self.actions[k] = request.decision_config_params.action_attrs[k]
 
-    # sorting dict key wise to maintain consistency at for all call
+    # sorting dict key wise to maintain consistency at for all calls
     state_keys = list(request.decision_config_params.state_attrs.keys())
     state_keys.sort()
     for k in state_keys:
       self.state[k] = request.decision_config_params.state_attrs[k]
-    # print(f"<<<<<<<<<  Out {method_name} of {_file_name}.")
+      
+    # sorting dict key wise to maintain consistency at for all calls
+    outcome_keys = list(request.decision_config_params.outcome_attrs.keys())
+    outcome_keys.sort()
+    for k in outcome_keys:
+      self.outcomes[k] = request.decision_config_params.outcome_attrs[k]
+
+    print(f"<<<<<<<<<  Out {method_name} of {_file_name}.")
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return service_pb2.LaunchResponse()
-
-  # def get_weights(
-  #     self, request: service_pb2.GetWeightsRequest
-  # ) -> service_pb2.GetWeightsResponse:
-  #   return service_pb2.GetWeightsResponse()
 
   def decision_point(
       self, request: service_pb2.DecisionPointRequest
@@ -102,6 +106,16 @@ class OptimizerInstance:
   ) -> service_pb2.FinalizeEpisodeResponse:
     return service_pb2.FinalizeEpisodeResponse()
 
+  def tell(
+      self, request: service_pb2.TellRequest
+  ) -> service_pb2.TellResponse:
+    return service_pb2.TellResponse()
+
+  def listen(
+      self, request: service_pb2.ListenRequest
+  ) -> service_pb2.ListenResponse:
+    return service_pb2.ListenResponse()
+  
   def current_status(
       self, request: service_pb2.CurrentStatusRequest
   ) -> service_pb2.CurrentStatusResponse:
