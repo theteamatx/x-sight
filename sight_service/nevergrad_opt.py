@@ -22,6 +22,7 @@ from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
 from sight.proto import sight_pb2
+from sight_service.normalizer import Normalizer
 import random
 import requests
 import google.auth
@@ -48,6 +49,7 @@ class NeverGradOpt(OptimizerInstance):
         self._lock = threading.RLock()
         self._total_count = 0
         self._completed_count = 0
+        self.normalizer = Normalizer()
 
     @overrides
     def launch(
@@ -61,6 +63,11 @@ class NeverGradOpt(OptimizerInstance):
 
         self._total_count = request.decision_config_params.num_trials
 
+        self.actions = self.normalizer.normalize_in_0_to_1(self.actions)
+        # print("self.actions : ", self.actions)
+
+
+
         self.possible_values = {}
         for i, key in enumerate(sorted(self.actions.keys())):
             if self.actions[key].valid_float_values:
@@ -72,7 +79,7 @@ class NeverGradOpt(OptimizerInstance):
                 while cur <= self.actions[key].max_value:
                     self.possible_values[key].append(cur)
                     cur += self.actions[key].step_size
-        print('possible_values=%s' % self.possible_values)
+        # print('possible_values=%s' % self.possible_values)
 
         params = {}
         for key, p in self.actions.items():
@@ -89,7 +96,7 @@ class NeverGradOpt(OptimizerInstance):
         # # print('here **params are : ', **params)
         # print('here ng.p.Dict is : ', ng.p.Dict(**params))
         # print('here ng.p.Instrumentation is : ', ng.p.Instrumentation(ng.p.Dict(**params)))
-        # # raise SystemExit
+
 
         parametrization = ng.p.Instrumentation(ng.p.Dict(**params))
         budget = 1000
@@ -102,7 +109,6 @@ class NeverGradOpt(OptimizerInstance):
               .NeverGradConfig.NeverGradAlgorithm.NG_BO):
             self._optimizer = ng.optimizers.BO(parametrization=parametrization,
                                                budget=budget)
-            print(self._optimizer, type(self._optimizer))
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_CMA):
             self._optimizer = ng.optimizers.CMA(parametrization=parametrization,
@@ -161,7 +167,7 @@ class NeverGradOpt(OptimizerInstance):
                                                budget=budget)
 
 
-        print(self._optimizer, type(self._optimizer))
+        # print(self._optimizer, type(self._optimizer))
 
         response.display_string = 'NeverGrad Start'
         print('response=%s' % response)
@@ -185,6 +191,7 @@ class NeverGradOpt(OptimizerInstance):
         self._lock.acquire()
         selected_actions = self._optimizer.ask()
         logging.info('selected_actions=%s', selected_actions.args)
+
         # logging.info('selected_actions=%s', selected_actions.kwargs)
         self.active_samples[request.worker_id] = {
             'action': selected_actions.args[0],
@@ -195,14 +202,18 @@ class NeverGradOpt(OptimizerInstance):
         self.num_samples_issued += 1
         self._lock.release()
 
+        denormalized_actions = self.normalizer.denormalize_from_0_to_1(selected_actions.args[0])
+        # print("denormalized_actions : ", denormalized_actions)
+
         dp_response = service_pb2.DecisionPointResponse()
-        for key, value in selected_actions.args[0].items():
+        for key, value in denormalized_actions.items():
             a = dp_response.action.add()
             a.key = key
             a.value.double_value = float(value)
 
         # self.last_outcome = request.decision_outcome.outcome_value
-        # print('DecisionPoint response=%s' % dp_response)
+        print('DecisionPoint response=%s' % dp_response)
+
         return dp_response
 
     @overrides
