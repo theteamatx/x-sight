@@ -58,7 +58,7 @@ gym==0.25.0
 gym-notices==0.0.8
 h5py==3.10.0
 httplib2==0.20.4
-idna==3.6
+idna==3.7
 importlib-resources==6.1.1
 jax==0.4.23
 jaxlib==0.4.23
@@ -87,7 +87,7 @@ overrides==7.4.0
 packaging==21.3
 pandas==2.1.4
 parameterized==0.8.1
-pillow==10.2.0
+pillow==10.3.0
 portpicker==1.6.0
 proto-plus==1.23.0
 protobuf==3.20.2
@@ -101,12 +101,12 @@ python-dotenv==1.0.0
 pytz==2022.1
 PyYAML==6.0
 readerwriterlock==1.0.9
-requests==2.31.0
+requests==2.32.2
 requests-oauthlib==1.3.1
 rich==13.7.0
 rlax==0.1.6
 rsa==4.8
-scikit-learn==1.4.1.post1
+scikit-learn==1.5.0
 scipy==1.12.0
 Shapely==1.8.5.post1
 six==1.16.0
@@ -115,7 +115,7 @@ tenacity==7.0.0
 tensorboard==2.8.0
 tensorboard-data-server==0.6.1
 tensorboard-plugin-wit==1.8.1
-tensorflow==2.8.0
+tensorflow==2.11.1
 tensorflow-io-gcs-filesystem==0.35.0
 tensorflow-probability==0.16.0
 tensorstore==0.1.52
@@ -123,11 +123,11 @@ termcolor==2.4.0
 tf-estimator-nightly==2.8.0.dev2021122109
 threadpoolctl==3.3.0
 toolz==0.12.1
-tqdm==4.66.1
+tqdm==4.66.3
 typing_extensions==4.9.0
 tzdata==2023.4
 uritemplate==4.1.1
-urllib3==2.2.0
+urllib3==2.2.2
 Werkzeug==3.0.1
 wrapt==1.16.0
 zipp==3.17.0
