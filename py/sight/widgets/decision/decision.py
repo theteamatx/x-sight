@@ -65,16 +65,16 @@ _DEPLOYMENT_MODE = flags.DEFINE_enum(
 _OPTIMIZER_TYPE = flags.DEFINE_enum(
     'optimizer_type',
     None,
-    ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search', 
+    ['vizier', 'dm_acme', 'genetic_algorithm', 'exhaustive_search',
      'llm_text_bison_optimize', 'llm_chat_bison_optimize', 'llm_gemini_pro_optimize',
      'llm_text_bison_recommend', 'llm_chat_bison_recommend', 'llm_gemini_pro_recommend',
      'llm_text_bison_interactive', 'llm_chat_bison_interactive', 'llm_gemini_pro_interactive',
-     'bayesian_opt', 'sensitivity_analysis', 
+     'bayesian_opt', 'sensitivity_analysis',
      'ng_auto', 'ng_bo', 'ng_cma',
      'ng_two_points_de', 'ng_random_search', 'ng_pso',
      'ng_scr_hammersley_search', 'ng_de', 'ng_cga', 'ng_es', 'ng_dl_opo',
      'ng_dde', 'ng_nmm', 'ng_tiny_spsa', 'ng_voronoi_de', 'ng_cma_small',
-     'smcpy',
+     'smcpy', 'dummy'
     ],
     'The optimizer to use',
 )
@@ -318,25 +318,25 @@ def run(
     optimizer.obj = AcmeOptimizerClient(sight)
   elif _OPTIMIZER_TYPE.value == 'vizier':
     optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER, 
+        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER,
         sight)
   elif _OPTIMIZER_TYPE.value == 'genetic_algorithm':
     optimizer.obj = GeneticAlgorithmOptimizerClient(
       max_population_size = _NUM_TRAIN_WORKERS.value, sight=sight)
   elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
     optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH, 
+        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH,
         sight)
   elif _OPTIMIZER_TYPE.value.startswith('llm_'):
     optimizer.obj = LLMOptimizerClient(
         _OPTIMIZER_TYPE.value.partition('llm_')[2], description, sight)
   elif _OPTIMIZER_TYPE.value == 'bayesian_opt':
     optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT, 
+        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT,
         sight)
   elif _OPTIMIZER_TYPE.value == 'sensitivity_analysis':
     optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SENSITIVITY_ANALYSIS, 
+        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SENSITIVITY_ANALYSIS,
         sight)
   elif _OPTIMIZER_TYPE.value.startswith('ng_'):
       optimizer.obj = SingleActionOptimizerClient(
@@ -345,16 +345,20 @@ def run(
           _OPTIMIZER_TYPE.value.partition('ng_')[2])
   elif _OPTIMIZER_TYPE.value == 'smcpy':
     optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY, 
+        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY,
+        sight)
+  elif _OPTIMIZER_TYPE.value == 'dummy':
+    optimizer.obj = SingleActionOptimizerClient(
+        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_DUMMY,
         sight)
   else:
     raise ValueError(f'Unknown optimizer type {_OPTIMIZER_TYPE.value}')
 
   if env is not None:
     if state_attrs == {}:
-      state_attrs = state_to_dict(env.observation_spec(), 'state')
+      state_attrs = attr_to_dict(env.observation_spec(), 'state')
     if action_attrs == {}:
-      action_attrs = state_to_dict(env.action_spec(), 'action')
+      action_attrs = attr_to_dict(env.action_spec(), 'action')
   if outcome_attrs == {}:
     outcome_attrs = {'outcome': sight_pb2.DecisionConfigurationStart.AttrProps()}
 
@@ -539,6 +543,13 @@ def run(
           # elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
           #   optimizer.obj = exhaustive_search_client.ExhaustiveSearch(sight)
 
+          actions_list = [
+                          {'action_1': 1, 'action_2': 1, 'action_3': 1},
+                          {'action_1': 2, 'action_2': 2, 'action_3': 2},
+                          {'action_1': 3, 'action_2': 3, 'action_3': 3}
+                      ]
+          unique_action_ids = propose_actions(sight, actions_list)
+
           for _ in range(num_samples_to_run):
             sight.enter_block('Decision Sample', sight_pb2.Object())
             if 'constant_action' in sight.widget_decision_state:
@@ -553,6 +564,11 @@ def run(
 
             finalize_episode(sight)
             sight.exit_block('Decision Sample', sight_pb2.Object())
+
+          results = get_outcome(sight)
+          logging.info('Get Outcome : %s', results)
+
+
 
         # req = service_pb2.TestRequest(client_id=str(sight.id))
         # response = service.call(
@@ -596,7 +612,7 @@ def get_decision_outcome_proto(outcome_label: str, sight: Any) -> sight_pb2.Deci
   )
   if 'sum_reward' in sight.widget_decision_state:
     decision_outcome.reward = sight.widget_decision_state['sum_reward']
-  
+
   if 'sum_outcome' in sight.widget_decision_state:
     outcome_params: List[sight_pb2.DecisionParam] = []
     for key in sight.widget_decision_state['sum_outcome']:
@@ -610,10 +626,10 @@ def get_decision_outcome_proto(outcome_label: str, sight: Any) -> sight_pb2.Deci
           )
       )
     decision_outcome.outcome_params.extend(outcome_params)
-  
+
   if 'discount' in sight.widget_decision_state:
     decision_outcome.discount = sight.widget_decision_state['discount']
-  
+
   return decision_outcome
 
 def decision_point(
@@ -684,13 +700,13 @@ def decision_point(
   # selected_action will be same for all calls of decision point in these
   # optimizers. As such, it is cached as the constant action.
   elif _OPTIMIZER_TYPE.value in [
-      'vizier', 'genetic_algorithm', 'exhaustive_search', 'bayesian_opt', 
-      'sensitivity_analysis', 'smcpy'
+      'vizier', 'genetic_algorithm', 'exhaustive_search', 'bayesian_opt',
+      'sensitivity_analysis', 'smcpy', 'dummy'
    ] or _OPTIMIZER_TYPE.value.startswith('ng_'):
     optimizer_obj = optimizer.get_instance()
     chosen_action = optimizer_obj.decision_point(sight, req)
     sight.widget_decision_state['constant_action'] = chosen_action
-  
+
   elif _OPTIMIZER_TYPE.value.startswith('llm_'):
     optimizer_obj = optimizer.get_instance()
     if 'reward' in sight.widget_decision_state:
@@ -735,6 +751,7 @@ def decision_point(
   obj.decision_point.choice_params.extend(choice_params)
   sight.log_object(obj, inspect.currentframe().f_back.f_back)
 
+  logging.info('decision_point() chosen_action=%s', chosen_action)
   logging.debug('<<<< Out %s of %s', method_name, _file_name)
   return chosen_action
 
@@ -761,14 +778,14 @@ def decision_outcome(
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
   sight.widget_decision_state['discount'] = discount
-  
+
   if reward is not None:
     logging.info('decision_outcome() reward=%s', reward)
     sight.widget_decision_state['reward'] = reward
     if 'sum_reward' not in sight.widget_decision_state:
       sight.widget_decision_state['sum_reward'] = 0
     sight.widget_decision_state['sum_reward'] += reward
-  
+
   if outcome is not None:
     logging.info('decision_outcome() outcome=%s', outcome)
     if 'sum_outcome' not in sight.widget_decision_state:
@@ -791,14 +808,30 @@ def decision_outcome(
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
-def propose_action(outcome: float, action: Dict[Text, float], sight) -> None:
-  sight.widget_decision_state['proposed_actions'].append({
-      'outcome':
-      outcome,
-      'action':
-      dict(action),
-  })
+def propose_actions(sight, actions_list):
+  request = service_pb2.ProposeActionRequest()
+  request.client_id = str(sight.id)
 
+  for action_dict in actions_list:
+    action = request.actions.add()
+    print(type(action))
+    for k,v in action_dict.items():
+      action_attr = action.action_attrs.add()
+      action_attr.key = k
+      val = sight_pb2.Value(
+                  sub_type=sight_pb2.Value.ST_DOUBLE,
+                  double_value=v,
+              )
+      action_attr.value.CopyFrom(val)
+
+  response = service.call(
+      lambda s, meta: s.ProposeAction(request, 300, metadata=meta)
+  )
+  # print('response : ', response)
+  unique_action_ids = []
+  for id in response.unique_ids:
+    unique_action_ids.append(id)
+  return unique_action_ids
 
 def finalize_episode(sight):  # , optimizer_obj
   """Finalize the run.
@@ -830,8 +863,8 @@ def finalize_episode(sight):  # , optimizer_obj
     )
 
     if _OPTIMIZER_TYPE.value in [
-        'genetic_algorithm', 'exhaustive_search', 'vizier', 'bayesian_opt', 
-        'sensitivity_analysis', 'smcpy'] or _OPTIMIZER_TYPE.value.startswith(
+        'genetic_algorithm', 'exhaustive_search', 'vizier', 'bayesian_opt',
+        'sensitivity_analysis', 'smcpy', 'dummy'] or _OPTIMIZER_TYPE.value.startswith(
                 'llm_') or _OPTIMIZER_TYPE.value.startswith('ng_'):
       req.decision_outcome.CopyFrom(get_decision_outcome_proto('outcome', sight))
       optimizer_obj = optimizer.get_instance()
@@ -839,7 +872,7 @@ def finalize_episode(sight):  # , optimizer_obj
     elif _OPTIMIZER_TYPE.value == 'dm_acme':
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight)
-    
+
     if 'outcome_value' in sight.widget_decision_state:
       del sight.widget_decision_state['outcome_value']
     #! not calling finalize episode to server
@@ -865,16 +898,34 @@ def finalize_episode(sight):  # , optimizer_obj
         response = service.call(lambda s, meta: s.ProposeAction(
             proposal_req, 300, metadata=meta))
       sight.widget_decision_state['proposed_actions'] = []
-  
+
   if 'sum_reward' in sight.widget_decision_state:
     _rewards.append(sight.widget_decision_state['sum_reward'])
   sight.widget_decision_state.pop('sum_reward', None)
   sight.widget_decision_state.pop('sum_outcome', None)
-  print('rewards : ', _rewards, len(_rewards))
 
 
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
+def get_outcome(sight):
+  request = service_pb2.GetOutcomeRequest()
+  request.client_id = str(sight.id)
+  # request.unique_ids.append(3)
+  response = service.call(
+      lambda s, meta: s.GetOutcome(request, 300, metadata=meta)
+  )
+
+  if(response.response_str):
+    return response.response_str
+
+  outcome_list = []
+  for outcome in response.outcome:
+    outcome_dict = {}
+    outcome_dict['reward'] = outcome.reward
+    outcome_dict['action'] = dict(outcome.action_attrs)
+    outcome_dict['outcome'] = dict(outcome.outcome_attrs)
+    outcome_list.append(outcome_dict)
+  return outcome_list
 
 def finalize(sight):
   logging.info(

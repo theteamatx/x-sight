@@ -212,8 +212,11 @@ class NeverGradOpt(OptimizerInstance):
         # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
         self.complete_samples[self.active_samples[
             request.worker_id]['sample_num']] = {
-                'outcome': request.decision_outcome.reward,
+                # 'outcome': request.decision_outcome.reward,
+                # 'action': self.active_samples[request.worker_id]['action'],
+                'reward': request.decision_outcome.reward,
                 'action': self.active_samples[request.worker_id]['action'],
+                'outcome': request.decision_outcome.outcome_params
             }
         # print('self.complete_samples : ', self.complete_samples)
         del self.active_samples[request.worker_id]

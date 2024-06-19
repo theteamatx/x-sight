@@ -48,6 +48,7 @@ from sight_service.proto import service_pb2_grpc
 from sight_service.sensitivity_analysis import SensitivityAnalysis
 from sight_service.smc_py import SMCPy
 from sight_service.vizier import Vizier
+from sight_service.dummy_opt import Dummy
 from readerwriterlock import rwlock
 
 
@@ -128,6 +129,10 @@ class Optimizers:
         return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY:
         self.instances[request.client_id] = SMCPy()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_DUMMY:
+        self.instances[request.client_id] = Dummy()
         obj = self.instances[request.client_id].launch(request)
         return obj
       else:
@@ -223,10 +228,21 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     method_name = "ProposeAction"
     logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-    return self.optimizers.get_instance(request.client_id).propose_action(
+    obj =  self.optimizers.get_instance(request.client_id).propose_action(
         request
     )
     logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
+
+  def GetOutcome(self, request, context):
+    method_name = "GetOutcome"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+
+    obj =  self.optimizers.get_instance(request.client_id).GetOutcome(
+        request
+    )
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
 
   def FinalizeEpisode(self, request, context):
     method_name = "FinalizeEpisode"

@@ -283,6 +283,12 @@ def start_jobs(
   if FLAGS.env_name:
     command += f' --env_name={FLAGS.env_name}'
 
+  logging_path = f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/'
+  if(FLAGS.parent_id):
+    logging_path += f'{FLAGS.parent_id}/'
+  logging_path += str(sight.id)
+
+
   print('sight.id=%s' % sight.id)
   args = [
       'dsub',
@@ -292,7 +298,8 @@ def start_jobs(
       f'--image={docker_image}',
       f'--machine-type={_DSUB_MACHINE_TYPE.value}',
       f'--project={_PROJECT_ID.value}',
-      f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service._SERVICE_ID}/{sight.id}',
+      # f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service._SERVICE_ID}/{sight.id}',
+      f'--logging={logging_path}',
       '--env',
       f'PARENT_LOG_ID={sight.id}',
       # '--env',

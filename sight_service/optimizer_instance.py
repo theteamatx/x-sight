@@ -85,7 +85,7 @@ class OptimizerInstance:
     state_keys.sort()
     for k in state_keys:
       self.state[k] = request.decision_config_params.state_attrs[k]
-      
+
     # sorting dict key wise to maintain consistency at for all calls
     outcome_keys = list(request.decision_config_params.outcome_attrs.keys())
     outcome_keys.sort()
@@ -125,6 +125,11 @@ class OptimizerInstance:
       self, request: service_pb2.ProposeActionRequest
   ) -> service_pb2.ProposeActionResponse:
     return service_pb2.ProposeActionResponse()
+
+  def GetOutcome(
+      self, request: service_pb2.GetOutcomeRequest
+  ) -> service_pb2.GetOutcomeResponse:
+    return service_pb2.GetOutcomeResponse()
 
   def fetch_optimal_action(
       self, request: service_pb2.FetchOptimalActionRequest

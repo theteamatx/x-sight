@@ -60,6 +60,11 @@ class SightServiceStub(object):
                 request_serializer=sight__service_dot_proto_dot_service__pb2.ProposeActionRequest.SerializeToString,
                 response_deserializer=sight__service_dot_proto_dot_service__pb2.ProposeActionResponse.FromString,
                 )
+        self.GetOutcome = channel.unary_unary(
+                '/sight.x.service.SightService/GetOutcome',
+                request_serializer=sight__service_dot_proto_dot_service__pb2.GetOutcomeRequest.SerializeToString,
+                response_deserializer=sight__service_dot_proto_dot_service__pb2.GetOutcomeResponse.FromString,
+                )
         self.FinalizeEpisode = channel.unary_unary(
                 '/sight.x.service.SightService/FinalizeEpisode',
                 request_serializer=sight__service_dot_proto_dot_service__pb2.FinalizeEpisodeRequest.SerializeToString,
@@ -132,6 +137,12 @@ class SightServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def GetOutcome(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def FinalizeEpisode(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -185,6 +196,11 @@ def add_SightServiceServicer_to_server(servicer, server):
                     servicer.ProposeAction,
                     request_deserializer=sight__service_dot_proto_dot_service__pb2.ProposeActionRequest.FromString,
                     response_serializer=sight__service_dot_proto_dot_service__pb2.ProposeActionResponse.SerializeToString,
+            ),
+            'GetOutcome': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetOutcome,
+                    request_deserializer=sight__service_dot_proto_dot_service__pb2.GetOutcomeRequest.FromString,
+                    response_serializer=sight__service_dot_proto_dot_service__pb2.GetOutcomeResponse.SerializeToString,
             ),
             'FinalizeEpisode': grpc.unary_unary_rpc_method_handler(
                     servicer.FinalizeEpisode,
@@ -352,6 +368,23 @@ class SightService(object):
         return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/ProposeAction',
             sight__service_dot_proto_dot_service__pb2.ProposeActionRequest.SerializeToString,
             sight__service_dot_proto_dot_service__pb2.ProposeActionResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def GetOutcome(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/GetOutcome',
+            sight__service_dot_proto_dot_service__pb2.GetOutcomeRequest.SerializeToString,
+            sight__service_dot_proto_dot_service__pb2.GetOutcomeResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

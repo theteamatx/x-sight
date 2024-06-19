@@ -136,23 +136,27 @@ class ExhaustiveSearch(OptimizerInstance):
   def finalize_episode(
       self, request: service_pb2.FinalizeEpisodeRequest
   ) -> service_pb2.FinalizeEpisodeResponse:
-    method_name = "finalize_episode"
+    method_name = "finalize_episode" 
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     # logging.info('Running for exhaustive search....')
+    # logging.info("req in finalize episode of exhaustive_search.py : %s", request)
 
     # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
     self._lock.acquire()
     self.complete_samples[
         tuple(self.active_samples[request.worker_id]['sample'])
     ] = {
-        'outcome': request.decision_outcome.outcome_value,
+        'reward': request.decision_outcome.reward,
         'action': self.active_samples[request.worker_id]['action'],
+        'outcome': request.decision_outcome.outcome_params
     }
     logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
 
-    if(self.max_reward_sample == {} or self.max_reward_sample['outcome'] < request.decision_outcome.outcome_value):
+    # if(self.max_reward_sample == {} or self.max_reward_sample['outcome'] < request.decision_outcome.outcome_value):
+    if(self.max_reward_sample == {} or self.max_reward_sample['reward'] < request.decision_outcome.reward):
       self.max_reward_sample = {
-        'outcome': request.decision_outcome.outcome_value,
+        # 'outcome': request.decision_outcome.outcome_value,
+        'reward': request.decision_outcome.reward,
         'action': self.active_samples[request.worker_id]['action'],
     }
     self._lock.release()

@@ -574,6 +574,7 @@ message DecisionConfigurationStart {
     OT_SENSITIVITY_ANALYSIS = 7;
     OT_NEVER_GRAD = 8;
     OT_SMC_PY = 9;
+    OT_DUMMY = 10;
   }
 
   message VizierConfig {}
@@ -654,6 +655,7 @@ message DecisionConfigurationStart {
   }
 
   message SMCPyConfig {}
+  message DummyConfig {}
 
   message ChoiceConfig {
     oneof choice_config {
@@ -666,6 +668,7 @@ message DecisionConfigurationStart {
       SensitivityAnalysisConfig sensitivity_analysis_config = 7;
       NeverGradConfig never_grad_config = 8;
       SMCPyConfig smc_py_config = 9;
+      DummyConfig dummy_config = 10;
     }
   }
 
