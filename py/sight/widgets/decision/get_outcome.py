@@ -44,7 +44,7 @@ def main(argv: Sequence[str]) -> None:
 
   request = service_pb2.GetOutcomeRequest()
   request.client_id = str(FLAGS.log_id)
-  request.unique_ids.append(10)
+  # request.unique_ids.append(1)
   response = service.call(
       lambda s, meta: s.GetOutcome(request, 300, metadata=meta)
   )

@@ -19,14 +19,15 @@ from overrides import overrides
 from typing import Any, Dict, List, Tuple
 
 from sight_service.proto import service_pb2
+from sight_service.single_action_optimizer import SingleActionOptimizer
 from sight_service.optimizer_instance import param_dict_to_proto
-from sight_service.optimizer_instance import OptimizerInstance
+# from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.optimizer_instance import param_proto_to_dict
 import threading
 
 _file_name = "exhaustive_search.py"
 
-class Dummy(OptimizerInstance):
+class Dummy(SingleActionOptimizer):
   """Exhaustively searches over all the possible values of the action attributes.
 
   Attributes:
@@ -37,11 +38,11 @@ class Dummy(OptimizerInstance):
   def __init__(self):
     super().__init__()
     self.next_sample_to_issue = []
-    self.action_ids = []
-    self.unique_id = 1
-    self.active_samples = {}
-    self.complete_samples = {}
-    self.worker_action_id_mapping = {}
+    # self.action_ids = []
+    # self.unique_id = 1
+    # self.active_samples = {}
+    # self.complete_samples = {}
+    # self.worker_action_id_mapping = {}
     self.last_sample = False
     self.sweep_issue_done = False
     self.possible_values = {}
