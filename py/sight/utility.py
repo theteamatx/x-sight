@@ -66,7 +66,7 @@ def MessageToJson(
       preserving_proto_field_name,
       use_integers_for_enums,
       descriptor_pool,
-      float_precision=float_precision,
+      #float_precision=float_precision,
   )
   return printer.ToJsonString(message, indent, sort_keys, ensure_ascii)
 
@@ -107,7 +107,7 @@ def MessageToDict(
       preserving_proto_field_name,
       use_integers_for_enums,
       descriptor_pool,
-      float_precision=float_precision,
+ #     float_precision=float_precision,
   )
   # pylint: disable=protected-access
   return printer._MessageToJsonObject(message)

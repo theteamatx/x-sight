@@ -154,7 +154,7 @@ class Vizier(OptimizerInstance):
     metrics = []
     metrics_obj = {}
     metrics_obj['metric_id'] = request.decision_outcome.outcome_label
-    metrics_obj['value'] = request.decision_outcome.outcome_value
+    metrics_obj['value'] = request.decision_outcome.reward
     metrics.append(metrics_obj)
 
     if request.worker_id not in self.current_trial:

@@ -265,9 +265,10 @@ class GeneticAlgorithm(OptimizerInstance):
         'algorithm': algorithm,
     }
 
-    response = service_pb2.DecisionPointResponse()
-    response.action.extend(param_dict_to_proto(next_action))
-    return response
+    dp_response = service_pb2.DecisionPointResponse()
+    dp_response.action.extend(param_dict_to_proto(next_action))
+    dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
+    return dp_response
 
   @overrides
   def finalize_episode(
@@ -284,25 +285,25 @@ class GeneticAlgorithm(OptimizerInstance):
       largest_outcome, largest_idx, smallest_outcome, smallest_idx = (
           self.find_best_worst_probweighted(self.ga_population)
       )
-      if request.decision_outcome.outcome_value >= smallest_outcome:
+      if request.decision_outcome.reward >= smallest_outcome:
         self.algorithms_succeeded_above_min[algorithm] += 1
-      if request.decision_outcome.outcome_value >= largest_outcome:
+      if request.decision_outcome.reward >= largest_outcome:
         self.algorithms_succeeded_best[algorithm] += 1
 
     self.ga_population.append({
-        'outcome': request.decision_outcome.outcome_value,
+        'outcome': request.decision_outcome.reward,
         'action': self.ga_active_samples[request.worker_id]['action'],
     })
     self.history.append({
         'algorithm': algorithm,
-        'outcome': request.decision_outcome.outcome_value,
+        'outcome': request.decision_outcome.reward,
         'action': self.ga_active_samples[request.worker_id]['action'],
         'worker_id': request.worker_id,
     })
     logging.info(
         '%s| FinalizeEpisode member=%s: %s / %s',
         request.worker_id,
-        request.decision_outcome.outcome_value,
+        request.decision_outcome.reward,
         self.ga_active_samples[request.worker_id]['algorithm'],
         self.ga_active_samples[request.worker_id]['action'],
     )
@@ -388,22 +389,22 @@ class GeneticAlgorithm(OptimizerInstance):
     largest_outcome, largest_idx, smallest_outcome, smallest_idx = (
         self.find_best_worst_probweighted(self.ga_population)
     )
-    if request.outcome.outcome_value >= smallest_outcome:
+    if request.outcome.reward >= smallest_outcome:
       self.proposals.append({
           'action': action,
-          'outcome': request.outcome.outcome_value,
+          'outcome': request.outcome.reward,
       })
       logging.info(
           '%s| Accepted Proposal %s: %s',
           request.worker_id,
-          request.outcome.outcome_value,
+          request.outcome.reward,
           action,
       )
     else:
       logging.info(
           '%s| Rejected Proposal %s: %s',
           request.worker_id,
-          request.outcome.outcome_value,
+          request.outcome.reward,
           action,
       )
     return service_pb2.ProposeActionResponse()

@@ -32,11 +32,11 @@ import os
 _LAST_TS = flags.DEFINE_integer(
     'last_ts', 10, 'The final day of the simulation.'
 )
-_NUM_ITERS = flags.DEFINE_integer(
-    'num_iters', 100, 'The number of steps the solver takes.'
+_MAX_DAYS = flags.DEFINE_integer(
+    'max_days', 1000, 'The number of days the solver simulates.'
 )
-_NUM_POP = flags.DEFINE_integer(
-    'num_pop', 100, 'The number members in the population.'
+_MAX_POP = flags.DEFINE_integer(
+    'max_pop', 10000, 'The number members in the population.'
 )
 _BETA = flags.DEFINE_float(
     'beta', .1, 'The disease transmission rate.'
@@ -48,27 +48,28 @@ _GAMMA = flags.DEFINE_float(
 
 def driver(sight: Sight) -> None:
   """Solves Lotka-Volterra equations using explicit Euler method."""
-  I, R = 1, 0
-  S = _NUM_POP.value - I - R
-  dt = _NUM_ITERS.value / _LAST_TS.value
+  dt = .1
 
   # data_structures.log_var('S', S, sight)
   # data_structures.log_var('I', I, sight)
   # data_structures.log_var('R', R, sight)
   action = decision.decision_point('init', sight) 
   print('dt=%s, action=%s' % (dt, action))
+  I, R = 1, 0
+  S = int(action['population']) - I - R
 
   hist = []
-  for idx in range(_NUM_ITERS.value - 1):
-
-    dotS = -action['beta'] * S * I / _NUM_POP.value
-    dotI = action['beta'] * S * I / _NUM_POP.value - action['gamma'] * I
+  for idx in range(int(int(action['num_days'])/dt) - 1):
+    dotS = -action['beta'] * S * I / int(action['population'])
+    dotI = action['beta'] * S * I / int(action['population']) - action['gamma'] * I
     dotR = action['gamma'] * I
-    print('%d: dotS=%s, dotI=%s, dotR=%s' % (idx, dotS, dotI, dotR))
+    
 
     S += dotS * dt
     I += dotI * dt
     R += dotR * dt
+
+    print('%d: S=(%s/d%s), dotI=(%s/d%s), dotR=(%s/d%s)' % (idx, S, dotS, I, dotI, R, dotR))
 
     # data_structures.log_var('S', S, sight)
     # data_structures.log_var('I', I, sight)
@@ -77,6 +78,7 @@ def driver(sight: Sight) -> None:
   data_structures.log_var('time series',
                       pd.DataFrame(hist, columns=['S', 'I', 'R']),
                       sight)
+  decision.decision_outcome('out', sight, reward=R, outcome={'S': S, 'I': I, 'R': R})
 
 
 def main(argv: Sequence[str]) -> None:
@@ -96,13 +98,47 @@ I need to configure this model's parameters based on data from the Los Angeles C
             state_attrs={
             },
             action_attrs={
-                'beta': sight_pb2.DecisionConfigurationStart.AttrProps(
-                    min_value=0, max_value=1,
-                    description='The transmission rate of the disease.'
+              'population': sight_pb2.DecisionConfigurationStart.AttrProps(
+                   min_value=0, max_value=_MAX_POP.value,
+                   description='The total population of the area affected by the infection.',
+                   discrete_prob_dist = sight_pb2.DiscreteProbDist(
+                    uniform = sight_pb2.DiscreteProbDist.Uniform(
+                        min_val = 0, max_val = _MAX_POP.value))
+               ),
+               'num_days': sight_pb2.DecisionConfigurationStart.AttrProps(
+                   min_value=0, max_value=_MAX_DAYS.value,
+                   description='The number of days of the infection being simulated.',
+                   discrete_prob_dist = sight_pb2.DiscreteProbDist(
+                    uniform = sight_pb2.DiscreteProbDist.Uniform(
+                        min_val = 0, max_val = _MAX_DAYS.value))
+               ),
+               'beta': sight_pb2.DecisionConfigurationStart.AttrProps(
+                   min_value=0, max_value=.2,
+                   description='The transmission rate of the disease.',
+                   continuous_prob_dist = sight_pb2.ContinuousProbDist(
+                   uniform = sight_pb2.ContinuousProbDist.Uniform(
+                       min_val = 0, max_val = .2))
+               ),
+               'gamma': sight_pb2.DecisionConfigurationStart.AttrProps(
+                   min_value=0, max_value=.2,
+                   description='The recovery rate of the disease.',
+                   continuous_prob_dist = sight_pb2.ContinuousProbDist(
+                   uniform = sight_pb2.ContinuousProbDist.Uniform(
+                       min_val = 0, max_val = .2))
+               ),
+            },
+            outcome_attrs={
+                'S': sight_pb2.DecisionConfigurationStart.AttrProps(
+                    min_value=0, max_value=_MAX_POP.value,
+                    description='The number of people who are susceptible to the disease.',
                 ),
-                'gamma': sight_pb2.DecisionConfigurationStart.AttrProps(
-                    min_value=0, max_value=1,
-                    description='The recovery rate of the disease.'
+                'I': sight_pb2.DecisionConfigurationStart.AttrProps(
+                    min_value=0, max_value=_MAX_POP.value,
+                    description='The number of people who are infected by the disease.',
+                ),
+                'R': sight_pb2.DecisionConfigurationStart.AttrProps(
+                    min_value=0, max_value=_MAX_POP.value,
+                    description='The number of people who have recovered from the disease.',
                 ),
             },
             sight=sight,

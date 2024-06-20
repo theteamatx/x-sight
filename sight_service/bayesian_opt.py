@@ -84,8 +84,8 @@ class BayesianOpt(OptimizerInstance):
       a.key = key
       a.value.double_value = float(value)
 
-    # self.last_outcome = request.decision_outcome.outcome_value
     print('DecisionPoint response=%s' % dp_response)
+    dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
     return dp_response
 
   @overrides
@@ -93,18 +93,15 @@ class BayesianOpt(OptimizerInstance):
       self, request: service_pb2.FinalizeEpisodeRequest
   ) -> service_pb2.FinalizeEpisodeResponse:
     logging.info('FinalizeEpisode request=%s', request)
-    # self._append_outcome(request.decision_outcome.outcome_value)
-    # self.history[-1]['outcome'] = request.decision_outcome.outcome_value
-    # self.last_outcome = request.decision_outcome.outcome_value
     d = {}
     for a in request.decision_point.choice_params:
       d[a.key] = a.value.double_value
 
     self._lock.acquire()
-    logging.info('FinalizeEpisode outcome=%s / %s', request.decision_outcome.outcome_value, d)
+    logging.info('FinalizeEpisode outcome=%s / %s', request.decision_outcome.reward, d)
     self._optimizer.register(
         params=d,
-        target=request.decision_outcome.outcome_value)
+        target=request.decision_outcome.reward)
     self._completed_count += 1
     self._lock.release()
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')

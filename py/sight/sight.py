@@ -363,16 +363,16 @@ class Sight(object):
         # if this is the only avro file, table has not been created yet
         if self.avro_file_counter == 1:
           create_external_bq_table(self.params, self.table_name, self.id)
-          logging.info(
-              'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-              'log_id=%s.%s&log_owner=%s&project_id=%s',
-              self.SIGHT_API_KEY,
-              self.params.dataset_name,
-              self.table_name,
-              self.params.log_owner,
-              os.environ['PROJECT_ID']
-          )
-          print(f'table generated : {self.params.dataset_name}.{self.table_name}')
+        logging.info(
+            'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+            'log_id=%s.%s&log_owner=%s&project_id=%s',
+            self.SIGHT_API_KEY,
+            self.params.dataset_name,
+            self.table_name,
+            self.params.log_owner,
+            os.environ['PROJECT_ID']
+        )
+        print(f'table generated : {self.params.dataset_name}.{self.table_name}')
       self.avro_log.close()
 
     if not self.params.local and not self.params.in_memory:
@@ -730,9 +730,6 @@ class Sight(object):
         dict_obj = MessageToDict(obj, preserving_proto_field_name=True)
         fastavro.writer(self.avro_log, self.avro_schema, [dict_obj])
         self.avro_record_counter += 1
-        # print('self.avro_log_file_path : ', self.avro_log_file_path)
-        # self.file_name = self.avro_log_file_path.split('/')[-1]
-        # print('&&&&&&&&&&&&&&&&&&&&&&&self.file_name : ', self.file_name)
         if self.avro_record_counter % 100 == 0:
           self.avro_file_counter += 1
           upload_blob_from_stream(
