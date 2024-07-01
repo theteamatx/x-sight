@@ -47,9 +47,21 @@ def param_proto_to_dict(
   """converting proto back into dictionary of parameters."""
   param_dict = {}
   for param in param_proto:
-    if param.value.sub_type != sight_pb2.Value.ST_DOUBLE:
+    # if ((param.value.sub_type != sight_pb2.Value.ST_DOUBLE) and (param.value.sub_type != sight_pb2.Value.ST_STRING)):
+    #   raise ValueError("Unsupported action type %s" % param.value.sub_type)
+    # param_dict[param.key] = param.value.double_value
+    if (param.value.sub_type == sight_pb2.Value.ST_DOUBLE):
+      param_dict[param.key] = param.value.double_value
+    elif (param.value.sub_type == sight_pb2.Value.ST_STRING):
+      param_dict[param.key] = param.value.string_value
+    elif (param.value.sub_type == sight_pb2.Value.ST_BOOL):
+      param_dict[param.key] = param.value.bool_value
+    elif (param.value.sub_type == sight_pb2.Value.ST_BYTES):
+      param_dict[param.key] = param.value.bytes_value
+    elif (param.value.sub_type == sight_pb2.Value.ST_INT64):
+      param_dict[param.key] = param.value.int64_value
+    else:
       raise ValueError("Unsupported action type %s" % param.value.sub_type)
-    param_dict[param.key] = param.value.double_value
   return param_dict
 
 
@@ -72,7 +84,7 @@ class OptimizerInstance:
     """
     method_name = "launch"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    logging.info('request.decision_config_params=%s', request.decision_config_params)
+    # logging.info('request.decision_config_params=%s', request.decision_config_params)
 
     # sorting dict key wise to maintain consistency at for all calls
     action_keys = list(request.decision_config_params.action_attrs.keys())
@@ -115,7 +127,7 @@ class OptimizerInstance:
       self, request: service_pb2.ListenRequest
   ) -> service_pb2.ListenResponse:
     return service_pb2.ListenResponse()
-  
+
   def current_status(
       self, request: service_pb2.CurrentStatusRequest
   ) -> service_pb2.CurrentStatusResponse:

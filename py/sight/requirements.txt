@@ -134,3 +134,4 @@ zipp==3.17.0
 google-vizier[jax]
 plotly
 streamlit
+smcpy

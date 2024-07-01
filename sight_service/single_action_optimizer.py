@@ -33,10 +33,9 @@ class SingleActionOptimizer(OptimizerInstance):
 
   def __init__(self):
     super().__init__()
-    self.action_ids = []
     self.unique_id = 1
+    self.pending_samples = {}
     self.active_samples = {}
-    self.complete_samples = {}
-    self.worker_action_id_mapping = {}
+    self.completed_samples = {}
 
 

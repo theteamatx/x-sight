@@ -24,6 +24,7 @@ import "sight/proto/widgets/pipeline/flume/flume.proto";
 message Attribute {
   string key = 1;
   string value = 2;
+  // Value value = 2;
 }
 
 // Base object from which all other logging objects are derived.
@@ -66,6 +67,7 @@ message Object {
     // A dummy object that does not have semantic content from the user.
     ST_GAP = 11;
     ST_LINK = 15;
+    ST_PROPOSE_ACTION = 16;
   }
   SubType sub_type = 4;
 
@@ -84,6 +86,7 @@ message Object {
     DecisionPoint decision_point = 22;
     DecisionOutcome decision_outcome = 23;
     Link link = 25;
+    ProposeAction propose_action = 26;
   }
 
   string file = 10;
@@ -108,6 +111,12 @@ message Object {
     int64 timestamp_ns = 1;
   }
   Order order = 19;
+}
+
+message ProposeAction {
+  repeated DecisionParam action_attrs = 1;
+  repeated DecisionParam attributes = 2;
+  string action_id = 3;
 }
 
 // Describes the configuration of some aspect of Sight or a Sight widget.
@@ -237,6 +246,7 @@ message Value {
     ST_INT64 = 3;
     ST_DOUBLE = 4;
     ST_BOOL = 5;
+    // add json type to send for finalized episode requeset
     ST_NONE = 6;
   }
   SubType sub_type = 1;
@@ -574,7 +584,7 @@ message DecisionConfigurationStart {
     OT_SENSITIVITY_ANALYSIS = 7;
     OT_NEVER_GRAD = 8;
     OT_SMC_PY = 9;
-    OT_DUMMY = 10;
+    OT_WORKLIST_SCHEDULER = 10;
   }
 
   message VizierConfig {}
@@ -655,7 +665,7 @@ message DecisionConfigurationStart {
   }
 
   message SMCPyConfig {}
-  message DummyConfig {}
+  message WorklistSchedulerConfig {}
 
   message ChoiceConfig {
     oneof choice_config {
@@ -668,7 +678,7 @@ message DecisionConfigurationStart {
       SensitivityAnalysisConfig sensitivity_analysis_config = 7;
       NeverGradConfig never_grad_config = 8;
       SMCPyConfig smc_py_config = 9;
-      DummyConfig dummy_config = 10;
+      WorklistSchedulerConfig worklist_scheduler_config = 10;
     }
   }
 
@@ -728,7 +738,7 @@ message DecisionPoint {
   string choice_label = 1;
 
   // Identifies the chosen option.
-  string chosen_option = 2;
+  string chosen_option = 2; // need or not?
 
   // The parameters that characterize the chosen option.
   repeated DecisionParam choice_params = 3;

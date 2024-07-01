@@ -51,7 +51,7 @@ _PROJECT_REGION = flags.DEFINE_string(
     'project_region', 'us-central1', 'location to store project-data'
 )
 _DSUB_MACHINE_TYPE = flags.DEFINE_string(
-    'dsub_machine-type', 'e2-standard-2', ''
+    'dsub_machine_type', 'e2-standard-2', ''
 )
 # _DSUB_LOGGING = flags.DEFINE_string(
 #     'log_path',

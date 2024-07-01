@@ -288,7 +288,7 @@ class Sight(object):
     self.attributes = {}
     self.open = True
 
-    self.set_attribute('log_uid', self.id)
+    self.set_attribute('log_uid', str(self.id))
 
     # if build_data.Changelist():
     #   self.change_list_number = int(build_data.Changelist())
@@ -664,6 +664,16 @@ class Sight(object):
       del self.attributes[key]
 
     self._update_line_suffix()
+
+  def fetch_attributes(self) -> dict[str,str]:
+    """Fetches all the values of attributes that is currently set to within Sight.
+    Returns:
+      The dictionary that contains key-value pairs of attributes currently set to.
+    """
+    attr_dict = {}
+    for k,v in self.attributes.items():
+      attr_dict[k] = v[-1]
+    return attr_dict
 
   def get_attribute(self, key: str) -> str:
     """Fetches the value that a key is currently set to within Sight.

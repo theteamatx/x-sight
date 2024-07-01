@@ -205,8 +205,9 @@ message Acme_Response {
 message DecisionPointRequest {
   string client_id = 1;
   string worker_id = 2;
-  sight.x.proto.DecisionPoint decision_point = 3;
+  sight.x.proto.DecisionPoint decision_point = 3; // need or not?
   sight.x.proto.DecisionOutcome decision_outcome = 4;
+  // attributes
   Acme_Request acme_config = 5;
 }
 message DecisionPointResponse {
@@ -286,14 +287,18 @@ message LaunchResponse {
 }
 
 message ProposeActionRequest {
-  message Action {
-    repeated sight.x.proto.DecisionParam action_attrs = 1;
-  }
+  // message Action {
+  //   repeated sight.x.proto.DecisionParam action_attrs = 1;
+  // }
   string client_id = 1;
-  repeated Action actions = 2;
+  // repeated Action actions = 2;
+  repeated sight.x.proto.DecisionParam action_attrs = 2;
+  // repeated sight.x.proto.DecisionParam state_attrs = 3;
+  // repeated sight.x.proto.Attribute attributes = 3;
+  repeated sight.x.proto.DecisionParam attributes = 3;
 }
 message ProposeActionResponse {
-  repeated int64 unique_ids = 1;
+  int64 action_id = 1;
 }
 
 message GetOutcomeRequest {

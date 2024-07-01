@@ -74,7 +74,7 @@ _OPTIMIZER_TYPE = flags.DEFINE_enum(
      'ng_two_points_de', 'ng_random_search', 'ng_pso',
      'ng_scr_hammersley_search', 'ng_de', 'ng_cga', 'ng_es', 'ng_dl_opo',
      'ng_dde', 'ng_nmm', 'ng_tiny_spsa', 'ng_voronoi_de', 'ng_cma_small',
-     'smcpy', 'dummy'
+     'smcpy', 'worklist_scheduler'
     ],
     'The optimizer to use',
 )
@@ -347,9 +347,9 @@ def run(
     optimizer.obj = SingleActionOptimizerClient(
         sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY,
         sight)
-  elif _OPTIMIZER_TYPE.value == 'dummy':
+  elif _OPTIMIZER_TYPE.value == 'worklist_scheduler':
     optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_DUMMY,
+        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER,
         sight)
   else:
     raise ValueError(f'Unknown optimizer type {_OPTIMIZER_TYPE.value}')
@@ -457,7 +457,7 @@ def run(
     # Otherwise, run within the current process.
     else:
       driver_fn(sight)
-  
+
   elif _DECISON_MODE.value == 'train':
     details = sight.widget_decision_state['decision_episode_fn']
     possible_actions = list(details.action_max.values())[0] - list(details.action_min.values())[0] + 2
@@ -495,7 +495,7 @@ def run(
             'docker_local',
             'worker_mode',
     ]:
-        if _DEPLOYMENT_MODE.value == 'worker_mode':
+        if _DEPLOYMENT_MODE.value == 'worker_mode' or 'PARENT_LOG_ID' in os.environ:
             num_samples_to_run = int(os.environ['num_samples'])
         else:
             trials.launch(
@@ -543,12 +543,12 @@ def run(
           # elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
           #   optimizer.obj = exhaustive_search_client.ExhaustiveSearch(sight)
 
-          actions_list = [
-                          {'action_1': 1, 'action_2': 1, 'action_3': 1},
-                          {'action_1': 2, 'action_2': 2, 'action_3': 2},
-                          {'action_1': 3, 'action_2': 3, 'action_3': 3}
-                      ]
-          unique_action_ids = propose_actions(sight, actions_list)
+          # actions_list = [
+          #                 {'action_1': 1, 'action_2': 1, 'action_3': 1},
+          #                 {'action_1': 2, 'action_2': 2, 'action_3': 2},
+          #                 {'action_1': 3, 'action_2': 3, 'action_3': 3}
+          #             ]
+          # unique_action_ids = propose_actions(sight, actions_list)
 
           for _ in range(num_samples_to_run):
             sight.enter_block('Decision Sample', sight_pb2.Object())
@@ -565,8 +565,8 @@ def run(
             finalize_episode(sight)
             sight.exit_block('Decision Sample', sight_pb2.Object())
 
-          results = get_outcome(sight)
-          logging.info('Get Outcome : %s', results)
+          # results = get_outcome(sight)
+          # logging.info('Get Outcome : %s', results)
 
 
 
@@ -701,8 +701,16 @@ def decision_point(
   # optimizers. As such, it is cached as the constant action.
   elif _OPTIMIZER_TYPE.value in [
       'vizier', 'genetic_algorithm', 'exhaustive_search', 'bayesian_opt',
-      'sensitivity_analysis', 'smcpy', 'dummy'
+      'sensitivity_analysis', 'smcpy'
    ] or _OPTIMIZER_TYPE.value.startswith('ng_'):
+    optimizer_obj = optimizer.get_instance()
+    chosen_action = optimizer_obj.decision_point(sight, req)
+    sight.widget_decision_state['constant_action'] = chosen_action
+  elif _OPTIMIZER_TYPE.value == 'worklist_scheduler':
+    if(not optimizer.obj):
+      optimizer.obj = SingleActionOptimizerClient(
+        sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER,
+        sight)
     optimizer_obj = optimizer.get_instance()
     chosen_action = optimizer_obj.decision_point(sight, req)
     sight.widget_decision_state['constant_action'] = chosen_action
@@ -808,30 +816,73 @@ def decision_outcome(
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
-def propose_actions(sight, actions_list):
+def propose_actions(sight, action_dict):
   request = service_pb2.ProposeActionRequest()
   request.client_id = str(sight.id)
 
-  for action_dict in actions_list:
-    action = request.actions.add()
-    print(type(action))
-    for k,v in action_dict.items():
-      action_attr = action.action_attrs.add()
-      action_attr.key = k
-      val = sight_pb2.Value(
-                  sub_type=sight_pb2.Value.ST_DOUBLE,
-                  double_value=v,
-              )
-      action_attr.value.CopyFrom(val)
+  actions_data = []
+  attributes_data = []
+
+  # Process actions
+  for k, v in action_dict.items():
+    action_attr = sight_pb2.DecisionParam()
+    action_attr.key = k
+    if isinstance(v, str):
+        val = sight_pb2.Value(
+            sub_type=sight_pb2.Value.ST_STRING,
+            string_value=v,
+        )
+    else:
+        val = sight_pb2.Value(
+            sub_type=sight_pb2.Value.ST_DOUBLE,
+            double_value=v,
+        )
+    action_attr.value.CopyFrom(val)
+    # Append to actions_data list
+    actions_data.append(action_attr)
+  request.action_attrs.extend(actions_data)
+
+
+  attr_dict = sight.fetch_attributes()
+  print('attr_dict : ', attr_dict)
+
+  # Process attributes
+  for k, v in attr_dict.items():
+    attribute = sight_pb2.DecisionParam()
+    attribute.key = k
+    if isinstance(v, str):
+        val = sight_pb2.Value(
+            sub_type=sight_pb2.Value.ST_STRING,
+            string_value=v,
+        )
+    else:
+        val = sight_pb2.Value(
+            sub_type=sight_pb2.Value.ST_DOUBLE,
+            double_value=v,
+        )
+    attribute.value.CopyFrom(val)
+    # Append to attributes_data list
+    attributes_data.append(attribute)
+    request.attributes.extend(attributes_data)
 
   response = service.call(
       lambda s, meta: s.ProposeAction(request, 300, metadata=meta)
   )
+  action_id = response.action_id
   # print('response : ', response)
-  unique_action_ids = []
-  for id in response.unique_ids:
-    unique_action_ids.append(id)
-  return unique_action_ids
+
+  # log_object call
+  sight_obj = sight_pb2.Object()
+  sight_obj.sub_type = sight_pb2.Object.SubType.ST_PROPOSE_ACTION
+  sight_obj.propose_action.action_id = str(action_id)
+  sight_obj.propose_action.action_attrs.extend(actions_data)
+  sight_obj.propose_action.attributes.extend(attributes_data)
+
+  frame = inspect.currentframe().f_back.f_back
+  sight.set_object_code_loc(sight_obj, frame)
+  sight.log_object(sight_obj, True)
+
+  return action_id
 
 def finalize_episode(sight):  # , optimizer_obj
   """Finalize the run.
@@ -864,8 +915,16 @@ def finalize_episode(sight):  # , optimizer_obj
 
     if _OPTIMIZER_TYPE.value in [
         'genetic_algorithm', 'exhaustive_search', 'vizier', 'bayesian_opt',
-        'sensitivity_analysis', 'smcpy', 'dummy'] or _OPTIMIZER_TYPE.value.startswith(
+        'sensitivity_analysis', 'smcpy'] or _OPTIMIZER_TYPE.value.startswith(
                 'llm_') or _OPTIMIZER_TYPE.value.startswith('ng_'):
+      req.decision_outcome.CopyFrom(get_decision_outcome_proto('outcome', sight))
+      optimizer_obj = optimizer.get_instance()
+      optimizer_obj.finalize_episode(sight, req)
+    elif _OPTIMIZER_TYPE.value == 'worklist_scheduler':
+      if(not optimizer.obj):
+        optimizer.obj = SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER,
+          sight)
       req.decision_outcome.CopyFrom(get_decision_outcome_proto('outcome', sight))
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight, req)
