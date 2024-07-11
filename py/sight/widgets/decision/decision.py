@@ -17,6 +17,7 @@ import inspect
 import os
 import sys
 import dm_env
+import json
 import numpy as np
 from typing import Any, Callable, Dict, List, Optional, Text
 
@@ -33,6 +34,7 @@ from sight.widgets.decision.env_driver import driver_fn
 # from sight.widgets.decision.cartpole_driver import driver_fn
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
+from sight.widgets.decision import utils
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -131,7 +133,7 @@ _ENV_NAME = flags.DEFINE_enum(
 )
 
 _TRAINED_MODEL_LOG_ID = flags.DEFINE_string(
-    'trained_model_log_id', None, 'Sight log Id of trained run to be used')
+    'sight_log_id', None, 'Sight log Id of trained run to be used')
 
 _file_name = 'decision_actor.py'
 _sight_id = None
@@ -403,13 +405,13 @@ def run(
       #   driver_fn(sight)
       # finalize_episode(sight)
 
-      if (not FLAGS.trained_model_log_id):
+      if (not FLAGS.sight_log_id):
           raise ValueError(
-              "trained_model_log_id have to be passed from the trained run for decision_mokde = run"
+              "sight_log_id have to be passed from the trained run for decision_mokde = run"
           )
 
       req = service_pb2.FetchOptimalActionRequest(
-          client_id=FLAGS.trained_model_log_id,
+          client_id=FLAGS.sight_log_id,
           # worker_id=f'client_{client_id}_worker_{worker_location}',
       )
       response = service.call(
@@ -616,15 +618,26 @@ def get_decision_outcome_proto(outcome_label: str, sight: Any) -> sight_pb2.Deci
   if 'sum_outcome' in sight.widget_decision_state:
     outcome_params: List[sight_pb2.DecisionParam] = []
     for key in sight.widget_decision_state['sum_outcome']:
+      val = sight.widget_decision_state['sum_outcome'][key]
+      if(utils.is_scalar(val)):
+        #todo: assuming only double for now in scalar
+        value=sight_pb2.Value(
+            sub_type=sight_pb2.Value.ST_DOUBLE,
+            double_value=val,
+        )
+      else:
+        value=sight_pb2.Value(
+            sub_type=sight_pb2.Value.ST_JSON,
+            # converting padas dataframe to json and into json string
+            json_value=json.dumps(val.to_json()),
+        )
+
       outcome_params.append(
-          sight_pb2.DecisionParam(
-              key=key,
-              value=sight_pb2.Value(
-                  sub_type=sight_pb2.Value.ST_DOUBLE,
-                  double_value=sight.widget_decision_state['sum_outcome'][key],
-              ),
+            sight_pb2.DecisionParam(
+                key=key,
+                value=value,
+            )
           )
-      )
     decision_outcome.outcome_params.extend(outcome_params)
 
   if 'discount' in sight.widget_decision_state:
@@ -799,11 +812,24 @@ def decision_outcome(
     if 'sum_outcome' not in sight.widget_decision_state:
       sight.widget_decision_state['sum_outcome'] = {}
     for key in outcome:
-      if not isinstance(outcome[key], float) and not isinstance(outcome[key], int):
-        continue
-      if key not in sight.widget_decision_state['sum_outcome']:
-        sight.widget_decision_state['sum_outcome'][key] = 0
-      sight.widget_decision_state['sum_outcome'][key] += outcome[key]
+      # print(key, outcome[key], type(outcome[key]))
+      # checking for scalar types
+      if utils.is_scalar(outcome[key]):
+        if key not in sight.widget_decision_state['sum_outcome']:
+          sight.widget_decision_state['sum_outcome'][key] = 0
+        sight.widget_decision_state['sum_outcome'][key] += outcome[key]
+      # converting json into string
+      else:
+        # converting pandas datafram to json and storing it as json string
+        # sight.widget_decision_state['sum_outcome'][key] = json.dumps(outcome[key].to_json())
+        sight.widget_decision_state['sum_outcome'][key] = outcome[key]
+
+
+      # if not isinstance(outcome[key], float) and not isinstance(outcome[key], int):
+      #   continue
+      # if key not in sight.widget_decision_state['sum_outcome']:
+      #   sight.widget_decision_state['sum_outcome'][key] = 0
+      # sight.widget_decision_state['sum_outcome'][key] += outcome[key]
 
   sight.log_object(
     sight_pb2.Object(
@@ -844,7 +870,7 @@ def propose_actions(sight, action_dict):
 
 
   attr_dict = sight.fetch_attributes()
-  print('attr_dict : ', attr_dict)
+  # print('attr_dict : ', attr_dict)
 
   # Process attributes
   for k, v in attr_dict.items():
@@ -926,6 +952,7 @@ def finalize_episode(sight):  # , optimizer_obj
           sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER,
           sight)
       req.decision_outcome.CopyFrom(get_decision_outcome_proto('outcome', sight))
+      # print('request : ', req)
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight, req)
     elif _OPTIMIZER_TYPE.value == 'dm_acme':
@@ -934,10 +961,7 @@ def finalize_episode(sight):  # , optimizer_obj
 
     if 'outcome_value' in sight.widget_decision_state:
       del sight.widget_decision_state['outcome_value']
-    #! not calling finalize episode to server
-    # response = service.call(
-    #     lambda s, meta: s.FinalizeEpisode(req, 300, metadata=meta)
-    # )
+
   else:
     logging.info('Not in local/worker mode, so skipping it')
 

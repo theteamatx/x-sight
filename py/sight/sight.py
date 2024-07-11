@@ -205,9 +205,9 @@ class Sight(object):
                 + 'log'
             )
             self.id = os.environ['PARENT_LOG_ID']
-          elif (FLAGS.trained_model_log_id):
-            logging.info('Using trained model sight id')
-            self.id = FLAGS.trained_model_log_id
+          elif (FLAGS.sight_log_id):
+            logging.info('Using provided sight id')
+            self.id = FLAGS.sight_log_id
             self.path_prefix = (
                 self.params.label + '_' + self.id + '_' + 'log' + '_run_mode'
             )

@@ -28,6 +28,7 @@ warnings.warn = warn
 
 import os
 from typing import Sequence
+import asyncio
 
 from absl import app
 from absl import flags
@@ -44,18 +45,7 @@ from fvs.fvs_api import action_attrs, outcome_attrs
 from sight_service.proto import service_pb2
 from sight import service_utils as service
 from sight_service.optimizer_instance import param_proto_to_dict
-
-
-_RUN_MODE = flags.DEFINE_enum(
-    'run_mode',
-    'propose_action',
-    ['propose_action', 'get_outcome'],
-    ('The way we want to run this scripts.'),
-)
 FLAGS = flags.FLAGS
-
-
-
 
 def get_sight_instance():
     params = sight_pb2.Params(
@@ -88,62 +78,83 @@ def launch_dummy_optimizer(sight):
         sight,
     )
 
+async def get_outcome(sight_id, action_id):
 
-def simulate_fvs(sight,params_dict):
-    print('here params_dict is :', params_dict)
-    mitigation_list = [101, 102, 103, 104, 105]
-    sim_stream = pd.Series(mitigation_list)
-    # print(sim_stream)
-    return sim_stream
+    request = service_pb2.GetOutcomeRequest()
+    request.client_id = str(sight_id)
+    request.unique_ids.append(action_id)
 
-def driver_func(sight):
+    # print(f'awaiting for 5 seconds for action id : {action_id}')
+    # await asyncio.sleep(5)
+    # return [0,1,2,3,4,5,6,7]
 
-  params_dict = decision.decision_point("label", sight)
-  # params_dict = {'fvs_type':'managed','region':'BM','project_id':'ACR173','desc': 'fire_projectACR173', 'fire-SIMFIRE_27-1_cycle': 2028, 'fire-SIMFIRE_27-6_stand_area_burned': 10.0, 'fire-SIMFIRE_30-1_cycle': 2031, 'fire-SIMFIRE_30-6_stand_area_burned': 10.0, 'fire-SIMFIRE_31-1_cycle': 2032, 'fire-SIMFIRE_31-6_stand_area_burned': 10.0}
-  print('params_dict : ', params_dict)
-  # raise SystemError
+    # loop till we get response of our sample
+    while True:
+      try:
+        response = service.call(
+            lambda s, meta: s.GetOutcome(request, 300, metadata=meta)
+        )
 
-  sim_stream = simulate_fvs(sight,params_dict)
+        # when worker finished fvs run of that sample
+        if(response.status == service_pb2.GetOutcomeResponse.Status.COMPLETED):
+          # outcome_list = []
+          for outcome in response.outcome:
+            outcome_dict = {}
+            outcome_dict['reward'] = outcome.reward
+            outcome_dict['action'] = param_proto_to_dict(outcome.action_attrs)
+            outcome_dict['outcome'] = param_proto_to_dict(outcome.outcome_attrs)
+            outcome_dict['attributes'] = param_proto_to_dict(outcome.attributes)
+            # outcome_list.append(outcome_dict)
+          # print('outcome_list : ', outcome_list)
+          return outcome_dict
+          # exit the loop
+          # break
+        # when our sample is in pending or active state at server, try again
+        else:
+          print(response.response_str)
+          await asyncio.sleep(5)
+      except Exception as e:
+        raise e
 
-  outcome = {'time_series' : sim_stream}
-  print("outcome : ", outcome)
 
-  decision.decision_outcome('outcome_label', sight, reward=0, outcome=outcome)
+async def propose_actions(sight, action_dict):
+    # tasks = []
+    # iterate over all the samples
+    # print(f"actions_dict : {actions_dict}")
+    with Attribute('Managed', '0', sight):
+      unique_action_id1 = decision.propose_actions(sight, action_dict)
+    with Attribute('Managed', '1', sight):
+      unique_action_id2 = decision.propose_actions(sight, action_dict)
+        # generate task of get_outcome and move on with next action to propose
+    task1 = asyncio.create_task(get_outcome(sight.id, unique_action_id1))
+    task2 = asyncio.create_task(get_outcome(sight.id, unique_action_id2))
 
-def main(argv: Sequence[str]) -> None:
+    # wait till we get outcome of all the samples
+    time_series = await asyncio.gather(task1,task2)
+    return time_series
+    # calculate diff series
+    # appy watermark algorithm
+    # return the final series
+
+async def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
       raise app.UsageError("Too many command-line arguments.")
 
-
-
-
+  sample_list = [{'a1': 1, 'a2': 1}, {'a1': 2, 'a2': 2}]
   with get_sight_instance() as sight:
-
-    if(_RUN_MODE.value == 'propose_action'):
       launch_dummy_optimizer(sight)
 
       with Block("Propose actions", sight):
         with Attribute("project_id", "APR107", sight):
-          with Attribute("sample_id", "Id-1", sight):
-            with Attribute("managed", "1", sight):
-              # get actions containing fvs params from the fire model
-              actions_dict = {'a1': 1,'a2': 1}
-              unique_action_id = decision.propose_actions(sight, actions_dict)
-              actions_dict = {'a1': 3,'a2': 3}
-              unique_action_id = decision.propose_actions(sight, actions_dict)
-              actions_dict = {'a1': 5,'a2': 5}
-              unique_action_id = decision.propose_actions(sight, actions_dict)
-              # print("unique_action_id : ", unique_action_id)
-            with Attribute("managed", "0", sight):
-              # get actions containing fvs params from the fire model
-              actions_dict = {'a1': 2,'a2': 2}
-              unique_action_id = decision.propose_actions(sight, actions_dict)
-              actions_dict = {'a1': 4,'a2': 4}
-              unique_action_id = decision.propose_actions(sight, actions_dict)
-              actions_dict = {'a1': 6,'a2': 6}
-              unique_action_id = decision.propose_actions(sight, actions_dict)
+          tasks = []
+          for id in range(len(sample_list)):
+            with Attribute("sample_id", id, sight):
+              # await propose_actions(sight)
+              tasks.append(asyncio.create_task(propose_actions(sight, sample_list[id])))
 
-              # print("unique_action_id : ", unique_action_id)
+          diff_time_series_all_samples = await asyncio.gather(*tasks)
+          print(diff_time_series_all_samples)
+
 
       # # spawn workers
       # trials.start_jobs(
@@ -158,38 +169,9 @@ def main(argv: Sequence[str]) -> None:
       #         sight=sight,
       #     )
 
-    elif(_RUN_MODE.value == 'get_outcome'):
-      if (not FLAGS.sight_log_id):
-        raise ValueError(
-            "sight_log_id have to be passed from the proposed action run for get outcome"
-        )
-
-      request = service_pb2.GetOutcomeRequest()
-      request.client_id = str(FLAGS.sight_log_id)
-      # request.unique_ids.append(1)
-      response = service.call(
-          lambda s, meta: s.GetOutcome(request, 300, metadata=meta)
-      )
-
-      if(response.response_str):
-        return response.response_str
-
-      outcome_list = []
-      for outcome in response.outcome:
-        outcome_dict = {}
-        outcome_dict['reward'] = outcome.reward
-        outcome_dict['action'] = param_proto_to_dict(outcome.action_attrs)
-        outcome_dict['outcome'] = param_proto_to_dict(outcome.outcome_attrs)
-        outcome_dict['attributes'] = param_proto_to_dict(outcome.attributes)
-        outcome_list.append(outcome_dict)
-
-      print('outcome_list : ', outcome_list)
-
-    else:
-      raise ValueError(
-            "run_mode have to be passed for this script to run either as propse_action or get_outcome"
-        )
+def main_wrapper(argv):
+    asyncio.run(main(argv))
 
 
 if __name__ == "__main__":
-    app.run(main)
+    app.run(main_wrapper)

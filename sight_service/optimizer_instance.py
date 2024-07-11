@@ -60,6 +60,8 @@ def param_proto_to_dict(
       param_dict[param.key] = param.value.bytes_value
     elif (param.value.sub_type == sight_pb2.Value.ST_INT64):
       param_dict[param.key] = param.value.int64_value
+    elif (param.value.sub_type == sight_pb2.Value.ST_JSON):
+      param_dict[param.key] = param.value.json_value
     else:
       raise ValueError("Unsupported action type %s" % param.value.sub_type)
   return param_dict

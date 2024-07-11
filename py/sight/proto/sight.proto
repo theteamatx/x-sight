@@ -246,8 +246,9 @@ message Value {
     ST_INT64 = 3;
     ST_DOUBLE = 4;
     ST_BOOL = 5;
-    // add json type to send for finalized episode requeset
     ST_NONE = 6;
+    // add json type to send for finalized episode requeset
+    ST_JSON = 7;
   }
   SubType sub_type = 1;
 
@@ -263,6 +264,8 @@ message Value {
     bool bool_value = 6;
 
     bool none_value = 7;
+
+    string json_value = 8;
   }
 }
 

@@ -17,12 +17,15 @@ import logging
 from overrides import overrides
 from typing import Any, Dict, List, Tuple
 
+from sight.proto import sight_pb2
 from sight_service.proto import service_pb2
 from sight_service.single_action_optimizer import SingleActionOptimizer
 from sight_service.optimizer_instance import param_dict_to_proto
 # from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.optimizer_instance import param_proto_to_dict
 import threading
+from sight.widgets.decision import utils
+
 
 _file_name = "exhaustive_search.py"
 
@@ -133,6 +136,7 @@ class WorklistScheduler(SingleActionOptimizer):
             for sample_id in required_samples:
                 # print('sample_id : ', sample_id)
                 if (sample_id in self.completed_samples):
+                    response.status = service_pb2.GetOutcomeResponse.Status.COMPLETED
                     sample_details = self.completed_samples[sample_id]
                     # print('sample_details : ', sample_details)
                     outcome = response.outcome.add()
@@ -149,10 +153,13 @@ class WorklistScheduler(SingleActionOptimizer):
                     outcome.outcome_attrs = param_dict_to_proto(
                         sample_details['outcome'])
                 elif (sample_id in self.pending_samples):
+                    response.status = service_pb2.GetOutcomeResponse.Status.PENDING
                     response.response_str = '!! requested sample not yet assigned to any worker !!'
                 elif (sample_id in self.active_samples.values()):
+                    response.status = service_pb2.GetOutcomeResponse.Status.ACTIVE
                     response.response_str = '!! requested sample not completed yet !!'
                 else:
+                    response.status = service_pb2.GetOutcomeResponse.Status.NOT_EXIST
                     response.response_str = '!! requested sample Id does not exist !!'
 
                     # print("!!!!!! requested sample not yet completed !!!!!")
@@ -179,14 +186,88 @@ class WorklistScheduler(SingleActionOptimizer):
                 # print('sample_details : ', sample_details)
                 outcome = response.outcome.add()
                 outcome.reward = sample_details['reward']
+
+                action_attrs = []
                 for k, v in sample_details['action'].items():
-                    outcome.action_attrs[k] = v
+                  if isinstance(v, str):
+                    val = sight_pb2.Value(
+                                sub_type=sight_pb2.Value.ST_STRING,
+                                string_value=v,
+                            )
+                  elif isinstance(v, float):
+                    val = sight_pb2.Value(
+                                sub_type=sight_pb2.Value.ST_DOUBLE,
+                                double_value=v,
+                            )
+                  else:
+                    raise ValueError('action attribute type must be either string or float')
+
+                  action_attrs.append(
+                      sight_pb2.DecisionParam(
+                          key=k,
+                          value=val
+                      )
+                  )
+                outcome.action_attrs.extend(action_attrs)
+
+                outcome_attrs = []
                 for k, v in sample_details['outcome'].items():
-                    outcome.outcome_attrs[k] = v
+                  if isinstance(v, str):
+                    val = sight_pb2.Value(
+                                sub_type=sight_pb2.Value.ST_STRING,
+                                string_value=v,
+                            )
+                  elif isinstance(v, float):
+                    val = sight_pb2.Value(
+                                sub_type=sight_pb2.Value.ST_DOUBLE,
+                                double_value=v,
+                            )
+                  elif (not utils.is_scalar(val)):
+                    val = sight_pb2.Value(
+                                sub_type=sight_pb2.Value.ST_JSON,
+                                json_value=v,
+                            )
+                  else:
+                    raise ValueError('action attribute type must be either string, float, or json')
+
+                  outcome_attrs.append(
+                      sight_pb2.DecisionParam(
+                          key=k,
+                          value=val
+                      )
+                  )
+                outcome.outcome_attrs.extend(outcome_attrs)
+
+                attributes = []
+                for k, v in sample_details['attribute'].items():
+                  if isinstance(v, str):
+                    val = sight_pb2.Value(
+                                sub_type=sight_pb2.Value.ST_STRING,
+                                string_value=v,
+                            )
+                  elif isinstance(v, float):
+                    val = sight_pb2.Value(
+                                sub_type=sight_pb2.Value.ST_DOUBLE,
+                                double_value=v,
+                            )
+                  # elif (not utils.is_scalar(val)):
+                  #   val = sight_pb2.Value(
+                  #               sub_type=sight_pb2.Value.ST_JSON,
+                  #               json_value=v,
+                  #           )
+                  else:
+                    raise ValueError('attribute type must be either string, float, or json')
+
+                  attributes.append(
+                      sight_pb2.DecisionParam(
+                          key=k,
+                          value=val
+                      )
+                  )
+                outcome.attributes.extend(attributes)
 
         # print('response here: ', response)
         return response
-        # raise SystemError
 
     @overrides
     def decision_point(
@@ -203,22 +284,30 @@ class WorklistScheduler(SingleActionOptimizer):
               self.completed_samples)
         print('self.unique_id : ', self.unique_id)
 
-        self._lock.acquire()
-        # todo : meetashah : add logic to fetch action stored from propose actions and send it as repsonse
-        id, sample = self.pending_samples.popitem()
-        self.active_samples[request.worker_id] = {'id': id, 'sample': sample}
-        self._lock.release()
-
-        next_action = sample[0]
-        logging.info('next_action=%s', next_action)
-        # raise SystemExit
         dp_response = service_pb2.DecisionPointResponse()
-        dp_response.action.extend(param_dict_to_proto(next_action))
-        print('self.active_samples : ', self.active_samples)
-        print('self.pending_samples : ', self.pending_samples)
-        print('self.completed_samples : ', self.completed_samples)
+        if self.pending_samples:
+          self._lock.acquire()
+          # todo : meetashah : add logic to fetch action stored from propose actions and send it as repsonse
+          # key, sample = self.pending_samples.popitem()
+          # fetching the key in FIFO manner
+          key = next(iter(self.pending_samples))
+          sample = self.pending_samples.pop(key)
+
+          self.active_samples[request.worker_id] = {'id': key, 'sample': sample}
+          self._lock.release()
+
+          next_action = sample[0]
+          logging.info('next_action=%s', next_action)
+          # raise SystemExit
+          dp_response.action.extend(param_dict_to_proto(next_action))
+          print('self.active_samples : ', self.active_samples)
+          print('self.pending_samples : ', self.pending_samples)
+          print('self.completed_samples : ', self.completed_samples)
+          dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
+        else:
+          dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_RETRY
+
         logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-        dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
         return dp_response
 
     @overrides
