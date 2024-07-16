@@ -166,22 +166,32 @@ def main(argv: Sequence[str]) -> None:
 
       request = service_pb2.GetOutcomeRequest()
       request.client_id = str(FLAGS.sight_log_id)
+      action_list = [1,2,3,4,5,6]
       # request.unique_ids.append(1)
+      request.unique_ids.extend(action_list)
       response = service.call(
           lambda s, meta: s.GetOutcome(request, 300, metadata=meta)
       )
 
-      if(response.response_str):
-        return response.response_str
-
       outcome_list = []
+      id = 0
       for outcome in response.outcome:
-        outcome_dict = {}
-        outcome_dict['reward'] = outcome.reward
-        outcome_dict['action'] = param_proto_to_dict(outcome.action_attrs)
-        outcome_dict['outcome'] = param_proto_to_dict(outcome.outcome_attrs)
-        outcome_dict['attributes'] = param_proto_to_dict(outcome.attributes)
-        outcome_list.append(outcome_dict)
+        if(outcome.status == service_pb2.GetOutcomeResponse.Outcome.Status.PENDING):
+          print(f"action id : {action_list[id]} is pending...")
+        elif(outcome.status == service_pb2.GetOutcomeResponse.Outcome.Status.ACTIVE):
+          print(f"action id : {action_list[id]} is active...")
+        elif(outcome.status == service_pb2.GetOutcomeResponse.Outcome.Status.NOT_EXIST):
+          print(f"action id : {action_list[id]} does not exist...")
+        elif(outcome.status == service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED):
+          print(f"action id : {action_list[id]} is completed...")
+          outcome_dict = {}
+          outcome_dict['reward'] = outcome.reward
+          outcome_dict['action'] = param_proto_to_dict(outcome.action_attrs)
+          outcome_dict['outcome'] = param_proto_to_dict(outcome.outcome_attrs)
+          outcome_dict['attributes'] = param_proto_to_dict(outcome.attributes)
+          outcome_list.append(outcome_dict)
+
+        id+=1
 
       print('outcome_list : ', outcome_list)
 

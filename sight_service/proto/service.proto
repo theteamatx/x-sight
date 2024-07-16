@@ -307,22 +307,22 @@ message GetOutcomeRequest {
 }
 message GetOutcomeResponse {
   message Outcome{
+    enum Status{
+      DEFAULT = 0;
+      PENDING = 1;
+      ACTIVE = 2;
+      COMPLETED = 3;
+      NOT_EXIST = 4;
+    }
     repeated sight.x.proto.DecisionParam state_attrs = 1;
     repeated sight.x.proto.DecisionParam action_attrs = 2;
     float reward = 3;
     repeated sight.x.proto.DecisionParam outcome_attrs = 4;
     repeated sight.x.proto.DecisionParam attributes = 5;
+    Status status = 6;
+    string response_str = 7;
   }
   repeated Outcome outcome = 1;
-  string response_str = 2;
-  enum Status{
-    DEFAULT = 0;
-    PENDING = 1;
-    ACTIVE = 2;
-    COMPLETED = 3;
-    NOT_EXIST = 4;
-  }
-  Status status =3;
 }
 
 message FinalizeEpisodeRequest {

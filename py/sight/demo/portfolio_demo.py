@@ -166,26 +166,11 @@ async def main(argv: Sequence[str]) -> None:
           tasks = []
           for id in range(len(sample_list)):
             with Attribute("sample_id", id, sight):
-              # await propose_actions(sight)
               tasks.append(asyncio.create_task(propose_actions(sight, sample_list[id])))
 
           print("waiting for all get outcome to finish.....")
           diff_time_series_all_samples = await asyncio.gather(*tasks)
           print(diff_time_series_all_samples)
-
-
-      # # spawn workers
-      # trials.start_jobs(
-      #         num_train_workers=1,
-      #         num_trials=1,
-      #         binary_path='fvs/fvs_worker.py',
-      #         optimizer_type='worklist_scheduler',
-      #         docker_image='gcr.io/cameltrain/sight-portfolio-worker',
-      #         decision_mode='train',
-      #         deployment_mode='worker_mode',
-      #         worker_mode='dsub_cloud_worker',
-      #         sight=sight,
-      #     )
 
 def main_wrapper(argv):
     asyncio.run(main(argv))

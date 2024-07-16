@@ -120,8 +120,6 @@ class WorklistScheduler(SingleActionOptimizer):
     def GetOutcome(
         self, request: service_pb2.GetOutcomeRequest
     ) -> service_pb2.GetOutcomeResponse:
-        # print('request  : ', request)
-        # raise SystemExit
         print('self.pending_samples : ',
               self.pending_samples)
         print('self.active_samples : ',
@@ -132,139 +130,42 @@ class WorklistScheduler(SingleActionOptimizer):
         response = service_pb2.GetOutcomeResponse()
         if (request.unique_ids):
             required_samples = list(request.unique_ids)
-            # print('required_samples : ', required_samples)
             for sample_id in required_samples:
-                # print('sample_id : ', sample_id)
+                outcome = response.outcome.add()
                 if (sample_id in self.completed_samples):
-                    response.status = service_pb2.GetOutcomeResponse.Status.COMPLETED
                     sample_details = self.completed_samples[sample_id]
-                    # print('sample_details : ', sample_details)
-                    outcome = response.outcome.add()
+                    outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
                     outcome.reward = sample_details['reward']
-                    # for k,v in sample_details['action'].items():
-                    #   outcome.action_attrs[k] = v
-                    # for k,v in sample_details['outcome'].items():
-                    #   outcome.outcome_attrs[k] = v
-
-                    # for k,v in sample_details['action'].items():
                     outcome.action_attrs.extend(param_dict_to_proto(
                         sample_details['action']))
-                    # for k,v in sample_details['outcome'].items():
                     outcome.outcome_attrs.extend(param_dict_to_proto(
                         sample_details['outcome']))
+                    outcome.attributes.extend(param_dict_to_proto(
+                        sample_details['attribute']))
                 elif (sample_id in self.pending_samples):
-                    response.status = service_pb2.GetOutcomeResponse.Status.PENDING
-                    response.response_str = '!! requested sample not yet assigned to any worker !!'
+                    outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.PENDING
+                    outcome.response_str = '!! requested sample not yet assigned to any worker !!'
                 elif (sample_id in self.active_samples.values()):
-                    response.status = service_pb2.GetOutcomeResponse.Status.ACTIVE
-                    response.response_str = '!! requested sample not completed yet !!'
+                    outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.ACTIVE
+                    outcome.response_str = '!! requested sample not completed yet !!'
                 else:
-                    response.status = service_pb2.GetOutcomeResponse.Status.NOT_EXIST
-                    response.response_str = '!! requested sample Id does not exist !!'
-
-                    # print("!!!!!! requested sample not yet completed !!!!!")
-
-                # outcome = response.outcome.add()
-
-                # # # Populate state_attrs map
-                # outcome.state_attrs['state_attr1'] = 0.1 * (i + 1)
-                # outcome.state_attrs['state_attr2'] = 0.2 * (i + 1)
-
-                # # Populate action_attrs map
-                # outcome.action_attrs['action_attr1'] = 1.0 * (i + 1)
-                # outcome.action_attrs['action_attr2'] = 2.0 * (i + 1)
-
-                # # Set the reward value
-                # outcome.reward = 10.0 * (i + 1)
-
-                # # Populate outcome_attrs map
-                # outcome.outcome_attrs['outcome_attr1'] = 5.0 * (i + 1)
-                # outcome.outcome_attrs['outcome_attr2'] = 6.0 * (i + 1)
+                    outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.NOT_EXIST
+                    outcome.response_str = '!! requested sample Id does not exist !!'
         else:
             for sample_id in self.completed_samples.keys():
                 sample_details = self.completed_samples[sample_id]
-                # print('sample_details : ', sample_details)
                 outcome = response.outcome.add()
+                outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
                 outcome.reward = sample_details['reward']
 
-                action_attrs = []
-                for k, v in sample_details['action'].items():
-                  if isinstance(v, str):
-                    val = sight_pb2.Value(
-                                sub_type=sight_pb2.Value.ST_STRING,
-                                string_value=v,
-                            )
-                  elif isinstance(v, float):
-                    val = sight_pb2.Value(
-                                sub_type=sight_pb2.Value.ST_DOUBLE,
-                                double_value=v,
-                            )
-                  else:
-                    raise ValueError('action attribute type must be either string or float')
+                outcome.action_attrs.extend(param_dict_to_proto(
+                        sample_details['action']))
 
-                  action_attrs.append(
-                      sight_pb2.DecisionParam(
-                          key=k,
-                          value=val
-                      )
-                  )
-                outcome.action_attrs.extend(action_attrs)
+                outcome.outcome_attrs.extend(param_dict_to_proto(
+                        sample_details['outcome']))
 
-                outcome_attrs = []
-                for k, v in sample_details['outcome'].items():
-                  if isinstance(v, str):
-                    val = sight_pb2.Value(
-                                sub_type=sight_pb2.Value.ST_STRING,
-                                string_value=v,
-                            )
-                  elif isinstance(v, float):
-                    val = sight_pb2.Value(
-                                sub_type=sight_pb2.Value.ST_DOUBLE,
-                                double_value=v,
-                            )
-                  elif (not utils.is_scalar(val)):
-                    val = sight_pb2.Value(
-                                sub_type=sight_pb2.Value.ST_JSON,
-                                json_value=v,
-                            )
-                  else:
-                    raise ValueError('action attribute type must be either string, float, or json')
-
-                  outcome_attrs.append(
-                      sight_pb2.DecisionParam(
-                          key=k,
-                          value=val
-                      )
-                  )
-                outcome.outcome_attrs.extend(outcome_attrs)
-
-                attributes = []
-                for k, v in sample_details['attribute'].items():
-                  if isinstance(v, str):
-                    val = sight_pb2.Value(
-                                sub_type=sight_pb2.Value.ST_STRING,
-                                string_value=v,
-                            )
-                  elif isinstance(v, float):
-                    val = sight_pb2.Value(
-                                sub_type=sight_pb2.Value.ST_DOUBLE,
-                                double_value=v,
-                            )
-                  # elif (not utils.is_scalar(val)):
-                  #   val = sight_pb2.Value(
-                  #               sub_type=sight_pb2.Value.ST_JSON,
-                  #               json_value=v,
-                  #           )
-                  else:
-                    raise ValueError('attribute type must be either string, float, or json')
-
-                  attributes.append(
-                      sight_pb2.DecisionParam(
-                          key=k,
-                          value=val
-                      )
-                  )
-                outcome.attributes.extend(attributes)
+                outcome.attributes.extend(param_dict_to_proto(
+                        sample_details['attribute']))
 
         # print('response here: ', response)
         return response

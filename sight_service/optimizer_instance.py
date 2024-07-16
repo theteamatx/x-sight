@@ -17,7 +17,7 @@
 from concurrent import futures
 import logging
 from typing import Any, Dict, List, Tuple, Sequence
-
+from sight.widgets.decision import utils
 from sight_service.proto import service_pb2
 from sight.proto import sight_pb2
 
@@ -39,6 +39,11 @@ def param_dict_to_proto(
                   sub_type=sight_pb2.Value.ST_DOUBLE,
                   double_value=v,
               )
+    elif (not utils.is_scalar(val)):
+                    val = sight_pb2.Value(
+                                sub_type=sight_pb2.Value.ST_JSON,
+                                json_value=v,
+                            )
     else:
       raise ValueError('action attribute type must be either string or float')
 
@@ -48,16 +53,6 @@ def param_dict_to_proto(
             value=val
         )
     )
-    # param_proto.append(
-    #     sight_pb2.DecisionParam(
-    #         key=key,
-    #         value=sight_pb2.Value(
-    #             sub_type=sight_pb2.Value.ST_DOUBLE,
-    #             double_value=param_dict[key],
-    #             #! add supprt for extra type
-    #         ),
-    #     )
-    # )
   return param_proto
 
 
