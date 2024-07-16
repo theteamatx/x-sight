@@ -28,16 +28,36 @@ def param_dict_to_proto(
 ) -> List[sight_pb2.DecisionParam]:
   """converting dictionary of parameters into proto."""
   param_proto: List[sight_pb2.DecisionParam] = []
-  for key in sorted(param_dict.keys()):
+  for k, v in sorted(param_dict.items()):
+    if isinstance(v, str):
+      val = sight_pb2.Value(
+                  sub_type=sight_pb2.Value.ST_STRING,
+                  string_value=v,
+              )
+    elif isinstance(v, float):
+      val = sight_pb2.Value(
+                  sub_type=sight_pb2.Value.ST_DOUBLE,
+                  double_value=v,
+              )
+    else:
+      raise ValueError('action attribute type must be either string or float')
+
     param_proto.append(
         sight_pb2.DecisionParam(
-            key=key,
-            value=sight_pb2.Value(
-                sub_type=sight_pb2.Value.ST_DOUBLE,
-                double_value=param_dict[key],
-            ),
+            key=k,
+            value=val
         )
     )
+    # param_proto.append(
+    #     sight_pb2.DecisionParam(
+    #         key=key,
+    #         value=sight_pb2.Value(
+    #             sub_type=sight_pb2.Value.ST_DOUBLE,
+    #             double_value=param_dict[key],
+    #             #! add supprt for extra type
+    #         ),
+    #     )
+    # )
   return param_proto
 
 

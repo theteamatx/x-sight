@@ -90,11 +90,13 @@ class SingleActionOptimizerClient(OptimizerClient):
 
         return self._get_dp_action(response)
 
+      print('waiting in decision point to get server from response......')
+      print('sleeping for 5 seconds......')
       time.sleep(5)
 
   @override
   def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
-    logging.info('SingleActionOptimizerClient() finalize_episode')
+    # logging.info('SingleActionOptimizerClient() finalize_episode')
     if self._last_action:
       for a in self._last_action:
         request.decision_point.choice_params.append(a)

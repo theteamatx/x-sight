@@ -17,6 +17,7 @@
 # limitations under the License.
 """Demo of using the Sight Decision API to run forest simulator."""
 
+import time
 import warnings
 
 
@@ -41,7 +42,7 @@ from sight.widgets.decision import decision
 import pandas as pd
 from sight.widgets.decision.single_action_optimizer_client import SingleActionOptimizerClient
 from sight.widgets.decision import trials
-from fvs.fvs_api import action_attrs, outcome_attrs
+from fvs_sight.fvs_api import action_attrs, outcome_attrs
 from sight_service.proto import service_pb2
 from sight import service_utils as service
 from sight_service.optimizer_instance import param_proto_to_dict
@@ -105,14 +106,14 @@ async def get_outcome(sight_id, action_id):
             outcome_dict['outcome'] = param_proto_to_dict(outcome.outcome_attrs)
             outcome_dict['attributes'] = param_proto_to_dict(outcome.attributes)
             # outcome_list.append(outcome_dict)
-          # print('outcome_list : ', outcome_list)
+          print('outcome_dict : ', outcome_dict)
           return outcome_dict
           # exit the loop
           # break
         # when our sample is in pending or active state at server, try again
         else:
           print(response.response_str)
-          await asyncio.sleep(5)
+          await asyncio.sleep(30)
       except Exception as e:
         raise e
 
@@ -131,6 +132,7 @@ async def propose_actions(sight, action_dict):
 
     # wait till we get outcome of all the samples
     time_series = await asyncio.gather(task1,task2)
+    print("time_series :", time_series)
     return time_series
     # calculate diff series
     # appy watermark algorithm
@@ -140,9 +142,24 @@ async def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
       raise app.UsageError("Too many command-line arguments.")
 
-  sample_list = [{'a1': 1, 'a2': 1}, {'a1': 2, 'a2': 2}]
+  sample_list = [{'a1': 1, 'a2': 1}]  #, {'a1': 2, 'a2': 2}
   with get_sight_instance() as sight:
       launch_dummy_optimizer(sight)
+
+      # spawn workers
+      trials.start_jobs(
+              num_train_workers=1,
+              num_trials=2,
+              binary_path='fvs_sight/fvs_worker.py',
+              optimizer_type='worklist_scheduler',
+              docker_image='gcr.io/cameltrain/sight-portfolio-worker',
+              decision_mode='train',
+              deployment_mode='worker_mode',
+              worker_mode='dsub_cloud_worker',
+              sight=sight,
+          )
+      print('going to sleep for 5 minutes')
+      time.sleep(300)
 
       with Block("Propose actions", sight):
         with Attribute("project_id", "APR107", sight):
@@ -152,6 +169,7 @@ async def main(argv: Sequence[str]) -> None:
               # await propose_actions(sight)
               tasks.append(asyncio.create_task(propose_actions(sight, sample_list[id])))
 
+          print("waiting for all get outcome to finish.....")
           diff_time_series_all_samples = await asyncio.gather(*tasks)
           print(diff_time_series_all_samples)
 

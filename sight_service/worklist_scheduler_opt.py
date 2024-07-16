@@ -147,11 +147,11 @@ class WorklistScheduler(SingleActionOptimizer):
                     #   outcome.outcome_attrs[k] = v
 
                     # for k,v in sample_details['action'].items():
-                    outcome.action_attrs = param_dict_to_proto(
-                        sample_details['action'])
+                    outcome.action_attrs.extend(param_dict_to_proto(
+                        sample_details['action']))
                     # for k,v in sample_details['outcome'].items():
-                    outcome.outcome_attrs = param_dict_to_proto(
-                        sample_details['outcome'])
+                    outcome.outcome_attrs.extend(param_dict_to_proto(
+                        sample_details['outcome']))
                 elif (sample_id in self.pending_samples):
                     response.status = service_pb2.GetOutcomeResponse.Status.PENDING
                     response.response_str = '!! requested sample not yet assigned to any worker !!'

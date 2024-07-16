@@ -4,7 +4,7 @@ import yaml
 from absl import app
 from absl import flags
 from sight.widgets.decision import decision_episode_fn
-from fvs.fvs_api import action_attrs, outcome_attrs
+from fvs_sight.fvs_api import action_attrs, outcome_attrs
 
 from sight import data_structures
 from sight.proto import sight_pb2
@@ -33,7 +33,7 @@ def driver_func(sight):
 
   sim_stream = simulate_fvs(sight,params_dict)
 
-  outcome = {'time_series' : sim_stream} 
+  outcome = {'time_series' : sim_stream}
   print("outcome : ", outcome)
 
   decision.decision_outcome('outcome_label', sight, reward=0, outcome=outcome)

@@ -40,7 +40,7 @@ from sight.widgets.decision import decision
 import pandas as pd
 from sight.widgets.decision.single_action_optimizer_client import SingleActionOptimizerClient
 from sight.widgets.decision import trials
-from fvs.fvs_api import action_attrs, outcome_attrs
+from fvs_sight.fvs_api import action_attrs, outcome_attrs
 from sight_service.proto import service_pb2
 from sight import service_utils as service
 from sight_service.optimizer_instance import param_proto_to_dict
@@ -149,7 +149,7 @@ def main(argv: Sequence[str]) -> None:
       # trials.start_jobs(
       #         num_train_workers=1,
       #         num_trials=1,
-      #         binary_path='fvs/fvs_worker.py',
+      #         binary_path='fvs_sight/fvs_worker.py',
       #         optimizer_type='worklist_scheduler',
       #         docker_image='gcr.io/cameltrain/sight-portfolio-worker',
       #         decision_mode='train',
