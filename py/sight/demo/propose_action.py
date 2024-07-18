@@ -185,6 +185,7 @@ def main(argv: Sequence[str]) -> None:
         elif(outcome.status == service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED):
           print(f"action id : {action_list[id]} is completed...")
           outcome_dict = {}
+          outcome_dict['action_id'] = outcome.action_id
           outcome_dict['reward'] = outcome.reward
           outcome_dict['action'] = param_proto_to_dict(outcome.action_attrs)
           outcome_dict['outcome'] = param_proto_to_dict(outcome.outcome_attrs)

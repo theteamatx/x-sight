@@ -38,7 +38,7 @@ RUN pip3 install -r sight_service/requirements.txt
 COPY py/sight/proto/ py/sight/proto/
 COPY py/sight/widgets/decision py/sight/widgets/decision
 COPY sight_service/ sight_service/
-COPY fvs/ fvs/
+COPY fvs_sight/ fvs_sight/
 COPY .env .env
 
 # updating PYTHONPATH to resolve relative imports

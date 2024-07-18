@@ -321,6 +321,7 @@ message GetOutcomeResponse {
     repeated sight.x.proto.DecisionParam attributes = 5;
     Status status = 6;
     string response_str = 7;
+    int64 action_id = 8;
   }
   repeated Outcome outcome = 1;
 }

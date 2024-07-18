@@ -132,6 +132,7 @@ class WorklistScheduler(SingleActionOptimizer):
             required_samples = list(request.unique_ids)
             for sample_id in required_samples:
                 outcome = response.outcome.add()
+                outcome.action_id = sample_id
                 if (sample_id in self.completed_samples):
                     sample_details = self.completed_samples[sample_id]
                     outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
@@ -150,11 +151,13 @@ class WorklistScheduler(SingleActionOptimizer):
                     outcome.response_str = '!! requested sample not completed yet !!'
                 else:
                     outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.NOT_EXIST
-                    outcome.response_str = '!! requested sample Id does not exist !!'
+                    outcome.response_str = f'!! requested sample Id {sample_id} does not exist !!'
+                    print("!! NOT EXIST !!")
         else:
             for sample_id in self.completed_samples.keys():
                 sample_details = self.completed_samples[sample_id]
                 outcome = response.outcome.add()
+                outcome.action_id = sample_id
                 outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
                 outcome.reward = sample_details['reward']
 
