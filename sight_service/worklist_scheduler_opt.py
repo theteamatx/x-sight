@@ -14,6 +14,7 @@
 """Exhaustive search for driving Sight applications."""
 
 import logging
+from readerwriterlock import rwlock
 from overrides import overrides
 from typing import Any, Dict, List, Tuple
 
@@ -41,16 +42,13 @@ class WorklistScheduler(SingleActionOptimizer):
     def __init__(self):
         super().__init__()
         self.next_sample_to_issue = []
-        # self.action_ids = []
-        # self.unique_id = 1
-        # self.pending_samples = {}
-        # self.completed_samples = {}
-        # self.active_samples = {}
         self.last_sample = False
         self.sweep_issue_done = False
         self.possible_values = {}
         self.max_reward_sample = {}
-        self._lock = threading.RLock()
+        self.pending_lock = rwlock.RWLockFair()
+        self.active_lock = rwlock.RWLockFair()
+        self.completed_lock = rwlock.RWLockFair()
 
     @overrides
     def launch(
@@ -58,27 +56,7 @@ class WorklistScheduler(SingleActionOptimizer):
             request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
         method_name = "launch"
         logging.debug(">>>>  In %s of %s", method_name, _file_name)
-
-        # print("request in launch is : ", request)
         response = super(WorklistScheduler, self).launch(request)
-        # print("self.actions : ", self.actions)
-        # self.next_sample_to_issue = [0] * len(self.actions)
-        # print("self.next_sample_to_issue : ", self.next_sample_to_issue)
-
-        # self.possible_values = {}
-        # for i, key in enumerate(sorted(self.actions.keys())):
-        #   if self.actions[key].valid_float_values:
-        #     self.possible_values[key] = list(self.actions[key].valid_float_values)
-        #   elif self.actions[key].step_size:
-        #     self.possible_values[key] = []
-        #     cur = self.actions[key].min_value
-        #     while cur <= self.actions[key].max_value:
-        #       self.possible_values[key].append(cur)
-        #       cur += self.actions[key].step_size
-        # logging.info('possible_values=%s', self.possible_values)
-
-        # print('self.actions : ', self.actions)
-        # print('self.state : ', self.state)
         response.display_string = 'Worklist Scheduler SUCCESS!'
         logging.debug("<<<<  Out %s of %s", method_name, _file_name)
         return response
@@ -92,20 +70,17 @@ class WorklistScheduler(SingleActionOptimizer):
         attributes = param_proto_to_dict(request.attributes)
         action_attrs = param_proto_to_dict(request.action_attrs)
 
-        #TODO : working for unique_ids
-        # for action in request.actions:
-            # print('action.action_attrs : ', action.action_attrs)
-        self._lock.acquire()
-        self.pending_samples[self.unique_id] = [
-            action_attrs, attributes
-        ]
+        with self.pending_lock.gen_wlock():
+          self.pending_samples[self.unique_id] = [
+              action_attrs, attributes
+          ]
 
-        print('self.pending_samples : ',
-              self.pending_samples)
-        print('self.active_samples : ',
-              self.active_samples)
-        print('self.completed_samples : ',
-              self.completed_samples)
+        # print('self.pending_samples : ',
+        #       self.pending_samples)
+        # print('self.active_samples : ',
+        #       self.active_samples)
+        # print('self.completed_samples : ',
+        #       self.completed_samples)
         print('self.unique_id : ', self.unique_id)
 
 
@@ -113,19 +88,24 @@ class WorklistScheduler(SingleActionOptimizer):
         response = service_pb2.ProposeActionResponse(
             action_id=self.unique_id)
         self.unique_id += 1
-        self._lock.release()
         return response
 
     @overrides
     def GetOutcome(
         self, request: service_pb2.GetOutcomeRequest
     ) -> service_pb2.GetOutcomeResponse:
-        print('self.pending_samples : ',
-              self.pending_samples)
-        print('self.active_samples : ',
-              self.active_samples)
-        print('self.completed_samples : ',
-              self.completed_samples)
+        # print('self.pending_samples : ',
+        #       self.pending_samples)
+        # print('self.active_samples : ',
+        #       self.active_samples)
+        # print('self.completed_samples : ',
+        #       self.completed_samples)
+        with self.completed_lock.gen_rlock():
+          completed_samples = self.completed_samples
+        with self.pending_lock.gen_rlock():
+          pending_samples = self.pending_samples
+        with self.active_lock.gen_rlock():
+          active_samples = self.active_samples
 
         response = service_pb2.GetOutcomeResponse()
         if (request.unique_ids):
@@ -133,7 +113,7 @@ class WorklistScheduler(SingleActionOptimizer):
             for sample_id in required_samples:
                 outcome = response.outcome.add()
                 outcome.action_id = sample_id
-                if (sample_id in self.completed_samples):
+                if (sample_id in completed_samples):
                     sample_details = self.completed_samples[sample_id]
                     outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
                     outcome.reward = sample_details['reward']
@@ -142,20 +122,27 @@ class WorklistScheduler(SingleActionOptimizer):
                     outcome.outcome_attrs.extend(param_dict_to_proto(
                         sample_details['outcome']))
                     outcome.attributes.extend(param_dict_to_proto(
-                        sample_details['attribute']))
-                elif (sample_id in self.pending_samples):
+                      sample_details['attribute']))
+                elif (sample_id in pending_samples):
                     outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.PENDING
                     outcome.response_str = '!! requested sample not yet assigned to any worker !!'
-                elif (sample_id in self.active_samples.values()):
+                elif any(value['id'] == sample_id for value in active_samples.values()):
                     outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.ACTIVE
                     outcome.response_str = '!! requested sample not completed yet !!'
                 else:
                     outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.NOT_EXIST
                     outcome.response_str = f'!! requested sample Id {sample_id} does not exist !!'
+
                     print("!! NOT EXIST !!")
+                    with self.active_lock.gen_rlock():
+                      print(self.active_samples)
+                    with self.pending_lock.gen_rlock():
+                      print(self.pending_samples)
+                    with self.completed_lock.gen_rlock():
+                      print(self.completed_samples)
         else:
-            for sample_id in self.completed_samples.keys():
-                sample_details = self.completed_samples[sample_id]
+            for sample_id in completed_samples.keys():
+                sample_details = completed_samples[sample_id]
                 outcome = response.outcome.add()
                 outcome.action_id = sample_id
                 outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
@@ -180,33 +167,36 @@ class WorklistScheduler(SingleActionOptimizer):
         method_name = "decision_point"
         logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-        print('self.pending_samples : ',
-              self.pending_samples)
-        print('self.active_samples : ',
-              self.active_samples)
-        print('self.completed_samples : ',
-              self.completed_samples)
-        print('self.unique_id : ', self.unique_id)
+        # print('self.pending_samples : ',
+        #       self.pending_samples)
+        # print('self.active_samples : ',
+        #       self.active_samples)
+        # print('self.completed_samples : ',
+        #       self.completed_samples)
+        # print('self.unique_id : ', self.unique_id)
 
         dp_response = service_pb2.DecisionPointResponse()
         if self.pending_samples:
-          self._lock.acquire()
+
           # todo : meetashah : add logic to fetch action stored from propose actions and send it as repsonse
           # key, sample = self.pending_samples.popitem()
           # fetching the key in FIFO manner
-          key = next(iter(self.pending_samples))
-          sample = self.pending_samples.pop(key)
 
-          self.active_samples[request.worker_id] = {'id': key, 'sample': sample}
-          self._lock.release()
+          with self.pending_lock.gen_wlock():
+            key = next(iter(self.pending_samples))
+            sample = self.pending_samples.pop(key)
+
+          with self.active_lock.gen_wlock():
+            self.active_samples[request.worker_id] = {'id': key, 'sample': sample}
+
 
           next_action = sample[0]
           logging.info('next_action=%s', next_action)
           # raise SystemExit
           dp_response.action.extend(param_dict_to_proto(next_action))
-          print('self.active_samples : ', self.active_samples)
-          print('self.pending_samples : ', self.pending_samples)
-          print('self.completed_samples : ', self.completed_samples)
+          # print('self.active_samples : ', self.active_samples)
+          # print('self.pending_samples : ', self.pending_samples)
+          # print('self.completed_samples : ', self.completed_samples)
           dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
         else:
           dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_RETRY
@@ -222,18 +212,23 @@ class WorklistScheduler(SingleActionOptimizer):
         logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
         # logging.info("req in finalize episode of dummy.py : %s", request)
-        self._lock.acquire()
-        sample_dict = self.active_samples[request.worker_id]
-        self.completed_samples[sample_dict['id']] = {
-            # 'action': self.pending_samples[unique_action_id],
-            'action':
-            param_proto_to_dict(request.decision_point.choice_params),
-            'attribute': sample_dict['sample'][1],
-            'reward': request.decision_outcome.reward,
-            'outcome':
-            param_proto_to_dict(request.decision_outcome.outcome_params)
-        }
-        del self.active_samples[request.worker_id]
+
+        with self.active_lock.gen_rlock():
+          sample_dict = self.active_samples[request.worker_id]
+
+        with self.completed_lock.gen_wlock():
+          self.completed_samples[sample_dict['id']] = {
+              # 'action': self.pending_samples[unique_action_id],
+              'action':
+              param_proto_to_dict(request.decision_point.choice_params),
+              'attribute': sample_dict['sample'][1],
+              'reward': request.decision_outcome.reward,
+              'outcome':
+              param_proto_to_dict(request.decision_outcome.outcome_params)
+          }
+
+        with self.active_lock.gen_wlock():
+          del self.active_samples[request.worker_id]
         # self.completed_samples[
         #     unique_action_id-1
         # ] = {
@@ -242,13 +237,13 @@ class WorklistScheduler(SingleActionOptimizer):
         #     'action': param_proto_to_dict(request.decision_point.choice_params),
         #     'outcome': param_proto_to_dict(request.decision_outcome.outcome_params)
         # }
-        logging.info('FinalizeEpisode completed_samples=%s' %
-                     self.completed_samples)
-        self._lock.release()
+        # logging.info('FinalizeEpisode completed_samples=%s' %
+        #              self.completed_samples)
 
-        print('self.active_samples : ', self.active_samples)
-        print('self.pending_samples : ', self.pending_samples)
-        print('self.completed_samples : ', self.completed_samples)
+
+        # print('self.active_samples : ', self.active_samples)
+        # print('self.pending_samples : ', self.pending_samples)
+        # print('self.completed_samples : ', self.completed_samples)
         logging.debug("<<<<  Out %s of %s", method_name, _file_name)
         return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
 

@@ -21,6 +21,7 @@ import inspect
 import io
 import os
 import time
+import threading
 from typing import Any, Optional, Sequence
 
 from absl import logging
@@ -36,7 +37,7 @@ from sight.gcs_utils import upload_blob_from_stream
 from sight.location import Location
 from sight.proto import sight_pb2
 from sight.service_utils import finalize_server
-from sight.utility import MessageToDict
+from sight.utility import MessageToDict, poll_network_batch_outcome
 from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
 
@@ -190,6 +191,7 @@ class Sight(object):
         # logging.info('#######SERVICE###############')
 
         try:
+
           if 'PARENT_LOG_ID' in os.environ:
             logging.info('PARENT_LOG_ID found - worker process')
             worker_location = os.environ['worker_location'].replace(':', '_')
@@ -205,6 +207,7 @@ class Sight(object):
                 + 'log'
             )
             self.id = os.environ['PARENT_LOG_ID']
+            print("log id is : ", self.id)
           elif (FLAGS.sight_log_id):
             logging.info('Using provided sight id')
             self.id = FLAGS.sight_log_id
@@ -831,6 +834,13 @@ class Sight(object):
   #       configuration log objects.
   #   """
   #   self.add_config(_read_capacitor_file(config_file_path))  # pytype: disable=wrong-arg-types  # dynamic-method-lookup
+
+  def init_sight_polling_thread(self):
+    # print
+    status_update_thread = threading.Thread(target=poll_network_batch_outcome,args=(self.id,))
+    print('*************** starting thread ************')
+    status_update_thread.start()
+
 
 
 def text(text_val: str, sight, end='\n', frame=None) -> str:
