@@ -94,6 +94,7 @@ class Optimizers:
     logging.info(">>>>>>>  In %s method of %s file.", method_name, "Optimizers")
 
     optimizer_type = request.decision_config_params.optimizer_type
+    logging.debug('optimizer_type here is : ', optimizer_type)
     logging.debug(">>>>>>>  In %s method of %s file. optimizer_type=%s", method_name, _file_name, optimizer_type)
     with self.instances_lock.gen_wlock():
       if optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER:

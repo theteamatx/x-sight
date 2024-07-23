@@ -126,7 +126,7 @@ def delete_service(service_name):
 
 def run_experiment(sight_id, optimizer_value, image_id, table_queue):
     cmd_args = [
-        'python', 'py/sight/demo/fn_rastrigin.py', '--decision_mode', 'train',
+        'python', 'py/sight/demo/fn_sphere.py', '--decision_mode', 'train',
         '--deployment_mode', 'distributed', '--num_train_workers', '1',
         '--num_trials', '10', '--optimizer_type', optimizer_value,
         '--docker_image', 'gcr.io/cameltrain/sight-worker',

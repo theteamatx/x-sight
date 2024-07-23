@@ -42,12 +42,17 @@ class Normalizer:
         self.denormalized_actions = {}
 
     def normalize_in_0_to_1(self, actions):
+      # storing key-value pair of action name and attr_proto in self.actions
       self.actions = copy.deepcopy(actions)
+
+      # normalizing min max value of actions to 0-1
       for k,v in actions.items():
         current_action = actions[k]
         current_action.min_value = 0
         current_action.max_value = 1
         self.normalized_actions[k] = current_action
+
+      # return key-value pair of action name and normalized attr_proto
       return self.normalized_actions
 
     def denormalize_from_0_to_1(self, actions):

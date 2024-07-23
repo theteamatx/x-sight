@@ -33,10 +33,10 @@ _LAST_TS = flags.DEFINE_integer(
     'last_ts', 10, 'The final day of the simulation.'
 )
 _NUM_ITERS = flags.DEFINE_integer(
-    'num_iters', 100, 'The number of steps the solver takes.'
+    'num_iters', 10, 'The number of steps the solver takes.'
 )
 _NUM_POP = flags.DEFINE_integer(
-    'num_pop', 100, 'The number members in the population.'
+    'num_pop', 10, 'The number members in the population.'
 )
 _BETA = flags.DEFINE_float(
     'beta', .1, 'The disease transmission rate.'
@@ -55,7 +55,7 @@ def driver(sight: Sight) -> None:
   # data_structures.log_var('S', S, sight)
   # data_structures.log_var('I', I, sight)
   # data_structures.log_var('R', R, sight)
-  action = decision.decision_point('init', sight) 
+  action = decision.decision_point('init', sight)
   print('dt=%s, action=%s' % (dt, action))
 
   hist = []
@@ -64,7 +64,7 @@ def driver(sight: Sight) -> None:
     dotS = -action['beta'] * S * I / _NUM_POP.value
     dotI = action['beta'] * S * I / _NUM_POP.value - action['gamma'] * I
     dotR = action['gamma'] * I
-    print('%d: dotS=%s, dotI=%s, dotR=%s' % (idx, dotS, dotI, dotR))
+    # print('%d: dotS=%s, dotI=%s, dotR=%s' % (idx, dotS, dotI, dotR))
 
     S += dotS * dt
     I += dotI * dt
@@ -90,7 +90,7 @@ def main(argv: Sequence[str]) -> None:
         decision.run(
             driver_fn=driver,
             description = '''
-I am building an SIR model to analyze the progress of Measles infections in Los Angeles during the summer of 2020. 
+I am building an SIR model to analyze the progress of Measles infections in Los Angeles during the summer of 2020.
 I need to configure this model's parameters based on data from the Los Angeles County Department of Public Health.
 ''',
             state_attrs={
@@ -98,7 +98,10 @@ I need to configure this model's parameters based on data from the Los Angeles C
             action_attrs={
                 'beta': sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=0, max_value=1,
-                    description='The transmission rate of the disease.'
+                    description='The transmission rate of the disease.',
+                    continuous_prob_dist=sight_pb2.ContinuousProbDist(
+                    gaussian = sight_pb2.ContinuousProbDist.Gaussian(
+                        mean = 0.5, stdev = 0.2)),
                 ),
                 'gamma': sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=0, max_value=1,
