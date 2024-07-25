@@ -39,11 +39,12 @@ def param_dict_to_proto(
                   sub_type=sight_pb2.Value.ST_DOUBLE,
                   double_value=v,
               )
-    elif (not utils.is_scalar(val)):
-                    val = sight_pb2.Value(
-                                sub_type=sight_pb2.Value.ST_JSON,
-                                json_value=v,
-                            )
+    elif (not utils.is_scalar(v)):
+      print('here v is : ', v, type(v))
+      val = sight_pb2.Value(
+                  sub_type=sight_pb2.Value.ST_JSON,
+                  json_value=v,
+              )
     else:
       raise ValueError('action attribute type must be either string or float')
 

@@ -25,7 +25,7 @@ from google.protobuf.json_format import _NAN
 from google.protobuf.json_format import _NEG_INFINITY
 from google.protobuf.json_format import _Printer as BasePrinter
 from google.protobuf.json_format import SerializeToJsonError
-from sight.demo.resource_lock import RWLockDictWrapper
+from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight_service.optimizer_instance import param_proto_to_dict
 from sight_service.proto import service_pb2
 from sight import service_utils as service
