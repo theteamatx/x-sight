@@ -18,10 +18,10 @@ import inspect
 from typing import Any, Dict, Text
 from absl import logging
 
-from sight.proto import sight_pb2
 from sight import data_structures
 from sight.exception import exception
 from sight.widgets.decision import decision
+from sight.proto import sight_pb2
 
 
 class SimulationState(object):

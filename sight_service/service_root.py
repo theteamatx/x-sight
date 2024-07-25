@@ -50,6 +50,13 @@ from sight_service.sensitivity_analysis import SensitivityAnalysis
 from sight_service.vizier import Vizier
 from readerwriterlock import rwlock
 
+from flask import Flask
+
+flask_app = Flask(__name__)
+
+@flask_app.route("/")
+def hello_world():
+    return "<p>Root!</p>"
 
 _file_name = "service_root.py"
 _resolve_times = []
@@ -235,8 +242,9 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
     return service_pb2.CreateResponse(id=unique_id, path_prefix="/tmp/")
 
-
+server = None
 def serve():
+  global server
   """Main method that listens on port 8080 and handle requests received from client.
   """
   method_name = "serve"
@@ -249,10 +257,11 @@ def serve():
     ]
   )
   service_pb2_grpc.add_SightServiceServicer_to_server(SightService(), server)
-  server.add_insecure_port("[::]:8080")
+  server.add_insecure_port("[::]:9999")
   server.start()
-  logging.info("server is up and running on port : 8080")
+  logging.info("server is up and running on port : 9999")
 
+  flask_app.run(debug=True, host="0.0.0.0", port=8080)
   server.wait_for_termination()
   logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 

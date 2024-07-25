@@ -29,6 +29,9 @@ from sight.widgets.pandas_sight import pandas_sight
 # from py.widgets.simulation import simulation_state
 # from py.widgets.tensorflow_sight import tensorflow_sight
 
+import warnings
+# Suppress FutureWarning messages
+warnings.simplefilter(action='ignore', category=FutureWarning)
 
 def log_var(
     name: str, obj_to_log: Any, sight: Any, frame: Optional[Any] = None

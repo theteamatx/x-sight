@@ -43,4 +43,5 @@ COPY .env .env
 ENV PYTHONPATH "$HOME/x-sight:$HOME/x-sight/py:${PYTHONPATH}"
 
 # run the python command
+# CMD [ "python3", "sight_service/service_root.py"]
 CMD [ "python3", "sight_service/service_root.py"]
