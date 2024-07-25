@@ -254,6 +254,8 @@ message Value {
 
     bool none_value = 7;
   }
+
+  string mime_type = 8;
 }
 
 // The starting point of a block. Must be matched to a BlockEnd.

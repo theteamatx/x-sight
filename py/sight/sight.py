@@ -366,7 +366,7 @@ class Sight(object):
         if self.avro_file_counter == 1:
           create_external_bq_table(self.params, self.table_name, self.id)
           logging.info(
-              'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+              'Log GUI : https://script.google.com/a/google.com/macros/s/%s?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
               self.SIGHT_API_KEY,
               self.params.dataset_name,
