@@ -60,10 +60,10 @@ def launch_worklist_scheduler(sight):
 def spawn_workers(sight):
     trials.start_jobs(
             num_train_workers=1,
-            num_trials=4,
+            # num_trials=4,
             binary_path='fvs_sight/fvs_worker.py',
             optimizer_type='worklist_scheduler',
-            docker_image='gcr.io/cameltrain/kokua_portfolio:fvs',
+            docker_image='gcr.io/cameltrain/sight-worker',
             decision_mode='train',
             deployment_mode='worker_mode',
             worker_mode='dsub_cloud_worker',

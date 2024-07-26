@@ -30,6 +30,7 @@ class SingleActionOptimizerClient(OptimizerClient):
     super().__init__(optimizer_type)
     self._sight = sight
     self._last_action = None
+    self.exp_completed = False
     if(algorithm == None):
       self._algorithm = algorithm
     elif algorithm == 'auto':
@@ -87,12 +88,16 @@ class SingleActionOptimizerClient(OptimizerClient):
       # logging.info('response: %s', response)
       if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
         self._last_action = response.action
-
         return self._get_dp_action(response)
-
-      print('waiting in decision point to get server from response......')
-      print('sleeping for 5 seconds......')
-      time.sleep(5)
+      elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_DONE:
+        self.exp_completed = True
+        return None
+      elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_RETRY:
+        print('waiting in decision point to get server from response......')
+        print('sleeping for 5 seconds......')
+        time.sleep(5)
+      else:
+        raise ValueError("action type not correctly received from server")
 
   @override
   def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):

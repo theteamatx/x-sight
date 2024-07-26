@@ -288,6 +288,17 @@ class SightService(service_pb2_grpc.SightServiceServicer):
                      _file_name)
         return service_pb2.CreateResponse(id=unique_id, path_prefix="/tmp/")
 
+    def Close(self, request, context):
+        method_name = "Close"
+        logging.info(">>>>>>>  In %s method of %s file.", method_name,
+                     _file_name)
+
+        obj = self.optimizers.get_instance(
+            request.client_id).close(request)
+        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
+                     _file_name)
+        return obj
+
 
 def serve():
     """Main method that listens on port 8080 and handle requests received from client.

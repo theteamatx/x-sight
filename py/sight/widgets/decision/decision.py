@@ -368,10 +368,10 @@ def run(
 
     decision_configuration = sight_pb2.DecisionConfigurationStart()
     decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
-    if _DEPLOYMENT_MODE.value == 'worker_mode':
-        decision_configuration.num_trials = int(os.environ['num_samples'])
-    else:
-        decision_configuration.num_trials = _NUM_TRIALS.value
+    # if _DEPLOYMENT_MODE.value == 'worker_mode':
+    #     decision_configuration.num_trials = int(os.environ['num_samples'])
+    # else:
+    #     decision_configuration.num_trials = _NUM_TRIALS.value
     decision_configuration.choice_config[sight.params.label].CopyFrom(
         optimizer.obj.create_config())
     attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
@@ -502,7 +502,9 @@ def run(
                 'worker_mode',
         ]:
             if _DEPLOYMENT_MODE.value == 'worker_mode' or 'PARENT_LOG_ID' in os.environ:
-                num_samples_to_run = int(os.environ['num_samples'])
+                # not used anymore - for worklist scheduler
+                # num_samples_to_run = int(os.environ['num_samples'])
+                pass
             else:
                 trials.launch(
                     optimizer.obj,
@@ -510,6 +512,7 @@ def run(
                     _NUM_TRAIN_WORKERS.value,
                     sight,
                 )
+                # not used anymore - for worklist scheduler
                 num_samples_to_run = _NUM_TRIALS.value
 
             # If a docker image is provided, run within it.
@@ -556,7 +559,9 @@ def run(
                 #             ]
                 # unique_action_ids = propose_actions(sight, actions_list)
 
-                for _ in range(num_samples_to_run):
+                # for _ in range(num_samples_to_run):
+                print("going inside while loop.....")
+                while(True):
                     sight.enter_block('Decision Sample', sight_pb2.Object())
                     if 'constant_action' in sight.widget_decision_state:
                         del sight.widget_decision_state['constant_action']
@@ -566,7 +571,13 @@ def run(
                     if env:
                         driver_fn(env, sight)
                     else:
-                        driver_fn(sight)
+                        exp = driver_fn(sight)
+
+                    # If no action received from server
+                    print("exp : ", exp)
+                    if(exp == None):
+                        print('done from driver fucntion so, killing the worker')
+                        break
 
                     finalize_episode(sight)
                     sight.exit_block('Decision Sample', sight_pb2.Object())
@@ -728,6 +739,9 @@ def decision_point(
                 OT_WORKLIST_SCHEDULER, sight)
         optimizer_obj = optimizer.get_instance()
         chosen_action = optimizer_obj.decision_point(sight, req)
+        if(chosen_action == None):
+            print("received None in chosen action")
+            return None
         sight.widget_decision_state['constant_action'] = chosen_action
 
     elif _OPTIMIZER_TYPE.value.startswith('llm_'):

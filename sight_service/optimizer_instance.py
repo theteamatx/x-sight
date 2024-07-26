@@ -165,3 +165,8 @@ class OptimizerInstance:
       self, request: service_pb2.FetchOptimalActionRequest
   ) -> service_pb2.FetchOptimalActionResponse:
     return service_pb2.FetchOptimalActionResponse()
+
+  def close(
+      self, request: service_pb2.CloseRequest
+  ) -> service_pb2.CloseResponse:
+    return service_pb2.CloseResponse()

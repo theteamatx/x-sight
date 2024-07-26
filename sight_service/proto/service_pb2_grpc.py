@@ -25,6 +25,11 @@ class SightServiceStub(object):
                 request_serializer=sight__service_dot_proto_dot_service__pb2.CreateRequest.SerializeToString,
                 response_deserializer=sight__service_dot_proto_dot_service__pb2.CreateResponse.FromString,
                 )
+        self.Close = channel.unary_unary(
+                '/sight.x.service.SightService/Close',
+                request_serializer=sight__service_dot_proto_dot_service__pb2.CloseRequest.SerializeToString,
+                response_deserializer=sight__service_dot_proto_dot_service__pb2.CloseResponse.FromString,
+                )
         self.Launch = channel.unary_unary(
                 '/sight.x.service.SightService/Launch',
                 request_serializer=sight__service_dot_proto_dot_service__pb2.LaunchRequest.SerializeToString,
@@ -87,6 +92,12 @@ class SightServiceServicer(object):
         """rpc PrintInsertionTime(TestRequest) returns (TestResponse) {}
         Creates a new Sight log.
         """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Close(self, request, context):
+        """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
@@ -161,6 +172,11 @@ def add_SightServiceServicer_to_server(servicer, server):
                     servicer.Create,
                     request_deserializer=sight__service_dot_proto_dot_service__pb2.CreateRequest.FromString,
                     response_serializer=sight__service_dot_proto_dot_service__pb2.CreateResponse.SerializeToString,
+            ),
+            'Close': grpc.unary_unary_rpc_method_handler(
+                    servicer.Close,
+                    request_deserializer=sight__service_dot_proto_dot_service__pb2.CloseRequest.FromString,
+                    response_serializer=sight__service_dot_proto_dot_service__pb2.CloseResponse.SerializeToString,
             ),
             'Launch': grpc.unary_unary_rpc_method_handler(
                     servicer.Launch,
@@ -249,6 +265,23 @@ class SightService(object):
         return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/Create',
             sight__service_dot_proto_dot_service__pb2.CreateRequest.SerializeToString,
             sight__service_dot_proto_dot_service__pb2.CreateResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def Close(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/Close',
+            sight__service_dot_proto_dot_service__pb2.CloseRequest.SerializeToString,
+            sight__service_dot_proto_dot_service__pb2.CloseResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

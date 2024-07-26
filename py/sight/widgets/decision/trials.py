@@ -218,7 +218,7 @@ def start_job_in_docker(
 
 def start_jobs(
     num_train_workers: int,
-    num_trials: int,
+    # num_trials: int,
     binary_path: Optional[str],
     optimizer_type: str,
     docker_image,
@@ -245,15 +245,15 @@ def start_jobs(
 
   sight.enter_block('Worker Spawning', sight_pb2.Object())
   with open('/tmp/optimization_tasks.tsv', 'w') as outf:
-    outf.write('--env worker_id\t--env num_samples\t--env worker_location\n')
-    num_tasks_per_worker = math.floor(num_trials / num_train_workers)
+    outf.write('--env worker_id\t--env worker_location\n')
+    # num_tasks_per_worker = math.floor(num_trials / num_train_workers)
     for worker_id in range(num_train_workers):
-      tasks_for_cur_worker = num_tasks_per_worker
-      # If _NUM_TRIALS is not evenly divisible by num_train_workers, add
-      # the extra extra tasks to the first few workers.
-      if worker_id < num_trials % num_train_workers:
-        tasks_for_cur_worker += 1
-      outf.write(f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location}\n')
+      # tasks_for_cur_worker = num_tasks_per_worker
+      # # If _NUM_TRIALS is not evenly divisible by num_train_workers, add
+      # # the extra extra tasks to the first few workers.
+      # if worker_id < num_trials % num_train_workers:
+      #   tasks_for_cur_worker += 1
+      outf.write(f'{worker_id}\t{sight.location}\n')
       sight.location.next()
 
 

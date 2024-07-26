@@ -54,13 +54,13 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
         raise app.UsageError("Too many command-line arguments.")
 
     sample_list = [{
-        "base-FERTILIZ-howManyCycle": 1.0,
-        "base-FERTILIZ-extra_step": 0.0,
-        "base-FERTILIZ-extra_offset": 0.0
+        "a1": 1.0,
+        "a2": 0.0,
+        "a3": 0.0
     }, {
-        "base-FERTILIZ-howManyCycle": 0.5,
-        "base-FERTILIZ-extra_step": 0.0,
-        "base-FERTILIZ-extra_offset": 0.0
+        "a1": 0.5,
+        "a2": 0.0,
+        "a3": 0.0
     }]
 
     # print('SIGHT ID => ',sight.id)

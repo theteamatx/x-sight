@@ -33,7 +33,7 @@ from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.proto import service_pb2
 
-_GENAI_API_KEY = os.environ['GENAI_API_KEY']
+# _GENAI_API_KEY = os.environ['GENAI_API_KEY']
 
 
 class LLM(OptimizerInstance):
@@ -45,7 +45,8 @@ class LLM(OptimizerInstance):
 
   def __init__(self):
     super().__init__()
-    genai.configure(api_key=_GENAI_API_KEY)
+    # genai.configure(api_key=_GENAI_API_KEY)
+    genai.configure(api_key="_GENAI_API_KEY")
     self._intro = ''
     self._history = []
     self._actions_to_do = []
@@ -543,7 +544,7 @@ class LLM(OptimizerInstance):
       else:
         text = text.split('\n')
       logging.info('text=[%s]', text)
-      
+
       actions = []
       for i in range(0, len(text), 3):
         try:
@@ -662,7 +663,7 @@ class LLM(OptimizerInstance):
       selected_actions = self._get_action(request.worker_id)
 
     logging.info('decision_point(): selected_actions=%s', selected_actions)
-      
+
     self._history[-1]['action'] = selected_actions[0]
     # If there are more actions to perform, store them in self._actions_to_do
     if len(selected_actions) >= 1:

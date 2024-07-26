@@ -326,6 +326,14 @@ class Sight(object):
     return self
 
   def __exit__(self, exc_type, value, traceback):
+    # last rpc call to server for this sight id
+    req = service_pb2.CloseRequest()
+    req.client_id = str(self.id)
+    response = service.call(
+                lambda s, meta: s.Close(req, 300, metadata=meta)
+            )
+    print("close rpc status :", response.response_str)
+
     if self.params.silent_logger:
       self.close()
     if exc_type is not None:

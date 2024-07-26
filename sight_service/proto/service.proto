@@ -47,6 +47,11 @@ service SightService {
     //   curl http://DOMAIN_NAME/v1/create
     option (google.api.http) = { get: "/v1/create" };
   }
+  rpc Close(CloseRequest) returns (CloseResponse) {
+    // Client example:
+    //   curl http://DOMAIN_NAME/v1/Close
+    option (google.api.http) = { get: "/v1/Close" };
+  }
   rpc Launch(LaunchRequest) returns (LaunchResponse) {
     //   curl http://DOMAIN_NAME/v1/launch/{client_id}/{label}
     option (google.api.http) = {
@@ -376,4 +381,12 @@ message CreateResponse {
   int64 id = 1;
   // The path prefix common to all the file(s) that hold the log.
   string path_prefix = 2;
+}
+
+message CloseRequest {
+  string client_id = 1;
+}
+
+message CloseResponse {
+  string response_str = 1;
 }
