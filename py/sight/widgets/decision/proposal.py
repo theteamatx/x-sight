@@ -21,8 +21,6 @@ from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import trials
-from fvs_sight.fvs_api import action_attrs
-from fvs_sight.fvs_api import outcome_attrs
 from sight.widgets.decision.single_action_optimizer_client import (
     SingleActionOptimizerClient)
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
@@ -34,7 +32,7 @@ FLAGS = flags.FLAGS
 
 """helper functions to be used in portfolio flow ."""
 
-def launch_worklist_scheduler(sight):
+def launch_worklist_scheduler(sight, action_attrs, outcome_attrs):
     optimizer_object = SingleActionOptimizerClient(
         sight_pb2.DecisionConfigurationStart.OptimizerType.
         OT_WORKLIST_SCHEDULER, sight)
@@ -57,16 +55,24 @@ def launch_worklist_scheduler(sight):
         sight,
     )
 
-def spawn_workers(sight):
+def spawn_workers(
+        num_train_workers,
+        binary_path,
+        optimizer_type,
+        docker_image,
+        decision_mode,
+        deployment_mode,
+        worker_mode,
+        sight,
+        ):
     trials.start_jobs(
-            num_train_workers=1,
-            # num_trials=4,
-            binary_path='fvs_sight/fvs_worker.py',
-            optimizer_type='worklist_scheduler',
-            docker_image='gcr.io/cameltrain/sight-worker',
-            decision_mode='train',
-            deployment_mode='worker_mode',
-            worker_mode='dsub_cloud_worker',
+            num_train_workers=num_train_workers,
+            binary_path=binary_path,
+            optimizer_type=optimizer_type,
+            docker_image=docker_image,
+            decision_mode=decision_mode,
+            deployment_mode=deployment_mode,
+            worker_mode=worker_mode,
             sight=sight,
         )
 

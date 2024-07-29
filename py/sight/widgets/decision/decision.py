@@ -560,7 +560,6 @@ def run(
                 # unique_action_ids = propose_actions(sight, actions_list)
 
                 # for _ in range(num_samples_to_run):
-                print("going inside while loop.....")
                 while(True):
                     sight.enter_block('Decision Sample', sight_pb2.Object())
                     if 'constant_action' in sight.widget_decision_state:
@@ -568,15 +567,15 @@ def run(
                     sight.widget_decision_state['discount'] = 0
                     sight.widget_decision_state['last_reward'] = None
 
+                    #? new rpc just to check move forward or not?
                     if env:
                         driver_fn(env, sight)
                     else:
                         exp = driver_fn(sight)
 
                     # If no action received from server
-                    print("exp : ", exp)
                     if(exp == None):
-                        print('done from driver fucntion so, killing the worker')
+                        print('done from driver function so, killing the worker')
                         break
 
                     finalize_episode(sight)
