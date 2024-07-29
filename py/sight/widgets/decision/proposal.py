@@ -56,14 +56,14 @@ def launch_worklist_scheduler(sight, action_attrs, outcome_attrs):
     )
 
 def spawn_workers(
-        num_train_workers,
-        binary_path,
-        optimizer_type,
-        docker_image,
-        decision_mode,
-        deployment_mode,
-        worker_mode,
-        sight,
+      sight,
+      binary_path,
+      num_train_workers = 10,
+      docker_image = 'gcr.io/cameltrain/sight-portfolio-worker',
+      optimizer_type = 'worklist_scheduler',
+      decision_mode = 'train',
+      deployment_mode = 'worker_mode',
+      worker_mode = 'dsub_cloud_worker',
         ):
     trials.start_jobs(
             num_train_workers=num_train_workers,
