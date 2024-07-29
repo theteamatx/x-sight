@@ -486,7 +486,6 @@ def run(
             )
             trials.start_jobs(
                 _NUM_TRAIN_WORKERS.value,
-                _NUM_TRIALS.value,
                 _BINARY_PATH.value,
                 _OPTIMIZER_TYPE.value,
                 _DOCKER_IMAGE.value,

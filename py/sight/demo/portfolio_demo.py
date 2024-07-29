@@ -36,20 +36,12 @@ from sight.proto import sight_pb2
 from sight.sight import Sight
 from fvs_sight.fvs_api import action_attrs
 from fvs_sight.fvs_api import outcome_attrs
+from sight.widgets.decision import decision
 # from sight.widgets.decision.proposal import spawn_workers, launch_worklist_scheduler, propose_actions
 from sight.widgets.decision import proposal
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
 
 global_outcome_mapping = RWLockDictWrapper()
-
-num_train_workers=1
-binary_path='fvs_sight/fvs_worker.py'
-optimizer_type='worklist_scheduler'
-docker_image='gcr.io/cameltrain/sight-worker'
-decision_mode='train'
-deployment_mode='worker_mode'
-worker_mode='dsub_cloud_worker'
-
 
 def get_sight_instance():
     params = sight_pb2.Params(
@@ -89,16 +81,11 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
 
 def main_wrapper(argv):
     with get_sight_instance() as sight:
-        proposal.launch_worklist_scheduler(sight, action_attrs, outcome_attrs)
-        proposal.spawn_workers(
-            num_train_workers=num_train_workers,
-            binary_path=binary_path,
-            optimizer_type=optimizer_type,
-            docker_image=docker_image,
-            decision_mode=decision_mode,
-            deployment_mode=deployment_mode,
-            worker_mode=worker_mode,
-            sight=sight,
+        
+        decision.run(
+            action_attrs=action_attrs,
+            outcome_attrs=outcome_attrs,
+            sight=sight
         )
 
         print('going to sleep for 6 minutes')
