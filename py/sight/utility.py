@@ -32,7 +32,7 @@ from sight import service_utils as service
 
 
 
-POLL_LIMIT = 6 # POLL_TIME_INTERVAL th part of second
+POLL_LIMIT = 60 # POLL_TIME_INTERVAL th part of second
 POLL_TIME_INTERVAL = 10 # seconds
 global_outcome_mapping = RWLockDictWrapper()
 
@@ -43,8 +43,8 @@ def get_all_outcomes(sight_id, action_ids):
   request.client_id = str(sight_id)
   request.unique_ids.extend(action_ids)
 
-  async_dict = global_outcome_mapping.get()
-  print(f'GLOBAL MAP OF GET OUTCOME => {async_dict}')
+  # async_dict = global_outcome_mapping.get()
+  # print(f'GLOBAL MAP OF GET OUTCOME => {async_dict}')
   # time.sleep(10)
   # return [[1] * 10]*len(action_ids)
 
@@ -60,7 +60,7 @@ def get_all_outcomes(sight_id, action_ids):
     for outcome in response.outcome:
       if (outcome.status == service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED):
         outcome_dict = {}
-        # outcome_dict['action_id'] = outcome.action_id
+        outcome_dict['action_id'] = outcome.action_id
         outcome_dict['reward'] = outcome.reward
         outcome_dict['action'] = param_proto_to_dict(outcome.action_attrs)
         outcome_dict['outcome'] = param_proto_to_dict(outcome.outcome_attrs)

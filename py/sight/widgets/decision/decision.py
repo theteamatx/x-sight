@@ -560,25 +560,38 @@ def run(
 
                 # for _ in range(num_samples_to_run):
                 while(True):
-                    sight.enter_block('Decision Sample', sight_pb2.Object())
-                    if 'constant_action' in sight.widget_decision_state:
-                        del sight.widget_decision_state['constant_action']
-                    sight.widget_decision_state['discount'] = 0
-                    sight.widget_decision_state['last_reward'] = None
 
-                    #? new rpc just to check move forward or not?
-                    if env:
-                        driver_fn(env, sight)
-                    else:
-                        exp = driver_fn(sight)
+                    # #? new rpc just to check move forward or not?
+                    # req = service_pb2.WorkerAliveRequest(
+                    #     client_id=FLAGS.sight_log_id,
+                    #     # worker_id=f'client_{client_id}_worker_{worker_location}',
+                    # )
+                    # response = service.call(
+                    #     lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
 
-                    # If no action received from server
-                    if(exp == None):
-                        print('done from driver function so, killing the worker')
-                        break
+                    # if(response.status == False):
+                    #     break
+                    # else:
+                        sight.enter_block('Decision Sample', sight_pb2.Object())
+                        if 'constant_action' in sight.widget_decision_state:
+                            del sight.widget_decision_state['constant_action']
+                        sight.widget_decision_state['discount'] = 0
+                        sight.widget_decision_state['last_reward'] = None
 
-                    finalize_episode(sight)
-                    sight.exit_block('Decision Sample', sight_pb2.Object())
+
+                        if env:
+                            driver_fn(env, sight)
+                        else:
+                            exp = driver_fn(sight)
+                            # driver_fn(sight)
+
+                        # If no action received from server
+                        if(exp == None):
+                            print('done from driver function so, killing the worker')
+                            break
+
+                        finalize_episode(sight)
+                        sight.exit_block('Decision Sample', sight_pb2.Object())
 
                 # results = get_outcome(sight)
                 # logging.info('Get Outcome : %s', results)
@@ -767,13 +780,23 @@ def decision_point(
     #         'decision_episode_fn'].action_attrs:
     for attr in chosen_action.keys():
         #? keep this might need to change sub_type of deicision param value
+        if isinstance(chosen_action[attr], str):
+            val = sight_pb2.Value(
+                sub_type=sight_pb2.Value.ST_STRING,
+                string_value=chosen_action[attr],
+            )
+        elif isinstance(chosen_action[attr], float):
+            val = sight_pb2.Value(
+                sub_type=sight_pb2.Value.ST_DOUBLE,
+                double_value=chosen_action[attr],
+            )
+        else:
+            raise ValueError("unsupported type!!")
+
         choice_params.append(
             sight_pb2.DecisionParam(
                 key=attr,
-                value=sight_pb2.Value(
-                    sub_type=sight_pb2.Value.ST_DOUBLE,
-                    double_value=chosen_action[attr],
-                ),
+                value=val,
             ))
 
     # pytype: disable=attribute-error

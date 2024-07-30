@@ -58,11 +58,11 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
     sample_list = [{
         "a1": 1.0,
         "a2": 0.0,
-        "a3": 0.0
+        "a3": "BM"
     }, {
         "a1": 0.5,
         "a2": 0.0,
-        "a3": 0.0
+        "a3": "NC"
     }]
 
     # print('SIGHT ID => ',sight.id)
@@ -81,7 +81,7 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
 
 def main_wrapper(argv):
     with get_sight_instance() as sight:
-        
+
         decision.run(
             action_attrs=action_attrs,
             outcome_attrs=outcome_attrs,

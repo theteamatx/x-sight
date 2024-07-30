@@ -39,17 +39,27 @@ class OptimizerClient:
 
     return self._get_dp_action(response)
 
-  def _get_dp_action(self, dp_response: service_pb2.DecisionPointResponse) -> Dict[str, float]:
+  def _get_dp_action(self, dp_response: service_pb2.DecisionPointResponse) -> Dict[str, Any]:
     """Returns the dict representation of the action encoded in dp_response."""
     d = {}
     for a in dp_response.action:
-      d[a.key] = a.value.double_value
+      if(a.value.sub_type == sight_pb2.Value.ST_DOUBLE):
+        d[a.key] = a.value.double_value
+      elif(a.value.sub_type == sight_pb2.Value.ST_STRING):
+        d[a.key] = a.value.string_value
+      else:
+        raise ValueError("not supported type!!")
     return d
 
-  def _set_dp_action(self, dp: sight_pb2.DecisionPoint, action: Dict[str, float]) -> None:
+  def _set_dp_action(self, dp: sight_pb2.DecisionPoint, action: Dict[str, Any]) -> None:
     """Add to dp the attributes of action."""
     for key, val in action.items():
-      dp.value.add(sight_pb2.DecisionParam(key=key, value=sight_pb2.Value(double_value=val)))
+      if(isinstance(val,str)):
+        dp.value.add(sight_pb2.DecisionParam(key=key, value=sight_pb2.Value(string_value=val)))
+      elif(isinstance(val,float)):
+        dp.value.add(sight_pb2.DecisionParam(key=key, value=sight_pb2.Value(double_value=val)))
+      else:
+        raise ValueError("not supported type!!")
 
   def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
     response = service.call(
