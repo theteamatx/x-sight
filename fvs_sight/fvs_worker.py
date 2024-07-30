@@ -29,8 +29,8 @@ def driver_fn(sight):
   params_dict = decision.decision_point("label", sight)
   # params_dict = {'fvs_type':'managed','region':'BM','project_id':'ACR173','desc': 'fire_projectACR173', 'fire-SIMFIRE_27-1_cycle': 2028, 'fire-SIMFIRE_27-6_stand_area_burned': 10.0, 'fire-SIMFIRE_30-1_cycle': 2031, 'fire-SIMFIRE_30-6_stand_area_burned': 10.0, 'fire-SIMFIRE_31-1_cycle': 2032, 'fire-SIMFIRE_31-6_stand_area_burned': 10.0}
   print('params_dict : ', params_dict)
-  if(params_dict == None):
-     return None
+  # if(params_dict == None):
+  #    return None
   # raise SystemError
 
   sim_stream = simulate_fvs(sight,params_dict)
@@ -39,7 +39,7 @@ def driver_fn(sight):
   print("outcome : ", outcome)
 
   decision.decision_outcome('outcome_label', sight, reward=0, outcome=outcome)
-  return sight
+  # return sight
 
 
 #temporary created

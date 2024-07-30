@@ -176,34 +176,34 @@ class WorklistScheduler(SingleActionOptimizer):
         # print('self.unique_id : ', self.unique_id)
 
         dp_response = service_pb2.DecisionPointResponse()
-        if(self.exp_completed):
-          logging.info("sight experiment completed, killing the worker")
-          dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_DONE
+        # if(self.exp_completed):
+        #   logging.info("sight experiment completed, killing the worker")
+        #   dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_DONE
+        # else:
+        if self.pending_samples:
+
+          # todo : meetashah : add logic to fetch action stored from propose actions and send it as repsonse
+          # key, sample = self.pending_samples.popitem()
+          # fetching the key in FIFO manner
+
+          with self.pending_lock.gen_wlock():
+            key = next(iter(self.pending_samples))
+            sample = self.pending_samples.pop(key)
+
+          with self.active_lock.gen_wlock():
+            self.active_samples[request.worker_id] = {'id': key, 'sample': sample}
+
+
+          next_action = sample[0]
+          logging.info('next_action=%s', next_action)
+          # raise SystemExit
+          dp_response.action.extend(param_dict_to_proto(next_action))
+          # print('self.active_samples : ', self.active_samples)
+          # print('self.pending_samples : ', self.pending_samples)
+          # print('self.completed_samples : ', self.completed_samples)
+          dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
         else:
-          if self.pending_samples:
-
-            # todo : meetashah : add logic to fetch action stored from propose actions and send it as repsonse
-            # key, sample = self.pending_samples.popitem()
-            # fetching the key in FIFO manner
-
-            with self.pending_lock.gen_wlock():
-              key = next(iter(self.pending_samples))
-              sample = self.pending_samples.pop(key)
-
-            with self.active_lock.gen_wlock():
-              self.active_samples[request.worker_id] = {'id': key, 'sample': sample}
-
-
-            next_action = sample[0]
-            logging.info('next_action=%s', next_action)
-            # raise SystemExit
-            dp_response.action.extend(param_dict_to_proto(next_action))
-            # print('self.active_samples : ', self.active_samples)
-            # print('self.pending_samples : ', self.pending_samples)
-            # print('self.completed_samples : ', self.completed_samples)
-            dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
-          else:
-            dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_RETRY
+          dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_RETRY
 
         logging.debug("<<<<  Out %s of %s", method_name, _file_name)
         return dp_response
@@ -266,7 +266,20 @@ class WorklistScheduler(SingleActionOptimizer):
         logging.debug(">>>>  In %s of %s", method_name, _file_name)
         self.exp_completed = True
         print("sight experiment completed....")
-        logging.debug("************************closed*******************************")
+        # logging.debug("************************closed*******************************")
         logging.debug("<<<<  Out %s of %s", method_name, _file_name)
         return service_pb2.CloseResponse(response_str="success")
+
+    @overrides
+    def WorkerAlive(
+       self, request: service_pb2.WorkerAliveRequest
+    ) -> service_pb2.WorkerAliveResponse:
+        method_name = "WorkerAlive"
+        logging.debug(">>>>  In %s of %s", method_name, _file_name)
+        if(self.exp_completed):
+           worker_alive_status = False
+        else:
+           worker_alive_status = True
+        logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+        return service_pb2.WorkerAliveResponse(status=worker_alive_status)
 

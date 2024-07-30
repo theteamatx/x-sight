@@ -89,9 +89,9 @@ class SingleActionOptimizerClient(OptimizerClient):
       if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
         self._last_action = response.action
         return self._get_dp_action(response)
-      elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_DONE:
-        self.exp_completed = True
-        return None
+      # elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_DONE:
+      #   self.exp_completed = True
+      #   return None
       elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_RETRY:
         print('waiting in decision point to get server from response......')
         print('sleeping for 5 seconds......')

@@ -299,6 +299,17 @@ class SightService(service_pb2_grpc.SightServiceServicer):
                      _file_name)
         return obj
 
+    def WorkerAlive(self, request, context):
+        method_name = "WorkerAlive"
+        logging.info(">>>>>>>  In %s method of %s file.", method_name,
+                     _file_name)
+
+        obj = self.optimizers.get_instance(
+            request.client_id).WorkerAlive(request)
+        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
+                     _file_name)
+        return obj
+
 
 def serve():
     """Main method that listens on port 8080 and handle requests received from client.

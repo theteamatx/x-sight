@@ -170,3 +170,8 @@ class OptimizerInstance:
       self, request: service_pb2.CloseRequest
   ) -> service_pb2.CloseResponse:
     return service_pb2.CloseResponse()
+
+  def WorkerAlive(
+      self, request: service_pb2.WorkerAliveRequest
+  ) -> service_pb2.WorkerAliveResponse:
+    return service_pb2.WorkerAliveResponse()

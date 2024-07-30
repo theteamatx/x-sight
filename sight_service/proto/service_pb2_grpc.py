@@ -30,6 +30,11 @@ class SightServiceStub(object):
                 request_serializer=sight__service_dot_proto_dot_service__pb2.CloseRequest.SerializeToString,
                 response_deserializer=sight__service_dot_proto_dot_service__pb2.CloseResponse.FromString,
                 )
+        self.WorkerAlive = channel.unary_unary(
+                '/sight.x.service.SightService/WorkerAlive',
+                request_serializer=sight__service_dot_proto_dot_service__pb2.WorkerAliveRequest.SerializeToString,
+                response_deserializer=sight__service_dot_proto_dot_service__pb2.WorkerAliveResponse.FromString,
+                )
         self.Launch = channel.unary_unary(
                 '/sight.x.service.SightService/Launch',
                 request_serializer=sight__service_dot_proto_dot_service__pb2.LaunchRequest.SerializeToString,
@@ -97,6 +102,12 @@ class SightServiceServicer(object):
         raise NotImplementedError('Method not implemented!')
 
     def Close(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def WorkerAlive(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -177,6 +188,11 @@ def add_SightServiceServicer_to_server(servicer, server):
                     servicer.Close,
                     request_deserializer=sight__service_dot_proto_dot_service__pb2.CloseRequest.FromString,
                     response_serializer=sight__service_dot_proto_dot_service__pb2.CloseResponse.SerializeToString,
+            ),
+            'WorkerAlive': grpc.unary_unary_rpc_method_handler(
+                    servicer.WorkerAlive,
+                    request_deserializer=sight__service_dot_proto_dot_service__pb2.WorkerAliveRequest.FromString,
+                    response_serializer=sight__service_dot_proto_dot_service__pb2.WorkerAliveResponse.SerializeToString,
             ),
             'Launch': grpc.unary_unary_rpc_method_handler(
                     servicer.Launch,
@@ -282,6 +298,23 @@ class SightService(object):
         return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/Close',
             sight__service_dot_proto_dot_service__pb2.CloseRequest.SerializeToString,
             sight__service_dot_proto_dot_service__pb2.CloseResponse.FromString,
+            options, channel_credentials,
+            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+
+    @staticmethod
+    def WorkerAlive(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(request, target, '/sight.x.service.SightService/WorkerAlive',
+            sight__service_dot_proto_dot_service__pb2.WorkerAliveRequest.SerializeToString,
+            sight__service_dot_proto_dot_service__pb2.WorkerAliveResponse.FromString,
             options, channel_credentials,
             insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
 

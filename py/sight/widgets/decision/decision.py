@@ -562,16 +562,16 @@ def run(
                 while(True):
 
                     # #? new rpc just to check move forward or not?
-                    # req = service_pb2.WorkerAliveRequest(
-                    #     client_id=FLAGS.sight_log_id,
-                    #     # worker_id=f'client_{client_id}_worker_{worker_location}',
-                    # )
-                    # response = service.call(
-                    #     lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+                    req = service_pb2.WorkerAliveRequest(
+                        client_id=str(sight.id),
+                    )
+                    response = service.call(
+                        lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+                    print("response from workAlive rpc is : ", response)
 
-                    # if(response.status == False):
-                    #     break
-                    # else:
+                    if(response.status == False):
+                        break
+                    else:
                         sight.enter_block('Decision Sample', sight_pb2.Object())
                         if 'constant_action' in sight.widget_decision_state:
                             del sight.widget_decision_state['constant_action']
@@ -582,13 +582,13 @@ def run(
                         if env:
                             driver_fn(env, sight)
                         else:
-                            exp = driver_fn(sight)
-                            # driver_fn(sight)
+                            # exp = driver_fn(sight)
+                            driver_fn(sight)
 
                         # If no action received from server
-                        if(exp == None):
-                            print('done from driver function so, killing the worker')
-                            break
+                        # if(exp == None):
+                        #     print('done from driver function so, killing the worker')
+                        #     break
 
                         finalize_episode(sight)
                         sight.exit_block('Decision Sample', sight_pb2.Object())
@@ -750,9 +750,9 @@ def decision_point(
                 OT_WORKLIST_SCHEDULER, sight)
         optimizer_obj = optimizer.get_instance()
         chosen_action = optimizer_obj.decision_point(sight, req)
-        if(chosen_action == None):
-            print("received None in chosen action")
-            return None
+        # if(chosen_action == None):
+        #     print("received None in chosen action")
+        #     return None
         sight.widget_decision_state['constant_action'] = chosen_action
 
     elif _OPTIMIZER_TYPE.value.startswith('llm_'):

@@ -52,6 +52,11 @@ service SightService {
     //   curl http://DOMAIN_NAME/v1/Close
     option (google.api.http) = { get: "/v1/Close" };
   }
+  rpc WorkerAlive(WorkerAliveRequest) returns (WorkerAliveResponse) {
+    // Client example:
+    //   curl http://DOMAIN_NAME/v1/WorkerAlive
+    option (google.api.http) = { get: "/v1/WorkerAlive" };
+  }
   rpc Launch(LaunchRequest) returns (LaunchResponse) {
     //   curl http://DOMAIN_NAME/v1/launch/{client_id}/{label}
     option (google.api.http) = {
@@ -389,4 +394,13 @@ message CloseRequest {
 
 message CloseResponse {
   string response_str = 1;
+}
+
+message WorkerAliveRequest {
+  string client_id = 1;
+  string worker_id = 2;
+}
+
+message WorkerAliveResponse {
+  bool status = 1;
 }
