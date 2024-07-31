@@ -265,8 +265,7 @@ class WorklistScheduler(SingleActionOptimizer):
         method_name = "close"
         logging.debug(">>>>  In %s of %s", method_name, _file_name)
         self.exp_completed = True
-        print("sight experiment completed....")
-        # logging.debug("************************closed*******************************")
+        logging.info("sight experiment completed...., changed exp_completed to True")
         logging.debug("<<<<  Out %s of %s", method_name, _file_name)
         return service_pb2.CloseResponse(response_str="success")
 
@@ -277,9 +276,12 @@ class WorklistScheduler(SingleActionOptimizer):
         method_name = "WorkerAlive"
         logging.debug(">>>>  In %s of %s", method_name, _file_name)
         if(self.exp_completed):
-           worker_alive_status = False
+           worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+        elif(not self.pending_samples):
+           worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
         else:
-           worker_alive_status = True
+           worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+        logging.info("worker_alive_status is %s", worker_alive_status)
         logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-        return service_pb2.WorkerAliveResponse(status=worker_alive_status)
+        return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)
 

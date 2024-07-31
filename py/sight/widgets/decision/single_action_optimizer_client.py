@@ -94,7 +94,7 @@ class SingleActionOptimizerClient(OptimizerClient):
       #   return None
       elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_RETRY:
         print('waiting in decision point to get server from response......')
-        print('sleeping for 5 seconds......')
+        logging.info('sleeping for 5 seconds......')
         time.sleep(5)
       else:
         raise ValueError("action type not correctly received from server")

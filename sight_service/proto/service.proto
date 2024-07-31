@@ -402,5 +402,14 @@ message WorkerAliveRequest {
 }
 
 message WorkerAliveResponse {
-  bool status = 1;
+  enum StatusType {
+    ST_UNKNOWN = 0;
+    // Tells the worker to continue to run.
+    ST_ACT = 1;
+    // Tells the worker to stop.
+    ST_DONE = 2;
+    // Tells the worker to back off and try again soon.
+    ST_RETRY = 3;
+  }
+  StatusType status_type = 4;
 }

@@ -20,6 +20,7 @@ import dm_env
 import json
 import numpy as np
 from typing import Any, Callable, Dict, List, Optional, Text
+import time
 
 from absl import flags
 # from absl import logging
@@ -560,41 +561,37 @@ def run(
 
                 # for _ in range(num_samples_to_run):
                 while(True):
-
                     # #? new rpc just to check move forward or not?
                     req = service_pb2.WorkerAliveRequest(
                         client_id=str(sight.id),
                     )
                     response = service.call(
                         lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
-                    print("response from workAlive rpc is : ", response)
 
-                    if(response.status == False):
+                    logging.info("response from workAlive rpc is : %s", response.status_type)
+                    if(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
                         break
-                    else:
+                    elif(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+                        logging.info('sleeping for 5 seconds......')
+                        time.sleep(5)
+                    elif(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
                         sight.enter_block('Decision Sample', sight_pb2.Object())
                         if 'constant_action' in sight.widget_decision_state:
                             del sight.widget_decision_state['constant_action']
                         sight.widget_decision_state['discount'] = 0
                         sight.widget_decision_state['last_reward'] = None
 
-
                         if env:
                             driver_fn(env, sight)
                         else:
-                            # exp = driver_fn(sight)
                             driver_fn(sight)
-
-                        # If no action received from server
-                        # if(exp == None):
-                        #     print('done from driver function so, killing the worker')
-                        #     break
 
                         finalize_episode(sight)
                         sight.exit_block('Decision Sample', sight_pb2.Object())
+                    else:
+                        raise ValueError("invalid response from server")
 
-                # results = get_outcome(sight)
-                # logging.info('Get Outcome : %s', results)
+                logging.info('exiting from the loop.....')
 
             # req = service_pb2.TestRequest(client_id=str(sight.id))
             # response = service.call(
