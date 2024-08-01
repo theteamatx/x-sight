@@ -144,10 +144,14 @@ class ExhaustiveSearch(OptimizerInstance):
     self.complete_samples[
         tuple(self.active_samples[request.worker_id]['sample'])
     ] = {
-        'outcome': request.decision_outcome.outcome_value,
+        'reward': request.decision_outcome.reward,
         'action': self.active_samples[request.worker_id]['action'],
+        'outcome' : request.decision_outcome.outcome_params
     }
     logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
+
+    todo: meetashah
+    # rpc to get the complete samples
 
     if(self.max_reward_sample == {} or self.max_reward_sample['outcome'] < request.decision_outcome.outcome_value):
       self.max_reward_sample = {

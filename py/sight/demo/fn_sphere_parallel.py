@@ -181,15 +181,15 @@ def main(argv: Sequence[str]) -> None:
 
       # optimizer_values = ['ng_random_search', 'ng_pso', 'ng_cga']
       # optimizer_values = ['ng_random_search', 'ng_pso', 'ng_cga', 'ng_es', 'ng_dl_opo', 'ng_dde']
-      # optimizer_values = ['ng_cga']
+      optimizer_values = ['ng_cga']
       # optimizer_values = ['bayesian_opt']
 
-      optimizer_values = [
-          'ng_random_search', 'ng_pso', 'ng_de', 'ng_cga', 'ng_es', 'ng_dl_opo', 'ng_dde',
-          'ng_nmm', 'ng_tiny_spsa', 'ng_scr_hammersley_search',
-          'ng_two_points_de', 'ng_cma_small', 'ng_cma', 'ng_auto',
-          'bayesian_opt'
-      ]
+      # optimizer_values = [
+      #     'ng_random_search', 'ng_pso', 'ng_de', 'ng_cga', 'ng_es', 'ng_dl_opo', 'ng_dde',
+      #     'ng_nmm', 'ng_tiny_spsa', 'ng_scr_hammersley_search',
+      #     'ng_two_points_de', 'ng_cma_small', 'ng_cma', 'ng_auto', 'ng_bo',
+      #     'ng_voronoi_de', 'bayesian_opt'
+      # ]
       table_queue = multiprocessing.Queue()
       processes = []
 
@@ -230,7 +230,7 @@ def main(argv: Sequence[str]) -> None:
       print('waiting for all experiments to get completed.......')
       completed_services = []
       while True:
-        print('checking if any experiment got compelted or not to delete service')
+        print("checking if remaining experiments got compelted or not, to delete it's service")
         # completed_services = []
         # for k,v in experiment_details.items():
         #     if check_exp_status(v[0], v[2]):
@@ -258,6 +258,12 @@ def main(argv: Sequence[str]) -> None:
         # Wait for some time before polling again
         print('going in sleep mode for 60 sec')
         time.sleep(60)  # Polling interval of 60 seconds
+
+      logging.info(
+              'Log GUI : https://streamlit-app-dq7fdwqgbq-uc.a.run.app/?'
+              'log_id=%s',
+              str(sight.id)
+          )
 
 
 if __name__ == "__main__":

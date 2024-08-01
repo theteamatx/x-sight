@@ -76,11 +76,12 @@ class SensitivityAnalysis(OptimizerInstance):
     next_action = {}
     for i, key in enumerate(self.actions):
       if key in self.possible_values:
+        print('selecting from possible values')
         next_action[key] = self.possible_values[key][
             random.randint(0, len(self.possible_values[key]) - 1)
         ]
       elif self.actions[key].HasField('continuous_prob_dist'):
-        rand_val = random.gauss(self.actions[key].continuous_prob_dist.gaussian.mean, 
+        rand_val = random.gauss(self.actions[key].continuous_prob_dist.gaussian.mean,
                                 self.actions[key].continuous_prob_dist.gaussian.stdev)
         print ('self.actions[key].continuous_prob_dist=%s, rand_val=%s' % (self.actions[key].continuous_prob_dist, rand_val))
         if rand_val < self.actions[key].min_value:
@@ -89,10 +90,11 @@ class SensitivityAnalysis(OptimizerInstance):
           rand_val = self.actions[key].max_value
         next_action[key] = rand_val
       else:
+        print('selecting from random.uniform')
         next_action[key] = random.uniform(
             self.actions[key].min_value, self.actions[key].max_value
         )
-    
+
     self._lock.acquire()
     self.active_samples[request.worker_id] = {
         'action': next_action,
@@ -123,7 +125,7 @@ class SensitivityAnalysis(OptimizerInstance):
     }
     del self.active_samples[request.worker_id]
     self._lock.release()
-    
+
     # logging.info('FinalizeEpisode active_samples=%s' % self.active_samples)
     logging.debug('<<<<  Out %s of %s', method_name, _file_name)
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')

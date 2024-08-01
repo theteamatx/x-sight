@@ -541,9 +541,24 @@ message ContinuousProbDist {
     float mean = 1;
     float stdev = 2;
   }
+  message Uniform {
+    float min_val = 1;
+    float max_val = 2;
+  }
 
   oneof dist {
     Gaussian gaussian = 1;
+    Uniform uniform = 2;
+  }
+}
+
+message DiscreteProbDist {
+  message Uniform {
+    int64 min_val = 1;
+    int64 max_val = 2;
+  }
+  oneof dist {
+    Uniform uniform = 1;
   }
 }
 
@@ -558,6 +573,7 @@ message DecisionConfigurationStart {
     OT_BAYESIAN_OPT = 6;
     OT_SENSITIVITY_ANALYSIS = 7;
     OT_NEVER_GRAD = 8;
+    OT_SMC_PY = 9;
   }
 
   message VizierConfig {}
@@ -602,6 +618,7 @@ message DecisionConfigurationStart {
       LM_UNKNOWN = 0;
       LM_OPTIMIZE = 1;
       LM_RECOMMEND = 2;
+      LM_INTERACTIVE = 3;
     }
     LLMGoal goal = 2;
 
@@ -636,6 +653,8 @@ message DecisionConfigurationStart {
     NeverGradAlgorithm algorithm = 1;
   }
 
+  message SMCPyConfig {}
+
   message ChoiceConfig {
     oneof choice_config {
       VizierConfig vizier_config = 1;
@@ -646,6 +665,7 @@ message DecisionConfigurationStart {
       BayesianOptConfig bayesian_opt_config = 6;
       SensitivityAnalysisConfig sensitivity_analysis_config = 7;
       NeverGradConfig never_grad_config = 8;
+      SMCPyConfig smc_py_config = 9;
     }
   }
 
@@ -684,6 +704,7 @@ message DecisionConfigurationStart {
 
     // Distribution of possible values
     ContinuousProbDist continuous_prob_dist = 6;
+    DiscreteProbDist discrete_prob_dist = 7;
   }
 
   // The attributes of application's state
@@ -715,4 +736,5 @@ message DecisionOutcome {
   // The numeric value of this outcome, with higher values being more desirable.
   float outcome_value = 2;
   float discount = 3;
+  repeated DecisionParam outcome_params = 4;
 }

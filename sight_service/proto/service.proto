@@ -243,9 +243,9 @@ message LaunchResponse {
 
 message ProposeActionRequest {
   string client_id = 1;
-  string worker_id = 2;
-  map<string, float> action = 3;
-  sight.x.proto.DecisionOutcome outcome = 4;
+  // string worker_id = 2;
+  repeated sight.x.proto.DecisionParam action = 1;
+  // sight.x.proto.DecisionOutcome outcome = 4;
 }
 message ProposeActionResponse {
   string response_str = 1;
