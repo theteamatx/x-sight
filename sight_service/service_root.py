@@ -151,8 +151,12 @@ class Optimizers:
         # method_name = "get_instance"
         # logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
         with self.instances_lock.gen_rlock():
-            instance_obj = self.instances[client_id]
-            return instance_obj
+            if(client_id in self.instances):
+              instance_obj = self.instances[client_id]
+              return instance_obj
+            else:
+              #add better mechanism, this require in close rpc for now
+              return None
         # logging.debug("<<<<<< Out %s method of %s file.", method_name, _file_name)
 
 
@@ -293,8 +297,15 @@ class SightService(service_pb2_grpc.SightServiceServicer):
         logging.info(">>>>>>>  In %s method of %s file.", method_name,
                      _file_name)
 
-        obj = self.optimizers.get_instance(
-            request.client_id).close(request)
+        # only call if it's launch called, otherwise no entry of opt for that client
+        if(self.optimizers.get_instance(
+              request.client_id)):
+          obj = self.optimizers.get_instance(
+              request.client_id).close(request)
+        else:
+          obj = service_pb2.CloseResponse()
+
+        #? do we need to remove entry from optimizer dict, if available??
         logging.info("<<<<<<<  Out %s method of %s file.", method_name,
                      _file_name)
         return obj

@@ -288,6 +288,19 @@ def start_jobs(
     logging_path += f'{FLAGS.parent_id}/'
   logging_path += str(sight.id)
 
+  env_vars = [
+    '--env', f'PARENT_LOG_ID={sight.id}',
+    '--env', f'PORT={service.get_port_number()}'
+  ]
+
+  print("FLAGS.deployment_mode : ", FLAGS.deployment_mode)
+  if FLAGS.deployment_mode == 'vm':
+      if FLAGS.ip_addr == 'localhost':
+          raise ValueError("ip_address must be provided for workers")
+      env_vars += ['--env', f'IP_ADDR={FLAGS.ip_addr}']
+  elif FLAGS.deployment_mode == 'distributed':
+      env_vars += ['--env', f'SIGHT_SERVICE_ID={service._SERVICE_ID}']
+
 
   print('sight.id=%s' % sight.id)
   args = [
@@ -300,12 +313,13 @@ def start_jobs(
       f'--project={_PROJECT_ID.value}',
       # f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service._SERVICE_ID}/{sight.id}',
       f'--logging={logging_path}',
-      '--env',
-      f'PARENT_LOG_ID={sight.id}',
       # '--env',
-      # 'PYTHONPATH=/project',
-      '--env',
-      f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
+      # f'PARENT_LOG_ID={sight.id}',
+      # '--env',
+      # f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
+      # '--env',
+      # f'PORT_NUMBER={service.get_port_number()}',
+      *env_vars,
       '--input',
       f'SCRIPT={remote_script}',
       f'--command={command}',

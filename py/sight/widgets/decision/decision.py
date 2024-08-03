@@ -58,13 +58,6 @@ _DECISION_PARAMS = flags.DEFINE_string(
     ('Assignment of the action attributes for the decision. Format: ' +
      '"key1=val1:key2=val2:...".'),
 )
-_DEPLOYMENT_MODE = flags.DEFINE_enum(
-    'deployment_mode',
-    None,
-    ['distributed', 'dsub_local', 'docker_local', 'local', 'worker_mode'],
-    ('The procedure to use when training a model to drive applications that '
-     'use the Decision API.'),
-)
 _OPTIMIZER_TYPE = flags.DEFINE_enum(
     'optimizer_type',
     None,
@@ -369,7 +362,7 @@ def run(
 
     decision_configuration = sight_pb2.DecisionConfigurationStart()
     decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
-    # if _DEPLOYMENT_MODE.value == 'worker_mode':
+    # if FLAGS.deployment_mode == 'worker_mode':
     #     decision_configuration.num_trials = int(os.environ['num_samples'])
     # else:
     #     decision_configuration.num_trials = _NUM_TRIALS.value
@@ -443,10 +436,10 @@ def run(
         # If a docker image is provided, run within it.
         logging.info(
             'decision_train_alg=%s docker_image=%s',
-            _DEPLOYMENT_MODE.value,
+            FLAGS.deployment_mode,
             _DOCKER_IMAGE.value,
         )
-        if _DEPLOYMENT_MODE.value == 'local' and _DOCKER_IMAGE.value:
+        if FLAGS.deployment_mode == 'local' and _DOCKER_IMAGE.value:
             trials.start_job_in_docker(
                 1,
                 _BINARY_PATH.value,
@@ -473,8 +466,8 @@ def run(
                 f"max possible value for num_trials is : {possible_actions}")
 
         print('_DECISON_MODE.value : ', _DECISON_MODE.value)
-        if _DEPLOYMENT_MODE.value == 'distributed':
-            logging.info('_DEPLOYMENT_MODE.value == distributed')
+        if FLAGS.deployment_mode in ['distributed', 'vm']:
+            # logging.info('FLAGS.deployment_mode == distributed')
             if (not _DOCKER_IMAGE.value):
                 raise ValueError(
                     "docker_image must be provided for distributed mode")
@@ -495,13 +488,13 @@ def run(
                 'dsub_cloud_worker',
                 sight,
             )
-        elif _DEPLOYMENT_MODE.value in [
+        elif FLAGS.deployment_mode in [
                 'local',
                 'dsub_local',
                 'docker_local',
                 'worker_mode',
         ]:
-            if _DEPLOYMENT_MODE.value == 'worker_mode' or 'PARENT_LOG_ID' in os.environ:
+            if FLAGS.deployment_mode == 'worker_mode' or 'PARENT_LOG_ID' in os.environ:
                 # not used anymore - for worklist scheduler
                 # num_samples_to_run = int(os.environ['num_samples'])
                 pass
@@ -516,7 +509,7 @@ def run(
                 num_samples_to_run = _NUM_TRIALS.value
 
             # If a docker image is provided, run within it.
-            if (_DEPLOYMENT_MODE.value == 'docker_local'
+            if (FLAGS.deployment_mode == 'docker_local'
                 ):  # and _NUM_TRAIN_WORKERS.value==1:
                 trials.start_job_in_docker(
                     _NUM_TRIALS.value,
@@ -530,7 +523,7 @@ def run(
                     sight,
                 )
             # run d-sub locally
-            elif (_DEPLOYMENT_MODE.value == 'dsub_local'
+            elif (FLAGS.deployment_mode == 'dsub_local'
                   ):  # and _NUM_TRAIN_WORKERS.value>1:
                 trials.start_job_in_dsub_local(
                     _NUM_TRAIN_WORKERS.value,
@@ -696,13 +689,13 @@ def decision_point(
 
     req = service_pb2.DecisionPointRequest()
 
-    if _DEPLOYMENT_MODE.value == 'local' or _TRAINED_MODEL_LOG_ID.value:
+    if FLAGS.deployment_mode == 'local' or _TRAINED_MODEL_LOG_ID.value:
         global _sight_id
         _sight_id = str(sight.id)
         client_id = str(sight.id)
         worker_location = '0'
-    elif (_DEPLOYMENT_MODE.value == 'worker_mode'
-          # or _DEPLOYMENT_MODE.value == 'docker_mode'
+    elif (FLAGS.deployment_mode == 'worker_mode'
+          # or FLAGS.deployment_mode == 'docker_mode'
           ):
         client_id = os.environ['PARENT_LOG_ID']
         worker_location = os.environ['worker_location']
@@ -952,14 +945,14 @@ def finalize_episode(sight):  # , optimizer_obj
     method_name = 'finalize_episode'
     logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-    if (_DEPLOYMENT_MODE.value == 'local'
-            # or _DEPLOYMENT_MODE.value == 'docker_mode'
-            or _DEPLOYMENT_MODE.value == 'worker_mode'):
-        if _DEPLOYMENT_MODE.value == 'local':
+    if (FLAGS.deployment_mode == 'local'
+            # or FLAGS.deployment_mode == 'docker_mode'
+            or FLAGS.deployment_mode == 'worker_mode'):
+        if FLAGS.deployment_mode == 'local':
             client_id = str(sight.id)
             worker_location = '0'
-        elif (_DEPLOYMENT_MODE.value == 'worker_mode'
-              # or _DEPLOYMENT_MODE.value == 'docker_mode'
+        elif (FLAGS.deployment_mode == 'worker_mode'
+              # or FLAGS.deployment_mode == 'docker_mode'
               ):
             client_id = os.environ['PARENT_LOG_ID']
             worker_location = os.environ['worker_location']
