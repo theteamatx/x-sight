@@ -843,12 +843,6 @@ class Sight(object):
   #   """
   #   self.add_config(_read_capacitor_file(config_file_path))  # pytype: disable=wrong-arg-types  # dynamic-method-lookup
 
-  def init_sight_polling_thread(self):
-    # print
-    status_update_thread = threading.Thread(target=poll_network_batch_outcome,args=(self.id,))
-    print('*************** starting thread ************')
-    status_update_thread.start()
-
 
 
 def text(text_val: str, sight, end='\n', frame=None) -> str:

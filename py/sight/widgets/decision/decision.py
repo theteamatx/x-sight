@@ -21,6 +21,7 @@ import json
 import numpy as np
 from typing import Any, Callable, Dict, List, Optional, Text
 import time
+import threading
 
 from absl import flags
 # from absl import logging
@@ -36,6 +37,7 @@ from sight.widgets.decision.env_driver import driver_fn
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
 from sight.widgets.decision import utils
+from sight.utility import poll_network_batch_outcome
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -174,6 +176,11 @@ def configure(
 
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
+def init_sight_polling_thread(sight_id):
+    # print
+    status_update_thread = threading.Thread(target=poll_network_batch_outcome,args=(sight_id,))
+    print('*************** starting thread ************')
+    status_update_thread.start()
 
 def attr_dict_to_proto(
     attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],

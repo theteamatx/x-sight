@@ -88,10 +88,10 @@ def main_wrapper(argv):
             sight=sight
         )
 
-        print('going to sleep for 6 minutes')
-        time.sleep(360)
+        # print('going to sleep for 6 minutes')
+        # time.sleep(360)
 
-        sight.init_sight_polling_thread()
+        # decision.init_sight_polling_thread(sight.id)
         asyncio.run(main(sight, argv))
 
 

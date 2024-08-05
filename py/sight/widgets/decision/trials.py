@@ -33,6 +33,7 @@ from sight import service_utils as service
 from sight.proto import sight_pb2
 # from sight.widgets.decision.acme import acme_optimizer_client
 from sight.widgets.decision.optimizer_client import OptimizerClient
+from sight.widgets.decision import decision
 
 load_dotenv()
 
@@ -123,6 +124,10 @@ def launch(
 
 
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
+  # start polling thread, fetching outcome from server for proposed actions
+  if(decision_configuration.optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER
+      and response.display_string == "Worklist Scheduler SUCCESS!"):
+      decision.init_sight_polling_thread(sight.id)
   logging.info('##### Launch response=%s #####', response)
 
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
