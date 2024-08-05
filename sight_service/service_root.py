@@ -331,8 +331,8 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
 
 def serve():
-  """Main method that listens on port 8080 and handle requests received from client.
-  """
+    """Main method that listens on port 8080 and handle requests received from client.
+    """
     method_name = "serve"
     logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
@@ -346,9 +346,9 @@ def serve():
     server.start()
     logging.info("server is up and running on port : 8080")
 
-  # flask_app.run(debug=True, host="0.0.0.0", port=8080)
-  server.wait_for_termination()
-  logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    # flask_app.run(debug=True, host="0.0.0.0", port=8080)
+    server.wait_for_termination()
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
 
 if __name__ == "__main__":
