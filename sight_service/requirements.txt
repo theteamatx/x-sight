@@ -1,21 +1,21 @@
-google-cloud-logging==3.1.2
+google-cloud-logging
 absl-py==1.4.0
 python-dotenv==1.0.0
 overrides==7.4.0
-google-cloud-spanner==1.10.0
-google-cloud-aiplatform==1.31.0
-dm-acme @ git+https://github.com/deepmind/acme@fb87fd53ce7250584dc94c481cba949b857ff255
-dm-launchpad==0.5.0
+google-cloud-spanner
+google-cloud-aiplatform
+#dm-acme @ git+https://github.com/deepmind/acme@fb87fd53ce7250584dc94c481cba949b857ff255
+#dm-launchpad==0.5.0
 tensorflow==2.8.0
 gym==0.25.0
 matplotlib==3.7.0
-dm-reverb==0.7.2
-jax==0.4.13
-jaxlib==0.4.13
+#dm-reverb==0.7.2
+jax==0.4.23
+jaxlib==0.4.23
 chex==0.1.82
-dm-haiku==0.0.11
-tensorflow-probability==0.15.0
-dm-sonnet==2.0.1
+#dm-haiku==0.0.11
+#tensorflow-probability==0.15.0
+#dm-sonnet==2.0.1
 readerwriterlock==1.0.9
 rlax==0.1.6
 optax==0.1.5
@@ -23,3 +23,6 @@ google-generativeai==0.3.2
 Flask==3.0.0
 bayesian-optimization==1.4.3
 nevergrad==1.0.2
+shapely==1.85
+smcpy==0.1.5
+scipy==1.12.0

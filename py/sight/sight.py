@@ -21,6 +21,7 @@ import inspect
 import io
 import os
 import time
+import threading
 from typing import Any, Optional, Sequence
 
 from absl import logging
@@ -36,7 +37,7 @@ from sight.gcs_utils import upload_blob_from_stream
 from sight.location import Location
 from sight.proto import sight_pb2
 from sight.service_utils import finalize_server
-from sight.utility import MessageToDict
+from sight.utility import MessageToDict, poll_network_batch_outcome
 from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
 from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
@@ -192,6 +193,7 @@ class Sight(object):
         # logging.info('#######SERVICE###############')
 
         try:
+
           if 'PARENT_LOG_ID' in os.environ:
             logging.info('PARENT_LOG_ID found - worker process')
             worker_location = os.environ['worker_location'].replace(':', '_')
@@ -207,9 +209,10 @@ class Sight(object):
                 + 'log'
             )
             self.id = os.environ['PARENT_LOG_ID']
-          elif (FLAGS.trained_model_log_id):
-            logging.info('Using trained model sight id')
-            self.id = FLAGS.trained_model_log_id
+            print("log id is : ", self.id)
+          elif (FLAGS.sight_log_id):
+            logging.info('Using provided sight id')
+            self.id = FLAGS.sight_log_id
             self.path_prefix = (
                 self.params.label + '_' + self.id + '_' + 'log' + '_run_mode'
             )
@@ -290,7 +293,7 @@ class Sight(object):
     self.attributes = {}
     self.open = True
 
-    self.set_attribute('log_uid', self.id)
+    self.set_attribute('log_uid', str(self.id))
 
     # if build_data.Changelist():
     #   self.change_list_number = int(build_data.Changelist())
@@ -325,6 +328,14 @@ class Sight(object):
     return self
 
   def __exit__(self, exc_type, value, traceback):
+    # last rpc call to server for this sight id
+    req = service_pb2.CloseRequest()
+    req.client_id = str(self.id)
+    response = service.call(
+                lambda s, meta: s.Close(req, 300, metadata=meta)
+            )
+    print("close rpc status :", response.response_str)
+
     if self.params.silent_logger:
       self.close()
     if exc_type is not None:
@@ -365,16 +376,16 @@ class Sight(object):
         # if this is the only avro file, table has not been created yet
         if self.avro_file_counter == 1:
           create_external_bq_table(self.params, self.table_name, self.id)
-          logging.info(
-              'Log GUI : https://script.google.com/a/google.com/macros/s/%s?'
-              'log_id=%s.%s&log_owner=%s&project_id=%s',
-              self.SIGHT_API_KEY,
-              self.params.dataset_name,
-              self.table_name,
-              self.params.log_owner,
-              os.environ['PROJECT_ID']
-          )
-          print(f'table generated : {self.params.dataset_name}.{self.table_name}')
+        logging.info(
+            'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+            'log_id=%s.%s&log_owner=%s&project_id=%s',
+            self.SIGHT_API_KEY,
+            self.params.dataset_name,
+            self.table_name,
+            self.params.log_owner,
+            os.environ['PROJECT_ID']
+        )
+        print(f'table generated : {self.params.dataset_name}.{self.table_name}')
       self.avro_log.close()
 
     if not self.params.local and not self.params.in_memory:
@@ -668,6 +679,16 @@ class Sight(object):
 
     self._update_line_suffix()
 
+  def fetch_attributes(self) -> dict[str,str]:
+    """Fetches all the values of attributes that is currently set to within Sight.
+    Returns:
+      The dictionary that contains key-value pairs of attributes currently set to.
+    """
+    attr_dict = {}
+    for k,v in self.attributes.items():
+      attr_dict[k] = v[-1]
+    return attr_dict
+
   def get_attribute(self, key: str) -> str:
     """Fetches the value that a key is currently set to within Sight.
 
@@ -733,9 +754,6 @@ class Sight(object):
         dict_obj = MessageToDict(obj, preserving_proto_field_name=True)
         fastavro.writer(self.avro_log, self.avro_schema, [dict_obj])
         self.avro_record_counter += 1
-        # print('self.avro_log_file_path : ', self.avro_log_file_path)
-        # self.file_name = self.avro_log_file_path.split('/')[-1]
-        # print('&&&&&&&&&&&&&&&&&&&&&&&self.file_name : ', self.file_name)
         if self.avro_record_counter % 100 == 0:
           self.avro_file_counter += 1
           upload_blob_from_stream(
@@ -827,6 +845,7 @@ class Sight(object):
   #       configuration log objects.
   #   """
   #   self.add_config(_read_capacitor_file(config_file_path))  # pytype: disable=wrong-arg-types  # dynamic-method-lookup
+
 
 
 def text(text_val: str, sight, end='\n', frame=None) -> str:

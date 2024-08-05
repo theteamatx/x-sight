@@ -126,10 +126,11 @@ class ExhaustiveSearch(OptimizerInstance):
     self._lock.release()
 
     logging.info('next_action=%s', next_action)
-    response = service_pb2.DecisionPointResponse()
-    response.action.extend(param_dict_to_proto(next_action))
+    dp_response = service_pb2.DecisionPointResponse()
+    dp_response.action.extend(param_dict_to_proto(next_action))
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return response
+    dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
+    return dp_response
 
   @overrides
   def finalize_episode(
@@ -138,6 +139,7 @@ class ExhaustiveSearch(OptimizerInstance):
     method_name = "finalize_episode"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     # logging.info('Running for exhaustive search....')
+    # logging.info("req in finalize episode of exhaustive_search.py : %s", request)
 
     # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
     self._lock.acquire()
@@ -146,16 +148,15 @@ class ExhaustiveSearch(OptimizerInstance):
     ] = {
         'reward': request.decision_outcome.reward,
         'action': self.active_samples[request.worker_id]['action'],
-        'outcome' : request.decision_outcome.outcome_params
+        'outcome': request.decision_outcome.outcome_params
     }
     logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
 
-    todo: meetashah
-    # rpc to get the complete samples
-
-    if(self.max_reward_sample == {} or self.max_reward_sample['outcome'] < request.decision_outcome.outcome_value):
+    # if(self.max_reward_sample == {} or self.max_reward_sample['outcome'] < request.decision_outcome.outcome_value):
+    if(self.max_reward_sample == {} or self.max_reward_sample['reward'] < request.decision_outcome.reward):
       self.max_reward_sample = {
-        'outcome': request.decision_outcome.outcome_value,
+        # 'outcome': request.decision_outcome.outcome_value,
+        'reward': request.decision_outcome.reward,
         'action': self.active_samples[request.worker_id]['action'],
     }
     self._lock.release()

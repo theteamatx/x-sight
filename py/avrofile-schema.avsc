@@ -63,7 +63,8 @@
                 "ST_DECISION_POINT",
                 "ST_DECISION_OUTCOME",
                 "ST_GAP",
-                "ST_LINK"
+                "ST_LINK",
+                "ST_PROPOSE_ACTION"
             ],
             "doc": "sub-type"
         }],
@@ -1698,67 +1699,67 @@
                                     "type": ["string", "null"],
                                     "doc": "key of attribute"
                                 },
-      {
-        "name": "value",
-        "type": [ "null", {
-            "namespace": "value",
-            "name": "type_value2",
-            "type": "record",
-            "fields": [
-                {
-                    "name": "sub_type",
-                    "type": [ "null", {
-                        "type": "enum",
-                        "name": "type_sub_type2",
-                        "symbols":
-                        [
-                            "ST_UNKNOWN",
-                            "ST_STRING",
-                            "ST_HETEROGENEOUS",
-                            "ST_BYTES",
-                            "ST_INT64",
-                            "ST_DOUBLE",
-                            "ST_BOOL",
-                            "ST_NONE"
-                        ],
-                        "doc": "sub-type"
-                    }],
-                    "doc": ""
-                },
-                {
-                    "name": "string_value",
-                    "type": [ "null", "string" ],
-                    "doc": ""
-                },
-                {
-                    "name": "bytes_value",
-                    "type": [ "null", "bytes" ],
-                    "doc": ""
-                },
-                {
-                    "name": "int64_value",
-                    "type": [ "null", "long" ],
-                    "doc": ""
-                },
-                {
-                    "name": "double_value",
-                    "type": [ "null", "double" ],
-                    "doc": ""
-                },
-                {
-                    "name": "bool_value",
-                    "type": [ "null", "boolean" ],
-                    "doc": ""
-                },
-                {
-                    "name": "none_value",
-                    "type": [ "null", "boolean" ],
-                    "doc": ""
-                }
-            ]
-          }],
-        "doc": ""
-      }
+                                {
+                                  "name": "value",
+                                  "type": [ "null", {
+                                      "namespace": "value",
+                                      "name": "type_value2",
+                                      "type": "record",
+                                      "fields": [
+                                          {
+                                              "name": "sub_type",
+                                              "type": [ "null", {
+                                                  "type": "enum",
+                                                  "name": "type_sub_type2",
+                                                  "symbols":
+                                                  [
+                                                      "ST_UNKNOWN",
+                                                      "ST_STRING",
+                                                      "ST_HETEROGENEOUS",
+                                                      "ST_BYTES",
+                                                      "ST_INT64",
+                                                      "ST_DOUBLE",
+                                                      "ST_BOOL",
+                                                      "ST_NONE"
+                                                  ],
+                                                  "doc": "sub-type"
+                                              }],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "string_value",
+                                              "type": [ "null", "string" ],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "bytes_value",
+                                              "type": [ "null", "bytes" ],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "int64_value",
+                                              "type": [ "null", "long" ],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "double_value",
+                                              "type": [ "null", "double" ],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "bool_value",
+                                              "type": [ "null", "boolean" ],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "none_value",
+                                              "type": [ "null", "boolean" ],
+                                              "doc": ""
+                                          }
+                                      ]
+                                    }],
+                                  "doc": ""
+                                }
                             ]
                         }]
                     }],
@@ -1817,6 +1818,181 @@
                 }
             ]
           }],
+        "doc": ""
+      },
+      {
+        "name": "propose_action",
+        "type": ["null", {
+            "name": "type_propose_action",
+            "type": "record",
+            "fields": [
+                {
+                    "name": "action_id",
+                    "type": ["string", "null"],
+                    "doc": ""
+                },
+                {
+                    "name": "action_attrs",
+                    "type": [ "null", {
+                        "type": "array",
+                        "name": "type_decision_param",
+                        "items": [ "null", {
+                            "type": "record",
+                            "name": "propose_action_action_attrs_schema",
+                            "fields": [
+                                {
+                                    "name": "key",
+                                    "type": ["string", "null"],
+                                    "doc": "key of attribute"
+                                },
+                                {
+                                  "name": "value",
+                                  "type": [ "null", {
+                                      "namespace": "value",
+                                      "name": "type_value3",
+                                      "type": "record",
+                                      "fields": [
+                                          {
+                                              "name": "sub_type",
+                                              "type": [ "null", {
+                                                  "type": "enum",
+                                                  "name": "type_sub_type3",
+                                                  "symbols":
+                                                  [
+                                                      "ST_UNKNOWN",
+                                                      "ST_STRING",
+                                                      "ST_HETEROGENEOUS",
+                                                      "ST_BYTES",
+                                                      "ST_INT64",
+                                                      "ST_DOUBLE",
+                                                      "ST_BOOL",
+                                                      "ST_NONE"
+                                                  ],
+                                                  "doc": "sub-type"
+                                              }],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "string_value",
+                                              "type": [ "null", "string" ],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "bytes_value",
+                                              "type": [ "null", "bytes" ],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "int64_value",
+                                              "type": [ "null", "long" ],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "double_value",
+                                              "type": [ "null", "double" ],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "bool_value",
+                                              "type": [ "null", "boolean" ],
+                                              "doc": ""
+                                          },
+                                          {
+                                              "name": "none_value",
+                                              "type": [ "null", "boolean" ],
+                                              "doc": ""
+                                          }
+                                      ]
+                                    }],
+                                  "doc": ""
+                                }
+                            ]
+                        }]
+                    }],
+                    "doc": "propose action action attributes"
+                },
+                {
+                  "name": "attributes",
+                  "type": [ "null", {
+                      "type": "array",
+                      "name": "type_attributes",
+                      "items": [ "null", {
+                          "type": "record",
+                          "name": "propose_action_attribute_schema",
+                          "fields": [
+                              {
+                                  "name": "key",
+                                  "type": ["string", "null"],
+                                  "doc": "key of attribute"
+                              },
+                              {
+                                "name": "value",
+                                "type": [ "null", {
+                                    "namespace": "value",
+                                    "name": "type_value4",
+                                    "type": "record",
+                                    "fields": [
+                                        {
+                                            "name": "sub_type",
+                                            "type": [ "null", {
+                                                "type": "enum",
+                                                "name": "type_sub_type4",
+                                                "symbols":
+                                                [
+                                                    "ST_UNKNOWN",
+                                                    "ST_STRING",
+                                                    "ST_HETEROGENEOUS",
+                                                    "ST_BYTES",
+                                                    "ST_INT64",
+                                                    "ST_DOUBLE",
+                                                    "ST_BOOL",
+                                                    "ST_NONE"
+                                                ],
+                                                "doc": "sub-type"
+                                            }],
+                                            "doc": ""
+                                        },
+                                        {
+                                            "name": "string_value",
+                                            "type": [ "null", "string" ],
+                                            "doc": ""
+                                        },
+                                        {
+                                            "name": "bytes_value",
+                                            "type": [ "null", "bytes" ],
+                                            "doc": ""
+                                        },
+                                        {
+                                            "name": "int64_value",
+                                            "type": [ "null", "long" ],
+                                            "doc": ""
+                                        },
+                                        {
+                                            "name": "double_value",
+                                            "type": [ "null", "double" ],
+                                            "doc": ""
+                                        },
+                                        {
+                                            "name": "bool_value",
+                                            "type": [ "null", "boolean" ],
+                                            "doc": ""
+                                        },
+                                        {
+                                            "name": "none_value",
+                                            "type": [ "null", "boolean" ],
+                                            "doc": ""
+                                        }
+                                    ]
+                                  }],
+                                "doc": ""
+                              }
+                          ]
+                      }]
+                  }],
+                  "doc": "propose_action attributes"
+              }
+            ]
+        }],
         "doc": ""
       },
       {

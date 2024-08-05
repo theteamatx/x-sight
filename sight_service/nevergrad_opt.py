@@ -214,6 +214,8 @@ class NeverGradOpt(OptimizerInstance):
         # self.last_outcome = request.decision_outcome.outcome_value
         print('DecisionPoint response=%s' % dp_response)
 
+        # print('DecisionPoint response=%s' % dp_response)
+        dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
         return dp_response
 
     @overrides
@@ -221,29 +223,24 @@ class NeverGradOpt(OptimizerInstance):
         self, request: service_pb2.FinalizeEpisodeRequest
     ) -> service_pb2.FinalizeEpisodeResponse:
         # logging.info('FinalizeEpisode request=%s', request)
-        # self._append_outcome(request.decision_outcome.outcome_value)
-        # self.history[-1]['outcome'] = request.decision_outcome.outcome_value
-        # self.last_outcome = request.decision_outcome.outcome_value
-
-        # d = {}
-        # for a in request.decision_point.choice_params:
-        #   d[a.key] = a.value.double_value
         d = self.last_action
 
         self._lock.acquire()
         # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
         self.complete_samples[self.active_samples[
             request.worker_id]['sample_num']] = {
-                'outcome': request.decision_outcome.outcome_value,
+                # 'outcome': request.decision_outcome.reward,
+                # 'action': self.active_samples[request.worker_id]['action'],
+                'reward': request.decision_outcome.reward,
                 'action': self.active_samples[request.worker_id]['action'],
+                'outcome': request.decision_outcome.outcome_params
             }
         # print('self.complete_samples : ', self.complete_samples)
         del self.active_samples[request.worker_id]
 
         logging.info('FinalizeEpisode outcome=%s / %s',
-                     request.decision_outcome.outcome_value, d)
-        self._optimizer.tell(d, 0 - request.decision_outcome.outcome_value)
-        # self._optimizer.tell(d, request.decision_outcome.outcome_value)
+                     request.decision_outcome.reward, d)
+        self._optimizer.tell(d, 0 - request.decision_outcome.reward)
         self._completed_count += 1
 
         del self.last_action
