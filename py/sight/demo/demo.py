@@ -53,6 +53,7 @@ def main(argv):
         frame = inspect.currentframe().f_back.f_back.f_back
         sight.set_object_code_loc(sight_obj, frame)
         sight.log_object(sight_obj, True)
+
     with Block("A-block", sight):
       sight.text("A preText")
       with Attribute("key-Attribute", "A", sight):
