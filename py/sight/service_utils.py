@@ -499,11 +499,11 @@ def generate_metadata():
         _find_or_deploy_server()
 
       secure_channel = obtain_secure_channel()
-      print("secure_channel : ", secure_channel)
+      # print("secure_channel : ", secure_channel)
       sight_service = service_pb2_grpc.SightServiceStub(secure_channel)
       metadata = []
       id_token = generate_id_token()
-      print('id_token : ', id_token)
+      # print('id_token : ', id_token)
       metadata.append(('authorization', 'Bearer ' + id_token))
       return sight_service, metadata
 
