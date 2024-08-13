@@ -61,8 +61,8 @@ async def main(argv: Sequence[str]) -> None:
   with get_sight_instance() as sight:
     with Block("A", sight):
       # Wrap coroutines with tasks
-      task1 = sight.create_task(coroutine_one(sight), 1)
-      task2 = sight.create_task(coroutine_two(sight), 2)
+      task1 = sight.create_task(coroutine_one(sight))
+      task2 = sight.create_task(coroutine_two(sight))
 
       # The event loop will now handle both tasks concurrently
       await task1
