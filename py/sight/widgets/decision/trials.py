@@ -203,7 +203,7 @@ def start_job_in_docker(
       # '--env',
       # f'SIGHT_SERVICE_ACCOUNT={_SERVICE_ACCOUNT.value}',
       '--env',
-      f'worker_location={sight.location}',
+      f'worker_location={sight.location.get()}',
       '--env',
       f'num_samples={num_trials}',
       '--net=host',
@@ -258,8 +258,8 @@ def start_jobs(
       # # the extra extra tasks to the first few workers.
       # if worker_id < num_trials % num_train_workers:
       #   tasks_for_cur_worker += 1
-      outf.write(f'{worker_id}\t{sight.location}\n')
-      sight.location.next()
+      outf.write(f'{worker_id}\t{sight.location.get()}\n')
+      sight.location.get().next()
 
 
   remote_script = (
@@ -381,8 +381,8 @@ def start_job_in_dsub_local(
       # the extra extra tasks to the first few workers.
       if worker_id < num_trials % num_train_workers:
         tasks_for_cur_worker += 1
-      outf.write(f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location}\n')
-      sight.location.next()
+      outf.write(f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location.get()}\n')
+      sight.location.get().next()
 
   remote_script = (
       f'gs://{os.environ["PROJECT_ID"]}/sight/d-sub/binary/' + binary_path.split('/')[-1]

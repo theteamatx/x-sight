@@ -286,6 +286,9 @@ class Sight(object):
         self.text_log = None
 
     self.pause_logging_depth = 0
+
+    self.location = contextvars.ContextVar('location')
+    self.location.set(Location())
     if 'PARENT_LOG_ID' in os.environ:
       self.location.get().exit()
       worker_location = (os.environ['worker_location']).split(':')
@@ -294,8 +297,6 @@ class Sight(object):
       self.location.get().enter(0)
     self.index = 1
 
-    self.location = contextvars.ContextVar('location')
-    self.location.set(Location())
     self.line_prefix = contextvars.ContextVar('line_prefix')
     self.line_prefix.set('')
     self.line_suffix = contextvars.ContextVar('line_suffix')
