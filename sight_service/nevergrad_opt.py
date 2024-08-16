@@ -31,7 +31,7 @@ import json
 import os
 import threading
 
-
+_file_name = "nevergrad_opt.py"
 class NeverGradOpt(OptimizerInstance):
     """Uses the NeverGrad library to choose the parameters of the code.
 
@@ -190,7 +190,7 @@ class NeverGradOpt(OptimizerInstance):
 
         self._lock.acquire()
         selected_actions = self._optimizer.ask()
-        logging.info('selected_actions=%s', selected_actions.args)
+        # logging.info('selected_actions=%s', selected_actions.args)
 
         # logging.info('selected_actions=%s', selected_actions.kwargs)
         self.active_samples[request.worker_id] = {
@@ -209,10 +209,11 @@ class NeverGradOpt(OptimizerInstance):
         for key, value in denormalized_actions.items():
             a = dp_response.action.add()
             a.key = key
+            a.value.sub_type = sight_pb2.Value.ST_DOUBLE
             a.value.double_value = float(value)
 
         # self.last_outcome = request.decision_outcome.outcome_value
-        print('DecisionPoint response=%s' % dp_response)
+        # print('DecisionPoint response=%s' % dp_response)
 
         # print('DecisionPoint response=%s' % dp_response)
         dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
@@ -238,10 +239,10 @@ class NeverGradOpt(OptimizerInstance):
         # print('self.complete_samples : ', self.complete_samples)
         del self.active_samples[request.worker_id]
 
-        logging.info('FinalizeEpisode outcome=%s / %s',
-                     request.decision_outcome.reward, d)
+        # logging.info('FinalizeEpisode outcome=%s / %s',
+        #              request.decision_outcome.reward, d)
         self._optimizer.tell(d, 0 - request.decision_outcome.reward)
-        self._completed_count += 1
+        # self._completed_count += 1
 
         del self.last_action
         self._lock.release()
@@ -285,3 +286,21 @@ class NeverGradOpt(OptimizerInstance):
           status = service_pb2.CurrentStatusResponse.Status.FAILURE
 
         return service_pb2.CurrentStatusResponse(response_str=response, status=status)
+
+    @overrides
+    def WorkerAlive(
+       self, request: service_pb2.WorkerAliveRequest
+    ) -> service_pb2.WorkerAliveResponse:
+        method_name = "WorkerAlive"
+        logging.debug(">>>>  In %s of %s", method_name, _file_name)
+        if(self._completed_count == self._total_count):
+           worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+        # elif(not self.pending_samples):
+        #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
+        else:
+          # Increasing count here so that multiple workers can't enter the dp call for same sample at last
+          self._completed_count += 1
+          worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+        logging.info("worker_alive_status is %s", worker_alive_status)
+        logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+        return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)
