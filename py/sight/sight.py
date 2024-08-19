@@ -352,7 +352,7 @@ class Sight(object):
       # print('%s/%s: outside self.location=%s/%s' % (task_id, asyncio.current_task().get_name(), self.location.get(), id(self.location.get())))
       # self.enter_block(label, sight_pb2.Object(), frame)
       # print('%s/%s: inside self.location=%s/%s' % (task_id, asyncio.current_task().get_name(), self.location.get(), id(self.location.get())))
-      await func
+      return await func
       # self.exit_block(label, sight_pb2.Object(), frame)
     
     self.enter_block(f'asyncio.create_task: {asyncio.current_task().get_name()}', sight_pb2.Object(), frame)
@@ -395,7 +395,7 @@ class Sight(object):
     response = service.call(
                 lambda s, meta: s.Close(req, 300, metadata=meta)
             )
-    print("close rpc status :", response.response_str)
+    # print("close rpc status :", response.response_str)
 
     if self.params.silent_logger:
       self.close()
@@ -814,7 +814,7 @@ class Sight(object):
         dict_obj = MessageToDict(obj, preserving_proto_field_name=True)
         fastavro.writer(self.avro_log, self.avro_schema, [dict_obj])
         self.avro_record_counter += 1
-        if self.avro_record_counter % 1 == 0:
+        if self.avro_record_counter % 1000 == 0:
           self.avro_file_counter += 1
           upload_blob_from_stream(
               self.params.bucket_name,
