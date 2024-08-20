@@ -469,14 +469,13 @@ def run(
         details = sight.widget_decision_state['decision_episode_fn']
         possible_actions = list(details.action_max.values())[0] - list(
             details.action_min.values())[0] + 2
-        print(possible_actions)
-        if (_OPTIMIZER_TYPE.value == 'exhaustive_search'
-                and possible_actions < _NUM_TRIALS.value):
-            raise ValueError(
-                f"max possible value for num_trials is : {possible_actions}")
 
         print('_DECISON_MODE.value : ', _DECISON_MODE.value)
         if FLAGS.deployment_mode in ['distributed', 'vm']:
+            if (_OPTIMIZER_TYPE.value == 'exhaustive_search'
+                and possible_actions < _NUM_TRIALS.value):
+              raise ValueError(
+                f"max possible value for num_trials is : {possible_actions}")
             # logging.info('FLAGS.deployment_mode == distributed')
             if (not _DOCKER_IMAGE.value):
                 raise ValueError(
