@@ -445,7 +445,7 @@ def obtain_secure_channel(options=None):
     # else:
     url = _service_addr()
     target = '{}:{}'.format(url, get_port_number())
-    print("service_url here : ", target)
+    # print("service_url here : ", target)
 
     channel = grpc.secure_channel(
         target,
@@ -465,7 +465,7 @@ def obtain_insecure_channel(options):
     else:
       host = 'localhost'
     target = '{}:{}'.format(host, get_port_number())
-    print("service_url here : ", target)
+    # print("service_url here : ", targpending action ids :et)
 
     channel = grpc.insecure_channel(
         target,

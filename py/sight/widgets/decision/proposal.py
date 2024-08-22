@@ -94,7 +94,7 @@ async def fetch_outcome(sight_id, actions_id):
                 # async_dict = global_outcome_mapping.get()
                 # print(f'GLOBAL_MAPPING_GET_OUTCOME_QUEUE => {async_dict}')
                 time = 5
-                print(f'Waiting for {actions_id} for {time} seconds...')
+                # print(f'Waiting for {actions_id} for {time} seconds...')
                 await asyncio.sleep(time)
         except Exception as e:
             raise e
@@ -116,7 +116,7 @@ async def propose_actions(sight, action_dict):
 
     # wait till we get outcome of all the samples
     time_series = await asyncio.gather(task1, task2)
-    print("time_series :", time_series)
+    # print("time_series :", time_series)
     # calculate diff series
     # appy watermark algorithm
     # return the final series

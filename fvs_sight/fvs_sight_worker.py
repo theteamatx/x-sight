@@ -4,7 +4,8 @@ import yaml
 from absl import app
 from absl import flags
 from sight.widgets.decision import decision_episode_fn
-from fvs_sight.fvs_api import action_attrs, outcome_attrs
+# from fvs_sight.fvs_api import action_attrs, outcome_attrs
+from fvs_sight import fvs_api
 
 from sight import data_structures
 from sight.proto import sight_pb2
@@ -19,7 +20,7 @@ import yaml
 
 def simulate_fvs(sight,params_dict):
     print('here params_dict is :', params_dict)
-    mitigation_list = [101, 102, 103, 104, 105]
+    mitigation_list = [227.6, 273.4, 273.3, 248.6, 165.3, 130.6, 106.4, 92.1, 81.7, 62.8]
     sim_stream = pd.Series(mitigation_list)
     # print(sim_stream)
     return sim_stream
@@ -60,8 +61,8 @@ def main(argv: Sequence[str]) -> None:
       decision.run(
             driver_fn=driver_fn,
             sight=sight,
-            action_attrs=action_attrs,
-            outcome_attrs=outcome_attrs
+            action_attrs=fvs_api.get_action_attrs(),
+            outcome_attrs=fvs_api.get_outcome_attrs()
         )
 
 if __name__ == "__main__":

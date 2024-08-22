@@ -312,6 +312,7 @@ def start_jobs(
       'dsub',
       '--provider=google-cls-v2',
       f'--regions={_PROJECT_REGION.value}',
+      '--use-private-address',
       # f'--location={_PROJECT_REGION.value}',
       f'--image={docker_image}',
       f'--machine-type={_DSUB_MACHINE_TYPE.value}',

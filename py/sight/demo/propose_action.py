@@ -40,7 +40,8 @@ from sight.widgets.decision import decision
 import pandas as pd
 from sight.widgets.decision.single_action_optimizer_client import SingleActionOptimizerClient
 from sight.widgets.decision import trials
-from fvs_sight.fvs_api import action_attrs, outcome_attrs
+# from fvs_sight.fvs_api import action_attrs, outcome_attrs
+from fvs_sight import fvs_api
 from sight_service.proto import service_pb2
 from sight import service_utils as service
 from sight_service.optimizer_instance import param_proto_to_dict
@@ -75,9 +76,9 @@ def launch_dummy_optimizer(sight):
         optimizer_object.create_config())
     # decision._attr_dict_to_proto(state_attrs,
     #                              decision_configuration.state_attrs)
-    decision.attr_dict_to_proto(action_attrs,
+    decision.attr_dict_to_proto(fvs_api.get_action_attrs(),
                                 decision_configuration.action_attrs)
-    decision.attr_dict_to_proto(outcome_attrs,
+    decision.attr_dict_to_proto(fvs_api.get_outcome_attrs(),
                                 decision_configuration.outcome_attrs)
     trials.launch(
         optimizer_object,
