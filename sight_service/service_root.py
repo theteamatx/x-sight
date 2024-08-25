@@ -25,6 +25,7 @@ warnings.warn = warn
 from concurrent import futures
 import logging
 from absl import app
+from absl import flags
 
 import grpc
 from dotenv import load_dotenv
@@ -55,14 +56,7 @@ from sight_service.vizier import Vizier
 from sight_service.worklist_scheduler_opt import WorklistScheduler
 from readerwriterlock import rwlock
 
-# from flask import Flask
-
-# flask_app = Flask(__name__)
-
-# @flask_app.route("/")
-# def hello_world():
-#     return "<p>Root!</p>"
-
+_PORT = flags.DEFINE_integer('port', 8080, 'The port to listen on')
 _file_name = "service_root.py"
 _resolve_times = []
 
@@ -342,16 +336,15 @@ def serve():
                               512 * 1024 * 1024),
                          ])
     service_pb2_grpc.add_SightServiceServicer_to_server(SightService(), server)
-    server.add_insecure_port("[::]:8080")
+    server.add_insecure_port(f"[::]:{_PORT.value}")
     server.start()
-    logging.info("server is up and running on port : 8080")
+    logging.info(f"server is up and running on port : {_PORT.value}")
 
-    # flask_app.run(debug=True, host="0.0.0.0", port=8080)
+    # flask_app.run(debug=True, host="0.0.0.0", port=_PORT.value)
     server.wait_for_termination()
     logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
-
-if __name__ == "__main__":
+def main(argv):
     method_name = "__main__"
     logging.basicConfig(level=logging.INFO)
     logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
@@ -361,3 +354,6 @@ if __name__ == "__main__":
         logging.error("Error occurred : ")
         logging.error(e)
     logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+
+if __name__ == "__main__":
+    app.run(main)
