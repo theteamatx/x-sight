@@ -181,7 +181,8 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
 
             print("waiting for all get outcome to finish.....")
             diff_time_series = await asyncio.gather(*tasks)
-            print(f'Combine Series : {diff_time_series}')
+            print("all get outcome are finished.....")
+            # print(f'Combine Series : {diff_time_series}')
 
 def main_wrapper(argv):
     start_time = time.perf_counter()

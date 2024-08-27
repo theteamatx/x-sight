@@ -561,12 +561,23 @@ def run(
                 #             ]
                 # unique_action_ids = propose_actions(sight, actions_list)
 
+                  if FLAGS.deployment_mode == 'local':
+                    client_id = str(sight.id)
+                    worker_location = '0'
+                  elif (FLAGS.deployment_mode == 'worker_mode'
+                        # or FLAGS.deployment_mode == 'docker_mode'
+                        ):
+                    client_id = os.environ['PARENT_LOG_ID']
+                    worker_location = os.environ['worker_location']
+
                 # for _ in range(num_samples_to_run):
                 # if(FLAGS.optimizer_type == "worklist_scheduler"):
+                # if (FLAGS.deployment_mode == 'worker_mode'):
                   while(True):
                       # #? new rpc just to check move forward or not?
                       req = service_pb2.WorkerAliveRequest(
-                          client_id=str(sight.id),
+                          client_id=client_id,
+                          worker_id=f'client_{client_id}_worker_{worker_location}'
                       )
                       response = service.call(
                           lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
