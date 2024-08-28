@@ -6,7 +6,7 @@ google-cloud-spanner
 google-cloud-aiplatform
 #dm-acme @ git+https://github.com/deepmind/acme@fb87fd53ce7250584dc94c481cba949b857ff255
 #dm-launchpad==0.5.0
-tensorflow==2.8.0
+tensorflow==2.12.1
 gym==0.25.0
 matplotlib==3.7.0
 #dm-reverb==0.7.2
