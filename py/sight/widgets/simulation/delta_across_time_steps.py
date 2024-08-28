@@ -25,13 +25,13 @@ from apache_beam.coders import ProtoCoder
 import pandas as pd
 
 from proto import sight_pb2
-from py.widgets.simulation import analysis_utils
 from google3.pipeline.flume.py import runner
 from google3.pipeline.flume.py.io import capacitorio
 from google3.pyglib import gfile
 from google3.pyglib.contrib.gpathlib import gpath_flag
-from proto import example_pb2
-from proto import feature_pb2
+from sight.proto import example_pb2
+from sight.proto import feature_pb2
+from sight.widgets.simulation import analysis_utils
 
 _IN_LOG_FILE = flags.DEFINE_list(
     'in_log_file',

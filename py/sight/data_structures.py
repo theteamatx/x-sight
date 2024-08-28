@@ -29,6 +29,18 @@ from sight.widgets.pandas_sight import pandas_sight
 # from py.widgets.simulation import simulation_state
 # from py.widgets.tensorflow_sight import tensorflow_sight
 
+import warnings
+# Suppress FutureWarning messages
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+import warnings
+# Suppress FutureWarning messages
+warnings.simplefilter(action='ignore', category=FutureWarning)
+
+class File:
+  def __init__(self, path: str, mime_type: str, binary: bool=True):
+    self.path = path
+    self.mime_type = mime_type
 
 def log_var(
     name: str, obj_to_log: Any, sight: Any, frame: Optional[Any] = None
@@ -135,6 +147,14 @@ def log(
     sight_obj.value.sub_type = sight_pb2.Value.ST_NONE
     sight_obj.value.none_value = True
     sight.log_object(sight_obj, True)
+  elif isinstance(obj_to_log, File):
+    sight_obj.sub_type = sight_pb2.Object.SubType.ST_VALUE
+    with open(obj_to_log.path, mode='rb') as f:
+      sight_obj.value.sub_type = sight_pb2.Value.ST_BYTES
+      sight_obj.value.string_value = f.read()
+      #sight_obj.value.bytes_value = f.read()
+      sight_obj.value.mime_type = obj_to_log.mime_type
+      sight.log_object(sight_obj, True)
   elif (
       isinstance(obj_to_log, list)
       or isinstance(obj_to_log, tuple)

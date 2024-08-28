@@ -31,8 +31,9 @@ from dotenv import load_dotenv
 from sight import service_utils as service
 
 from sight.proto import sight_pb2
-from sight.widgets.decision.acme import acme_optimizer_client
+# from sight.widgets.decision.acme import acme_optimizer_client
 from sight.widgets.decision.optimizer_client import OptimizerClient
+from sight.widgets.decision import decision
 
 load_dotenv()
 
@@ -51,7 +52,7 @@ _PROJECT_REGION = flags.DEFINE_string(
     'project_region', 'us-central1', 'location to store project-data'
 )
 _DSUB_MACHINE_TYPE = flags.DEFINE_string(
-    'dsub_machine-type', 'e2-standard-2', ''
+    'dsub_machine_type', 'e2-standard-2', ''
 )
 # _DSUB_LOGGING = flags.DEFINE_string(
 #     'log_path',
@@ -123,6 +124,10 @@ def launch(
 
 
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
+  # start polling thread, fetching outcome from server for proposed actions
+  if(decision_configuration.optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER
+      and response.display_string == "Worklist Scheduler SUCCESS!"):
+      decision.init_sight_polling_thread(sight.id)
   logging.info('##### Launch response=%s #####', response)
 
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
@@ -198,7 +203,7 @@ def start_job_in_docker(
       # '--env',
       # f'SIGHT_SERVICE_ACCOUNT={_SERVICE_ACCOUNT.value}',
       '--env',
-      f'worker_location={sight.location}',
+      f'worker_location={sight.location.get()}',
       '--env',
       f'num_samples={num_trials}',
       '--net=host',
@@ -218,7 +223,7 @@ def start_job_in_docker(
 
 def start_jobs(
     num_train_workers: int,
-    num_trials: int,
+    # num_trials: int,
     binary_path: Optional[str],
     optimizer_type: str,
     docker_image,
@@ -245,16 +250,16 @@ def start_jobs(
 
   sight.enter_block('Worker Spawning', sight_pb2.Object())
   with open('/tmp/optimization_tasks.tsv', 'w') as outf:
-    outf.write('--env worker_id\t--env num_samples\t--env worker_location\n')
-    num_tasks_per_worker = math.floor(num_trials / num_train_workers)
+    outf.write('--env worker_id\t--env worker_location\n')
+    # num_tasks_per_worker = math.floor(num_trials / num_train_workers)
     for worker_id in range(num_train_workers):
-      tasks_for_cur_worker = num_tasks_per_worker
-      # If _NUM_TRIALS is not evenly divisible by num_train_workers, add
-      # the extra extra tasks to the first few workers.
-      if worker_id < num_trials % num_train_workers:
-        tasks_for_cur_worker += 1
-      outf.write(f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location}\n')
-      sight.location.next()
+      # tasks_for_cur_worker = num_tasks_per_worker
+      # # If _NUM_TRIALS is not evenly divisible by num_train_workers, add
+      # # the extra extra tasks to the first few workers.
+      # if worker_id < num_trials % num_train_workers:
+      #   tasks_for_cur_worker += 1
+      outf.write(f'{worker_id}\t{sight.location.get()}\n')
+      sight.location.get().next()
 
 
   remote_script = (
@@ -283,21 +288,44 @@ def start_jobs(
   if FLAGS.env_name:
     command += f' --env_name={FLAGS.env_name}'
 
+  logging_path = f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/'
+  if(FLAGS.parent_id):
+    logging_path += f'{FLAGS.parent_id}/'
+  logging_path += str(sight.id)
+
+  env_vars = [
+    '--env', f'PARENT_LOG_ID={sight.id}',
+    '--env', f'PORT={service.get_port_number()}'
+  ]
+
+  print("FLAGS.deployment_mode : ", FLAGS.deployment_mode)
+  if FLAGS.deployment_mode == 'vm':
+      if FLAGS.ip_addr == 'localhost':
+          raise ValueError("ip_address must be provided for workers")
+      env_vars += ['--env', f'IP_ADDR={FLAGS.ip_addr}']
+  elif FLAGS.deployment_mode == 'distributed':
+      env_vars += ['--env', f'SIGHT_SERVICE_ID={service._SERVICE_ID}']
+
+
   print('sight.id=%s' % sight.id)
   args = [
       'dsub',
       '--provider=google-cls-v2',
       f'--regions={_PROJECT_REGION.value}',
+      '--use-private-address',
+      # f'--location={_PROJECT_REGION.value}',
       f'--image={docker_image}',
       f'--machine-type={_DSUB_MACHINE_TYPE.value}',
       f'--project={_PROJECT_ID.value}',
-      f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service._SERVICE_ID}/{sight.id}',
-      '--env',
-      f'PARENT_LOG_ID={sight.id}',
+      # f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service._SERVICE_ID}/{sight.id}',
+      f'--logging={logging_path}',
       # '--env',
-      # 'PYTHONPATH=/project',
-      '--env',
-      f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
+      # f'PARENT_LOG_ID={sight.id}',
+      # '--env',
+      # f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
+      # '--env',
+      # f'PORT_NUMBER={service.get_port_number()}',
+      *env_vars,
       '--input',
       f'SCRIPT={remote_script}',
       f'--command={command}',
@@ -354,8 +382,8 @@ def start_job_in_dsub_local(
       # the extra extra tasks to the first few workers.
       if worker_id < num_trials % num_train_workers:
         tasks_for_cur_worker += 1
-      outf.write(f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location}\n')
-      sight.location.next()
+      outf.write(f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location.get()}\n')
+      sight.location.get().next()
 
   remote_script = (
       f'gs://{os.environ["PROJECT_ID"]}/sight/d-sub/binary/' + binary_path.split('/')[-1]

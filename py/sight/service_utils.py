@@ -52,6 +52,23 @@ _SERVICE_DOCKER_IMG = flags.DEFINE_string(
     '',
     'name of local docker image to be used while deploying service',
 )
+_IP_ADDR = flags.DEFINE_string(
+    'ip_addr',
+    'localhost',
+    'where the service is deployed',
+)
+_PORT = flags.DEFINE_string(
+    'port',
+    '443',
+    'port number on which service is deployed',
+)
+_DEPLOYMENT_MODE = flags.DEFINE_enum(
+    'deployment_mode',
+    None,
+    ['vm', 'distributed', 'local', 'dsub_local', 'docker_local', 'worker_mode'],
+    ('The procedure to use when training a model to drive applications that '
+     'use the Decision API.'),
+)
 _SIGHT_SERVICE_KNOWN = False
 _SERVICE_ID = ''
 _RESPONSE_TIMES = []
@@ -87,10 +104,22 @@ def get_service_id() -> str:
     # logging.info("service id : %s%s", _SERVICE_PREFIX, _SERVICE_ID)
     return _SERVICE_ID
 
+def get_port_number() -> str:
+    if 'PORT' in os.environ:
+      return os.environ['PORT']
+    # need to use secure channel for cloud run server
+    elif(FLAGS.deployment_mode in ['local', 'vm']):
+      return '8080'
+    else:
+      return FLAGS.port
+
 
 def _service_addr() -> str:
     # return f'{_SERVICE_PREFIX}{get_service_id()}-dq7fdwqgbq-uc.a.run.app'
     global _UNIQUE_STRING
+    # if('IP_ADDR' in os.environ):
+    #     return os.environ['IP_ADDR']
+    # elif (_UNIQUE_STRING):
     if (_UNIQUE_STRING):
         # print("unique string found : ", _UNIQUE_STRING)
         # print("get_service_id() : ", get_service_id())
@@ -397,7 +426,7 @@ def generate_id_token():
     return id_token
 
 
-def obtain_secure_channel():
+def obtain_secure_channel(options=None):
     """create secure channel to communicate with server.
 
   Returns:
@@ -410,43 +439,71 @@ def obtain_secure_channel():
         cert_file = _CERT_FILE_PATH
     with open(cert_file, 'rb') as f:
         creds = grpc.ssl_channel_credentials(f.read())
-    channel_opts = [
-        ('grpc.max_send_message_length', 512 * 1024 * 1024),
-        ('grpc.max_receive_message_length', 512 * 1024 * 1024),
-    ]
 
-    # print("service_address in here : ", _service_addr())
-    target = '{}:{}'.format(_service_addr(), 443)
+    # if('IP_ADDR' in os.environ):
+    #   url = os.environ['IP_ADDR']
+    # else:
+    url = _service_addr()
+    target = '{}:{}'.format(url, get_port_number())
+    # print("service_url here : ", target)
 
     channel = grpc.secure_channel(
         target,
         creds,
-        channel_opts,
+        options,
     )
-    sight_service = service_pb2_grpc.SightServiceStub(channel)
-    return sight_service
+    return channel
 
+def obtain_insecure_channel(options):
+    """create insecure channel to communicate with server.
+
+  Returns:
+    service_handle: to communicate with server
+  """
+    if 'IP_ADDR' in os.environ:
+      host = os.environ["IP_ADDR"]
+    else:
+      host = 'localhost'
+    target = '{}:{}'.format(host, get_port_number())
+    # print("service_url here : ", targpending action ids :et)
+
+    channel = grpc.insecure_channel(
+        target,
+        options,
+    )
+    return channel
 
 def generate_metadata():
     """Generate metadata to call service with authentication."""
 
-    if 'deployment_mode' in flags.FLAGS and flags.FLAGS.deployment_mode == 'local':
-      channel_opts = [
+    channel_opts = [
         ('grpc.max_send_message_length', 512 * 1024 * 1024),
         ('grpc.max_receive_message_length', 512 * 1024 * 1024),
       ]
-      channel = grpc.insecure_channel(
-          'localhost:8080',
-          options=channel_opts
-      )  # localhost #10.138.0.17:8080
+
+    if 'IP_ADDR' in os.environ or ('deployment_mode' in FLAGS and FLAGS.deployment_mode in ['local','vm']):
+
+      channel = obtain_insecure_channel(channel_opts)
       sight_service = service_pb2_grpc.SightServiceStub(channel)
       metadata = []
       return sight_service, metadata
+    # elif 'deployment_mode' == "worker_mode":
+    #   return sight_service, metadata
     else:
-      _find_or_deploy_server()
-      sight_service = obtain_secure_channel()
+      #for worker spawned using vm mode, they must be connect via insecure channel
+      # if():
+
+
+      # for client code, need to find or deploy cloud run service, workers will directly get via env
+      if 'deployment_mode' in FLAGS and FLAGS.deployment_mode == "distributed":
+        _find_or_deploy_server()
+
+      secure_channel = obtain_secure_channel()
+      # print("secure_channel : ", secure_channel)
+      sight_service = service_pb2_grpc.SightServiceStub(secure_channel)
       metadata = []
       id_token = generate_id_token()
+      # print('id_token : ', id_token)
       metadata.append(('authorization', 'Bearer ' + id_token))
       return sight_service, metadata
 

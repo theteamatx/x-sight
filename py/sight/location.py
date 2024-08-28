@@ -21,6 +21,11 @@ class Location(object):
   def __init__(self):
     self.id = [0]
 
+  def clone(self):# -> Location:
+    new_loc = Location()
+    new_loc.id = list(self.id)
+    return new_loc
+
   def enter(self, deeper_id: int) -> None:
     """Enters a next deeper level of the hierarchy.
 

@@ -98,7 +98,7 @@ def create_table(
     table.external_data_configuration = external_config
     client.create_table(table)
     # logging.info('%s table successfully created.', table_name)
-  except:
+  except Exception as e:
     logging.info(f"Error creating table: {e}")
 
 

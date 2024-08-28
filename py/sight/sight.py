@@ -21,10 +21,14 @@ import inspect
 import io
 import os
 import time
+import threading
 from typing import Any, Optional, Sequence
 
 from absl import logging
 from absl import flags
+import asyncio
+import contextvars
+import dataclasses
 from dotenv import load_dotenv
 import fastavro
 from fastavro.schema import load_schema
@@ -36,8 +40,9 @@ from sight.gcs_utils import upload_blob_from_stream
 from sight.location import Location
 from sight.proto import sight_pb2
 from sight.service_utils import finalize_server
-from sight.utility import MessageToDict
+from sight.utility import MessageToDict, poll_network_batch_outcome
 from sight.widgets.decision import decision
+from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
 from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
 
 load_dotenv()
@@ -70,6 +75,15 @@ def generate_default_sight_params():
   )
   return default_prams
 
+@dataclasses.dataclass
+class SightLocationState:
+  location: Location
+  line_prefix: str
+  line_suffix: str
+  open_block_start_locations: list[Any]
+  num_direct_contents: Location
+  num_transitive_contents: Location
+  active_block_labels: list[Any]
 
 class Sight(object):
   """Object that manages writing a Sight log in some structured format.
@@ -158,6 +172,7 @@ class Sight(object):
     # Initialize each widget's state to make sure its state field is created.
     self.widget_decision_state = defaultdict(dict)
     self.widget_simulation_state = SimulationWidgetState()
+    self.widget_simulation_state = SimulationWidgetState()
     # self._configure(configuration)
     if self.params.silent_logger:
       return
@@ -190,6 +205,7 @@ class Sight(object):
         # logging.info('#######SERVICE###############')
 
         try:
+
           if 'PARENT_LOG_ID' in os.environ:
             logging.info('PARENT_LOG_ID found - worker process')
             worker_location = os.environ['worker_location'].replace(':', '_')
@@ -205,9 +221,10 @@ class Sight(object):
                 + 'log'
             )
             self.id = os.environ['PARENT_LOG_ID']
-          elif (FLAGS.trained_model_log_id):
-            logging.info('Using trained model sight id')
-            self.id = FLAGS.trained_model_log_id
+            print("log id is : ", self.id)
+          elif (FLAGS.sight_log_id):
+            logging.info('Using provided sight id')
+            self.id = FLAGS.sight_log_id
             self.path_prefix = (
                 self.params.label + '_' + self.id + '_' + 'log' + '_run_mode'
             )
@@ -271,24 +288,34 @@ class Sight(object):
         self.text_log = None
 
     self.pause_logging_depth = 0
-    self.location = Location()
+
+    self.location = contextvars.ContextVar('location')
+    self.location.set(Location())
     if 'PARENT_LOG_ID' in os.environ:
-      self.location.exit()
+      self.location.get().exit()
       worker_location = (os.environ['worker_location']).split(':')
       for loc in worker_location:
-        self.location.enter(loc)
-      self.location.enter(0)
+        self.location.get().enter(loc)
+      self.location.get().enter(0)
     self.index = 1
-    self.line_prefix = ''
-    self.line_suffix = ''
-    self.open_block_start_locations = []
-    self.num_direct_contents = Location()
-    self.num_transitive_contents = Location()
-    self.active_block_labels = []
+
+    self.line_prefix = contextvars.ContextVar('line_prefix')
+    self.line_prefix.set('')
+    self.line_suffix = contextvars.ContextVar('line_suffix')
+    self.line_suffix.set('')
+    self.open_block_start_locations = contextvars.ContextVar('line_suffix')
+    self.open_block_start_locations.set([])
+    self.num_direct_contents = contextvars.ContextVar('num_direct_contents')
+    self.num_direct_contents.set(Location())
+    self.num_transitive_contents = contextvars.ContextVar('num_transitive_contents')
+    self.num_transitive_contents.set(Location())
+    self.active_block_labels = contextvars.ContextVar('active_block_labels')
+    self.active_block_labels.set([])
+    
     self.attributes = {}
     self.open = True
 
-    self.set_attribute('log_uid', self.id)
+    self.set_attribute('log_uid', str(self.id))
 
     # if build_data.Changelist():
     #   self.change_list_number = int(build_data.Changelist())
@@ -296,6 +323,47 @@ class Sight(object):
     # if build_data.CitcSnapshot():
     #   self.citc_snapshot = int(build_data.CitcSnapshot())
     #   self.set_attribute('citc_snapshot', str(self.citc_snapshot))
+
+  def get_location_state(self) -> SightLocationState:
+    return SightLocationState(
+      self.location.get().clone(),
+      self.line_prefix.get(),
+      self.line_suffix.get(),
+      self.open_block_start_locations.get().copy(),
+      self.num_direct_contents.get().clone(),
+      self.num_transitive_contents.get().clone(),
+      self.active_block_labels.get().copy(),
+    )
+  
+  def set_location_state(self, state: SightLocationState) -> None:
+    self.location.set(state.location)
+    self.line_prefix.set(state.line_prefix)
+    self.line_suffix.set(state.line_suffix)
+    self.open_block_start_locations.set(state.open_block_start_locations)
+    self.num_direct_contents.set(state.num_direct_contents)
+    self.num_transitive_contents.set(state.num_transitive_contents)
+    self.active_block_labels.set(state.active_block_labels)
+  
+
+  def create_task(self, func):
+    frame = inspect.currentframe().f_back
+    async def go(func, state):
+      # self.location.set(temp_location)
+      self.set_location_state(state)
+      # label = f'id={task_id}'
+      # print('%s/%s: outside self.location=%s/%s' % (task_id, asyncio.current_task().get_name(), self.location.get(), id(self.location.get())))
+      # self.enter_block(label, sight_pb2.Object(), frame)
+      # print('%s/%s: inside self.location=%s/%s' % (task_id, asyncio.current_task().get_name(), self.location.get(), id(self.location.get())))
+      return await func
+      # self.exit_block(label, sight_pb2.Object(), frame)
+    
+    self.enter_block(f'asyncio.create_task: {asyncio.current_task().get_name()}', sight_pb2.Object(), frame)
+    state = self.get_location_state() #self.location.get().clone()
+    # print('%s/%s: temp_location=%s=%s' % (task_id, asyncio.current_task().get_name(), state, id(state)))
+    
+    new_task = asyncio.create_task(go(func, state))#, name=f'task_{task_id}')
+    self.exit_block(f'asyncio.create_task: {asyncio.current_task().get_name()}', sight_pb2.Object(), frame)
+    return new_task
 
   @classmethod
   def silent(cls) -> Sight:
@@ -323,6 +391,14 @@ class Sight(object):
     return self
 
   def __exit__(self, exc_type, value, traceback):
+    # last rpc call to server for this sight id
+    req = service_pb2.CloseRequest()
+    req.client_id = str(self.id)
+    response = service.call(
+                lambda s, meta: s.Close(req, 300, metadata=meta)
+            )
+    # print("close rpc status :", response.response_str)
+
     if self.params.silent_logger:
       self.close()
     if exc_type is not None:
@@ -363,22 +439,23 @@ class Sight(object):
         # if this is the only avro file, table has not been created yet
         if self.avro_file_counter == 1:
           create_external_bq_table(self.params, self.table_name, self.id)
-          logging.info(
-              'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-              'log_id=%s.%s&log_owner=%s&project_id=%s',
-              self.SIGHT_API_KEY,
-              self.params.dataset_name,
-              self.table_name,
-              self.params.log_owner,
-              os.environ['PROJECT_ID']
-          )
-          print(f'table generated : {self.params.dataset_name}.{self.table_name}')
+        logging.info(
+            'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+            'log_id=%s.%s&log_owner=%s&project_id=%s',
+            self.SIGHT_API_KEY,
+            self.params.dataset_name,
+            self.table_name,
+            self.params.log_owner,
+            os.environ['PROJECT_ID']
+        )
+        print(f'table generated : {self.params.dataset_name}.{self.table_name}')
       self.avro_log.close()
 
     if not self.params.local and not self.params.in_memory:
       logging.info(
           (
-              'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
+              #'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
+              'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
           ),
           self.SIGHT_API_KEY,
@@ -533,16 +610,16 @@ class Sight(object):
       return None
 
     if self.pause_logging_depth > 0:
-      return self.location
+      return self.location.get()
 
-    self.active_block_labels.append(label)
+    self.active_block_labels.get().append(label)
     # self.emit_text_to_file(
     #     self.line_prefix + label + '<<<' + self.line_suffix + '\n'
     # )
-    self.emit_text_to_file(self.line_prefix + label + '\n' + '>>> ' + '\n')
-    self.line_prefix = self.line_prefix + label + ': '
+    self.emit_text_to_file(self.line_prefix.get() + label + '\n' + '>>> ' + '\n')
+    self.line_prefix.set(self.line_prefix.get() + label + ': ')
 
-    obj_location = self.location
+    obj_location = self.location.get()
     if self.is_binary_logged():
       obj.sub_type = sight_pb2.Object.SubType.ST_BLOCK_START
 
@@ -557,11 +634,11 @@ class Sight(object):
       self.set_object_code_loc(obj, frame)
 
       self.log_object(obj, False)
-      self.open_block_start_locations.append(obj.location)
+      self.open_block_start_locations.get().append(obj.location)
 
-    self.num_direct_contents.enter(0)
-    self.num_transitive_contents.enter(0)
-    self.location.enter(0)
+    self.num_direct_contents.get().enter(0)
+    self.num_transitive_contents.get().enter(0)
+    self.location.get().enter(0)
 
     return obj_location
 
@@ -579,32 +656,32 @@ class Sight(object):
     if self.params.silent_logger or self.pause_logging_depth > 0:
       return
 
-    if not self.active_block_labels or self.location.size() == 1:
+    if not self.active_block_labels.get() or self.location.get().size() == 1:
       logging.warning('Exiting inactive Sight block "%s"', label)
       return
 
-    self.active_block_labels.pop()
-    self.line_prefix = ''
-    for block_label in self.active_block_labels:
-      self.line_prefix = self.line_prefix + block_label + ': '
+    self.active_block_labels.get().pop()
+    self.line_prefix.set('')
+    for block_label in self.active_block_labels.get():
+      self.line_prefix.set(self.line_prefix.get() + block_label + ': ')
 
-    self.location.exit()
-    self.location.next()
+    self.location.get().exit()
+    self.location.get().next()
 
     if self.is_binary_logged():
-      if not self.open_block_start_locations:
+      if not self.open_block_start_locations.get():
         logging.warning('Exiting inactive Sight block "%s"', label)
 
       obj.sub_type = sight_pb2.Object.SubType.ST_BLOCK_END
       if obj.block_end is None:
         obj.block_end = sight_pb2.BlockEnd()
       obj.block_end.label = label
-      obj.block_end.num_direct_contents = self.num_direct_contents.pos()
-      obj.block_end.num_transitive_contents = self.num_transitive_contents.pos()
-      obj.block_end.location_of_block_start = self.open_block_start_locations[
+      obj.block_end.num_direct_contents = self.num_direct_contents.get().pos()
+      obj.block_end.num_transitive_contents = self.num_transitive_contents.get().pos()
+      obj.block_end.location_of_block_start = self.open_block_start_locations.get()[
           -1
       ]
-      self.open_block_start_locations.pop()
+      self.open_block_start_locations.get().pop()
 
       if frame is None:
         # pytype: disable=attribute-error
@@ -620,15 +697,15 @@ class Sight(object):
         + '\n'
     )
 
-    self.num_direct_contents.exit()
-    self.num_transitive_contents.exit()
+    self.num_direct_contents.get().exit()
+    self.num_transitive_contents.get().exit()
 
   def _update_line_suffix(self) -> None:
     # Each value in self.attributes is non-empty since empty values are removed
     # in unset_attribute.
-    self.line_suffix = '| ' + ','.join(
+    self.line_suffix.set('| ' + ','.join(
         [f'{key}={value[-1]}' for key, value in self.attributes.items()]
-    )
+    ))
 
   def set_attribute(self, key: str, value: str) -> None:
     """Documents in the Sight log a new key-value attribute mapping.
@@ -665,6 +742,16 @@ class Sight(object):
 
     self._update_line_suffix()
 
+  def fetch_attributes(self) -> dict[str,str]:
+    """Fetches all the values of attributes that is currently set to within Sight.
+    Returns:
+      The dictionary that contains key-value pairs of attributes currently set to.
+    """
+    attr_dict = {}
+    for k,v in self.attributes.items():
+      attr_dict[k] = v[-1]
+    return attr_dict
+
   def get_attribute(self, key: str) -> str:
     """Fetches the value that a key is currently set to within Sight.
 
@@ -697,15 +784,15 @@ class Sight(object):
       return None
 
     if self.pause_logging_depth > 0:
-      return self.location
+      return self.location.get()
 
-    if not self.num_direct_contents.is_empty():
-      self.num_direct_contents.next()
-    self.num_transitive_contents.next_all()
+    if not self.num_direct_contents.get().is_empty():
+      self.num_direct_contents.get().next()
+    self.num_transitive_contents.get().next_all()
 
-    obj_location = self.location
+    obj_location = self.location.get()
     if self.is_binary_logged():
-      obj.location = str(self.location)
+      obj.location = str(self.location.get())
       obj.index = self.index
       self.index += 1
 
@@ -718,9 +805,9 @@ class Sight(object):
         attr.key = key
         attr.value = str(value[-1])
 
-      for loc in self.open_block_start_locations:
+      for loc in self.open_block_start_locations.get():
         obj.ancestor_start_location.append(str(loc))
-      obj.ancestor_start_location.append(str(self.location))
+      obj.ancestor_start_location.append(str(self.location.get()))
 
       obj.order.timestamp_ns = time.time_ns()
 
@@ -730,10 +817,7 @@ class Sight(object):
         dict_obj = MessageToDict(obj, preserving_proto_field_name=True)
         fastavro.writer(self.avro_log, self.avro_schema, [dict_obj])
         self.avro_record_counter += 1
-        # print('self.avro_log_file_path : ', self.avro_log_file_path)
-        # self.file_name = self.avro_log_file_path.split('/')[-1]
-        # print('&&&&&&&&&&&&&&&&&&&&&&&self.file_name : ', self.file_name)
-        if self.avro_record_counter % 100 == 0:
+        if self.avro_record_counter % 1000 == 0:
           self.avro_file_counter += 1
           upload_blob_from_stream(
               self.params.bucket_name,
@@ -758,7 +842,7 @@ class Sight(object):
           self.avro_log = io.BytesIO()
 
     if advance_location:
-      self.location.next()
+      self.location.get().next()
 
     return obj_location
 
@@ -824,6 +908,7 @@ class Sight(object):
   #       configuration log objects.
   #   """
   #   self.add_config(_read_capacitor_file(config_file_path))  # pytype: disable=wrong-arg-types  # dynamic-method-lookup
+
 
 
 def text(text_val: str, sight, end='\n', frame=None) -> str:

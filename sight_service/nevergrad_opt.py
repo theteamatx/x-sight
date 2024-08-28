@@ -22,6 +22,7 @@ from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
 from sight.proto import sight_pb2
+from sight_service.normalizer import Normalizer
 import random
 import requests
 import google.auth
@@ -30,7 +31,7 @@ import json
 import os
 import threading
 
-
+_file_name = "nevergrad_opt.py"
 class NeverGradOpt(OptimizerInstance):
     """Uses the NeverGrad library to choose the parameters of the code.
 
@@ -48,6 +49,7 @@ class NeverGradOpt(OptimizerInstance):
         self._lock = threading.RLock()
         self._total_count = 0
         self._completed_count = 0
+        self.normalizer = Normalizer()
 
     @overrides
     def launch(
@@ -61,6 +63,11 @@ class NeverGradOpt(OptimizerInstance):
 
         self._total_count = request.decision_config_params.num_trials
 
+        self.actions = self.normalizer.normalize_in_0_to_1(self.actions)
+        # print("self.actions : ", self.actions)
+
+
+
         self.possible_values = {}
         for i, key in enumerate(sorted(self.actions.keys())):
             if self.actions[key].valid_float_values:
@@ -72,7 +79,7 @@ class NeverGradOpt(OptimizerInstance):
                 while cur <= self.actions[key].max_value:
                     self.possible_values[key].append(cur)
                     cur += self.actions[key].step_size
-        print('possible_values=%s' % self.possible_values)
+        # print('possible_values=%s' % self.possible_values)
 
         params = {}
         for key, p in self.actions.items():
@@ -89,7 +96,7 @@ class NeverGradOpt(OptimizerInstance):
         # # print('here **params are : ', **params)
         # print('here ng.p.Dict is : ', ng.p.Dict(**params))
         # print('here ng.p.Instrumentation is : ', ng.p.Instrumentation(ng.p.Dict(**params)))
-        # # raise SystemExit
+
 
         parametrization = ng.p.Instrumentation(ng.p.Dict(**params))
         budget = 1000
@@ -102,7 +109,6 @@ class NeverGradOpt(OptimizerInstance):
               .NeverGradConfig.NeverGradAlgorithm.NG_BO):
             self._optimizer = ng.optimizers.BO(parametrization=parametrization,
                                                budget=budget)
-            print(self._optimizer, type(self._optimizer))
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_CMA):
             self._optimizer = ng.optimizers.CMA(parametrization=parametrization,
@@ -161,7 +167,7 @@ class NeverGradOpt(OptimizerInstance):
                                                budget=budget)
 
 
-        print(self._optimizer, type(self._optimizer))
+        # print(self._optimizer, type(self._optimizer))
 
         response.display_string = 'NeverGrad Start'
         print('response=%s' % response)
@@ -184,7 +190,8 @@ class NeverGradOpt(OptimizerInstance):
 
         self._lock.acquire()
         selected_actions = self._optimizer.ask()
-        logging.info('selected_actions=%s', selected_actions.args)
+        # logging.info('selected_actions=%s', selected_actions.args)
+
         # logging.info('selected_actions=%s', selected_actions.kwargs)
         self.active_samples[request.worker_id] = {
             'action': selected_actions.args[0],
@@ -195,14 +202,21 @@ class NeverGradOpt(OptimizerInstance):
         self.num_samples_issued += 1
         self._lock.release()
 
+        denormalized_actions = self.normalizer.denormalize_from_0_to_1(selected_actions.args[0])
+        # print("denormalized_actions : ", denormalized_actions)
+
         dp_response = service_pb2.DecisionPointResponse()
-        for key, value in selected_actions.args[0].items():
+        for key, value in denormalized_actions.items():
             a = dp_response.action.add()
             a.key = key
+            a.value.sub_type = sight_pb2.Value.ST_DOUBLE
             a.value.double_value = float(value)
 
         # self.last_outcome = request.decision_outcome.outcome_value
         # print('DecisionPoint response=%s' % dp_response)
+
+        # print('DecisionPoint response=%s' % dp_response)
+        dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
         return dp_response
 
     @overrides
@@ -210,30 +224,25 @@ class NeverGradOpt(OptimizerInstance):
         self, request: service_pb2.FinalizeEpisodeRequest
     ) -> service_pb2.FinalizeEpisodeResponse:
         # logging.info('FinalizeEpisode request=%s', request)
-        # self._append_outcome(request.decision_outcome.outcome_value)
-        # self.history[-1]['outcome'] = request.decision_outcome.outcome_value
-        # self.last_outcome = request.decision_outcome.outcome_value
-
-        # d = {}
-        # for a in request.decision_point.choice_params:
-        #   d[a.key] = a.value.double_value
         d = self.last_action
 
         self._lock.acquire()
         # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
         self.complete_samples[self.active_samples[
             request.worker_id]['sample_num']] = {
-                'outcome': request.decision_outcome.outcome_value,
+                # 'outcome': request.decision_outcome.reward,
+                # 'action': self.active_samples[request.worker_id]['action'],
+                'reward': request.decision_outcome.reward,
                 'action': self.active_samples[request.worker_id]['action'],
+                'outcome': request.decision_outcome.outcome_params
             }
         # print('self.complete_samples : ', self.complete_samples)
         del self.active_samples[request.worker_id]
 
-        logging.info('FinalizeEpisode outcome=%s / %s',
-                     request.decision_outcome.outcome_value, d)
-        self._optimizer.tell(d, 0 - request.decision_outcome.outcome_value)
-        # self._optimizer.tell(d, request.decision_outcome.outcome_value)
-        self._completed_count += 1
+        # logging.info('FinalizeEpisode outcome=%s / %s',
+        #              request.decision_outcome.reward, d)
+        self._optimizer.tell(d, 0 - request.decision_outcome.reward)
+        # self._completed_count += 1
 
         del self.last_action
         self._lock.release()
@@ -277,3 +286,21 @@ class NeverGradOpt(OptimizerInstance):
           status = service_pb2.CurrentStatusResponse.Status.FAILURE
 
         return service_pb2.CurrentStatusResponse(response_str=response, status=status)
+
+    @overrides
+    def WorkerAlive(
+       self, request: service_pb2.WorkerAliveRequest
+    ) -> service_pb2.WorkerAliveResponse:
+        method_name = "WorkerAlive"
+        logging.debug(">>>>  In %s of %s", method_name, _file_name)
+        if(self._completed_count == self._total_count):
+           worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+        # elif(not self.pending_samples):
+        #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
+        else:
+          # Increasing count here so that multiple workers can't enter the dp call for same sample at last
+          self._completed_count += 1
+          worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+        logging.info("worker_alive_status is %s", worker_alive_status)
+        logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+        return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)

@@ -52,10 +52,10 @@ def driver(sight: Sight) -> None:
 
   for _ in range(1):
       next_point = decision.decision_point("label", sight)
-      reward = black_box_function(list(next_point.values()))
       print('next_point : ', next_point)
+      reward = black_box_function(list(next_point.values()))
       print('reward : ', reward)
-      decision.decision_outcome(json.dumps(next_point), reward, sight)
+      decision.decision_outcome(json.dumps(next_point), sight, reward)
 
 
 def get_sight_instance():

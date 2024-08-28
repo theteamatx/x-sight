@@ -24,6 +24,7 @@ import "sight/proto/widgets/pipeline/flume/flume.proto";
 message Attribute {
   string key = 1;
   string value = 2;
+  // Value value = 2;
 }
 
 // Base object from which all other logging objects are derived.
@@ -66,6 +67,7 @@ message Object {
     // A dummy object that does not have semantic content from the user.
     ST_GAP = 11;
     ST_LINK = 15;
+    ST_PROPOSE_ACTION = 16;
   }
   SubType sub_type = 4;
 
@@ -84,6 +86,7 @@ message Object {
     DecisionPoint decision_point = 22;
     DecisionOutcome decision_outcome = 23;
     Link link = 25;
+    ProposeAction propose_action = 26;
   }
 
   string file = 10;
@@ -108,6 +111,12 @@ message Object {
     int64 timestamp_ns = 1;
   }
   Order order = 19;
+}
+
+message ProposeAction {
+  repeated DecisionParam action_attrs = 1;
+  repeated DecisionParam attributes = 2;
+  string action_id = 3;
 }
 
 // Describes the configuration of some aspect of Sight or a Sight widget.
@@ -238,6 +247,8 @@ message Value {
     ST_DOUBLE = 4;
     ST_BOOL = 5;
     ST_NONE = 6;
+    // add json type to send for finalized episode requeset
+    ST_JSON = 7;
   }
   SubType sub_type = 1;
 
@@ -253,7 +264,11 @@ message Value {
     bool bool_value = 6;
 
     bool none_value = 7;
+
+    string json_value = 8;
   }
+
+  string mime_type = 9;
 }
 
 // The starting point of a block. Must be matched to a BlockEnd.
@@ -540,8 +555,25 @@ message ContinuousProbDist {
     float stdev = 2;
   }
 
+  message Uniform {
+    float min_val = 1;
+    float max_val = 2;
+  }
+
   oneof dist {
     Gaussian gaussian = 1;
+    Uniform uniform = 2;
+  }
+}
+
+message DiscreteProbDist {
+  message Uniform {
+    int64 min_val = 1;
+    int64 max_val = 2;
+  }
+
+  oneof dist {
+    Uniform uniform = 1;
   }
 }
 
@@ -556,6 +588,8 @@ message DecisionConfigurationStart {
     OT_BAYESIAN_OPT = 6;
     OT_SENSITIVITY_ANALYSIS = 7;
     OT_NEVER_GRAD = 8;
+    OT_SMC_PY = 9;
+    OT_WORKLIST_SCHEDULER = 10;
   }
 
   message VizierConfig {}
@@ -600,6 +634,7 @@ message DecisionConfigurationStart {
       LM_UNKNOWN = 0;
       LM_OPTIMIZE = 1;
       LM_RECOMMEND = 2;
+      LM_INTERACTIVE = 3;
     }
     LLMGoal goal = 2;
 
@@ -634,6 +669,9 @@ message DecisionConfigurationStart {
     NeverGradAlgorithm algorithm = 1;
   }
 
+  message SMCPyConfig {}
+  message WorklistSchedulerConfig {}
+
   message ChoiceConfig {
     oneof choice_config {
       VizierConfig vizier_config = 1;
@@ -644,6 +682,8 @@ message DecisionConfigurationStart {
       BayesianOptConfig bayesian_opt_config = 6;
       SensitivityAnalysisConfig sensitivity_analysis_config = 7;
       NeverGradConfig never_grad_config = 8;
+      SMCPyConfig smc_py_config = 9;
+      WorklistSchedulerConfig worklist_scheduler_config = 10;
     }
   }
 
@@ -682,13 +722,15 @@ message DecisionConfigurationStart {
 
     // Distribution of possible values
     ContinuousProbDist continuous_prob_dist = 6;
+    DiscreteProbDist discrete_prob_dist = 7;
   }
 
   // The attributes of application's state
   map<string, AttrProps> state_attrs = 3;
   map<string, AttrProps> action_attrs = 4;
+  map<string, AttrProps> outcome_attrs = 5;
 
-  int64 num_trials = 5;
+  int64 num_trials = 6;
 }
 
 message DecisionParam {
@@ -701,7 +743,7 @@ message DecisionPoint {
   string choice_label = 1;
 
   // Identifies the chosen option.
-  string chosen_option = 2;
+  string chosen_option = 2; // need or not?
 
   // The parameters that characterize the chosen option.
   repeated DecisionParam choice_params = 3;
@@ -711,6 +753,7 @@ message DecisionPoint {
 message DecisionOutcome {
   string outcome_label = 1;
   // The numeric value of this outcome, with higher values being more desirable.
-  float outcome_value = 2;
+  float reward = 2;
   float discount = 3;
+  repeated DecisionParam outcome_params = 4;
 }

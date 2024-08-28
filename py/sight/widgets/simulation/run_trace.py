@@ -23,16 +23,16 @@ import apache_beam as beam
 import numpy as np
 
 from google3.analysis.dremel.core.capacitor.public.python import pywrap_record_reader
-from proto import sight_pb2
-from py import data_structures
-from py.attribute import Attribute
-from py.sight import Sight
-from py.widgets.numpy_sight import numpy_sight
-from py.widgets.simulation import analysis_utils
 from google3.pipeline.flume.py import runner
 from google3.pipeline.flume.py.io import capacitorio
 from google3.pyglib import gfile
 from google3.pyglib.contrib.gpathlib import gpath_flag
+from sight import data_structures
+from sight.attribute import Attribute
+from sight.proto import sight_pb2
+from sight.sight import Sight
+from sight.widgets.numpy_sight import numpy_sight
+from sight.widgets.simulation import analysis_utils
 
 _IN_CLUSTERS_FILE = gpath_flag.DEFINE_path(
     'in_clusters_file',

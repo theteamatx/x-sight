@@ -37,6 +37,8 @@ RUN pip install -r py/sight/requirements.txt
 COPY py/ py/
 COPY sight_service/ sight_service/
 COPY .env .env
+COPY fvs_sight/ fvs_sight/
+
 
 # updating PYTHONPATH to resolve relative imports
 ENV PYTHONPATH "$HOME/x-sight:$HOME/x-sight/py:${PYTHONPATH}"

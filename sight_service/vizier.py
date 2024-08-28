@@ -82,6 +82,8 @@ class Vizier(OptimizerInstance):
     self.vizier_study = ''
     self.current_trial: Dict[str, str] = {}
     self.vizier_url = ''
+    self._total_count = 0
+    self._completed_count = 0
 
   @overrides
   def launch(
@@ -91,6 +93,7 @@ class Vizier(OptimizerInstance):
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     launch_response = super(Vizier, self).launch(request)
 
+    self._total_count = request.decision_config_params.num_trials
     study_config = _get_vizier_study_config(
         request.client_id, request.label, request.decision_config_params
     )
@@ -142,6 +145,7 @@ class Vizier(OptimizerInstance):
             }
         )
     )
+    dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return dp_response
 
@@ -154,7 +158,7 @@ class Vizier(OptimizerInstance):
     metrics = []
     metrics_obj = {}
     metrics_obj['metric_id'] = request.decision_outcome.outcome_label
-    metrics_obj['value'] = request.decision_outcome.outcome_value
+    metrics_obj['value'] = request.decision_outcome.reward
     metrics.append(metrics_obj)
 
     if request.worker_id not in self.current_trial:
@@ -197,3 +201,22 @@ class Vizier(OptimizerInstance):
     })
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return service_pb2.CurrentStatusResponse(response_str=str(optimal))
+
+  @overrides
+  def WorkerAlive(
+      self, request: service_pb2.WorkerAliveRequest
+  ) -> service_pb2.WorkerAliveResponse:
+    method_name = "WorkerAlive"
+    logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    if(self._completed_count == self._total_count):
+        worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+    # elif(not self.pending_samples):
+    #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
+    else:
+      # Increasing count here so that multiple workers can't enter the dp call for same sample at last
+      self._completed_count += 1
+      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+    logging.info("worker_alive_status is %s", worker_alive_status)
+    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+    return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)
+

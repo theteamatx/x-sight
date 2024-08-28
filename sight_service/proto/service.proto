@@ -22,7 +22,9 @@
 
 // The Interface for the Sight service.
 syntax = "proto3";
+
 package sight.x.service;
+
 import "sight/proto/sight.proto";
 import "sight_service/proto/numproto/protobuf/ndarray.proto";
 import "google/api/annotations.proto";
@@ -45,6 +47,16 @@ service SightService {
     //   curl http://DOMAIN_NAME/v1/create
     option (google.api.http) = { get: "/v1/create" };
   }
+  rpc Close(CloseRequest) returns (CloseResponse) {
+    // Client example:
+    //   curl http://DOMAIN_NAME/v1/Close
+    option (google.api.http) = { get: "/v1/Close" };
+  }
+  rpc WorkerAlive(WorkerAliveRequest) returns (WorkerAliveResponse) {
+    // Client example:
+    //   curl http://DOMAIN_NAME/v1/WorkerAlive
+    option (google.api.http) = { get: "/v1/WorkerAlive" };
+  }
   rpc Launch(LaunchRequest) returns (LaunchResponse) {
     //   curl http://DOMAIN_NAME/v1/launch/{client_id}/{label}
     option (google.api.http) = {
@@ -63,6 +75,19 @@ service SightService {
   // rpc DecisionOutcome(DecisionOutcomeRequest)
   //     returns (DecisionOutcomeResponse) {}
   // rpc CopyDataToReplayServer(CopyDataToReplayServerRequest) returns (CopyDataToReplayServerResponse) {}
+  rpc Tell(TellRequest) returns (TellResponse) {
+    //   curl http://DOMAIN_NAME/v1/tell/{client_id}/{worker_id}
+    option (google.api.http) = {
+      post: "/v1/tell/{client_id}/{worker_id}"
+    };
+  }
+  rpc Listen(ListenRequest) returns (ListenResponse) {
+    //   curl http://DOMAIN_NAME/v1/listen/{client_id}/{worker_id}
+    option (google.api.http) = {
+      get: "/v1/listen/{client_id}/{worker_id}"
+    };
+  }
+
   rpc CurrentStatus(CurrentStatusRequest) returns (CurrentStatusResponse) {
     //   curl http://DOMAIN_NAME/v1/current_status/{client_id}/{worker_id}
     option (google.api.http) = {
@@ -75,7 +100,10 @@ service SightService {
       get: "/v1/fetch_optimal_action/{client_id}/{worker_id}"
     };
   }
+
   rpc ProposeAction(ProposeActionRequest) returns (ProposeActionResponse) {}
+  rpc GetOutcome(GetOutcomeRequest) returns (GetOutcomeResponse) {}
+
   rpc FinalizeEpisode(FinalizeEpisodeRequest) returns (FinalizeEpisodeResponse) {
     //   curl http://DOMAIN_NAME/v1/finalize_episode/{client_id}/{worker_id}
     option (google.api.http) = {
@@ -153,13 +181,13 @@ service SightService {
 // }
 
 message Acme_Request {
-  enum StepType{
+  enum StepType {
     DEFAULT = 0;
     FIRST = 1;
     MID = 2;
     LAST = 3;
   }
-  message Observation{
+  message Observation {
     numproto.protobuf.NDArray action = 1;
     StepType steptype = 2;
     numproto.protobuf.NDArray reward = 3;
@@ -187,14 +215,26 @@ message Acme_Response {
 message DecisionPointRequest {
   string client_id = 1;
   string worker_id = 2;
-  sight.x.proto.DecisionPoint decision_point = 3;
+  sight.x.proto.DecisionPoint decision_point = 3; // need or not?
   sight.x.proto.DecisionOutcome decision_outcome = 4;
+  // attributes
   Acme_Request acme_config = 5;
 }
 message DecisionPointResponse {
   repeated sight.x.proto.DecisionParam action = 1;
-  // repeated Acme_Response acme_response = 2;
-  bytes weights = 2; // acme_response required
+  Acme_Response acme_response = 2;
+  int64 response_idx = 3;
+
+  enum ActionType {
+    AT_UNKNOWN = 0;
+    // Tells the worker to perform the provided action.
+    AT_ACT = 1;
+    // Tells the worker that the server is finished providing actions.
+    AT_DONE = 2;
+    // Tells the worker to back off and try again soon.
+    AT_RETRY = 3;
+  }
+  ActionType action_type = 4;
 }
 // message DecisionOutcomeRequest {
 //   sight.x.proto.DecisionOutcome decision_outcome = 1;
@@ -214,6 +254,22 @@ message FetchOptimalActionRequest {
 }
 message FetchOptimalActionResponse {
   string response_str = 1;
+}
+
+message TellRequest {
+  string client_id = 1;
+  string message_str = 2;
+}
+message TellResponse {
+  string response_str = 1;
+}
+
+message ListenRequest {
+  string client_id = 1;
+}
+message ListenResponse {
+  bool response_ready = 1;
+  string response_str = 2;
 }
 
 message CurrentStatusRequest {
@@ -236,19 +292,48 @@ message LaunchRequest {
   string label = 3;
   string client_id = 4;
 }
-
 message LaunchResponse {
   string display_string = 1;
 }
 
 message ProposeActionRequest {
+  // message Action {
+  //   repeated sight.x.proto.DecisionParam action_attrs = 1;
+  // }
   string client_id = 1;
-  string worker_id = 2;
-  map<string, float> action = 3;
-  sight.x.proto.DecisionOutcome outcome = 4;
+  // repeated Action actions = 2;
+  repeated sight.x.proto.DecisionParam action_attrs = 2;
+  // repeated sight.x.proto.DecisionParam state_attrs = 3;
+  // repeated sight.x.proto.Attribute attributes = 3;
+  repeated sight.x.proto.DecisionParam attributes = 3;
 }
 message ProposeActionResponse {
-  string response_str = 1;
+  int64 action_id = 1;
+}
+
+message GetOutcomeRequest {
+  string client_id = 1;
+  repeated int64 unique_ids = 2;
+}
+message GetOutcomeResponse {
+  message Outcome{
+    enum Status{
+      DEFAULT = 0;
+      PENDING = 1;
+      ACTIVE = 2;
+      COMPLETED = 3;
+      NOT_EXIST = 4;
+    }
+    repeated sight.x.proto.DecisionParam state_attrs = 1;
+    repeated sight.x.proto.DecisionParam action_attrs = 2;
+    float reward = 3;
+    repeated sight.x.proto.DecisionParam outcome_attrs = 4;
+    repeated sight.x.proto.DecisionParam attributes = 5;
+    Status status = 6;
+    string response_str = 7;
+    int64 action_id = 8;
+  }
+  repeated Outcome outcome = 1;
 }
 
 message FinalizeEpisodeRequest {
@@ -301,4 +386,30 @@ message CreateResponse {
   int64 id = 1;
   // The path prefix common to all the file(s) that hold the log.
   string path_prefix = 2;
+}
+
+message CloseRequest {
+  string client_id = 1;
+}
+
+message CloseResponse {
+  string response_str = 1;
+}
+
+message WorkerAliveRequest {
+  string client_id = 1;
+  string worker_id = 2;
+}
+
+message WorkerAliveResponse {
+  enum StatusType {
+    ST_UNKNOWN = 0;
+    // Tells the worker to continue to run.
+    ST_ACT = 1;
+    // Tells the worker to stop.
+    ST_DONE = 2;
+    // Tells the worker to back off and try again soon.
+    ST_RETRY = 3;
+  }
+  StatusType status_type = 4;
 }

@@ -20,6 +20,7 @@ from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from overrides import override
+import time
 
 
 class SingleActionOptimizerClient(OptimizerClient):
@@ -29,6 +30,7 @@ class SingleActionOptimizerClient(OptimizerClient):
     super().__init__(optimizer_type)
     self._sight = sight
     self._last_action = None
+    self.exp_completed = False
     if(algorithm == None):
       self._algorithm = algorithm
     elif algorithm == 'auto':
@@ -79,15 +81,27 @@ class SingleActionOptimizerClient(OptimizerClient):
 
   @override
   def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
-    response = service.call(
-        lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
-    )
-    self._last_action = response.action
-
-    return self._get_dp_action(response)
+    # while True:
+      response = service.call(
+          lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
+      )
+      logging.info('response: %s', response)
+      if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
+        self._last_action = response.action
+        return self._get_dp_action(response)
+      # elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_DONE:
+      #   self.exp_completed = True
+      #   return None
+      # elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_RETRY:
+      #   print('waiting in decision point to get server from response......')
+      #   logging.info('sleeping for 5 seconds......')
+      #   time.sleep(5)
+      else:
+        raise ValueError("No action received from server")
 
   @override
   def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
+    # logging.info('SingleActionOptimizerClient() finalize_episode')
     if self._last_action:
       for a in self._last_action:
         request.decision_point.choice_params.append(a)

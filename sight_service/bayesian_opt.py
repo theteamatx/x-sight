@@ -32,6 +32,7 @@ import json
 import os
 import threading
 
+_file_name = "bayesian_opt.py"
 
 class BayesianOpt(OptimizerInstance):
   """Uses an LLM to choose the parameters of the code.
@@ -60,12 +61,12 @@ class BayesianOpt(OptimizerInstance):
     response.display_string = 'BayesianOpt Start'
     return response
 
-  def _params_to_dict(self, dp: sight_pb2) -> Dict[str, float]:
-    """Returns the dict representation of a DecisionParams proto"""
-    d = {}
-    for a in dp:
-      d[a.key] = a.value.double_value
-    return d
+  # def _params_to_dict(self, dp: sight_pb2) -> Dict[str, float]:
+  #   """Returns the dict representation of a DecisionParams proto"""
+  #   d = {}
+  #   for a in dp:
+  #     d[a.key] = a.value.double_value
+  #   return d
 
   @overrides
   def decision_point(
@@ -82,10 +83,11 @@ class BayesianOpt(OptimizerInstance):
     for key, value in selected_actions.items():
       a = dp_response.action.add()
       a.key = key
+      a.value.sub_type = sight_pb2.Value.ST_DOUBLE
       a.value.double_value = float(value)
 
-    # self.last_outcome = request.decision_outcome.outcome_value
     print('DecisionPoint response=%s' % dp_response)
+    dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
     return dp_response
 
   @overrides
@@ -93,19 +95,16 @@ class BayesianOpt(OptimizerInstance):
       self, request: service_pb2.FinalizeEpisodeRequest
   ) -> service_pb2.FinalizeEpisodeResponse:
     logging.info('FinalizeEpisode request=%s', request)
-    # self._append_outcome(request.decision_outcome.outcome_value)
-    # self.history[-1]['outcome'] = request.decision_outcome.outcome_value
-    # self.last_outcome = request.decision_outcome.outcome_value
     d = {}
     for a in request.decision_point.choice_params:
       d[a.key] = a.value.double_value
 
     self._lock.acquire()
-    logging.info('FinalizeEpisode outcome=%s / %s', request.decision_outcome.outcome_value, d)
+    logging.info('FinalizeEpisode outcome=%s / %s', request.decision_outcome.reward, d)
     self._optimizer.register(
         params=d,
-        target=request.decision_outcome.outcome_value)
-    self._completed_count += 1
+        target=request.decision_outcome.reward)
+    # self._completed_count += 1
     self._lock.release()
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
 
@@ -126,3 +125,21 @@ class BayesianOpt(OptimizerInstance):
       status = service_pb2.CurrentStatusResponse.Status.FAILURE
 
     return service_pb2.CurrentStatusResponse(response_str=output, status=status)
+
+  @overrides
+  def WorkerAlive(
+      self, request: service_pb2.WorkerAliveRequest
+  ) -> service_pb2.WorkerAliveResponse:
+    method_name = "WorkerAlive"
+    logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    if(self._completed_count == self._total_count):
+        worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+    # elif(not self.pending_samples):
+    #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
+    else:
+      # Increasing count here so that multiple workers can't enter the dp call for same sample at last
+      self._completed_count += 1
+      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+    logging.info("worker_alive_status is %s", worker_alive_status)
+    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+    return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)

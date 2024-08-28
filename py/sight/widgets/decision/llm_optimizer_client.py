@@ -22,6 +22,7 @@ from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from overrides import override
+import time
 
 class LLMOptimizerClient (OptimizerClient):
   """LLM client for the Sight service."""
@@ -41,6 +42,8 @@ class LLMOptimizerClient (OptimizerClient):
       self._goal = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE
     elif llm_name.endswith('_recommend'):
       self._goal = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_RECOMMEND
+    elif llm_name.endswith('_interactive'):
+      self._goal = sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE
     else:
       raise ValueError(f'Unknown LLM Goal {llm_name}')
 
@@ -69,14 +72,19 @@ class LLMOptimizerClient (OptimizerClient):
       param.value.sub_type
       param.value.double_value = value
 
-    response = service.call(
-        lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
-    )
-    logging.info('decision_point() response=%s' % response)
-    return self._get_dp_action(response)
+    while True:
+      response = service.call(
+          lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
+      )
+      logging.info('decision_point() response=%s' % response)
+      if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
+        return self._get_dp_action(response)
+      if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_RETRY:
+        time.sleep(5)
 
   @override
   def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
+    logging.info('LLMOptimizerClient() finalize_episode, request=%s', request)
     response = service.call(
         lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)
     )

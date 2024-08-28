@@ -112,7 +112,7 @@ class SightVariableSource(core.VariableSource):
     method_name = "get_variables"
     # logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-    if flags.FLAGS.deployment_mode == "local" or flags.FLAGS.trained_model_log_id:
+    if flags.FLAGS.deployment_mode == "local" or flags.FLAGS.sight_log_id:
       self._worker_id = 0
     else:
       self._worker_id = os.environ["worker_location"]

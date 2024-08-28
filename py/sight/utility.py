@@ -14,6 +14,7 @@
 
 import base64
 import math
+import time
 
 from google.protobuf import descriptor
 from google.protobuf.internal import type_checkers
@@ -24,6 +25,88 @@ from google.protobuf.json_format import _NAN
 from google.protobuf.json_format import _NEG_INFINITY
 from google.protobuf.json_format import _Printer as BasePrinter
 from google.protobuf.json_format import SerializeToJsonError
+from sight.widgets.decision.resource_lock import RWLockDictWrapper
+from sight_service.optimizer_instance import param_proto_to_dict
+from sight_service.proto import service_pb2
+from sight import service_utils as service
+
+
+
+POLL_LIMIT = 10 # POLL_TIME_INTERVAL th part of second
+POLL_TIME_INTERVAL = 6 # seconds
+global_outcome_mapping = RWLockDictWrapper()
+
+def get_all_outcomes(sight_id, action_ids):
+
+  # print(f'get all outcome for actions ids {action_ids}')
+  request = service_pb2.GetOutcomeRequest()
+  request.client_id = str(sight_id)
+  request.unique_ids.extend(action_ids)
+
+  # async_dict = global_outcome_mapping.get()
+  # print(f'GLOBAL MAP OF GET OUTCOME => {async_dict}')
+  # time.sleep(10)
+  # return [[1] * 10]*len(action_ids)
+
+  try:
+    response = service.call(
+        lambda s, meta: s.GetOutcome(request, 300, metadata=meta))
+
+    # when worker finished fvs run of that sample
+    # this `if` will goes inside for loop for each outcome
+    outcome_list = []
+    # service_pb2.GetOutcomeResponse.Status.COMPLETED
+    # print(f'Response => {[outcome for outcome in response.outcome]}')
+    for outcome in response.outcome:
+      if (outcome.status == service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED):
+        outcome_dict = {}
+        outcome_dict['action_id'] = outcome.action_id
+        outcome_dict['reward'] = outcome.reward
+        outcome_dict['action'] = param_proto_to_dict(outcome.action_attrs)
+        outcome_dict['outcome'] = param_proto_to_dict(outcome.outcome_attrs)
+        outcome_dict['attributes'] = param_proto_to_dict(outcome.attributes)
+      else:
+        outcome_dict = None
+      outcome_list.append(outcome_dict)
+    return outcome_list
+  except Exception as e:
+    print(f'ERROR {e}')
+    raise e
+
+
+def poll_network_batch_outcome(sight_id):
+  counter = POLL_LIMIT
+  while True:
+    try:
+      resource_dict = global_outcome_mapping.get()
+      pending_action_ids = [
+          id for id in resource_dict
+          if resource_dict[id] is None
+      ]
+
+      # print("pending action ids : ", pending_action_ids)
+      if len(pending_action_ids):
+        counter = POLL_LIMIT
+        print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
+        outcome_of_action_ids = get_all_outcomes(sight_id, pending_action_ids)
+
+        # print(f'Outcome from get_all_outcome => {outcome_of_action_ids}')
+
+        new_dict = {}
+        for i in range(len(pending_action_ids)):
+          new_dict[pending_action_ids[i]] = outcome_of_action_ids[i]
+        global_outcome_mapping.update(new_dict)
+
+      else:
+        print(f'Not sending request as no pending ids ...=> {pending_action_ids} with counter => {counter}')
+        if counter <= 0:
+          return
+        counter -=1
+      time.sleep(POLL_TIME_INTERVAL)
+    except Exception as e:
+      print(f"Error updating outcome mapping: {e}")
+      raise e
+
 
 
 def MessageToJson(
@@ -66,7 +149,7 @@ def MessageToJson(
       preserving_proto_field_name,
       use_integers_for_enums,
       descriptor_pool,
-      float_precision=float_precision,
+      #float_precision=float_precision,
   )
   return printer.ToJsonString(message, indent, sort_keys, ensure_ascii)
 
@@ -107,7 +190,7 @@ def MessageToDict(
       preserving_proto_field_name,
       use_integers_for_enums,
       descriptor_pool,
-      float_precision=float_precision,
+ #     float_precision=float_precision,
   )
   # pylint: disable=protected-access
   return printer._MessageToJsonObject(message)
