@@ -956,11 +956,9 @@ def propose_actions(sight, action_dict):
         attributes_data.append(attribute)
         request.attributes.extend(attributes_data)
 
-    logging.info('ProposeAction request : %s', request)
     response = service.call(
         lambda s, meta: s.ProposeAction(request, 300, metadata=meta))
     action_id = response.action_id
-    logging.info('ProposeAction response : %s', response)
 
     # log_object call
     sight_obj = sight_pb2.Object()
@@ -1063,7 +1061,6 @@ def get_outcome(sight):
     # request.unique_ids.append(3)
     response = service.call(
         lambda s, meta: s.GetOutcome(request, 300, metadata=meta))
-    # logging.info('Outcome response=%s', response)
 
     if (response.response_str):
         return response.response_str

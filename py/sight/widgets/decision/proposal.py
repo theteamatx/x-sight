@@ -31,27 +31,25 @@ FLAGS = flags.FLAGS
 
 
 async def push_message(sight_id, action_id):
-    try:
-        global_outcome_mapping.set_for_key(action_id, None)
-    except Exception as e:
-        print(f'Exception => {e}')
-        raise e
+  try:
+    global_outcome_mapping.set_for_key(action_id, None)
+  except Exception as e:
+    print(f'Exception => {e}')
+    raise e
 
 
 async def fetch_outcome(sight_id, actions_id):
-    while True:
-        try:
-            outcome = global_outcome_mapping.get_for_key(actions_id)
-            # print('action_id: ', actions_id, ', outcome=', outcome)
-            if outcome is not None:
-                # print('action_id: ', actions_id, ', outcome=', outcome, ' RETURNING')
-                return outcome
-            else:
-                # async_dict = global_outcome_mapping.get()
-                # print(f'GLOBAL_MAPPING_GET_OUTCOME_QUEUE => {async_dict}')
-                time = 5
-                # print(f'Waiting for {actions_id} for {time} seconds...')
-                await asyncio.sleep(time)
-        except Exception as e:
-            print('action_id: ', actions_id, ', exception=', e)
-            raise e
+  while True:
+    try:
+      outcome = global_outcome_mapping.get_for_key(actions_id)
+      if outcome:
+        return outcome
+      else:
+        # async_dict = global_outcome_mapping.get()
+        # print(f'GLOBAL_MAPPING_GET_OUTCOME_QUEUE => {async_dict}')
+        time = 5
+        # print(f'Waiting for {actions_id} for {time} seconds...')
+        await asyncio.sleep(time)
+    except Exception as e:
+      print('action_id: ', actions_id, ', exception=', e)
+      raise e

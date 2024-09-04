@@ -314,7 +314,6 @@ def start_jobs(
       f'--regions={_PROJECT_REGION.value}',
       '--use-private-address',
       # f'--location={_PROJECT_REGION.value}',
-      '--use-private-address',
       f'--image={docker_image}',
       f'--machine-type={_DSUB_MACHINE_TYPE.value}',
       f'--project={_PROJECT_ID.value}',

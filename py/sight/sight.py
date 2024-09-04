@@ -176,7 +176,8 @@ class Sight(object):
     # self._configure(configuration)
 
 
-
+    # Configure the tracking state of the Sight object, which records the current location
+    # in the log of the current task, including its hierarchical nesting.
     self.pause_logging_depth = 0
 
     self.location = contextvars.ContextVar('location')
