@@ -102,22 +102,27 @@ async def fetch_outcome(sight_id, actions_id):
 
 async def propose_actions(sight, action_dict):
 
-    with Attribute('Managed', '0', sight):
-        unique_action_id1 = decision.propose_actions(sight, action_dict)
-    with Attribute('Managed', '1', sight):
-        unique_action_id2 = decision.propose_actions(sight, action_dict)
+    # with Attribute('Managed', '0', sight):
+    #     unique_action_id1 = decision.propose_actions(sight, action_dict)
+    # with Attribute('Managed', '1', sight):
+    #     unique_action_id2 = decision.propose_actions(sight, action_dict)
+    unique_action_id = decision.propose_actions(sight, action_dict)
 
     # push messsage into QUEUE
-    await push_message(sight.id, unique_action_id1)
-    await push_message(sight.id, unique_action_id2)
+    # await push_message(sight.id, unique_action_id1)
+    # await push_message(sight.id, unique_action_id2)
+    await push_message(sight.id, unique_action_id)
 
-    task1 = asyncio.create_task(fetch_outcome(sight.id, unique_action_id1))
-    task2 = asyncio.create_task(fetch_outcome(sight.id, unique_action_id2))
+
+    # task1 = asyncio.create_task(fetch_outcome(sight.id, unique_action_id1))
+    # task2 = asyncio.create_task(fetch_outcome(sight.id, unique_action_id2))
+    return await fetch_outcome(sight.id, unique_action_id)
 
     # wait till we get outcome of all the samples
-    time_series = await asyncio.gather(task1, task2)
+    # time_series = await asyncio.gather(task1, task2)
     # print("time_series :", time_series)
     # calculate diff series
     # appy watermark algorithm
     # return the final series
-    return time_series
+    # return time_series
+    return task

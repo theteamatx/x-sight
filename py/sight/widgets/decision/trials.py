@@ -264,7 +264,7 @@ def start_jobs(
 
   remote_script = (
       # 'gs://dsub_cameltrain/cameltrain/' + binary_path.split('/')[-1]
-      f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/' + binary_path.split('/')[-1]
+      f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/{str(sight.id)}/' + binary_path.split('/')[-1]
   )
   print(f'Uploading {binary_path}...')
   subprocess.run(['gsutil', 'cp', '-c', binary_path, remote_script], check=True)
