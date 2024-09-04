@@ -108,7 +108,7 @@ def get_port_number() -> str:
     if 'PORT' in os.environ:
       return os.environ['PORT']
     # need to use secure channel for cloud run server
-    elif(FLAGS.deployment_mode in ['local', 'vm']):
+    elif(FLAGS.deployment_mode in ['local']):
       return '8080'
     else:
       return FLAGS.port

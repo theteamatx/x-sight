@@ -19,6 +19,7 @@ import sys
 import dm_env
 import json
 import numpy as np
+import pandas as pd
 from typing import Any, Callable, Dict, List, Optional, Text
 import time
 import threading
@@ -646,11 +647,15 @@ def get_decision_outcome_proto(outcome_label: str,
                     double_value=val,
                 )
             else:
+                if isinstance(val, pd.DataFrame):
+                  json_value = json.dumps(val.to_dict())
+                else:
+                  json_value = json.dumps(val)
                 value = sight_pb2.Value(
                     sub_type=sight_pb2.Value.ST_JSON,
                     # converting padas dataframe to json and into json string
                     # json_value=json.dumps(val.to_json()),
-                    json_value=json.dumps(val.to_dict()),
+                    json_value=json_value,
                 )
 
             outcome_params.append(
@@ -923,10 +928,11 @@ def propose_actions(sight, action_dict):
         attributes_data.append(attribute)
         request.attributes.extend(attributes_data)
 
+    logging.info('ProposeAction request : %s', request)
     response = service.call(
         lambda s, meta: s.ProposeAction(request, 300, metadata=meta))
     action_id = response.action_id
-    # print('response : ', response)
+    logging.info('ProposeAction response : %s', response)
 
     # log_object call
     sight_obj = sight_pb2.Object()
@@ -1029,6 +1035,7 @@ def get_outcome(sight):
     # request.unique_ids.append(3)
     response = service.call(
         lambda s, meta: s.GetOutcome(request, 300, metadata=meta))
+    # logging.info('Outcome response=%s', response)
 
     if (response.response_str):
         return response.response_str

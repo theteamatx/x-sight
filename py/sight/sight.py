@@ -172,6 +172,40 @@ class Sight(object):
     self.widget_decision_state = defaultdict(dict)
     self.widget_simulation_state = SimulationWidgetState()
     # self._configure(configuration)
+
+
+
+    self.pause_logging_depth = 0
+
+    self.location = contextvars.ContextVar('location')
+    self.location.set(Location())
+    if 'PARENT_LOG_ID' in os.environ:
+      self.location.get().exit()
+      worker_location = (os.environ['worker_location']).split(':')
+      for loc in worker_location:
+        self.location.get().enter(loc)
+      self.location.get().enter(0)
+    self.index = 1
+
+    self.line_prefix = contextvars.ContextVar('line_prefix')
+    self.line_prefix.set('')
+    self.line_suffix = contextvars.ContextVar('line_suffix')
+    self.line_suffix.set('')
+    self.open_block_start_locations = contextvars.ContextVar('line_suffix')
+    self.open_block_start_locations.set([])
+    self.num_direct_contents = contextvars.ContextVar('num_direct_contents')
+    self.num_direct_contents.set(Location())
+    self.num_transitive_contents = contextvars.ContextVar('num_transitive_contents')
+    self.num_transitive_contents.set(Location())
+    self.active_block_labels = contextvars.ContextVar('active_block_labels')
+    self.active_block_labels.set([])
+    
+    self.attributes = {}
+    self.open = True
+
+    self.id = 0
+    self.set_attribute('log_uid', str(self.id))
+
     if self.params.silent_logger:
       return
 
@@ -284,36 +318,6 @@ class Sight(object):
         self.text_log = open(self.text_log_file_path, 'w')
       else:
         self.text_log = None
-
-    self.pause_logging_depth = 0
-
-    self.location = contextvars.ContextVar('location')
-    self.location.set(Location())
-    if 'PARENT_LOG_ID' in os.environ:
-      self.location.get().exit()
-      worker_location = (os.environ['worker_location']).split(':')
-      for loc in worker_location:
-        self.location.get().enter(loc)
-      self.location.get().enter(0)
-    self.index = 1
-
-    self.line_prefix = contextvars.ContextVar('line_prefix')
-    self.line_prefix.set('')
-    self.line_suffix = contextvars.ContextVar('line_suffix')
-    self.line_suffix.set('')
-    self.open_block_start_locations = contextvars.ContextVar('line_suffix')
-    self.open_block_start_locations.set([])
-    self.num_direct_contents = contextvars.ContextVar('num_direct_contents')
-    self.num_direct_contents.set(Location())
-    self.num_transitive_contents = contextvars.ContextVar('num_transitive_contents')
-    self.num_transitive_contents.set(Location())
-    self.active_block_labels = contextvars.ContextVar('active_block_labels')
-    self.active_block_labels.set([])
-    
-    self.attributes = {}
-    self.open = True
-
-    self.set_attribute('log_uid', str(self.id))
 
     # if build_data.Changelist():
     #   self.change_list_number = int(build_data.Changelist())

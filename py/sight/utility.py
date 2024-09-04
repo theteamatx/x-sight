@@ -16,6 +16,7 @@ import base64
 import math
 import time
 
+from absl import logging
 from google.protobuf import descriptor
 from google.protobuf.internal import type_checkers
 from google.protobuf.json_format import _FLOAT_TYPES
@@ -32,7 +33,7 @@ from sight import service_utils as service
 
 
 
-POLL_LIMIT = 60 # POLL_TIME_INTERVAL th part of second
+POLL_LIMIT = 600 # POLL_TIME_INTERVAL th part of second
 POLL_TIME_INTERVAL = 10 # seconds
 global_outcome_mapping = RWLockDictWrapper()
 
@@ -51,6 +52,7 @@ def get_all_outcomes(sight_id, action_ids):
   try:
     response = service.call(
         lambda s, meta: s.GetOutcome(request, 300, metadata=meta))
+    # logging.info('Outcome response=%s', response)
 
     # when worker finished fvs run of that sample
     # this `if` will goes inside for loop for each outcome
@@ -68,6 +70,7 @@ def get_all_outcomes(sight_id, action_ids):
       else:
         outcome_dict = None
       outcome_list.append(outcome_dict)
+    logging.info('#outcome_list=%s', len(outcome_list))
     return outcome_list
   except Exception as e:
     print(f'ERROR {e}')
