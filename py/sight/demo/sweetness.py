@@ -58,7 +58,7 @@ def driver(sight: Sight) -> None:
 
     reward = float(choice["sweetness"]) * sweet_tooth
 
-    decision.decision_outcome("joy", reward, sight)
+    decision.decision_outcome("joy", sight, reward)
 
 def get_sight_instance():
   params = sight_pb2.Params(

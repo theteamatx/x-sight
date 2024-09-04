@@ -36,8 +36,16 @@ def get_exp_details_query(sight_log_id):
 
 
 st.set_page_config(layout="wide", initial_sidebar_state="expanded")
+
+# Read the query parameters from the URL
+query_params = st.query_params
+log_id = query_params.get('log_id', None)
+
 st.title("Comparison study of all the optimizers")
-super_id = st.text_input("Enter Parent experiment sight ID:")
+if log_id:
+    super_id = st.text_input("Enter Parent experiment sight ID:", value=log_id, disabled=True)
+else:
+    super_id = st.text_input("Enter Parent experiment sight ID:")
 
 if super_id:
     experiment_ids = {}
@@ -46,7 +54,6 @@ if super_id:
     for row in rows:
       experiment_ids.update(row)
 
-    # with st.status("Fetching data of all optimizers...", expanded=True) as status:
     progress_text = "Operation in progress. Please wait."
     my_bar = st.progress(0, text=progress_text)
     all_data = {}
@@ -62,8 +69,6 @@ if super_id:
         all_data[opt] = rows
         my_bar.progress(int(count * progress_increment), text=progress_text)
         count += 1
-
-      # status.update(label="fetched all data", state="complete", expanded=False)
     time.sleep(1)
     my_bar.empty()
 
@@ -72,7 +77,7 @@ if super_id:
 
     # Display the DataFrame
     if st.checkbox('Show raw data'):
-        st.subheader('optimizer wise generated rewards over each iteration')
+        st.subheader('Optimizer wise generated rewards over each iteration')
         st.write(df)
 
     st.subheader('Comparing Optimizer performance')

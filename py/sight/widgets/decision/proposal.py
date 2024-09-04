@@ -50,7 +50,7 @@ async def fetch_outcome(sight_id, actions_id):
                 # async_dict = global_outcome_mapping.get()
                 # print(f'GLOBAL_MAPPING_GET_OUTCOME_QUEUE => {async_dict}')
                 time = 5
-                print(f'Waiting for {actions_id} for {time} seconds...')
+                # print(f'Waiting for {actions_id} for {time} seconds...')
                 await asyncio.sleep(time)
         except Exception as e:
             print('action_id: ', actions_id, ', exception=', e)

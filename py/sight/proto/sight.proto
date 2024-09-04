@@ -267,6 +267,8 @@ message Value {
 
     string json_value = 8;
   }
+
+  string mime_type = 9;
 }
 
 // The starting point of a block. Must be matched to a BlockEnd.

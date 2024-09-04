@@ -53,7 +53,7 @@ def driver(sight: Sight) -> None:
   # data_structures.log_var('S', S, sight)
   # data_structures.log_var('I', I, sight)
   # data_structures.log_var('R', R, sight)
-  action = decision.decision_point('init', sight) 
+  action = decision.decision_point('init', sight)
   print('dt=%s, action=%s' % (dt, action))
   I, R = 1, 0
   S = int(action['population']) - I - R
@@ -63,7 +63,7 @@ def driver(sight: Sight) -> None:
     dotS = -action['beta'] * S * I / int(action['population'])
     dotI = action['beta'] * S * I / int(action['population']) - action['gamma'] * I
     dotR = action['gamma'] * I
-    
+
 
     S += dotS * dt
     I += dotI * dt
@@ -92,7 +92,7 @@ def main(argv: Sequence[str]) -> None:
         decision.run(
             driver_fn=driver,
             description = '''
-I am building an SIR model to analyze the progress of Measles infections in Los Angeles during the summer of 2020. 
+I am building an SIR model to analyze the progress of Measles infections in Los Angeles during the summer of 2020.
 I need to configure this model's parameters based on data from the Los Angeles County Department of Public Health.
 ''',
             state_attrs={

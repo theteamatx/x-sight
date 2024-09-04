@@ -26,12 +26,12 @@ import numpy as np
 from sklearn import metrics
 from sklearn.ensemble import GradientBoostingRegressor
 
-from proto import sight_pb2
 from google3.pipeline.flume.py import runner
 from google3.pipeline.flume.py.io import capacitorio
 from google3.pyglib import gfile
 from google3.pyglib.contrib.gpathlib import gpath_flag
-from proto import example_pb2
+from sight.proto import example_pb2
+from sight.proto import sight_pb2
 
 _IN_LOG_FILE = flags.DEFINE_list(
     'in_log_file',

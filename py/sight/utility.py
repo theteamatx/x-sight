@@ -33,13 +33,13 @@ from sight import service_utils as service
 
 
 
-POLL_LIMIT = 600 # POLL_TIME_INTERVAL th part of second
-POLL_TIME_INTERVAL = 10 # seconds
+POLL_LIMIT = 10 # POLL_TIME_INTERVAL th part of second
+POLL_TIME_INTERVAL = 6 # seconds
 global_outcome_mapping = RWLockDictWrapper()
 
 def get_all_outcomes(sight_id, action_ids):
 
-  print(f'get all outcome for actions ids {action_ids}')
+  # print(f'get all outcome for actions ids {action_ids}')
   request = service_pb2.GetOutcomeRequest()
   request.client_id = str(sight_id)
   request.unique_ids.extend(action_ids)
@@ -87,7 +87,7 @@ def poll_network_batch_outcome(sight_id):
           if resource_dict[id] is None
       ]
 
-      print("pending action ids : ", pending_action_ids)
+      # print("pending action ids : ", pending_action_ids)
       if len(pending_action_ids):
         counter = POLL_LIMIT
         print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')

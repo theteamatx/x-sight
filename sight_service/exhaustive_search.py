@@ -136,7 +136,7 @@ class ExhaustiveSearch(OptimizerInstance):
   def finalize_episode(
       self, request: service_pb2.FinalizeEpisodeRequest
   ) -> service_pb2.FinalizeEpisodeResponse:
-    method_name = "finalize_episode" 
+    method_name = "finalize_episode"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     # logging.info('Running for exhaustive search....')
     # logging.info("req in finalize episode of exhaustive_search.py : %s", request)
@@ -230,3 +230,19 @@ class ExhaustiveSearch(OptimizerInstance):
     print(" : ", best_action)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return service_pb2.CurrentStatusResponse(response_str=str(best_action))
+
+  @overrides
+  def WorkerAlive(
+      self, request: service_pb2.WorkerAliveRequest
+  ) -> service_pb2.WorkerAliveResponse:
+    method_name = "WorkerAlive"
+    logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    if(self.sweep_issue_done):
+        worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+    # elif(not self.pending_samples):
+    #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
+    else:
+      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+    logging.info("worker_alive_status is %s", worker_alive_status)
+    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+    return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)

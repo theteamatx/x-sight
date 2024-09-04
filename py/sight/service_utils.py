@@ -445,7 +445,7 @@ def obtain_secure_channel(options=None):
     # else:
     url = _service_addr()
     target = '{}:{}'.format(url, get_port_number())
-    print("service_url here : ", target)
+    # print("service_url here : ", target)
 
     channel = grpc.secure_channel(
         target,
@@ -465,7 +465,7 @@ def obtain_insecure_channel(options):
     else:
       host = 'localhost'
     target = '{}:{}'.format(host, get_port_number())
-    print("service_url here : ", target)
+    # print("service_url here : ", targpending action ids :et)
 
     channel = grpc.insecure_channel(
         target,
@@ -499,11 +499,11 @@ def generate_metadata():
         _find_or_deploy_server()
 
       secure_channel = obtain_secure_channel()
-      print("secure_channel : ", secure_channel)
+      # print("secure_channel : ", secure_channel)
       sight_service = service_pb2_grpc.SightServiceStub(secure_channel)
       metadata = []
       id_token = generate_id_token()
-      print('id_token : ', id_token)
+      # print('id_token : ', id_token)
       metadata.append(('authorization', 'Bearer ' + id_token))
       return sight_service, metadata
 

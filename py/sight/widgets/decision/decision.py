@@ -370,6 +370,9 @@ def run(
 
     decision_configuration = sight_pb2.DecisionConfigurationStart()
     decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
+
+    if(_NUM_TRIALS.value):
+      decision_configuration.num_trials = _NUM_TRIALS.value
     # if FLAGS.deployment_mode == 'worker_mode':
     #     decision_configuration.num_trials = int(os.environ['num_samples'])
     # else:
@@ -467,14 +470,13 @@ def run(
         details = sight.widget_decision_state['decision_episode_fn']
         possible_actions = list(details.action_max.values())[0] - list(
             details.action_min.values())[0] + 2
-        print(possible_actions)
-        if (_OPTIMIZER_TYPE.value == 'exhaustive_search'
-                and possible_actions < _NUM_TRIALS.value):
-            raise ValueError(
-                f"max possible value for num_trials is : {possible_actions}")
 
         print('_DECISON_MODE.value : ', _DECISON_MODE.value)
         if FLAGS.deployment_mode in ['distributed', 'vm']:
+            if (_OPTIMIZER_TYPE.value == 'exhaustive_search'
+                and possible_actions < _NUM_TRIALS.value):
+              raise ValueError(
+                f"max possible value for num_trials is : {possible_actions}")
             # logging.info('FLAGS.deployment_mode == distributed')
             if (not _DOCKER_IMAGE.value):
                 raise ValueError(
@@ -560,39 +562,65 @@ def run(
                 #             ]
                 # unique_action_ids = propose_actions(sight, actions_list)
 
+                  if FLAGS.deployment_mode == 'local':
+                    client_id = str(sight.id)
+                    worker_location = '0'
+                  elif (FLAGS.deployment_mode == 'worker_mode'
+                        # or FLAGS.deployment_mode == 'docker_mode'
+                        ):
+                    client_id = os.environ['PARENT_LOG_ID']
+                    worker_location = os.environ['worker_location']
+
                 # for _ in range(num_samples_to_run):
-                while(True):
-                    # #? new rpc just to check move forward or not?
-                    req = service_pb2.WorkerAliveRequest(
-                        client_id=str(sight.id),
-                    )
-                    response = service.call(
-                        lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+                # if(FLAGS.optimizer_type == "worklist_scheduler"):
+                # if (FLAGS.deployment_mode == 'worker_mode'):
+                  while(True):
+                      # #? new rpc just to check move forward or not?
+                      req = service_pb2.WorkerAliveRequest(
+                          client_id=client_id,
+                          worker_id=f'client_{client_id}_worker_{worker_location}'
+                      )
+                      response = service.call(
+                          lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
 
-                    logging.info("response from workAlive rpc is : %s", response.status_type)
-                    if(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
-                        break
-                    elif(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-                        logging.info('sleeping for 5 seconds......')
-                        time.sleep(5)
-                    elif(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-                        sight.enter_block('Decision Sample', sight_pb2.Object())
-                        if 'constant_action' in sight.widget_decision_state:
-                            del sight.widget_decision_state['constant_action']
-                        sight.widget_decision_state['discount'] = 0
-                        sight.widget_decision_state['last_reward'] = None
+                      logging.info("response from workAlive rpc is : %s", response.status_type)
+                      if(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
+                          break
+                      elif(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+                          logging.info('sleeping for 5 seconds......')
+                          time.sleep(5)
+                      elif(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
+                          sight.enter_block('Decision Sample', sight_pb2.Object())
+                          if 'constant_action' in sight.widget_decision_state:
+                              del sight.widget_decision_state['constant_action']
+                          sight.widget_decision_state['discount'] = 0
+                          sight.widget_decision_state['last_reward'] = None
 
-                        if env:
-                            driver_fn(env, sight)
-                        else:
-                            driver_fn(sight)
+                          if env:
+                              driver_fn(env, sight)
+                          else:
+                              driver_fn(sight)
 
-                        finalize_episode(sight)
-                        sight.exit_block('Decision Sample', sight_pb2.Object())
-                    else:
-                        raise ValueError("invalid response from server")
+                          finalize_episode(sight)
+                          sight.exit_block('Decision Sample', sight_pb2.Object())
+                      else:
+                          raise ValueError("invalid response from server")
+                  logging.info('exiting from the loop.....')
+                # else:
+                #   for _ in range(num_samples_to_run):
+                #     sight.enter_block('Decision Sample', sight_pb2.Object())
+                #     if 'constant_action' in sight.widget_decision_state:
+                #         del sight.widget_decision_state['constant_action']
+                #     sight.widget_decision_state['discount'] = 0
+                #     sight.widget_decision_state['last_reward'] = None
 
-                logging.info('exiting from the loop.....')
+                #     if env:
+                #         driver_fn(env, sight)
+                #     else:
+                #         driver_fn(sight)
+
+                #     finalize_episode(sight)
+                #     sight.exit_block('Decision Sample', sight_pb2.Object())
 
             # req = service_pb2.TestRequest(client_id=str(sight.id))
             # response = service.call(

@@ -43,6 +43,7 @@ from sight.service_utils import finalize_server
 from sight.utility import MessageToDict, poll_network_batch_outcome
 from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
+from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
 
 load_dotenv()
 _PARENT_ID = flags.DEFINE_string(
@@ -170,6 +171,7 @@ class Sight(object):
 
     # Initialize each widget's state to make sure its state field is created.
     self.widget_decision_state = defaultdict(dict)
+    self.widget_simulation_state = SimulationWidgetState()
     self.widget_simulation_state = SimulationWidgetState()
     # self._configure(configuration)
 
@@ -456,7 +458,8 @@ class Sight(object):
     if not self.params.local and not self.params.in_memory:
       logging.info(
           (
-              'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
+              #'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
+              'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
               'log_id=%s.%s&log_owner=%s&project_id=%s',
           ),
           self.SIGHT_API_KEY,
