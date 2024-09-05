@@ -26,10 +26,11 @@ warnings.warn = warn
 import asyncio
 import os
 import threading
-from typing import Sequence
+from typing import Sequence, Any
 
 from absl import app
 from absl import flags
+import pandas as pd
 from sight.attribute import Attribute
 from sight.block import Block
 from sight.proto import sight_pb2
@@ -162,6 +163,34 @@ def get_sight_instance():
     sight_obj = Sight(params)
     return sight_obj
 
+async def propose_actions(sight: Sight, base_project_config: dict[str, Any],
+                          treatments: dict[str, Any]) -> pd.Series:
+    treatment_project_config = treatments
+    tasks = []
+    with Attribute("Managed", "0", sight):
+      # base_sim = decision.propose_actions(sight,
+      #                                       action_dict=base_project_config)
+      # await proposal.push_message(sight.id, base_sim)
+      # unmanaged_task = sight.create_task(
+      #     proposal.fetch_outcome(sight.id, base_sim))
+      # tasks.append(unmanaged_task)
+      unmanaged_task = sight.create_task(
+          proposal.propose_actions(sight, action_dict=base_project_config))
+      tasks.append(unmanaged_task)
+    with Attribute("Managed", "1", sight):
+      # treatment_sim = decision.propose_actions(
+      #     sight, action_dict=treatment_project_config)
+      # await proposal.push_message(sight.id, treatment_sim)
+      # managed_task = sight.create_task(
+      #     proposal.fetch_outcome(sight.id, treatment_sim))
+      # tasks.append(managed_task)
+      managed_task = sight.create_task(
+          proposal.propose_actions(sight, action_dict=treatment_project_config))
+      tasks.append(managed_task)
+
+    [unmanaged_response, managed_response] = await asyncio.gather(*tasks)
+    return unmanaged_response, managed_response
+
 
 async def main(sight: Sight, argv: Sequence[str]) -> None:
     if len(argv) > 1:
@@ -173,16 +202,20 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
     with Block("Propose actions", sight):
         with Attribute("project_id", "APR107", sight):
             tasks = []
+            print("len(sample_list) : ", len(sample_list))
             for id in range(len(sample_list)):
                 with Attribute("sample_id", id, sight):
                     tasks.append(
-                        asyncio.create_task(
-                            proposal.propose_actions(sight, sample_list[id])))
+                        sight.create_task(
+                            # both base and treatment are considerred to be same dict here
+                             propose_actions(sight, sample_list[id], sample_list[id])
+                        )
+                    )
 
             print("waiting for all get outcome to finish.....")
             diff_time_series = await asyncio.gather(*tasks)
             print("all get outcome are finished.....")
-            # print(f'Combine Series : {diff_time_series}')
+            print(f'Combine Series : {diff_time_series}')
 
 def main_wrapper(argv):
     start_time = time.perf_counter()
