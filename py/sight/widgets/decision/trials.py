@@ -20,6 +20,7 @@ import os
 import random
 import subprocess
 import time
+import pytz
 from typing import Any, Dict, Optional
 
 from absl import flags
@@ -132,6 +133,13 @@ def launch(
 
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
 
+def append_ist_time_to_logging_path_12hr():
+    # Define IST timezone
+    ist = pytz.timezone('Asia/Kolkata')
+    # Get the current date and time in IST
+    current_time = datetime.now(ist)
+    formatted_time = current_time.strftime('%Y-%m-%d-%I-%M-%S')
+    return formatted_time
 
 def start_job_in_docker(
     num_trials: int,
@@ -288,7 +296,7 @@ def start_jobs(
   if FLAGS.env_name:
     command += f' --env_name={FLAGS.env_name}'
 
-  logging_path = f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/meet-logs/'
+  logging_path = f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/meet-logs/{sight.params.label}/{append_ist_time_to_logging_path_12hr()}/'
   if(FLAGS.parent_id):
     logging_path += f'{FLAGS.parent_id}/'
   logging_path += str(sight.id)
