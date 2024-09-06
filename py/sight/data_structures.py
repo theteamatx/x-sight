@@ -192,8 +192,18 @@ def log(
   elif isinstance(obj_to_log, pd.DataFrame):
     pandas_sight.log('pandas.DataFrame', obj_to_log, sight, frame)
   elif isinstance(obj_to_log, dict) or hasattr(obj_to_log, '__dict__'):
+    def sanitize_dict(d):
+      sanitized = {}
+      for k, v in d.items():
+        if v == float('inf'):
+          sanitized[k] = 1e308  # Replace positive infinity
+        elif v == float('-inf'):
+          sanitized[k] = -1e308  # Replace negative infinity
+        else:
+          sanitized[k] = v
+      return sanitized
     if isinstance(obj_to_log, dict):
-      obj_dict = obj_to_log
+      obj_dict = sanitize_dict(obj_to_log)
     else:
       obj_dict = obj_to_log.__dict__
     sight_obj.sub_type = sight_pb2.Object.SubType.ST_BLOCK_START
