@@ -20,6 +20,7 @@ import dm_env
 import json
 import numpy as np
 import pandas as pd
+import pandas as pd
 from typing import Any, Callable, Dict, List, Optional, Text
 import time
 import threading
@@ -960,7 +961,6 @@ def propose_actions(sight, action_dict):
     response = service.call(
         lambda s, meta: s.ProposeAction(request, 300, metadata=meta))
     action_id = response.action_id
-    # print('response : ', response)
 
     # log_object call
     sight_obj = sight_pb2.Object()

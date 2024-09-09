@@ -30,58 +30,12 @@ global_outcome_mapping = RWLockDictWrapper()
 FLAGS = flags.FLAGS
 
 
-"""helper functions to be used in portfolio flow ."""
-
-# def launch_worklist_scheduler(sight, action_attrs, outcome_attrs):
-#     optimizer_object = SingleActionOptimizerClient(
-#         sight_pb2.DecisionConfigurationStart.OptimizerType.
-#         OT_WORKLIST_SCHEDULER, sight)
-#     decision_configuration = sight_pb2.DecisionConfigurationStart()
-#     decision_configuration.optimizer_type = optimizer_object.optimizer_type()
-
-#     decision_configuration.num_trials = FLAGS.num_trials
-#     decision_configuration.choice_config[sight.params.label].CopyFrom(
-#         optimizer_object.create_config())
-#     # decision._attr_dict_to_proto(state_attrs,
-#     #                              decision_configuration.state_attrs)
-#     decision.attr_dict_to_proto(action_attrs,
-#                                 decision_configuration.action_attrs)
-#     decision.attr_dict_to_proto(outcome_attrs,
-#                                 decision_configuration.outcome_attrs)
-#     trials.launch(
-#         optimizer_object,
-#         decision_configuration,
-#         FLAGS.num_train_workers,
-#         sight,
-#     )
-
-# def spawn_workers(
-#       sight,
-#       binary_path,
-#       num_train_workers = 10,
-#       docker_image = 'gcr.io/cameltrain/sight-portfolio-worker',
-#       optimizer_type = 'worklist_scheduler',
-#       decision_mode = 'train',
-#       deployment_mode = 'worker_mode',
-#       worker_mode = 'dsub_cloud_worker',
-#         ):
-#     trials.start_jobs(
-#             num_train_workers=num_train_workers,
-#             binary_path=binary_path,
-#             optimizer_type=optimizer_type,
-#             docker_image=docker_image,
-#             decision_mode=decision_mode,
-#             deployment_mode=deployment_mode,
-#             worker_mode=worker_mode,
-#             sight=sight,
-#         )
-
 async def push_message(sight_id, action_id):
-    try:
-        global_outcome_mapping.set_for_key(action_id, None)
-    except Exception as e:
-        print(f'Exception => {e}')
-        raise e
+  try:
+    global_outcome_mapping.set_for_key(action_id, None)
+  except Exception as e:
+    print(f'Exception => {e}')
+    raise e
 
 
 async def fetch_outcome(sight_id, actions_id):

@@ -14,6 +14,7 @@
 
 """Simulation state in the Sight log."""
 
+from enum import Enum
 import inspect
 from typing import Any, Dict, Text
 from absl import logging
@@ -27,7 +28,12 @@ from sight.widgets.decision import decision
 class SimulationState(object):
   """Encapsulates log region that documents a simulation's state."""
 
-  def __init__(self, state: Dict[Text, Any], sight: Any) -> None:
+  class Type(Enum):
+    INITIAL = 1
+    BOUNDARY = 2
+    DYNAMIC = 3
+
+  def __init__(self, state: Dict[Text, Any], sight: Any, type: Type = Type.DYNAMIC) -> None:
     """Creates and enters a block of a simulation's state.
 
     Args:
@@ -49,10 +55,17 @@ class SimulationState(object):
     # Register this simulation state object with Sight.
     sight.widget_simulation_state.simulation_state = self
 
+    self.type = type
+    proto_type = sight_pb2.BlockStart.ST_SIMULATION_STATE
+    if type == self.Type.INITIAL:
+      proto_type = sight_pb2.BlockStart.ST_SIMULATION_INITIAL_STATE
+    elif type == self.Type.BOUNDARY:
+      proto_type = sight_pb2.BlockStart.ST_SIMULATION_BOUNDARY_STATE
+    
     if sight.widget_simulation_state.reference_trace:
       sight.widget_simulation_state.reference_trace.advance_to_within_block([
           sight_pb2.Object.ST_BLOCK_START,
-          sight_pb2.BlockStart.ST_SIMULATION_STATE,
+          proto_type,
       ])
 
     # pytype: disable=attribute-error
@@ -60,7 +73,7 @@ class SimulationState(object):
         'SimulationState',
         sight_pb2.Object(
             block_start=sight_pb2.BlockStart(
-                sub_type=sight_pb2.BlockStart.ST_SIMULATION_STATE
+                sub_type=proto_type
             )
         ),
         inspect.currentframe().f_back.f_back,
@@ -94,13 +107,20 @@ class SimulationState(object):
     if self.sight is None:
       logging.info('SimulationState>>>')
       return
+    
+    self.type = type
+    proto_type = sight_pb2.BlockEnd.ST_SIMULATION_STATE
+    if type == self.Type.INITIAL:
+      proto_type = sight_pb2.BlockEnd.ST_SIMULATION_INITIAL_STATE
+    elif type == self.Type.BOUNDARY:
+      proto_type = sight_pb2.BlockEnd.ST_SIMULATION_BOUNDARY_STATE
 
     # pytype: disable=attribute-error
     self.sight.exit_block(
         'SimulationState',
         sight_pb2.Object(
             block_end=sight_pb2.BlockEnd(
-                sub_type=sight_pb2.BlockEnd.ST_SIMULATION_STATE
+                sub_type=proto_type
             )
         ),
         inspect.currentframe().f_back,

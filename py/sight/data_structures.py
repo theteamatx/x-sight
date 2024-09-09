@@ -208,7 +208,7 @@ def log(
         else:
           sanitized[k] = v
       return sanitized
-      
+
     if isinstance(obj_to_log, dict):
       obj_dict = sanitize_dict(obj_to_log)
     else:
