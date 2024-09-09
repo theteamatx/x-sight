@@ -17,6 +17,7 @@
 import inspect
 from typing import Any, List, Optional, Sequence
 
+import math
 import numpy as np
 import pandas as pd
 from sight.location import Location
@@ -195,13 +196,19 @@ def log(
     def sanitize_dict(d):
       sanitized = {}
       for k, v in d.items():
-        if v == float('inf'):
-          sanitized[k] = 1e308  # Replace positive infinity
-        elif v == float('-inf'):
-          sanitized[k] = -1e308  # Replace negative infinity
+        if isinstance(v, float):  # Replace NaN with None
+          if v == float('inf'):
+            sanitized[k] = 1e308  # Replace positive infinity
+          elif v == float('-inf'):
+            sanitized[k] = -1e308  # Replace negative infinity
+          elif math.isnan(v):
+            sanitized[k] = None
+          else:
+            sanitized[k] = v
         else:
           sanitized[k] = v
       return sanitized
+      
     if isinstance(obj_to_log, dict):
       obj_dict = sanitize_dict(obj_to_log)
     else:

@@ -2,3 +2,5 @@ __pycache__
 *.pyc
 .env
 .vscode/
+*/.cache_local_data/ *
+*/.cache_redis_data/ *
