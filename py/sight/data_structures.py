@@ -43,6 +43,28 @@ class File:
     self.path = path
     self.mime_type = mime_type
 
+def sanitize_dict(d) -> dict:
+  """ preprocess data which can't be handle by the AVRO file format.
+  Args:
+    Dictionary to be stored in AVRO
+  Returns:
+    Sanitized dictionary which can be stored with AVRO
+  """
+  sanitized = {}
+  for k, v in d.items():
+    if isinstance(v, float):  # Replace NaN with None
+      if v == float('inf'):
+        sanitized[k] = 1e308  # Replace positive infinity
+      elif v == float('-inf'):
+        sanitized[k] = -1e308  # Replace negative infinity
+      elif math.isnan(v):
+        sanitized[k] = None
+      else:
+        sanitized[k] = v
+    else:
+      sanitized[k] = v
+  return sanitized
+
 def log_var(
     name: str, obj_to_log: Any, sight: Any, frame: Optional[Any] = None
 ) -> Optional[Location]:
@@ -193,24 +215,12 @@ def log(
   elif isinstance(obj_to_log, pd.DataFrame):
     pandas_sight.log('pandas.DataFrame', obj_to_log, sight, frame)
   elif isinstance(obj_to_log, dict) or hasattr(obj_to_log, '__dict__'):
-    def sanitize_dict(d):
-      sanitized = {}
-      for k, v in d.items():
-        if isinstance(v, float):  # Replace NaN with None
-          if v == float('inf'):
-            sanitized[k] = 1e308  # Replace positive infinity
-          elif v == float('-inf'):
-            sanitized[k] = -1e308  # Replace negative infinity
-          elif math.isnan(v):
-            sanitized[k] = None
-          else:
-            sanitized[k] = v
-        else:
-          sanitized[k] = v
-      return sanitized
-
     if isinstance(obj_to_log, dict):
-      obj_dict = sanitize_dict(obj_to_log)
+      if(sight.params.file_format == '.avro'):
+        # need to handle inf/NaN values in dictionary for avro
+        obj_dict = sanitize_dict(obj_to_log)
+      else:
+        obj_dict = obj_to_log
     else:
       obj_dict = obj_to_log.__dict__
     sight_obj.sub_type = sight_pb2.Object.SubType.ST_BLOCK_START

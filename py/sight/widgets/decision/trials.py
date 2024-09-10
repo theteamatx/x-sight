@@ -296,7 +296,7 @@ def start_jobs(
   if FLAGS.env_name:
     command += f' --env_name={FLAGS.env_name}'
 
-  logging_path = f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/meet-logs/{sight.params.label}/{append_ist_time_to_logging_path_12hr()}/'
+  logging_path = f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{sight.params.label}/{append_ist_time_to_logging_path_12hr()}/'
   if(FLAGS.parent_id):
     logging_path += f'{FLAGS.parent_id}/'
   logging_path += str(sight.id)
