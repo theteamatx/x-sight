@@ -604,7 +604,7 @@ def run(
                           finalize_episode(sight)
                           sight.exit_block('Decision Sample', sight_pb2.Object())
                       else:
-                          raise ValueError("invalid response from server")
+                          raise ValueError("invalid response from server: %s" % (response, ))
                   logging.info('exiting from the loop.....')
                 # else:
                 #   for _ in range(num_samples_to_run):
@@ -820,8 +820,13 @@ def decision_point(
                 sub_type=sight_pb2.Value.ST_DOUBLE,
                 double_value=chosen_action[attr],
             )
+        elif isinstance(chosen_action[attr], int):
+            val = sight_pb2.Value(
+                sub_type=sight_pb2.Value.ST_INT64,
+                int64_value=chosen_action[attr],
+            )
         else:
-            raise ValueError("unsupported type!!")
+            raise ValueError(f"Unsupported type! {attr}, {chosen_action[attr]}")
 
         choice_params.append(
             sight_pb2.DecisionParam(

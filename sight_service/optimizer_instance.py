@@ -39,6 +39,11 @@ def param_dict_to_proto(
                   sub_type=sight_pb2.Value.ST_DOUBLE,
                   double_value=v,
               )
+    elif isinstance(v, int):
+      val = sight_pb2.Value(
+                  sub_type=sight_pb2.Value.ST_INT64,
+                  int64_value=v,
+              )
     elif (not utils.is_scalar(v)):
       print('here v is : ', v, type(v))
       val = sight_pb2.Value(
@@ -46,7 +51,7 @@ def param_dict_to_proto(
                   json_value=v,
               )
     else:
-      raise ValueError('action attribute type must be either string or float')
+      raise ValueError(f'action attribute type of key "{k}", value "{v}" must be either string or float')
 
     param_proto.append(
         sight_pb2.DecisionParam(
@@ -91,6 +96,7 @@ class OptimizerInstance:
   """
 
   def __init__(self):
+    self.num_trials = 0
     self.actions = {}
     self.state = {}
     self.outcomes = {}
@@ -103,6 +109,8 @@ class OptimizerInstance:
     method_name = "launch"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     # logging.info('request.decision_config_params=%s', request.decision_config_params)
+
+    self.num_trials = request.decision_config_params.num_trials
 
     # sorting dict key wise to maintain consistency at for all calls
     action_keys = list(request.decision_config_params.action_attrs.keys())

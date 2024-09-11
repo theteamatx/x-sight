@@ -133,7 +133,6 @@ def log(
     sight_obj.value.int64_value = obj_to_log
     sight.log_object(sight_obj, True)
   elif isinstance(obj_to_log, float):
-    print('float obj_to_log=', obj_to_log)
     sight_obj.sub_type = sight_pb2.Object.SubType.ST_VALUE
     sight_obj.value.sub_type = sight_pb2.Value.ST_DOUBLE
     sight_obj.value.double_value = obj_to_log

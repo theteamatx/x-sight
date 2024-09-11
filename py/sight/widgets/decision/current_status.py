@@ -34,15 +34,15 @@ from sight.service_utils import generate_metadata
 _LOG_ID = flags.DEFINE_string(
     "log_id", None, "ID of the Sight log that tracks this execution."
 )
-_DEPLOYMENT_MODE = flags.DEFINE_enum(
-   'deployment_mode',
-   None,
-   ['distributed', 'dsub_local', 'docker_local', 'local', 'worker_mode'],
-   (
-       'The procedure to use when training a model to drive applications that '
-       'use the Decision API.'
-   ),
-)
+# _DEPLOYMENT_MODE = flags.DEFINE_enum(
+#     'deployment_mode',
+#     None,
+#     ['distributed', 'dsub_local', 'docker_local', 'local', 'worker_mode'],
+#     (
+#         'The procedure to use when training a model to drive applications that '
+#         'use the Decision API.'
+#     ),
+# )
 
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
@@ -54,9 +54,6 @@ def main(argv: Sequence[str]) -> None:
       lambda s, meta: s.CurrentStatus(req, 300, metadata=meta)
   )
 
-  # print('response :', response.response_str)
-
-
   if response.status == service_pb2.CurrentStatusResponse.Status.DEFAULT :
     print('Experiment is in Default state')
   elif response.status == service_pb2.CurrentStatusResponse.Status.IN_PROGRESS :
@@ -67,6 +64,7 @@ def main(argv: Sequence[str]) -> None:
     print('Experiment is in Failure state')
   else:
     print('response.status = ', response.status)
+  print('response :', response.response_str)
 
 
 if __name__ == "__main__":
