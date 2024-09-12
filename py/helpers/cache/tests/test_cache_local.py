@@ -1,6 +1,6 @@
 import unittest
 
-from fvs.tests.colorful_tests import ColorfulTestRunner
+from tests.colorful_tests import ColorfulTestRunner
 from helpers.cache.cache_factory import LocalCache
 from helpers.cache.cache_factory import RedisCache
 from helpers.cache.cache_helper import CacheKeyMaker
@@ -33,7 +33,7 @@ class CacheLocalTest(unittest.TestCase):
     )
 
     # Set data in the cache
-    cache.set(
+    cache.json_set(
         key,
         {"Fire": [2023, 2034, 3004]},
     )

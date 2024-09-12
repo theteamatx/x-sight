@@ -1,19 +1,19 @@
 import unittest
 
-from fvs.tests.colorful_tests import ColorfulTestRunner
+from tests.colorful_tests import ColorfulTestRunner
 from helpers.cache.cache_factory import GCSCache
 from helpers.cache.cache_factory import RedisCache
 
 
-class CacheLocalTest(unittest.TestCase):
+class CacheGCSTest(unittest.TestCase):
 
   @staticmethod
-  def test_local_cache():
+  def test_gcs_cache():
     # Initialize the cache
     cache = GCSCache(
         config={
-            "gcs_base_dir": ".cache_gcs_data",
-            "gcs_bucket": "kokua-data"
+            "gcs_base_dir": "test_sight_cache",
+            "gcs_bucket": "cameltrain-sight"
         },
         with_redis_client=RedisCache(config={
             "redis_host": "localhost",

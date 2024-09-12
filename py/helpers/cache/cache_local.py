@@ -1,5 +1,6 @@
 import json
 import os
+import logging
 from pathlib import Path
 
 from redis import StrictRedis
@@ -27,7 +28,7 @@ class LocalCache(CacheInterface):
         if value:
           return value
       except Exception as e:
-        print("GOT THE ISSUE IN REDIS", e)
+        logging.warning("GOT THE ISSUE IN REDIS", e)
         return None
     path = self._local_cache_path(key.replace(":", "/"))
     if path.exists():
@@ -43,7 +44,7 @@ class LocalCache(CacheInterface):
       try:
         self.redis_client.json_set(key=key, value=value)
       except Exception as e:
-        print("GOT THE ISSUE IN REDIS", e)
+        logging.warning("GOT THE ISSUE IN REDIS", e)
     path = self._local_cache_path(key.replace(":", "/"))
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as file:

@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
 import asyncio
 from sight.attribute import Attribute
 from sight.block import Block
@@ -25,17 +24,26 @@ from sight.widgets.decision.single_action_optimizer_client import (
     SingleActionOptimizerClient)
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
 
+from helpers.cache.cache_helper import CacheKeyMaker, CacheConfig
+from helpers.cache.cache_factory import CacheFactory
+from helpers.cache.cache_interface import CacheInterface
+
+_CACHE_MODE = flags.DEFINE_enum(
+    'cache_mode', 'none',
+    ['gcs', 'local', 'redis', 'none', 'gcs_with_redis', 'local_with_redis'],
+    'Which Sight cache to use ? (default is none)')
+
 global_outcome_mapping = RWLockDictWrapper()
 
 FLAGS = flags.FLAGS
 
 
 async def push_message(sight_id, action_id):
-  try:
-    global_outcome_mapping.set_for_key(action_id, None)
-  except Exception as e:
-    print(f'Exception => {e}')
-    raise e
+    try:
+        global_outcome_mapping.set_for_key(action_id, None)
+    except Exception as e:
+        print(f'Exception => {e}')
+        raise e
 
 
 async def fetch_outcome(sight_id, actions_id):
@@ -54,29 +62,26 @@ async def fetch_outcome(sight_id, actions_id):
             raise e
 
 
-async def propose_actions(sight, action_dict):
+async def propose_actions(sight, action_dict, custom_part="sight_cache"):
 
-    # with Attribute('Managed', '0', sight):
-    #     unique_action_id1 = decision.propose_actions(sight, action_dict)
-    # with Attribute('Managed', '1', sight):
-    #     unique_action_id2 = decision.propose_actions(sight, action_dict)
+    key_maker = CacheKeyMaker()
+    cache_key = key_maker.make_custom_key(custom_part, action_dict)
+
+    cache_client = CacheFactory.get_cache(
+        _CACHE_MODE.value,
+        with_redis=CacheConfig.get_redis_instance(_CACHE_MODE.value))
+
+    outcome = cache_client.json_get(key=cache_key)
+
+    if outcome is not None:
+        print('Getting response from cache !!')
+        return outcome
+
     unique_action_id = decision.propose_actions(sight, action_dict)
-
-    # push messsage into QUEUE
-    # await push_message(sight.id, unique_action_id1)
-    # await push_message(sight.id, unique_action_id2)
     await push_message(sight.id, unique_action_id)
-
-
-    # task1 = asyncio.create_task(fetch_outcome(sight.id, unique_action_id1))
-    # task2 = asyncio.create_task(fetch_outcome(sight.id, unique_action_id2))
-    return await fetch_outcome(sight.id, unique_action_id)
-
-    # wait till we get outcome of all the samples
-    # time_series = await asyncio.gather(task1, task2)
-    # print("time_series :", time_series)
-    # calculate diff series
-    # appy watermark algorithm
-    # return the final series
-    # return time_series
-    return task
+    response = await fetch_outcome(sight.id, unique_action_id)
+    outcome = response.get('outcome', None)
+    if response is None or outcome is None:
+        raise Exception('fetch_outcome response or respose["outcome"] is none')
+    cache_client.json_set(key=cache_key, value=outcome)
+    return outcome
