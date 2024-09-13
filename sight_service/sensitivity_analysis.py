@@ -165,6 +165,7 @@ class SensitivityAnalysis(OptimizerInstance):
     keys = sorted(self.actions.keys())
     logging.info('self.complete_samples=%s', self.complete_samples)
     # for s in sorted(self.complete_samples.items(), key=lambda x: x[1]['outcome'], reverse=True):
+    self._lock.acquire()
     for s in self.complete_samples.items():
       response += str(s[0])+', '
       response += ', '.join([str(s[1]['action'][key]) for key in keys])
@@ -177,6 +178,7 @@ class SensitivityAnalysis(OptimizerInstance):
       status = service_pb2.CurrentStatusResponse.Status.IN_PROGRESS
     else:
       status = service_pb2.CurrentStatusResponse.Status.SUCCESS
+    self._lock.release()
 
     return service_pb2.CurrentStatusResponse(
       status = status,
