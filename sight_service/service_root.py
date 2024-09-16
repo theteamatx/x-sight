@@ -23,7 +23,8 @@ import warnings
 warnings.warn = warn
 
 from concurrent import futures
-from helpers.logs.logs_handler import logger as logging
+# from helpers.logs.logs_handler import logger as logging
+import logging
 from absl import app
 from absl import flags
 

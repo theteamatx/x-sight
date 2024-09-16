@@ -13,7 +13,8 @@
 # limitations under the License.
 
 """Client for optimizers that are called once per episode to communicate with server."""
-from helpers.logs.logs_handler import logger as loggingfrom typing import Optional, Sequence, Tuple
+from helpers.logs.logs_handler import logger as logging
+from typing import Optional, Sequence, Tuple
 from sight_service.proto import service_pb2
 from sight import service_utils as service
 from sight.proto import sight_pb2

@@ -476,6 +476,7 @@ def obtain_insecure_channel(options):
     )
     return channel
 
+
 def generate_metadata():
     """Generate metadata to call service with authentication."""
 

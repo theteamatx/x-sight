@@ -7,6 +7,7 @@ from google.cloud import storage
 from .cache_interface import CacheInterface
 from .cache_redis import RedisCache
 
+
 class GCSCache(CacheInterface):
 
     def __init__(self, config={}, with_redis_client: RedisCache | None = None):

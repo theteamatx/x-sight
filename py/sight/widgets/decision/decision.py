@@ -42,7 +42,7 @@ from sight.widgets.decision import trials
 from sight.widgets.decision import utils
 from sight.utility import poll_network_batch_outcome
 
-logging.basicConfig(level=logging.DEBUG)
+# logging.basicConfig(level=logging.DEBUG)
 
 _DECISON_MODE = flags.DEFINE_enum(
     'decision_mode',
