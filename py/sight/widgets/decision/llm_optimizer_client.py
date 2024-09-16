@@ -16,8 +16,7 @@
 
 from typing import Optional, Sequence, Tuple
 
-from absl import logging
-from sight_service.proto import service_pb2
+from helpers.logs.logs_handler import logger as loggingfrom sight_service.proto import service_pb2
 from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient

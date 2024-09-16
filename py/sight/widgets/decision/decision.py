@@ -27,7 +27,8 @@ import threading
 
 from absl import flags
 # from absl import logging
-import logging
+from helpers.logs.logs_handler import logger as logging
+
 from sight_service.proto import service_pb2
 from sight import service_utils as service
 from sight.proto import sight_pb2
@@ -178,11 +179,14 @@ def configure(
 
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
+
 def init_sight_polling_thread(sight_id):
     # print
-    status_update_thread = threading.Thread(target=poll_network_batch_outcome,args=(sight_id,))
+    status_update_thread = threading.Thread(target=poll_network_batch_outcome,
+                                            args=(sight_id, ))
     print('*************** starting thread ************')
     status_update_thread.start()
+
 
 def attr_dict_to_proto(
     attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
@@ -372,8 +376,8 @@ def run(
     decision_configuration = sight_pb2.DecisionConfigurationStart()
     decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
 
-    if(_NUM_TRIALS.value):
-      decision_configuration.num_trials = _NUM_TRIALS.value
+    if (_NUM_TRIALS.value):
+        decision_configuration.num_trials = _NUM_TRIALS.value
     # if FLAGS.deployment_mode == 'worker_mode':
     #     decision_configuration.num_trials = int(os.environ['num_samples'])
     # else:
@@ -475,9 +479,10 @@ def run(
         print('_DECISON_MODE.value : ', _DECISON_MODE.value)
         if FLAGS.deployment_mode in ['distributed', 'vm']:
             if (_OPTIMIZER_TYPE.value == 'exhaustive_search'
-                and possible_actions < _NUM_TRIALS.value):
-              raise ValueError(
-                f"max possible value for num_trials is : {possible_actions}")
+                    and possible_actions < _NUM_TRIALS.value):
+                raise ValueError(
+                    f"max possible value for num_trials is : {possible_actions}"
+                )
             # logging.info('FLAGS.deployment_mode == distributed')
             if (not _DOCKER_IMAGE.value):
                 raise ValueError(
@@ -563,65 +568,70 @@ def run(
                 #             ]
                 # unique_action_ids = propose_actions(sight, actions_list)
 
-                  if FLAGS.deployment_mode == 'local':
+                if FLAGS.deployment_mode == 'local':
                     client_id = str(sight.id)
                     worker_location = '0'
-                  elif (FLAGS.deployment_mode == 'worker_mode'
-                        # or FLAGS.deployment_mode == 'docker_mode'
-                        ):
+                elif (FLAGS.deployment_mode == 'worker_mode'
+                      # or FLAGS.deployment_mode == 'docker_mode'
+                      ):
                     client_id = os.environ['PARENT_LOG_ID']
                     worker_location = os.environ['worker_location']
 
-                # for _ in range(num_samples_to_run):
-                # if(FLAGS.optimizer_type == "worklist_scheduler"):
-                # if (FLAGS.deployment_mode == 'worker_mode'):
-                  while(True):
-                      # #? new rpc just to check move forward or not?
-                      req = service_pb2.WorkerAliveRequest(
-                          client_id=client_id,
-                          worker_id=f'client_{client_id}_worker_{worker_location}'
-                      )
-                      response = service.call(
-                          lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+            # for _ in range(num_samples_to_run):
+            # if(FLAGS.optimizer_type == "worklist_scheduler"):
+            # if (FLAGS.deployment_mode == 'worker_mode'):
+                while (True):
+                    # #? new rpc just to check move forward or not?
+                    req = service_pb2.WorkerAliveRequest(
+                        client_id=client_id,
+                        worker_id=f'client_{client_id}_worker_{worker_location}'
+                    )
+                    response = service.call(
+                        lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
 
-                      logging.info("response from workAlive rpc is : %s", response.status_type)
-                      if(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
-                          break
-                      elif(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-                          logging.info('sleeping for 5 seconds......')
-                          time.sleep(5)
-                      elif(response.status_type == service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-                          sight.enter_block('Decision Sample', sight_pb2.Object())
-                          if 'constant_action' in sight.widget_decision_state:
-                              del sight.widget_decision_state['constant_action']
-                          sight.widget_decision_state['discount'] = 0
-                          sight.widget_decision_state['last_reward'] = None
+                    logging.info("response from workAlive rpc is : %s",
+                                 response.status_type)
+                    if (response.status_type == service_pb2.
+                            WorkerAliveResponse.StatusType.ST_DONE):
+                        break
+                    elif (response.status_type ==
+                          service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+                        logging.info('sleeping for 5 seconds......')
+                        time.sleep(5)
+                    elif (response.status_type ==
+                          service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
+                        sight.enter_block('Decision Sample',
+                                          sight_pb2.Object())
+                        if 'constant_action' in sight.widget_decision_state:
+                            del sight.widget_decision_state['constant_action']
+                        sight.widget_decision_state['discount'] = 0
+                        sight.widget_decision_state['last_reward'] = None
 
-                          if env:
-                              driver_fn(env, sight)
-                          else:
-                              driver_fn(sight)
+                        if env:
+                            driver_fn(env, sight)
+                        else:
+                            driver_fn(sight)
 
-                          finalize_episode(sight)
-                          sight.exit_block('Decision Sample', sight_pb2.Object())
-                      else:
-                          raise ValueError("invalid response from server")
-                  logging.info('exiting from the loop.....')
-                # else:
-                #   for _ in range(num_samples_to_run):
-                #     sight.enter_block('Decision Sample', sight_pb2.Object())
-                #     if 'constant_action' in sight.widget_decision_state:
-                #         del sight.widget_decision_state['constant_action']
-                #     sight.widget_decision_state['discount'] = 0
-                #     sight.widget_decision_state['last_reward'] = None
+                        finalize_episode(sight)
+                        sight.exit_block('Decision Sample', sight_pb2.Object())
+                    else:
+                        raise ValueError("invalid response from server")
+                logging.info('exiting from the loop.....')
+            # else:
+            #   for _ in range(num_samples_to_run):
+            #     sight.enter_block('Decision Sample', sight_pb2.Object())
+            #     if 'constant_action' in sight.widget_decision_state:
+            #         del sight.widget_decision_state['constant_action']
+            #     sight.widget_decision_state['discount'] = 0
+            #     sight.widget_decision_state['last_reward'] = None
 
-                #     if env:
-                #         driver_fn(env, sight)
-                #     else:
-                #         driver_fn(sight)
+            #     if env:
+            #         driver_fn(env, sight)
+            #     else:
+            #         driver_fn(sight)
 
-                #     finalize_episode(sight)
-                #     sight.exit_block('Decision Sample', sight_pb2.Object())
+            #     finalize_episode(sight)
+            #     sight.exit_block('Decision Sample', sight_pb2.Object())
 
             # req = service_pb2.TestRequest(client_id=str(sight.id))
             # response = service.call(
@@ -676,17 +686,15 @@ def get_decision_outcome_proto(outcome_label: str,
                     double_value=val,
                 )
             else:
-                if(isinstance(val, dict)):
+                if (isinstance(val, dict)):
                     json_value = json.dumps(val)
-                elif(isinstance(val, pd.Series)):
+                elif (isinstance(val, pd.Series)):
                     json_value = json.dumps(val.to_dict())
                 else:
                     raise TypeError("value needs to be dict type")
 
-                value = sight_pb2.Value(
-                    sub_type=sight_pb2.Value.ST_JSON,
-                    json_value=json_value
-                )
+                value = sight_pb2.Value(sub_type=sight_pb2.Value.ST_JSON,
+                                        json_value=json_value)
 
             outcome_params.append(
                 sight_pb2.DecisionParam(
@@ -825,11 +833,10 @@ def decision_point(
         else:
             raise ValueError("unsupported type!!")
 
-        choice_params.append(
-            sight_pb2.DecisionParam(
-                key=attr,
-                value=val,
-            ))
+        choice_params.append(sight_pb2.DecisionParam(
+            key=attr,
+            value=val,
+        ))
 
     # pytype: disable=attribute-error
     obj = sight_pb2.Object(
@@ -1018,8 +1025,8 @@ def finalize_episode(sight):  # , optimizer_obj
                     sight_pb2.DecisionConfigurationStart.OptimizerType.
                     OT_WORKLIST_SCHEDULER, sight)
             req.decision_outcome.CopyFrom(
-            #     get_fvs_outcome_proto('outcome', sight))
-            # whole output of key "fvs_outcome" is stringified, not individual key-value
+                #     get_fvs_outcome_proto('outcome', sight))
+                # whole output of key "fvs_outcome" is stringified, not individual key-value
                 get_decision_outcome_proto('outcome', sight))
             # print('request : ', req)
             optimizer_obj = optimizer.get_instance()

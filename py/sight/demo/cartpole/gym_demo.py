@@ -24,8 +24,10 @@ warnings.warn = warn
 
 import os
 import gym
-import logging
-# import logging
+from helpers.logs.logs_handler import logger as logging
+
+# from helpers.logs.logs_handler import logger as logging
+
 from typing import Sequence
 from absl import app
 from absl import flags

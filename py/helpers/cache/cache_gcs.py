@@ -1,17 +1,15 @@
 import json
 from pathlib import Path
 
-import logging
+from helpers.logs.logs_handler import logger as logging
 from google.cloud import storage
 
 from .cache_interface import CacheInterface
-from .cache_redis  import RedisCache
+from .cache_redis import RedisCache
 
 class GCSCache(CacheInterface):
 
-    def __init__(self,
-                 config={},
-                 with_redis_client:  RedisCache | None = None):
+    def __init__(self, config={}, with_redis_client: RedisCache | None = None):
         gcs_client = storage.Client()
         bucket_name = config.get('gcs_bucket', 'cameltrain-sight')
         self.bucket = gcs_client.bucket(bucket_name=bucket_name)
