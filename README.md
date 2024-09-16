@@ -247,11 +247,9 @@ account can have required permissions.
 2) Create service image from the code and host it on [gcr.io](http://gcr.io)
 
     ```bash
-    docker build --tag gcr.io/$PROJECT_ID/sight-default -f sight_service/Dockerfile .
-
-    gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
-
-    docker push gcr.io/$PROJECT_ID/sight-default
+    docker build --tag gcr.io/$PROJECT_ID/sight-default:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD) -f sight_service/Dockerfile . && \
+    gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io && \
+    docker push gcr.io/$PROJECT_ID/sight-default:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD)
     ```
 
 3) With the help of the image, launch cloud run service
@@ -266,11 +264,9 @@ Host the worker image in a cloud which will be used as default image by the
 workers spawned using sight unless specified otherwise.
 
 ```bash
-docker build --tag gcr.io/$PROJECT_ID/sight-worker -f py/Dockerfile .
-
-gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
-
-docker push gcr.io/$PROJECT_ID/sight-worker
+docker build --tag gcr.io/$PROJECT_ID/sight-worker:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD) -f py/Dockerfile . && \
+gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io && \
+docker push gcr.io/$PROJECT_ID/sight-worker:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD)
 ```
 
 ## Logging API
