@@ -9,6 +9,7 @@ import json
 import os
 import pandas as pd
 from typing import Optional, Dict, Sequence, Tuple
+import uuid
 
 from  sight.widgets.simulation.surrogate import log_to_time_series
 from  sight.widgets.simulation.surrogate import time_series_to_text
@@ -117,13 +118,22 @@ class LoadedDataset:
   max_pred_len: int
 
 
-async def load_dataset(log_id: str) -> LoadedDataset:
+async def load_dataset(log_id: str, run_id: str) -> LoadedDataset:
+  """Loads a time series dataset from a given Sight log.
+  
+  Arguments:
+    log_id: UID of the Sight log from which the simulations are being loaded.
+    run_ud: UID of this data loading run, used to make consistent unique temporary files.
+  
+  Returns:
+    Record of the loaded dataset.
+  """
   print(f'Loading TS Dataset from {log_id}')
 
   # Load the time series DataFrame
   ts_file_path = os.path.join(_WORKDIR.value, f'ts.{log_id}.csv')
   if os.path.exists(ts_file_path):
-    ts = pd.read_csv(ts_file_path) 
+    ts = pd.read_csv(ts_file_path)
   else:
     ts = log_to_time_series.load_ts(
       log_id,
@@ -136,9 +146,9 @@ async def load_dataset(log_id: str) -> LoadedDataset:
   print(f'Splitting TS Dataset from {log_id} into Train and Validate')
   ts_dataset = log_to_time_series.split_time_series(ts, _TRAIN_FRAC.value)
   ts_dataset.train.reset_index().to_csv(
-    os.path.join(_WORKDIR.value, f'ts.{log_id}.train.csv'), index=False)
+    os.path.join(_WORKDIR.value, f'ts.{log_id}.train.tf_{_TRAIN_FRAC.value}.{run_id}.csv'), index=False)
   ts_dataset.validate.reset_index().to_csv(
-    os.path.join(_WORKDIR.value, f'ts.{log_id}.validate.csv'), index=False)
+    os.path.join(_WORKDIR.value, f'ts.{log_id}.validate.tf_{_TRAIN_FRAC.value}.{run_id}.csv'), index=False)
   
   print(f'Building Transformer Text Dataset from TS, for log {log_id}')
   transformer_dataset = time_series_to_text.build_train_val_text_dataset(
@@ -147,17 +157,17 @@ async def load_dataset(log_id: str) -> LoadedDataset:
     hist_len = _HIST_LEN.value,
   )
   transformer_dataset.train.to_csv(
-    os.path.join(_WORKDIR.value, f'transformer.{log_id}.train.csv'), 
+    os.path.join(_WORKDIR.value, f'transformer.{log_id}.train.tf_{_TRAIN_FRAC.value}.hist_{_HIST_LEN.value}.{run_id}.csv'), 
     index=False, quoting=csv.QUOTE_ALL)
   transformer_dataset.validate.to_csv(
-    os.path.join(_WORKDIR.value, f'transformer.{log_id}.validate.csv'), 
+    os.path.join(_WORKDIR.value, f'transformer.{log_id}.validate.tf_{_TRAIN_FRAC.value}.hist_{_HIST_LEN.value}.{run_id}.csv'), 
     index=False, quoting=csv.QUOTE_ALL)
 
-  with open(os.path.join(_WORKDIR.value, f'transformer.{log_id}.meta.csv'), 'w') as f:
-    json.dump({
-      'max_input_len': transformer_dataset.max_input_len,
-      'max_pred_len': transformer_dataset.max_pred_len,
-    }, f)
+  # with open(os.path.join(_WORKDIR.value, f'transformer.{log_id}.meta.tf_{_TRAIN_FRAC.value}.hist_{_HIST_LEN.value}.{run_id}.csv'), 'w') as f:
+  #   json.dump({
+  #     'max_input_len': transformer_dataset.max_input_len,
+  #     'max_pred_len': transformer_dataset.max_pred_len,
+  #   }, f)
   
   return LoadedDataset(
     transformer_dataset.train,
@@ -172,10 +182,13 @@ async def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
 
+
+  run_id = str(uuid.uuid4()).replace('-', '_')
+
   # Load all the log files
   load_tasks = []
   for log_id in _LOG_ID.value:
-    load_tasks.append(asyncio.create_task(load_dataset(log_id)))
+    load_tasks.append(asyncio.create_task(load_dataset(log_id, run_id)))
 
   all_train = []
   all_validate = []
@@ -190,7 +203,7 @@ async def main(argv: Sequence[str]) -> None:
   train = pd.concat(all_train, axis=0)
   validate = pd.concat(all_train, axis=0)
 
-  all_log_ids_label = ','.join([str(log_id) for log_id in _LOG_ID.value])
+  all_log_ids_label = ','.join([str(log_id) for log_id in _LOG_ID.value]) + f'_tf_{_TRAIN_FRAC.value}_hist_{_HIST_LEN.value}_{run_id}'
   print(f'Ingesting full Transformer text dataset.')
   ingested_dataset = train_transformer.ingest_transformer_dataset(
     train,

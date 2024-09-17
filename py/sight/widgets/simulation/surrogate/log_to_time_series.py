@@ -27,6 +27,7 @@ def build_query(raw_query, params: dict = None):
   query = raw_query
   if params is not None:
     query = query.format(**params)
+  print(query)
   return query
 
 def run_query(query_file_name: str, bq_client: bigquery.Client, params: Dict=dict()) -> pd.DataFrame:
@@ -79,7 +80,6 @@ def load_ts(log_id: str, project_id: str) -> pd.DataFrame:
   print('autoreg_variables(#%d)=%s' % (len(autoreg_variables), autoreg_variables))
   print('boundary_variables(#%d)=%s' % (len(boundary_variables), boundary_variables))
   print('initial_variables(#%d)=%s' % (len(initial_variables), initial_variables))
-
 
   for type in ['autoreg', 'boundary', 'initial']:
     run_query('sim_unordered_time_series', bq_client, {'type': type, 'log_id': log_id})

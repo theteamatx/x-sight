@@ -37,9 +37,11 @@ def ingest_transformer_dataset(train: pd.DataFrame,
     local_validate_path, 
     index=False, quoting=csv.QUOTE_ALL)
   
+  escaped_label = label.replace(',', '_')
+  
   base_dir_path = os.path.join('/cns', f'{data_cell}-d', 'home', os.environ["USER"], 'dataset')
   print('base_dir_path=', base_dir_path)
-  dataset_name = f'simulation_transformer_{label}'
+  dataset_name = f'simulation_transformer_{escaped_label}'
   ingest_cmd = [
     '/google/bin/releases/tunelab/public/ingest_csv',
     f'--train_csv_file={local_train_path}',
@@ -61,8 +63,8 @@ def ingest_transformer_dataset(train: pd.DataFrame,
   return IngestedDataset(
     dataset_name,
     base_dir_path,
-    os.path.join(base_dir_path, f'simulation_transformer_{label}', 'train', f'{dataset_name}.array_record-00000-of-00001'),
-    os.path.join(base_dir_path, f'simulation_transformer_{label}', 'validation', f'{dataset_name}.array_record-00000-of-00001'),
+    os.path.join(base_dir_path, f'simulation_transformer_{escaped_label}', 'train', f'{dataset_name}.array_record-00000-of-00001'),
+    os.path.join(base_dir_path, f'simulation_transformer_{escaped_label}', 'validation', f'{dataset_name}.array_record-00000-of-00001'),
   )
 
 def finetune_gemini(
@@ -85,7 +87,8 @@ def finetune_gemini(
     priority: int = 200,
     mesh: str = '(1,16,1)'
   ):
-  mixtures_path = os.path.join(work_dir, f'mixtures.{label}.textproto')
+  escaped_label = label.replace(',', '_')
+  mixtures_path = os.path.join(work_dir, f'mixtures.{escaped_label}.textproto')
   with open(mixtures_path, 'w') as f:
     f.write(f"""
 # proto-file: google3/learning/language/tunelab/tunekit/api/common/proto/task.proto
@@ -95,13 +98,13 @@ def finetune_gemini(
 # fed from ingestion.sh
 
 train_datasets {{
-  name: "simulation_transformer_{label}"
+  name: "simulation_transformer_{escaped_label}"
   data_path: "arrayrecord:{dataset.train_path}"
   text_feature_keys: "input"
   label_key: "pred"
 }}
 eval_datasets {{
-  name: "simulation_transformer_{label}"
+  name: "simulation_transformer_{escaped_label}"
   data_path: "arrayrecord:{dataset.validate_path}"
   text_feature_keys: "input"
   label_key: "pred"
