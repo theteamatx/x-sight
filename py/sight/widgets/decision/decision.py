@@ -20,6 +20,7 @@ import dm_env
 import json
 import numpy as np
 import pandas as pd
+import pandas as pd
 from typing import Any, Callable, Dict, List, Optional, Text
 import time
 import threading
@@ -675,15 +676,16 @@ def get_decision_outcome_proto(outcome_label: str,
                     double_value=val,
                 )
             else:
-                if isinstance(val, pd.DataFrame):
-                  json_value = json.dumps(val.to_dict())
+                if(isinstance(val, dict)):
+                    json_value = json.dumps(val)
+                elif(isinstance(val, pd.Series)):
+                    json_value = json.dumps(val.to_dict())
                 else:
-                  json_value = json.dumps(val)
+                    raise TypeError("value needs to be dict type")
+
                 value = sight_pb2.Value(
                     sub_type=sight_pb2.Value.ST_JSON,
-                    # converting padas dataframe to json and into json string
-                    # json_value=json.dumps(val.to_json()),
-                    json_value=json_value,
+                    json_value=json_value
                 )
 
             outcome_params.append(
@@ -1021,6 +1023,8 @@ def finalize_episode(sight):  # , optimizer_obj
                     sight_pb2.DecisionConfigurationStart.OptimizerType.
                     OT_WORKLIST_SCHEDULER, sight)
             req.decision_outcome.CopyFrom(
+            #     get_fvs_outcome_proto('outcome', sight))
+            # whole output of key "fvs_outcome" is stringified, not individual key-value
                 get_decision_outcome_proto('outcome', sight))
             # print('request : ', req)
             optimizer_obj = optimizer.get_instance()
