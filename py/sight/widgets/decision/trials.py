@@ -394,20 +394,21 @@ def start_job_in_dsub_local(
             )
             sight.location.get().next()
 
-    remote_script = (f'gs://{os.environ["PROJECT_ID"]}/sight/d-sub/binary/' +
-                     binary_path.split('/')[-1])
-    print(f'Uploading {binary_path}...')
-    subprocess.run(['gsutil', 'cp', '-c', binary_path, remote_script],
-                   check=True)
+    # remote_script = (f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/{str(sight.id)}/' +
+    #                  binary_path.split('/')[-1])
+    remote_script = binary_path
+    # print(f'Uploading {binary_path}...')
+    # subprocess.run(['gsutil', 'cp', '-c', binary_path, remote_script],
+    #                check=True)
 
     # provider = 'google-cls-v2' if deployment_mode == 'distributed' else 'local'
 
     script_args = (
         f'--decision_mode={decision_mode} --deployment_mode={deployment_mode} --worker_mode={worker_mode} --optimizer_type={optimizer_type} '
     )
-    if FLAGS.service_account:
-        script_args = (script_args +
-                       f'--service_account={FLAGS.service_account}')
+    # if FLAGS.service_account:
+    #     script_args = (script_args +
+    #                    f'--service_account={FLAGS.service_account}')
 
     print('sight.id=%s' % sight.id)
     args = [
@@ -415,12 +416,13 @@ def start_job_in_dsub_local(
         '--provider=local',
         f'--image={docker_image}',
         f'--project={_PROJECT_ID.value}',
-        f'--logging=gs://{os.environ["PROJECT_ID"]}/d-sub/logs/local/{sight.id}',
+        # f'--logging=gs://{os.environ["PROJECT_ID"]}/d-sub/logs/local/{sight.id}',
+        f'--logging=extra/dsub-logs',
         '--env',
         f'GOOGLE_CLOUD_PROJECT={os.environ["PROJECT_ID"]}',
-        '--env',
-        'GOOGLE_APPLICATION_CREDENTIALS=/mnt/data/mount/file' +
-        f'{FLAGS.gcloud_dir_path}/application_default_credentials.json',
+        # '--env',
+        # 'GOOGLE_APPLICATION_CREDENTIALS=/mnt/data/mount/file' +
+        # f'{FLAGS.gcloud_dir_path}/application_default_credentials.json',
         '--env',
         f'PARENT_LOG_ID={sight.id}',
         # '--env',
@@ -429,10 +431,12 @@ def start_job_in_dsub_local(
         f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
         '--input',
         f'SCRIPT={remote_script}',
-        f'--command=cd /x-sight && python3 "${{SCRIPT}}" {script_args}',
+        '--input-recursive',
+        f'CLOUDSDK_CONFIG={os.path.expanduser("~")}/.config/gcloud',
+        f'--command=python3 "${{SCRIPT}}" {script_args}',
         # + f'--optimizer_type={optimizer_type}',
-        '--mount',
-        'RESOURCES=file:/' + f'{FLAGS.gcloud_dir_path}',
+        # '--mount',
+        # 'RESOURCES=file:/' + f'{FLAGS.gcloud_dir_path}',
         # + f'{os.path.expanduser("~")}/.config/gcloud',
         '--tasks',
         '/tmp/optimization_tasks.tsv',

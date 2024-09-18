@@ -16,7 +16,6 @@
 from concurrent import futures
 import json
 from helpers.logs.logs_handler import logger as logging
-from helpers.logs.logs_handler import logger as loggingogs.logs_handler import logger as logging
 import random
 import threading
 from typing import Any, Dict, List, Optional, Tuple
