@@ -395,20 +395,21 @@ class Sight(object):
         return self
 
     def __exit__(self, exc_type, value, traceback):
+        if self.params.silent_logger:
+            self.close()
+            return 
+        if exc_type is not None:
+            # pytype: disable=attribute-error
+            exception(exc_type, value, traceback, self,
+                      inspect.currentframe().f_back)
+            # pytype: enable=attribute-error
+
         # last rpc call to server for this sight id
         req = service_pb2.CloseRequest()
         req.client_id = str(self.id)
         response = service.call(
             lambda s, meta: s.Close(req, 300, metadata=meta))
         # print("close rpc status :", response.response_str)
-
-        if self.params.silent_logger:
-            self.close()
-        if exc_type is not None:
-            # pytype: disable=attribute-error
-            exception(exc_type, value, traceback, self,
-                      inspect.currentframe().f_back)
-            # pytype: enable=attribute-error
         self.close()
 
     def __del__(self):
