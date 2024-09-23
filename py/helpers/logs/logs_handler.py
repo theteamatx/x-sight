@@ -14,26 +14,26 @@
 import logging
 from google.cloud import logging as cloud_logging
 
+# Set this to True for Cloud logging
+USE_CLOUD_LOGGING = False
+
 class CustomAdapter(logging.LoggerAdapter):
     def process(self, msg, kwargs):
         # Include the extra context from the adapter into the log message
         extra_info = ' | '.join(f'{key}: {value}' for key, value in self.extra.items())
         return f'{extra_info} | {msg}', kwargs
 
-# Instantiates a client
-logging_client = cloud_logging.Client()
-
-# Retrieves a Cloud Logging handler based on the environment
-# you're running in and integrates the handler with the
-# Python logging module. By default this captures all logs
-# at INFO level and higher
-handler = logging_client.get_default_handler()
+if USE_CLOUD_LOGGING:
+  logging_client = cloud_logging.Client()
+  handler = logging_client.get_default_handler()
+else:
+  handler = logging.StreamHandler()
 
 # Set up Python logging
-logger = logging.getLogger("cloudLogger")
+logger = logging.getLogger("myLogger")
 logger.setLevel(logging.INFO)
 logger.addHandler(handler)
-adapter = CustomAdapter(logger, {'user': 'meetashah'})
+# adapter = CustomAdapter(logger, {'user': 'meetashah'})
 
 # Example of logging
 # logger.info("This is an info message logged to GCP")
