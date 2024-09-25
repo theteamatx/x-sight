@@ -23,6 +23,7 @@ import warnings
 warnings.warn = warn
 
 from concurrent import futures
+# from helpers.logs.logs_handler import logger as logging
 import logging
 from absl import app
 from absl import flags
@@ -153,12 +154,12 @@ class Optimizers:
         # method_name = "get_instance"
         # logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
         with self.instances_lock.gen_rlock():
-            if(client_id in self.instances):
-              instance_obj = self.instances[client_id]
-              return instance_obj
+            if (client_id in self.instances):
+                instance_obj = self.instances[client_id]
+                return instance_obj
             else:
-              #add better mechanism, this require in close rpc for now
-              return None
+                #add better mechanism, this require in close rpc for now
+                return None
         # logging.debug("<<<<<< Out %s method of %s file.", method_name, _file_name)
 
 
@@ -300,12 +301,11 @@ class SightService(service_pb2_grpc.SightServiceServicer):
                      _file_name)
 
         # only call if it's launch called, otherwise no entry of opt for that client
-        if(self.optimizers.get_instance(
-              request.client_id)):
-          obj = self.optimizers.get_instance(
-              request.client_id).close(request)
+        if (self.optimizers.get_instance(request.client_id)):
+            obj = self.optimizers.get_instance(
+                request.client_id).close(request)
         else:
-          obj = service_pb2.CloseResponse()
+            obj = service_pb2.CloseResponse()
 
         #? do we need to remove entry from optimizer dict, if available??
         logging.info("<<<<<<<  Out %s method of %s file.", method_name,
@@ -344,6 +344,7 @@ def serve():
     server.wait_for_termination()
     logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
+
 def main(argv):
     method_name = "__main__"
     logging.basicConfig(level=logging.INFO)
@@ -354,6 +355,7 @@ def main(argv):
         logging.error("Error occurred : ")
         logging.error(e)
     logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+
 
 if __name__ == "__main__":
     app.run(main)

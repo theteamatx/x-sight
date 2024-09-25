@@ -22,7 +22,7 @@ import time
 from typing import Any, Callable
 import uuid
 from absl import flags
-from absl import logging
+from helpers.logs.logs_handler import logger as logging
 from dotenv import load_dotenv
 import google.auth.transport.requests
 import google.oauth2.id_token
@@ -65,7 +65,10 @@ _PORT = flags.DEFINE_string(
 _DEPLOYMENT_MODE = flags.DEFINE_enum(
     'deployment_mode',
     None,
-    ['vm', 'distributed', 'local', 'dsub_local', 'docker_local', 'worker_mode'],
+    [
+        'vm', 'distributed', 'local', 'dsub_local', 'docker_local',
+        'worker_mode'
+    ],
     ('The procedure to use when training a model to drive applications that '
      'use the Decision API.'),
 )
@@ -85,8 +88,6 @@ def get_service_id() -> str:
     global _SERVICE_ID
     global _SIGHT_SERVICE_KNOWN
 
-
-
     # print('os.environ : ', os.environ)
     if 'SIGHT_SERVICE_ID' in os.environ:
         # print('used env flow from get_service_id.....')
@@ -103,6 +104,7 @@ def get_service_id() -> str:
 
     # logging.info("service id : %s%s", _SERVICE_PREFIX, _SERVICE_ID)
     return _SERVICE_ID
+
 
 def get_port_number() -> str:
     return os.environ.get('PORT', FLAGS.port)
@@ -139,10 +141,10 @@ def _find_or_deploy_server() -> str:
     """deploy sight server with given docker image."""
 
     global _SIGHT_SERVICE_KNOWN
-    if(os.environ.get('SIGHT_SERVICE_ID')):
-      # print('service found from environment variable : ', get_service_id())
-      # logging.info('service found from environment variable')
-      return get_service_id()
+    if (os.environ.get('SIGHT_SERVICE_ID')):
+        # print('service found from environment variable : ', get_service_id())
+        # logging.info('service found from environment variable')
+        return get_service_id()
 
     if _SIGHT_SERVICE_KNOWN or (not _SERVICE_DOCKER_FILE.value
                                 and not _SERVICE_DOCKER_IMG.value):
@@ -448,6 +450,7 @@ def obtain_secure_channel(options=None):
     )
     return channel
 
+
 def obtain_insecure_channel(options):
     """create insecure channel to communicate with server.
 
@@ -455,9 +458,9 @@ def obtain_insecure_channel(options):
     service_handle: to communicate with server
   """
     if 'IP_ADDR' in os.environ:
-      host = os.environ["IP_ADDR"]
+        host = os.environ["IP_ADDR"]
     else:
-      host = 'localhost'
+        host = 'localhost'
     target = '{}:{}'.format(host, get_port_number())
     # print("service_url here : ", targpending action ids :et)
 
@@ -467,39 +470,40 @@ def obtain_insecure_channel(options):
     )
     return channel
 
+
 def generate_metadata():
     """Generate metadata to call service with authentication."""
 
     channel_opts = [
         ('grpc.max_send_message_length', 512 * 1024 * 1024),
         ('grpc.max_receive_message_length', 512 * 1024 * 1024),
-      ]
+    ]
 
-    if 'IP_ADDR' in os.environ or ('deployment_mode' in FLAGS and FLAGS.deployment_mode in ['local','vm']):
+    if 'IP_ADDR' in os.environ or ('deployment_mode' in FLAGS and
+                                   FLAGS.deployment_mode in ['local', 'vm']):
 
-      channel = obtain_insecure_channel(channel_opts)
-      sight_service = service_pb2_grpc.SightServiceStub(channel)
-      metadata = []
-      return sight_service, metadata
+        channel = obtain_insecure_channel(channel_opts)
+        sight_service = service_pb2_grpc.SightServiceStub(channel)
+        metadata = []
+        return sight_service, metadata
     # elif 'deployment_mode' == "worker_mode":
     #   return sight_service, metadata
     else:
-      #for worker spawned using vm mode, they must be connect via insecure channel
-      # if():
+        #for worker spawned using vm mode, they must be connect via insecure channel
+        # if():
 
+        # for client code, need to find or deploy cloud run service, workers will directly get via env
+        if 'deployment_mode' in FLAGS and FLAGS.deployment_mode == "distributed":
+            _find_or_deploy_server()
 
-      # for client code, need to find or deploy cloud run service, workers will directly get via env
-      if 'deployment_mode' in FLAGS and FLAGS.deployment_mode == "distributed":
-        _find_or_deploy_server()
-
-      secure_channel = obtain_secure_channel()
-      # print("secure_channel : ", secure_channel)
-      sight_service = service_pb2_grpc.SightServiceStub(secure_channel)
-      metadata = []
-      id_token = generate_id_token()
-      # print('id_token : ', id_token)
-      metadata.append(('authorization', 'Bearer ' + id_token))
-      return sight_service, metadata
+        secure_channel = obtain_secure_channel()
+        # print("secure_channel : ", secure_channel)
+        sight_service = service_pb2_grpc.SightServiceStub(secure_channel)
+        metadata = []
+        id_token = generate_id_token()
+        # print('id_token : ', id_token)
+        metadata.append(('authorization', 'Bearer ' + id_token))
+        return sight_service, metadata
 
 
 # def calculate_response_time(start_time):

@@ -16,7 +16,7 @@
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Tuple
 
-from absl import logging
+from helpers.logs.logs_handler import logger as logging
 
 import numpy as np
 # import tensorflow as tf  # pylint: disable=g-explicit-tensorflow-version-import
@@ -133,8 +133,7 @@ class DecisionEpisodeFn:
 
         self.step_size = {
             attr: attr_val.step_size
-            for attr, attr_val in action_attrs.items()
-            if attr_val.step_size
+            for attr, attr_val in action_attrs.items() if attr_val.step_size
         }
 
         # for action, attributes in action_attrs.items():

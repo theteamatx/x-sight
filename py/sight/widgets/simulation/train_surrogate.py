@@ -20,8 +20,7 @@ from typing import Iterable, Iterator, List, Tuple
 
 from absl import app
 from absl import flags
-from absl import logging
-import apache_beam as beam
+from helpers.logs.logs_handler import logger as loggingimport apache_beam as beam
 import numpy as np
 from sklearn import metrics
 from sklearn.ensemble import GradientBoostingRegressor

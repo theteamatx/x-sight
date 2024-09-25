@@ -13,7 +13,7 @@
 # limitations under the License.
 """LLM-based optimization for driving Sight applications."""
 
-import logging
+from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from typing import Any, Dict, List, Tuple
 
@@ -32,6 +32,8 @@ import os
 import threading
 
 _file_name = "nevergrad_opt.py"
+
+
 class NeverGradOpt(OptimizerInstance):
     """Uses the NeverGrad library to choose the parameters of the code.
 
@@ -66,8 +68,6 @@ class NeverGradOpt(OptimizerInstance):
         self.actions = self.normalizer.normalize_in_0_to_1(self.actions)
         # print("self.actions : ", self.actions)
 
-
-
         self.possible_values = {}
         for i, key in enumerate(sorted(self.actions.keys())):
             if self.actions[key].valid_float_values:
@@ -97,7 +97,6 @@ class NeverGradOpt(OptimizerInstance):
         # print('here ng.p.Dict is : ', ng.p.Dict(**params))
         # print('here ng.p.Instrumentation is : ', ng.p.Instrumentation(ng.p.Dict(**params)))
 
-
         parametrization = ng.p.Instrumentation(ng.p.Dict(**params))
         budget = 1000
 
@@ -111,61 +110,60 @@ class NeverGradOpt(OptimizerInstance):
                                                budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_CMA):
-            self._optimizer = ng.optimizers.CMA(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.CMA(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_TwoPointsDE):
-            self._optimizer = ng.optimizers.TwoPointsDE(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.TwoPointsDE(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_RandomSearch):
-            self._optimizer = ng.optimizers.RandomSearch(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.RandomSearch(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_PSO):
-            self._optimizer = ng.optimizers.PSO(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.PSO(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_ScrHammersleySearch):
-            self._optimizer = ng.optimizers.ScrHammersleySearch(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.ScrHammersleySearch(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_DE):
             self._optimizer = ng.optimizers.DE(parametrization=parametrization,
                                                budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_CGA):
-            self._optimizer = ng.optimizers.cGA(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.cGA(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_ES):
             self._optimizer = ng.optimizers.ES(parametrization=parametrization,
                                                budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_DL_OPO):
-            self._optimizer = ng.optimizers.DiscreteLenglerOnePlusOne(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.DiscreteLenglerOnePlusOne(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_DDE):
-            self._optimizer = ng.optimizers.DiscreteDE(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.DiscreteDE(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_NMM):
-            self._optimizer = ng.optimizers.NeuralMetaModel(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.NeuralMetaModel(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_TINY_SPSA):
-            self._optimizer = ng.optimizers.TinySPSA(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.TinySPSA(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_VORONOI_DE):
-            self._optimizer = ng.optimizers.VoronoiDE(parametrization=parametrization,
-                                               budget=budget)
+            self._optimizer = ng.optimizers.VoronoiDE(
+                parametrization=parametrization, budget=budget)
         elif (self._ng_config.algorithm == sight_pb2.DecisionConfigurationStart
               .NeverGradConfig.NeverGradAlgorithm.NG_CMA_SMALL):
-            self._optimizer = ng.optimizers.CMAsmall(parametrization=parametrization,
-                                               budget=budget)
-
+            self._optimizer = ng.optimizers.CMAsmall(
+                parametrization=parametrization, budget=budget)
 
         # print(self._optimizer, type(self._optimizer))
 
@@ -202,7 +200,8 @@ class NeverGradOpt(OptimizerInstance):
         self.num_samples_issued += 1
         self._lock.release()
 
-        denormalized_actions = self.normalizer.denormalize_from_0_to_1(selected_actions.args[0])
+        denormalized_actions = self.normalizer.denormalize_from_0_to_1(
+            selected_actions.args[0])
         # print("denormalized_actions : ", denormalized_actions)
 
         dp_response = service_pb2.DecisionPointResponse()
@@ -278,29 +277,30 @@ class NeverGradOpt(OptimizerInstance):
         # print('self._total_count was : ', self._total_count)
         # print('self._completed_count is now : ', self._completed_count)
 
-        if(self._completed_count == self._total_count):
-          status = service_pb2.CurrentStatusResponse.Status.SUCCESS
-        elif(self._completed_count < self._total_count):
-          status = service_pb2.CurrentStatusResponse.Status.IN_PROGRESS
+        if (self._completed_count == self._total_count):
+            status = service_pb2.CurrentStatusResponse.Status.SUCCESS
+        elif (self._completed_count < self._total_count):
+            status = service_pb2.CurrentStatusResponse.Status.IN_PROGRESS
         else:
-          status = service_pb2.CurrentStatusResponse.Status.FAILURE
+            status = service_pb2.CurrentStatusResponse.Status.FAILURE
 
-        return service_pb2.CurrentStatusResponse(response_str=response, status=status)
+        return service_pb2.CurrentStatusResponse(response_str=response,
+                                                 status=status)
 
     @overrides
     def WorkerAlive(
-       self, request: service_pb2.WorkerAliveRequest
+        self, request: service_pb2.WorkerAliveRequest
     ) -> service_pb2.WorkerAliveResponse:
         method_name = "WorkerAlive"
         logging.debug(">>>>  In %s of %s", method_name, _file_name)
-        if(self._completed_count == self._total_count):
-           worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+        if (self._completed_count == self._total_count):
+            worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
         # elif(not self.pending_samples):
         #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
         else:
-          # Increasing count here so that multiple workers can't enter the dp call for same sample at last
-          self._completed_count += 1
-          worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+            # Increasing count here so that multiple workers can't enter the dp call for same sample at last
+            self._completed_count += 1
+            worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
         logging.info("worker_alive_status is %s", worker_alive_status)
         logging.debug("<<<<  Out %s of %s", method_name, _file_name)
         return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)

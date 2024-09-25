@@ -1,5 +1,5 @@
 import json
-import logging
+from helpers.logs.logs_handler import logger as logging
 import redis
 from redis.commands.json.path import Path
 

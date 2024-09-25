@@ -27,6 +27,7 @@ from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from helpers.cache.cache_helper import CacheKeyMaker, CacheConfig
 from helpers.cache.cache_factory import CacheFactory
 from helpers.cache.cache_interface import CacheInterface
+import json
 
 _CACHE_MODE = flags.DEFINE_enum(
     'cache_mode', 'none',
@@ -83,5 +84,13 @@ async def propose_actions(sight, action_dict, custom_part="sight_cache"):
     outcome = response.get('outcome', None)
     if response is None or outcome is None:
         raise Exception('fetch_outcome response or respose["outcome"] is none')
+    # converting the stringify data into json data if it can
+    for key in outcome:
+        value = outcome[key]
+        try:
+            final_value = json.loads(value)
+        except (json.JSONDecodeError,TypeError):
+            final_value = value
+        outcome[key] = final_value
     cache_client.json_set(key=cache_key, value=outcome)
     return outcome
