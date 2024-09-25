@@ -471,7 +471,7 @@ def run(
         possible_actions = list(details.action_max.values())[0] - list(
             details.action_min.values())[0] + 2
 
-        print('_DECISON_MODE.value : ', _DECISON_MODE.value)
+        print('FLAGS.deployment_mode : ', FLAGS.deployment_mode)
         if FLAGS.deployment_mode in ['distributed', 'vm']:
             if (_OPTIMIZER_TYPE.value == 'exhaustive_search'
                 and possible_actions < _NUM_TRIALS.value):
@@ -570,7 +570,7 @@ def run(
                         ):
                     client_id = os.environ['PARENT_LOG_ID']
                     worker_location = os.environ['worker_location']
-
+                  print('LOCAL: client_id=', client_id)
                 # for _ in range(num_samples_to_run):
                 # if(FLAGS.optimizer_type == "worklist_scheduler"):
                 # if (FLAGS.deployment_mode == 'worker_mode'):

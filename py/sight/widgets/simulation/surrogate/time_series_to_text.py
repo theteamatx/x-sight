@@ -110,7 +110,8 @@ def build_text_dataset(ts: pd.DataFrame, hist_len: int) -> TextTs:
         max_pred_len = max(max_pred_len, len(prediction))
         preds.append(prediction)
 
-        hist.pop(0)
+        if hist:
+          hist.pop(0)
       hist.append(cur_row[3:]) 
   
   return TextTs(inputs, preds, max_input_len, max_pred_len)
