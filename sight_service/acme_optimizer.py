@@ -14,7 +14,7 @@
 """Acme reinforcement learning for driving Sight applications."""
 
 import concurrent.futures
-import logging
+from helpers.logs.logs_handler import logger as logging
 import time
 import json
 import pickle
@@ -252,8 +252,8 @@ class Acme(OptimizerInstance):
         action_min = []
         action_max = []
         for key, attr_props in action_attrs.items():
-          action_min.append(attr_props.min_value)
-          action_max.append(attr_props.max_value)
+            action_min.append(attr_props.min_value)
+            action_max.append(attr_props.max_value)
 
         if (attr_props.valid_int_values):
             actions = specs.DiscreteArray(num_values=len(
@@ -261,13 +261,13 @@ class Acme(OptimizerInstance):
                                           dtype=np.int64,
                                           name="action")
         else:
-            if(attr_props.step_size):
-              default_dtype=np.int64
+            if (attr_props.step_size):
+                default_dtype = np.int64
             actions = specs.BoundedArray(shape=(len(action_max), ),
-                                          dtype=default_dtype,
-                                          name='action',
-                                          minimum=action_min,
-                                          maximum=action_max)
+                                         dtype=default_dtype,
+                                         name='action',
+                                         minimum=action_min,
+                                         maximum=action_max)
 
         # print(state_min, state_max, len(state_max), state_dtype)
         # print(action_min, action_max, len(action_max), action_dtype)
@@ -292,7 +292,6 @@ class Acme(OptimizerInstance):
                        action_attrs):
         method_name = "create_learner"
         logging.info(">>>>  In %s of %s", method_name, _file_name)
-
 
         environment_spec = self.generate_env_spec(state_attrs, action_attrs)
 
@@ -449,9 +448,7 @@ class Acme(OptimizerInstance):
         # directly serializing the weights structure
         # serialized_weights = json.dumps(
         #     latest_weights, default=convert_np_to_list).encode('utf-8')
-        serialized_weights = pickle.dumps(
-            latest_weights)
-
+        serialized_weights = pickle.dumps(latest_weights)
 
         response.weights = serialized_weights
 

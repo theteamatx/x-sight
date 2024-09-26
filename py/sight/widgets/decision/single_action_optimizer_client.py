@@ -13,7 +13,7 @@
 # limitations under the License.
 
 """Client for optimizers that are called once per episode to communicate with server."""
-from absl import logging
+from helpers.logs.logs_handler import logger as logging
 from typing import Optional, Sequence, Tuple
 from sight_service.proto import service_pb2
 from sight import service_utils as service
@@ -82,6 +82,7 @@ class SingleActionOptimizerClient(OptimizerClient):
   @override
   def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     # while True:
+      logging.info('DP request=%s', request)
       response = service.call(
           lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
       )

@@ -13,7 +13,8 @@
 # limitations under the License.
 """Default Driver function to be used while training within the Sight log."""
 
-import logging
+from helpers.logs.logs_handler import logger as logging
+
 import gym
 import numpy as np
 import dm_env
@@ -72,12 +73,9 @@ def step(action):
     costheta = math.cos(theta)
     sintheta = math.sin(theta)
 
-    temp = (
-            force + polemass_length * theta_dot**2 * sintheta
-        ) / total_mass
+    temp = (force + polemass_length * theta_dot**2 * sintheta) / total_mass
     thetaacc = (gravity * sintheta - costheta * temp) / (
-            length * (4.0 / 3.0 - masspole * costheta**2 / total_mass)
-        )
+        length * (4.0 / 3.0 - masspole * costheta**2 / total_mass))
     xacc = temp - polemass_length * thetaacc * costheta / total_mass
 
     x = x + tau * x_dot
@@ -86,18 +84,16 @@ def step(action):
     theta_dot = theta_dot + tau * thetaacc
     state = (x, x_dot, theta, theta_dot)
 
-    terminated = bool(
-            x < -x_threshold
-            or x > x_threshold
-            or theta < -theta_threshold_radians
-            or theta > theta_threshold_radians
-        )
+    terminated = bool(x < -x_threshold or x > x_threshold
+                      or theta < -theta_threshold_radians
+                      or theta > theta_threshold_radians)
     if not terminated:
         reward = 1.0
     else:
         reward = 0.0
 
-    observation, reward, done, info = np.array(state, dtype=np.float32), reward, terminated, {}
+    observation, reward, done, info = np.array(
+        state, dtype=np.float32), reward, terminated, {}
     reset_next_step = done
 
     # Convert the type of the reward based on the spec, respecting the scalar or
@@ -110,10 +106,10 @@ def step(action):
         specs.Array(shape=(), dtype=float, name='reward'))
 
     if done:
-      truncated = info.get('TimeLimit.truncated', False)
-      if truncated:
-        return dm_env.truncation(reward, observation)
-      return dm_env.termination(reward, observation)
+        truncated = info.get('TimeLimit.truncated', False)
+        if truncated:
+            return dm_env.truncation(reward, observation)
+        return dm_env.termination(reward, observation)
     return dm_env.transition(reward, observation)
 
 
@@ -132,7 +128,6 @@ def driver_fn(sight) -> None:
     state_attrs = decision.get_state_attrs(sight)
     for i in range(len(state_attrs)):
         data_structures.log_var(state_attrs[i], timestep.observation[i], sight)
-
 
     while not timestep.last():
         chosen_action = decision.decision_point("DP_label", sight)

@@ -13,7 +13,8 @@
 # limitations under the License.
 """Default Driver function to be used while training within the Sight log."""
 
-import logging
+from helpers.logs.logs_handler import logger as logging
+
 import gym
 import numpy as np
 import dm_env
@@ -26,7 +27,6 @@ from acme import specs
 import tree
 
 _file_name = "driver.py"
-
 
 reset_next_step = True
 state = None
@@ -55,7 +55,8 @@ def reset():
     low = -high
     state = np_random.uniform(low=low, high=high)
     theta, thetadot = state
-    observation = np.array([np.cos(theta), np.sin(theta), thetadot], dtype=np.float32)
+    observation = np.array(
+        [np.cos(theta), np.sin(theta), thetadot], dtype=np.float32)
     return dm_env.restart(observation)
 
 
@@ -71,15 +72,17 @@ def step(action):
     # step of pendulum
     th, thdot = state
     u = np.clip(action, -max_torque, max_torque)[0]
-    costs = angle_normalize(th) ** 2 + 0.1 * thdot**2 + 0.001 * (u**2)
+    costs = angle_normalize(th)**2 + 0.1 * thdot**2 + 0.001 * (u**2)
 
-    newthdot = thdot + (3 * g / (2 * l) * np.sin(th) + 3.0 / (m * l**2) * u) * dt
+    newthdot = thdot + (3 * g / (2 * l) * np.sin(th) + 3.0 /
+                        (m * l**2) * u) * dt
     newthdot = np.clip(newthdot, -max_speed, max_speed)
     newth = th + newthdot * dt
 
     state = np.array([newth, newthdot])
     theta, thetadot = state
-    latest_state = np.array([np.cos(theta), np.sin(theta), thetadot], dtype=np.float32)
+    latest_state = np.array(
+        [np.cos(theta), np.sin(theta), thetadot], dtype=np.float32)
 
     observation, reward, done, info = latest_state, -costs, False, {}
     elapsed_steps += 1
@@ -98,14 +101,16 @@ def step(action):
         specs.Array(shape=(), dtype=float, name='reward'))
 
     if done:
-      truncated = info.get('TimeLimit.truncated', False)
-      if truncated:
-        return dm_env.truncation(reward, observation)
-      return dm_env.termination(reward, observation)
+        truncated = info.get('TimeLimit.truncated', False)
+        if truncated:
+            return dm_env.truncation(reward, observation)
+        return dm_env.termination(reward, observation)
     return dm_env.transition(reward, observation)
+
 
 def angle_normalize(x):
     return ((x + np.pi) % (2 * np.pi)) - np.pi
+
 
 def driver_fn(sight) -> None:
     """Executes the logic of searching for a value.

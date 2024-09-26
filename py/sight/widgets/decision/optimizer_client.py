@@ -1,4 +1,4 @@
-# Copyright 2023 Google LLC
+  # Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,10 +45,12 @@ class OptimizerClient:
     for a in dp_response.action:
       if(a.value.sub_type == sight_pb2.Value.ST_DOUBLE):
         d[a.key] = a.value.double_value
+      elif(a.value.sub_type == sight_pb2.Value.ST_INT64):
+        d[a.key] = a.value.int64_value
       elif(a.value.sub_type == sight_pb2.Value.ST_STRING):
         d[a.key] = a.value.string_value
       else:
-        raise ValueError("not supported type!!")
+        raise ValueError(f"Not supported type: {a.key}: {a.value}")
     return d
 
   def _set_dp_action(self, dp: sight_pb2.DecisionPoint, action: Dict[str, Any]) -> None:
@@ -58,8 +60,10 @@ class OptimizerClient:
         dp.value.add(sight_pb2.DecisionParam(key=key, value=sight_pb2.Value(string_value=val)))
       elif(isinstance(val,float)):
         dp.value.add(sight_pb2.DecisionParam(key=key, value=sight_pb2.Value(double_value=val)))
+      elif(isinstance(val,int)):
+        dp.value.add(sight_pb2.DecisionParam(key=key, value=sight_pb2.Value(int64_value=val)))
       else:
-        raise ValueError("not supported type!!")
+        raise ValueError(f"Not supported type: {key}: {val}")
 
   def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
     response = service.call(

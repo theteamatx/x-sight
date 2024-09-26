@@ -17,8 +17,7 @@
 import inspect
 from typing import Any, Optional
 
-from absl import logging
-import tensorflow as tf
+from helpers.logs.logs_handler import logger as loggingimport tensorflow as tf
 
 from proto import sight_pb2
 from py.exception import exception

@@ -1,6 +1,6 @@
 import json
 import os
-import logging
+from helpers.logs.logs_handler import logger as logging
 from .cache_interface import CacheInterface
 from typing import Any
 

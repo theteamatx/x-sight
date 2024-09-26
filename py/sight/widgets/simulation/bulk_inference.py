@@ -2,7 +2,7 @@ from typing import Sequence, Tuple
 
 from absl import app
 from absl import flags
-from absl import logging
+from helpers.logs.logs_handler import logger as logging
 from datetime import datetime
 import json
 import os
@@ -60,17 +60,16 @@ _TRAINER_XID = flags.DEFINE_string(
 )
 
 
-
 def main(argv: Sequence[str]) -> None:
-  if len(argv) > 1:
-    raise app.UsageError('Too many command-line arguments.')
+    if len(argv) > 1:
+        raise app.UsageError('Too many command-line arguments.')
 
-  with open(_INPUT_META_PATH.value) as f:
-    meta = json.load(f)
-    max_input_len = meta['max_input_len']
-    max_pred_len = meta['max_pred_len']
+    with open(_INPUT_META_PATH.value) as f:
+        meta = json.load(f)
+        max_input_len = meta['max_input_len']
+        max_pred_len = meta['max_pred_len']
 
-  cmd = [
+    cmd = [
         '/google/bin/releases/tunelab/public/bulk_inference_jax_on_beam',
         f'--input_spec=arrayrecord:/cns/oj-d/home/bronevet/kokua/experiments/bronevet/dataset/simulation_transformer_{_LOG_ID.value}/simulation_transformer_{_LOG_ID.value}/validation/simulation_transformer_{_LOG_ID.value}.array_record-00000-of-00001',
         f'--output_spec=arrayrecord:/cns/oj-d/home/bronevet/kokua/experiments/bronevet/dataset/simulation_transformer_{_LOG_ID.value}/simulation_transformer_{_LOG_ID.value}/validation/predictions/model_output.recordio@*',
@@ -90,18 +89,19 @@ def main(argv: Sequence[str]) -> None:
         f'--platform={_PLATFORM_NAME.value}',
         f'--topology={_PLATFORM_MESH.value}',
         f'--ici_mesh_shape="{_MESH.value}"',
-      ]
-  if _CHECKPOINT_PATH.value:
-    cmd.append(f'--model_checkpoint={_CHECKPOINT_PATH.value}')
-  elif _TRAINER_XID.value:
-    cmd.append(f'--trainer_xid={_TRAINER_XID.value}')
-  print(' '.join(cmd))
-  out = subprocess.run(cmd,
-      capture_output=True,
-      check=True,
-  )
-  print(out)
+    ]
+    if _CHECKPOINT_PATH.value:
+        cmd.append(f'--model_checkpoint={_CHECKPOINT_PATH.value}')
+    elif _TRAINER_XID.value:
+        cmd.append(f'--trainer_xid={_TRAINER_XID.value}')
+    print(' '.join(cmd))
+    out = subprocess.run(
+        cmd,
+        capture_output=True,
+        check=True,
+    )
+    print(out)
 
 
 if __name__ == '__main__':
-  app.run(main)
+    app.run(main)
