@@ -82,6 +82,7 @@ class SingleActionOptimizerClient(OptimizerClient):
   @override
   def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     # while True:
+      logging.info('DP request=%s', request)
       response = service.call(
           lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
       )

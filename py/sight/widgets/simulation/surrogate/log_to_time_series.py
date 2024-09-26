@@ -1,7 +1,7 @@
 """Queries the Simulation entries in a Sight log and saves them as a time series."""
 
 import os
-from typing import Optional, Dict, Sequence, Tuple
+from typing import Any, Callable, Dict, Sequence, Tuple
 
 from absl import app
 from dataclasses import dataclass
@@ -135,10 +135,10 @@ class TsDataset:
   train: pd.DataFrame
   validate: pd.DataFrame
 
-def split_time_series(ts: pd.DataFrame, train_frac: float) -> TsDataset:
+def split_time_series_randomly(ts: pd.DataFrame, train_frac: float) -> TsDataset:
   """Splits a simulation time series into train and validation subsets.
   
-  The split occurs at the granularity of whole simulation runs.
+  The split occurs randomly at the granularity of whole simulation runs.
 
   Arguments:
     ts: Dataframe with all time series observations.
@@ -152,6 +152,37 @@ def split_time_series(ts: pd.DataFrame, train_frac: float) -> TsDataset:
   validate = []
   for _, sim_log in simulations:
     if rn.random() < train_frac:
+      train.append(sim_log)
+    else:
+      validate.append(sim_log)
+  return TsDataset(pd.concat(train, axis=0) if train else pd.DataFrame(),
+                   pd.concat(validate, axis=0) if validate else pd.DataFrame())
+
+def split_time_series_by_condition(
+    ts: pd.DataFrame, 
+                      split_column: str, 
+                      split_condition: Callable[[Any], bool],
+                      ) -> TsDataset:
+  """Splits a simulation time series into train and validation subsets.
+  
+  The split occurs at the granularity of whole simulation runs, based on 
+  the value of a given column in the first time step of a simulation log.
+
+  Arguments:
+    ts: Dataframe with all time series observations.
+    split_column: The name of the column used to determine the split.
+    split_condition: Function that takes as input the value of the column. 
+      Returns True if the log should be in the training set, False if it
+      should be in the validation set.
+  
+  Returns:
+    The full dataset with separated validation and training subsets.
+  """
+  simulations = ts.groupby(['sim_location'])
+  train = []
+  validate = []
+  for _, sim_log in simulations:
+    if split_condition(sim_log[split_column].iloc[0]):
       train.append(sim_log)
     else:
       validate.append(sim_log)

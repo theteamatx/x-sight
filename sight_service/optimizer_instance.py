@@ -38,6 +38,11 @@ def param_dict_to_proto(
                 sub_type=sight_pb2.Value.ST_DOUBLE,
                 double_value=v,
             )
+        elif isinstance(v, int):
+            val = sight_pb2.Value(
+                sub_type=sight_pb2.Value.ST_INT64,
+                int64_value=v,
+            )
         elif (not utils.is_scalar(v)):
             print('here v is : ', v, type(v))
             val = sight_pb2.Value(

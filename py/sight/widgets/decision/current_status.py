@@ -36,13 +36,13 @@ _LOG_ID = flags.DEFINE_string(
 
 
 def main(argv: Sequence[str]) -> None:
-    if len(argv) > 1:
-        raise app.UsageError("Too many command-line arguments.")
+  if len(argv) > 1:
+    raise app.UsageError("Too many command-line arguments.")
 
-    req = service_pb2.CurrentStatusRequest()
-    req.client_id = _LOG_ID.value
-    response = service.call(
-        lambda s, meta: s.CurrentStatus(req, 300, metadata=meta))
+  req = service_pb2.CurrentStatusRequest()
+  req.client_id = _LOG_ID.value
+  response = service.call(
+      lambda s, meta: s.CurrentStatus(req, 300, metadata=meta))
 
   if response.status == service_pb2.CurrentStatusResponse.Status.DEFAULT :
     print('Experiment is in Default state')
