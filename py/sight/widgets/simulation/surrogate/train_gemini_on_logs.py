@@ -2,6 +2,7 @@
 
 from absl import app
 from absl import flags
+from absl import logging
 import asyncio
 import csv
 from dataclasses import dataclass
@@ -28,11 +29,29 @@ _WORKDIR = flags.DEFINE_string(
 _PROJECT_ID = flags.DEFINE_string(
     'project_id', os.environ['PROJECT_ID'], 'ID of the current GCP project.'
 )
+_SPLIT = flags.DEFINE_enum('split', 
+                              'random', 
+                              ['random', 'lat', 'lng'], 
+                              'The algorithm for splitting time series into training and validation.')
 _TRAIN_FRAC = flags.DEFINE_float(
     'train_frac',
     .8,
     'The path where the output validation data file will be written.',
 )
+_TRAIN_MIN_VAL = flags.DEFINE_float(
+    'train_min_val',
+    0,
+    'The0 minimum value (inclusive) of the training split selection column to include in the training set.',
+)
+_TRAIN_MAX_VAL = flags.DEFINE_float(
+    'train_max_val',
+    100,
+    'The maximum value (inclusive) of the training split selection column to include in the training set.',
+)
+_ENCODING = flags.DEFINE_enum('encoding', 
+                              'init_recent_hist', 
+                              ['init_recent_hist', 'init_bound_to_auto'], 
+                              'The algorithm for encoding time series into transformer text.')
 _HIST_LEN = flags.DEFINE_integer(
     'hist_len',
     5,
@@ -118,11 +137,14 @@ class LoadedDataset:
   max_pred_len: int
 
 
-async def load_dataset(log_id: str, run_id: str) -> LoadedDataset:
+async def load_dataset(log_id: str, split_label: str, encoding_label: str, run_id: str) -> LoadedDataset:
   """Loads a time series dataset from a given Sight log.
   
   Arguments:
     log_id: UID of the Sight log from which the simulations are being loaded.
+    split_label: Human-readable label that captures the details of the algorithm for splitting the time series
+      dataset into training and validation subsets.
+    encoding_label: Human-readable label that captures the details of the text encoding of the time series.
     run_ud: UID of this data loading run, used to make consistent unique temporary files.
   
   Returns:
@@ -144,26 +166,40 @@ async def load_dataset(log_id: str, run_id: str) -> LoadedDataset:
   print(ts)
 
   print(f'Splitting TS Dataset from {log_id} into Train and Validate')
-  ts_dataset = log_to_time_series.split_time_series(ts, _TRAIN_FRAC.value)
+
+  if _SPLIT.value == 'random':
+    ts_dataset = log_to_time_series.split_time_series_randomly(ts, _TRAIN_FRAC.value)
+  elif _SPLIT.value == 'lat':
+    ts_dataset = log_to_time_series.split_time_series_by_condition(ts, 'initial:lat', lambda x: x>=_TRAIN_MIN_VAL.value and x<=_TRAIN_MAX_VAL.value)
+  elif _SPLIT.value == 'lng':
+    ts_dataset = log_to_time_series.split_time_series_by_condition(ts, 'initial:lng', lambda x: x>=_TRAIN_MIN_VAL.value and x<=_TRAIN_MAX_VAL.value)
+
   ts_dataset.train.reset_index().to_csv(
-    os.path.join(_WORKDIR.value, f'ts.{log_id}.train.tf_{_TRAIN_FRAC.value}.{run_id}.csv'), index=False)
+    os.path.join(_WORKDIR.value, f'ts.{log_id}.train.{split_label}.{run_id}.csv'), index=False)
   ts_dataset.validate.reset_index().to_csv(
-    os.path.join(_WORKDIR.value, f'ts.{log_id}.validate.tf_{_TRAIN_FRAC.value}.{run_id}.csv'), index=False)
+    os.path.join(_WORKDIR.value, f'ts.{log_id}.validate.{split_label}.{run_id}.csv'), index=False)
   
   print(f'Building Transformer Text Dataset from TS, for log {log_id}')
-  transformer_dataset = time_series_to_text.build_train_val_text_dataset(
-    train_ts = ts_dataset.train.reset_index(),
-    validate_ts = ts_dataset.validate.reset_index(),
-    hist_len = _HIST_LEN.value,
-  )
+  if _ENCODING.value == 'init_recent_hist':
+    transformer_dataset = time_series_to_text.build_recent_hist_text_dataset(
+      train_ts = ts_dataset.train.reset_index(),
+      validate_ts = ts_dataset.validate.reset_index(),
+      hist_len = _HIST_LEN.value,
+    )
+  elif _ENCODING.value == 'init_bound_to_auto':
+    transformer_dataset = time_series_to_text.build_train_val_text_dataset_init_bound_to_auto(
+      train_ts = ts_dataset.train.reset_index(),
+      validate_ts = ts_dataset.validate.reset_index(),
+    )
+  
   transformer_dataset.train.to_csv(
-    os.path.join(_WORKDIR.value, f'transformer.{log_id}.train.tf_{_TRAIN_FRAC.value}.hist_{_HIST_LEN.value}.{run_id}.csv'), 
+    os.path.join(_WORKDIR.value, f'transformer.{log_id}.train.{split_label}.{encoding_label}.{run_id}.csv'), 
     index=False, quoting=csv.QUOTE_ALL)
   transformer_dataset.validate.to_csv(
-    os.path.join(_WORKDIR.value, f'transformer.{log_id}.validate.tf_{_TRAIN_FRAC.value}.hist_{_HIST_LEN.value}.{run_id}.csv'), 
+    os.path.join(_WORKDIR.value, f'transformer.{log_id}.validate.{split_label}.{encoding_label}.{run_id}.csv'), 
     index=False, quoting=csv.QUOTE_ALL)
 
-  # with open(os.path.join(_WORKDIR.value, f'transformer.{log_id}.meta.tf_{_TRAIN_FRAC.value}.hist_{_HIST_LEN.value}.{run_id}.csv'), 'w') as f:
+  # with open(os.path.join(_WORKDIR.value, f'transformer.{log_id}.meta.{split_label}.{encoding_label}.{run_id}.csv'), 'w') as f:
   #   json.dump({
   #     'max_input_len': transformer_dataset.max_input_len,
   #     'max_pred_len': transformer_dataset.max_pred_len,
@@ -182,13 +218,22 @@ async def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError('Too many command-line arguments.')
 
+  if _SPLIT.value == 'random':
+    split_label = f'{_SPLIT.value}_tf_{_TRAIN_FRAC.value}'
+  elif _SPLIT.value == 'lat' or _SPLIT.value == 'lng':
+    split_label = f'{_SPLIT.value}_min_{_TRAIN_MIN_VAL.value}_max_{_TRAIN_MAX_VAL.value}'.replace('-', '_')
+
+  if _ENCODING.value == 'init_recent_hist':
+    encoding_label = f'{_ENCODING.value}_hist_{_HIST_LEN.value}'
+  elif _ENCODING.value == 'init_bound_to_auto':
+    encoding_label = _ENCODING.value
 
   run_id = str(uuid.uuid4()).replace('-', '_')
 
   # Load all the log files
   load_tasks = []
   for log_id in _LOG_ID.value:
-    load_tasks.append(asyncio.create_task(load_dataset(log_id, run_id)))
+    load_tasks.append(asyncio.create_task(load_dataset(log_id, run_id, split_label, encoding_label)))
 
   all_train = []
   all_validate = []
@@ -203,7 +248,8 @@ async def main(argv: Sequence[str]) -> None:
   train = pd.concat(all_train, axis=0)
   validate = pd.concat(all_train, axis=0)
 
-  all_log_ids_label = ','.join([str(log_id) for log_id in _LOG_ID.value]) + f'_tf_{_TRAIN_FRAC.value}_hist_{_HIST_LEN.value}_{run_id}'
+
+  all_log_ids_label = ','.join([str(log_id) for log_id in _LOG_ID.value]) + f'_{split_label}_{encoding_label}_{run_id}'
   print(f'Ingesting full Transformer text dataset.')
   ingested_dataset = train_transformer.ingest_transformer_dataset(
     train,
@@ -212,6 +258,8 @@ async def main(argv: Sequence[str]) -> None:
     all_log_ids_label,
     _DATA_CELL.value
   )
+
+  logging.info ('max_input_len=%s, max_pred_len=%s', max_input_len, max_pred_len)
 
   print(f'Launching Gemini to train on Transformer text dataset.')
   train_transformer.finetune_gemini(
