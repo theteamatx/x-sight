@@ -1,0 +1,45 @@
+---
+question_id: 1
+question_label: one
+# decision_mode : train
+# deployment_mode : distributed
+optimizer_type : worklist_scheduler
+# num_train_workers : 1
+# num_trials : 2
+# binary_path : fvs_sight/fvs_sight_worker.py
+# docker_image : gcr.io/cameltrain/sight-worker:dev-9f01478
+
+action_attrs:
+  a1:
+    min_value: 0
+    max_value: 1
+  a2:
+    min_value: 0
+    max_value: 1
+outcome_attrs:
+  time_series:
+    min_value: 0
+    max_value: 1
+
+---
+question_id: 2
+question_label: two
+# decision_mode : train
+# deployment_mode : distributed
+optimizer_type : worklist_scheduler
+# num_train_workers : 1
+# num_trials : 2
+# binary_path : fvs_sight/fvs_sight_worker.py
+# docker_image : gcr.io/cameltrain/sight-worker:dev-9f01478
+
+action_attrs:
+  a1:
+    min_value: 0
+    max_value: 1
+  a2:
+    min_value: 0
+    max_value: 1
+outcome_attrs:
+  time_series:
+    min_value: 0
+    max_value: 1

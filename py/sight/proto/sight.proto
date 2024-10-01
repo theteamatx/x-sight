@@ -739,6 +739,8 @@ message DecisionConfigurationStart {
   map<string, AttrProps> outcome_attrs = 5;
 
   int64 num_trials = 6;
+  int64 question_id = 7;
+  string question_label = 8;
 }
 
 message DecisionParam {

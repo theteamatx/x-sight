@@ -31,11 +31,13 @@ from helpers.logs.logs_handler import logger as logging
 
 from sight_service.proto import service_pb2
 from sight import service_utils as service
+# from sight.sight import Sight
 from sight.proto import sight_pb2
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
 from sight.widgets.decision.single_action_optimizer_client import SingleActionOptimizerClient
 from sight.widgets.decision.acme.acme_optimizer_client import AcmeOptimizerClient
 from sight.widgets.decision.env_driver import driver_fn
+from sight.widgets.decision import decision_helper
 # from sight.widgets.decision.cartpole_driver import driver_fn
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
@@ -276,53 +278,7 @@ def attr_to_dict(attr, array):
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return result
 
-
-def run(
-    sight: Any,
-    env: Any = None,
-    driver_fn: Callable[[Any], Any] = driver_fn,
-    state_attrs: Dict[str,
-                      sight_pb2.DecisionConfigurationStart.AttrProps] = {},
-    action_attrs: Dict[str,
-                       sight_pb2.DecisionConfigurationStart.AttrProps] = {},
-    outcome_attrs: Dict[str,
-                        sight_pb2.DecisionConfigurationStart.AttrProps] = {},
-    description: str = '',
-):
-    """Driver for running applications that use the Decision API.
-
-  Args:
-    sight: The Sight object to be used for logging.
-    env: environment object if passed by user.
-    driver_fn: Driver function for calling application logic that uses the Sight
-      Decision API to describe decisions and their outcomes. It is assumed that
-      driver_fn does not maintain state across invocations and can be called as
-      many time as needed, possibly concurrently (i.e. does not keep state
-      within global variables either internally or via its interactions with
-      external resources).
-    state_attrs: Maps the name of each state variable to its possible values.
-    action_attrs: Maps the name of each variable that describes possible
-      decisions to its possible values.
-    outcome_attrs: Maps the name of each variable that describes possible
-      outcomes to its possible values.
-    description: Human-readable description of the application.
-  """
-
-    method_name = 'run'
-    logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
-
-    if env is not None:
-        if state_attrs == {}:
-            state_attrs = attr_to_dict(env.observation_spec(), 'state')
-        if action_attrs == {}:
-            action_attrs = attr_to_dict(env.action_spec(), 'action')
-
-    sight.widget_decision_state['decision_episode_fn'] = (
-        decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
-                                              action_attrs))
-    # print(sight.widget_decision_state['decision_episode_fn'])
-    # raise SystemError
-
+def get_optimizer(optimizer_type: str, sight: Any):
     if _OPTIMIZER_TYPE.value == 'dm_acme':
         optimizer.obj = AcmeOptimizerClient(sight)
     elif _OPTIMIZER_TYPE.value == 'vizier':
@@ -363,282 +319,620 @@ def run(
     else:
         raise ValueError(f'Unknown optimizer type {_OPTIMIZER_TYPE.value}')
 
-    if env is not None:
-        if state_attrs == {}:
-            state_attrs = attr_to_dict(env.observation_spec(), 'state')
-        if action_attrs == {}:
-            action_attrs = attr_to_dict(env.action_spec(), 'action')
-    if outcome_attrs == {}:
-        outcome_attrs = {
-            'outcome': sight_pb2.DecisionConfigurationStart.AttrProps()
-        }
+    return optimizer.obj
 
-    decision_configuration = sight_pb2.DecisionConfigurationStart()
-    decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
+def run(
+    sight: Any,
+    env: Any = None,
+    configs: List[Dict] = None,
+    driver_fn: Callable[[Any], Any] = driver_fn,
+    state_attrs: Dict[str,
+                      sight_pb2.DecisionConfigurationStart.AttrProps] = {},
+    action_attrs: Dict[str,
+                       sight_pb2.DecisionConfigurationStart.AttrProps] = {},
+    outcome_attrs: Dict[str,
+                        sight_pb2.DecisionConfigurationStart.AttrProps] = {},
+    description: str = '',
+):
+    """Driver for running applications that use the Decision API.
 
-    if (_NUM_TRIALS.value):
-        decision_configuration.num_trials = _NUM_TRIALS.value
-    # if FLAGS.deployment_mode == 'worker_mode':
-    #     decision_configuration.num_trials = int(os.environ['num_samples'])
-    # else:
-    #     decision_configuration.num_trials = _NUM_TRIALS.value
-    decision_configuration.choice_config[sight.params.label].CopyFrom(
-        optimizer.obj.create_config())
-    attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
-    attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
-    attr_dict_to_proto(outcome_attrs, decision_configuration.outcome_attrs)
+  Args:
+    sight: The Sight object to be used for logging.
+    env: environment object if passed by user.
+    driver_fn: Driver function for calling application logic that uses the Sight
+      Decision API to describe decisions and their outcomes. It is assumed that
+      driver_fn does not maintain state across invocations and can be called as
+      many time as needed, possibly concurrently (i.e. does not keep state
+      within global variables either internally or via its interactions with
+      external resources).
+    state_attrs: Maps the name of each state variable to its possible values.
+    action_attrs: Maps the name of each variable that describes possible
+      decisions to its possible values.
+    outcome_attrs: Maps the name of each variable that describes possible
+      outcomes to its possible values.
+    description: Human-readable description of the application.
+  """
 
-    sight.enter_block(
-        'Decision Configuration',
-        sight_pb2.Object(block_start=sight_pb2.BlockStart(
-            sub_type=sight_pb2.BlockStart.ST_CONFIGURATION,
-            configuration=sight_pb2.ConfigurationStart(
-                sub_type=sight_pb2.ConfigurationStart.
-                ST_DECISION_CONFIGURATION,
-                decision_configuration=decision_configuration,
-            ),
-        )),
-    )
-    sight.exit_block('Decision Configuration', sight_pb2.Object())
-    sight.widget_decision_state['num_decision_points'] = 0
+    method_name = 'run'
+    logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-    sight.widget_decision_state['decision_episode_fn'] = (
-        decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
-                                              action_attrs))
-    sight.widget_decision_state['proposed_actions'] = []
 
-    if _DECISON_MODE.value == 'run':
-        logging.info('_DECISON_MODE.value == run')
-        # sight.widget_decision_state['sum_outcome'] = 0
-        # sight.widget_decision_state['last_reward'] = None
-        # if env:
-        #   driver_fn(env, sight)
-        # else:
-        #   driver_fn(sight)
-        # finalize_episode(sight)
 
-        if (not FLAGS.sight_log_id):
-            raise ValueError(
-                "sight_log_id have to be passed from the trained run for decision_mokde = run"
+    if (configs):
+        # # print('lenght : ', len(configs))
+        # print('type : ', type(configs))
+        # print('config : ', configs)
+
+        # for config in configs:
+        #   print('config : ', config)
+        # raise SystemError
+        for config in configs:
+            optimizer_type = config["optimizer_type"]
+            # print("optimizer_type : ", optimizer_type)
+            opt_obj = get_optimizer(optimizer_type, sight)
+            print('new config : ', config)
+            print('*'*10)
+            state_attrs = decision_helper.config_to_attr(config, 'state_attrs')
+            action_attrs = decision_helper.config_to_attr(
+                config, 'action_attrs')
+            outcome_attrs = decision_helper.config_to_attr(
+                config, 'outcome_attrs')
+
+            sight.widget_decision_state['decision_episode_fn'] = (
+            decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+                                                  action_attrs))
+
+            decision_configuration = sight_pb2.DecisionConfigurationStart()
+            decision_configuration.optimizer_type = opt_obj.optimizer_type()
+            decision_configuration.question_id = config["question_id"]
+            decision_configuration.question_label = config["question_label"]
+
+            if (_NUM_TRIALS.value):
+                decision_configuration.num_trials = _NUM_TRIALS.value
+            # if FLAGS.deployment_mode == 'worker_mode':
+            #     decision_configuration.num_trials = int(os.environ['num_samples'])
+            # else:
+            #     decision_configuration.num_trials = _NUM_TRIALS.value
+            decision_configuration.choice_config[sight.params.label].CopyFrom(
+                opt_obj.create_config())
+            attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
+            attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
+            attr_dict_to_proto(outcome_attrs, decision_configuration.outcome_attrs)
+
+            sight.enter_block(
+                'Decision Configuration',
+                sight_pb2.Object(block_start=sight_pb2.BlockStart(
+                    sub_type=sight_pb2.BlockStart.ST_CONFIGURATION,
+                    configuration=sight_pb2.ConfigurationStart(
+                        sub_type=sight_pb2.ConfigurationStart.
+                        ST_DECISION_CONFIGURATION,
+                        decision_configuration=decision_configuration,
+                    ),
+                )),
             )
+            sight.exit_block('Decision Configuration', sight_pb2.Object())
+            sight.widget_decision_state['num_decision_points'] = 0
 
-        req = service_pb2.FetchOptimalActionRequest(
-            client_id=FLAGS.sight_log_id,
-            # worker_id=f'client_{client_id}_worker_{worker_location}',
-        )
-        response = service.call(
-            lambda s, meta: s.FetchOptimalAction(req, 300, metadata=meta))
-        print('response : ', response.response_str)
+            sight.widget_decision_state['decision_episode_fn'] = (
+                decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+                                                      action_attrs))
+            sight.widget_decision_state['proposed_actions'] = []
 
-    elif _DECISON_MODE.value == 'configured_run':
-        # ? not proper flow right now
-        # If the run configuration is provided in a file.
-        # if _DECISION_RUN_CONFIG_FILE.value:
-        if flags.FLAGS.decision_run_config_file:
-            sight.add_config_file(_DECISION_RUN_CONFIG_FILE.value)
-        # If the run configuration is provided on the command line.
-        elif _DECISION_PARAMS.value:
-            chosen_action = {}
-            for key_val in _DECISION_PARAMS.value.split(':'):
-                key, val = tuple(key_val.split('='))
-                chosen_action[key] = float(val)
-            sight.widget_decision_state['constant_action'] = chosen_action
-            # sight.widget_decision_state['sum_outcome'] = 0
-            sight.widget_decision_state['last_reward'] = None
-        else:
-            raise ValueError(
-                'In configured_run mode decision_run_config_file is required.')
+            if _DECISON_MODE.value == 'run':
+                logging.info('_DECISON_MODE.value == run')
+                # sight.widget_decision_state['sum_outcome'] = 0
+                # sight.widget_decision_state['last_reward'] = None
+                # if env:
+                #   driver_fn(env, sight)
+                # else:
+                #   driver_fn(sight)
+                # finalize_episode(sight)
 
-        # If a docker image is provided, run within it.
-        logging.info(
-            'decision_train_alg=%s docker_image=%s',
-            FLAGS.deployment_mode,
-            _DOCKER_IMAGE.value,
-        )
-        if FLAGS.deployment_mode == 'local' and _DOCKER_IMAGE.value:
-            trials.start_job_in_docker(
-                1,
-                _BINARY_PATH.value,
-                _OPTIMIZER_TYPE.value,
-                _DOCKER_IMAGE.value,
-                _DECISON_MODE.value,
-                'docker_worker',
-                'worker_mode',
-                _DECISION_PARAMS.value,
-                sight,
-            )
-        # Otherwise, run within the current process.
-        else:
-            driver_fn(sight)
+                if (not FLAGS.sight_log_id):
+                    raise ValueError(
+                        "sight_log_id have to be passed from the trained run for decision_mokde = run"
+                    )
 
-    elif _DECISON_MODE.value == 'train':
-        details = sight.widget_decision_state['decision_episode_fn']
-        possible_actions = list(details.action_max.values())[0] - list(
-            details.action_min.values())[0] + 2
-
-        print('FLAGS.deployment_mode : ', FLAGS.deployment_mode)
-        if FLAGS.deployment_mode in ['distributed', 'vm']:
-            if (_OPTIMIZER_TYPE.value == 'exhaustive_search'
-                    and possible_actions < _NUM_TRIALS.value):
-                raise ValueError(
-                    f"max possible value for num_trials is : {possible_actions}"
+                req = service_pb2.FetchOptimalActionRequest(
+                    client_id=FLAGS.sight_log_id,
+                    # worker_id=f'client_{client_id}_worker_{worker_location}',
                 )
-            # logging.info('FLAGS.deployment_mode == distributed')
-            if (not _DOCKER_IMAGE.value):
+                response = service.call(
+                    lambda s, meta: s.FetchOptimalAction(req, 300, metadata=meta))
+                print('response : ', response.response_str)
+
+            elif _DECISON_MODE.value == 'configured_run':
+                # ? not proper flow right now
+                # If the run configuration is provided in a file.
+                # if _DECISION_RUN_CONFIG_FILE.value:
+                if flags.FLAGS.decision_run_config_file:
+                    sight.add_config_file(_DECISION_RUN_CONFIG_FILE.value)
+                # If the run configuration is provided on the command line.
+                elif _DECISION_PARAMS.value:
+                    chosen_action = {}
+                    for key_val in _DECISION_PARAMS.value.split(':'):
+                        key, val = tuple(key_val.split('='))
+                        chosen_action[key] = float(val)
+                    sight.widget_decision_state['constant_action'] = chosen_action
+                    # sight.widget_decision_state['sum_outcome'] = 0
+                    sight.widget_decision_state['last_reward'] = None
+                else:
+                    raise ValueError(
+                        'In configured_run mode decision_run_config_file is required.')
+
+                # If a docker image is provided, run within it.
+                logging.info(
+                    'decision_train_alg=%s docker_image=%s',
+                    FLAGS.deployment_mode,
+                    _DOCKER_IMAGE.value,
+                )
+                if FLAGS.deployment_mode == 'local' and _DOCKER_IMAGE.value:
+                    trials.start_job_in_docker(
+                        1,
+                        _BINARY_PATH.value,
+                        _OPTIMIZER_TYPE.value,
+                        _DOCKER_IMAGE.value,
+                        _DECISON_MODE.value,
+                        'docker_worker',
+                        'worker_mode',
+                        _DECISION_PARAMS.value,
+                        sight,
+                    )
+                # Otherwise, run within the current process.
+                else:
+                    driver_fn(sight)
+
+            elif _DECISON_MODE.value == 'train':
+                details = sight.widget_decision_state['decision_episode_fn']
+                possible_actions = list(details.action_max.values())[0] - list(
+                    details.action_min.values())[0] + 2
+
+                print('_DECISON_MODE.value : ', _DECISON_MODE.value)
+                if FLAGS.deployment_mode in ['distributed', 'vm']:
+                    if (_OPTIMIZER_TYPE.value == 'exhaustive_search'
+                            and possible_actions < _NUM_TRIALS.value):
+                        raise ValueError(
+                            f"max possible value for num_trials is : {possible_actions}"
+                        )
+                    # logging.info('FLAGS.deployment_mode == distributed')
+                    if (not _DOCKER_IMAGE.value):
+                        raise ValueError(
+                            "docker_image must be provided for distributed mode")
+                    # print("decision_config : ", decision_configuration)
+                    trials.launch(
+                        opt_obj,
+                        decision_configuration,
+                        _NUM_TRAIN_WORKERS.value,
+                        sight,
+                    )
+                    trials.start_jobs(
+                        _NUM_TRAIN_WORKERS.value,
+                        _BINARY_PATH.value,
+                        _OPTIMIZER_TYPE.value,
+                        _DOCKER_IMAGE.value,
+                        _DECISON_MODE.value,
+                        'worker_mode',
+                        'dsub_cloud_worker',
+                        sight,
+                    )
+                elif FLAGS.deployment_mode in [
+                        'local',
+                        'dsub_local',
+                        'docker_local',
+                        'worker_mode',
+                ]:
+                    if FLAGS.deployment_mode == 'worker_mode' or 'PARENT_LOG_ID' in os.environ:
+                        # not used anymore - for worklist scheduler
+                        # num_samples_to_run = int(os.environ['num_samples'])
+                        pass
+                    else:
+                        trials.launch(
+                            opt_obj,
+                            decision_configuration,
+                            _NUM_TRAIN_WORKERS.value,
+                            sight,
+                        )
+                        # not used anymore - for worklist scheduler
+                        num_samples_to_run = _NUM_TRIALS.value
+
+                    # If a docker image is provided, run within it.
+                    if (FLAGS.deployment_mode == 'docker_local'
+                        ):  # and _NUM_TRAIN_WORKERS.value==1:
+                        trials.start_job_in_docker(
+                            _NUM_TRIALS.value,
+                            _BINARY_PATH.value,
+                            _OPTIMIZER_TYPE.value,
+                            _DOCKER_IMAGE.value,
+                            _DECISON_MODE.value,
+                            'worker_mode',
+                            'docker_local_worker',
+                            _DECISION_PARAMS.value,
+                            sight,
+                        )
+                    # run d-sub locally
+                    elif (FLAGS.deployment_mode == 'dsub_local'
+                          ):  # and _NUM_TRAIN_WORKERS.value>1:
+                        trials.start_job_in_dsub_local(
+                            _NUM_TRAIN_WORKERS.value,
+                            _NUM_TRIALS.value,
+                            _BINARY_PATH.value,
+                            _OPTIMIZER_TYPE.value,
+                            _DOCKER_IMAGE.value,
+                            _DECISON_MODE.value,
+                            'worker_mode',
+                            'dsub_local_worker',
+                            sight,
+                        )
+                    # Otherwise, run within the current process.
+                    else:  # local & worker_mode
+                        # if _OPTIMIZER_TYPE.value == 'dm_acme':
+                        #   opt_obj = acme_optimizer_client.Acme(sight)
+                        # elif _OPTIMIZER_TYPE.value == 'vizier':
+                        #   opt_obj = vizier_optimizer_client.Vizier(sight)
+                        # elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
+                        #   opt_obj = exhaustive_search_client.ExhaustiveSearch(sight)
+
+                        # actions_list = [
+                        #                 {'action_1': 1, 'action_2': 1, 'action_3': 1},
+                        #                 {'action_1': 2, 'action_2': 2, 'action_3': 2},
+                        #                 {'action_1': 3, 'action_2': 3, 'action_3': 3}
+                        #             ]
+                        # unique_action_ids = propose_actions(sight, actions_list)
+
+                        if FLAGS.deployment_mode == 'local':
+                            client_id = str(sight.id)
+                            worker_location = '0'
+                        elif (FLAGS.deployment_mode == 'worker_mode'
+                              # or FLAGS.deployment_mode == 'docker_mode'
+                              ):
+                            client_id = os.environ['PARENT_LOG_ID']
+                            worker_location = os.environ['worker_location']
+
+                    # for _ in range(num_samples_to_run):
+                    # if(FLAGS.optimizer_type == "worklist_scheduler"):
+                    # if (FLAGS.deployment_mode == 'worker_mode'):
+                        while (True):
+                            # #? new rpc just to check move forward or not?
+                            req = service_pb2.WorkerAliveRequest(
+                                client_id=client_id,
+                                worker_id=f'client_{client_id}_worker_{worker_location}'
+                            )
+                            response = service.call(
+                                lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+
+                            logging.info("response from workAlive rpc is : %s",
+                                        response.status_type)
+                            if (response.status_type == service_pb2.
+                                    WorkerAliveResponse.StatusType.ST_DONE):
+                                break
+                            elif (response.status_type ==
+                                  service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+                                logging.info('sleeping for 5 seconds......')
+                                time.sleep(5)
+                            elif (response.status_type ==
+                                  service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
+                                sight.enter_block('Decision Sample',
+                                                  sight_pb2.Object())
+                                if 'constant_action' in sight.widget_decision_state:
+                                    del sight.widget_decision_state['constant_action']
+                                sight.widget_decision_state['discount'] = 0
+                                sight.widget_decision_state['last_reward'] = None
+
+                                if env:
+                                    driver_fn(env, sight)
+                                else:
+                                    driver_fn(sight)
+
+                                finalize_episode(sight)
+                                sight.exit_block('Decision Sample', sight_pb2.Object())
+                            else:
+                                raise ValueError("invalid response from server")
+                        logging.info('exiting from the loop.....')
+                    # else:
+                    #   for _ in range(num_samples_to_run):
+                    #     sight.enter_block('Decision Sample', sight_pb2.Object())
+                    #     if 'constant_action' in sight.widget_decision_state:
+                    #         del sight.widget_decision_state['constant_action']
+                    #     sight.widget_decision_state['discount'] = 0
+                    #     sight.widget_decision_state['last_reward'] = None
+
+                    #     if env:
+                    #         driver_fn(env, sight)
+                    #     else:
+                    #         driver_fn(sight)
+
+                    #     finalize_episode(sight)
+                    #     sight.exit_block('Decision Sample', sight_pb2.Object())
+
+                    # req = service_pb2.TestRequest(client_id=str(sight.id))
+                    # response = service.call(
+                    #     lambda s, meta: s.PrintInsertionTime(req, 300, metadata=meta)
+                    # )
+
+                logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+    #! need to discard this condition when yaml flow is setup
+    else:
+        if env is not None:
+            if state_attrs == {}:
+                state_attrs = attr_to_dict(env.observation_spec(), 'state')
+            if action_attrs == {}:
+                action_attrs = attr_to_dict(env.action_spec(), 'action')
+
+        sight.widget_decision_state['decision_episode_fn'] = (
+            decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+                                                  action_attrs))
+
+        if outcome_attrs == {}:
+            outcome_attrs = {
+                'outcome': sight_pb2.DecisionConfigurationStart.AttrProps()
+            }
+
+        decision_configuration = sight_pb2.DecisionConfigurationStart()
+        decision_configuration.optimizer_type = opt_obj.optimizer_type()
+
+        if (_NUM_TRIALS.value):
+            decision_configuration.num_trials = _NUM_TRIALS.value
+        # if FLAGS.deployment_mode == 'worker_mode':
+        #     decision_configuration.num_trials = int(os.environ['num_samples'])
+        # else:
+        #     decision_configuration.num_trials = _NUM_TRIALS.value
+        decision_configuration.choice_config[sight.params.label].CopyFrom(
+            opt_obj.create_config())
+        attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
+        attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
+        attr_dict_to_proto(outcome_attrs, decision_configuration.outcome_attrs)
+
+        sight.enter_block(
+            'Decision Configuration',
+            sight_pb2.Object(block_start=sight_pb2.BlockStart(
+                sub_type=sight_pb2.BlockStart.ST_CONFIGURATION,
+                configuration=sight_pb2.ConfigurationStart(
+                    sub_type=sight_pb2.ConfigurationStart.
+                    ST_DECISION_CONFIGURATION,
+                    decision_configuration=decision_configuration,
+                ),
+            )),
+        )
+        sight.exit_block('Decision Configuration', sight_pb2.Object())
+        sight.widget_decision_state['num_decision_points'] = 0
+
+        sight.widget_decision_state['decision_episode_fn'] = (
+            decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+                                                  action_attrs))
+        sight.widget_decision_state['proposed_actions'] = []
+
+        if _DECISON_MODE.value == 'run':
+            logging.info('_DECISON_MODE.value == run')
+            # sight.widget_decision_state['sum_outcome'] = 0
+            # sight.widget_decision_state['last_reward'] = None
+            # if env:
+            #   driver_fn(env, sight)
+            # else:
+            #   driver_fn(sight)
+            # finalize_episode(sight)
+
+            if (not FLAGS.sight_log_id):
                 raise ValueError(
-                    "docker_image must be provided for distributed mode")
-            # print("decision_config : ", decision_configuration)
-            trials.launch(
-                optimizer.obj,
-                decision_configuration,
-                _NUM_TRAIN_WORKERS.value,
-                sight,
+                    "sight_log_id have to be passed from the trained run for decision_mokde = run"
+                )
+
+            req = service_pb2.FetchOptimalActionRequest(
+                client_id=FLAGS.sight_log_id,
+                # worker_id=f'client_{client_id}_worker_{worker_location}',
             )
-            trials.start_jobs(
-                _NUM_TRAIN_WORKERS.value,
-                _BINARY_PATH.value,
-                _OPTIMIZER_TYPE.value,
-                _DOCKER_IMAGE.value,
-                _DECISON_MODE.value,
-                'worker_mode',
-                'dsub_cloud_worker',
-                sight,
-            )
-        elif FLAGS.deployment_mode in [
-                'local',
-                'dsub_local',
-                'docker_local',
-                'worker_mode',
-        ]:
-            if FLAGS.deployment_mode == 'worker_mode' or 'PARENT_LOG_ID' in os.environ:
-                # not used anymore - for worklist scheduler
-                # num_samples_to_run = int(os.environ['num_samples'])
-                pass
+            response = service.call(
+                lambda s, meta: s.FetchOptimalAction(req, 300, metadata=meta))
+            print('response : ', response.response_str)
+
+        elif _DECISON_MODE.value == 'configured_run':
+            # ? not proper flow right now
+            # If the run configuration is provided in a file.
+            # if _DECISION_RUN_CONFIG_FILE.value:
+            if flags.FLAGS.decision_run_config_file:
+                sight.add_config_file(_DECISION_RUN_CONFIG_FILE.value)
+            # If the run configuration is provided on the command line.
+            elif _DECISION_PARAMS.value:
+                chosen_action = {}
+                for key_val in _DECISION_PARAMS.value.split(':'):
+                    key, val = tuple(key_val.split('='))
+                    chosen_action[key] = float(val)
+                sight.widget_decision_state['constant_action'] = chosen_action
+                # sight.widget_decision_state['sum_outcome'] = 0
+                sight.widget_decision_state['last_reward'] = None
             else:
+                raise ValueError(
+                    'In configured_run mode decision_run_config_file is required.')
+
+            # If a docker image is provided, run within it.
+            logging.info(
+                'decision_train_alg=%s docker_image=%s',
+                FLAGS.deployment_mode,
+                _DOCKER_IMAGE.value,
+            )
+            if FLAGS.deployment_mode == 'local' and _DOCKER_IMAGE.value:
+                trials.start_job_in_docker(
+                    1,
+                    _BINARY_PATH.value,
+                    _OPTIMIZER_TYPE.value,
+                    _DOCKER_IMAGE.value,
+                    _DECISON_MODE.value,
+                    'docker_worker',
+                    'worker_mode',
+                    _DECISION_PARAMS.value,
+                    sight,
+                )
+            # Otherwise, run within the current process.
+            else:
+                driver_fn(sight)
+
+        elif _DECISON_MODE.value == 'train':
+            details = sight.widget_decision_state['decision_episode_fn']
+            possible_actions = list(details.action_max.values())[0] - list(
+                details.action_min.values())[0] + 2
+
+            print('_DECISON_MODE.value : ', _DECISON_MODE.value)
+            if FLAGS.deployment_mode in ['distributed', 'vm']:
+                if (_OPTIMIZER_TYPE.value == 'exhaustive_search'
+                        and possible_actions < _NUM_TRIALS.value):
+                    raise ValueError(
+                        f"max possible value for num_trials is : {possible_actions}"
+                    )
+                # logging.info('FLAGS.deployment_mode == distributed')
+                if (not _DOCKER_IMAGE.value):
+                    raise ValueError(
+                        "docker_image must be provided for distributed mode")
+                # print("decision_config : ", decision_configuration)
                 trials.launch(
-                    optimizer.obj,
+                    opt_obj,
                     decision_configuration,
                     _NUM_TRAIN_WORKERS.value,
                     sight,
                 )
-                # not used anymore - for worklist scheduler
-                num_samples_to_run = _NUM_TRIALS.value
-
-            # If a docker image is provided, run within it.
-            if (FLAGS.deployment_mode == 'docker_local'
-                ):  # and _NUM_TRAIN_WORKERS.value==1:
-                trials.start_job_in_docker(
-                    _NUM_TRIALS.value,
-                    _BINARY_PATH.value,
-                    _OPTIMIZER_TYPE.value,
-                    _DOCKER_IMAGE.value,
-                    _DECISON_MODE.value,
-                    'worker_mode',
-                    'docker_local_worker',
-                    _DECISION_PARAMS.value,
-                    sight,
-                )
-            # run d-sub locally
-            elif (FLAGS.deployment_mode == 'dsub_local'
-                  ):  # and _NUM_TRAIN_WORKERS.value>1:
-                trials.start_job_in_dsub_local(
+                trials.start_jobs(
                     _NUM_TRAIN_WORKERS.value,
-                    _NUM_TRIALS.value,
                     _BINARY_PATH.value,
                     _OPTIMIZER_TYPE.value,
                     _DOCKER_IMAGE.value,
                     _DECISON_MODE.value,
                     'worker_mode',
-                    'dsub_local_worker',
+                    'dsub_cloud_worker',
                     sight,
                 )
-            # Otherwise, run within the current process.
-            else:  # local & worker_mode
-                # if _OPTIMIZER_TYPE.value == 'dm_acme':
-                #   optimizer.obj = acme_optimizer_client.Acme(sight)
-                # elif _OPTIMIZER_TYPE.value == 'vizier':
-                #   optimizer.obj = vizier_optimizer_client.Vizier(sight)
-                # elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
-                #   optimizer.obj = exhaustive_search_client.ExhaustiveSearch(sight)
-
-                # actions_list = [
-                #                 {'action_1': 1, 'action_2': 1, 'action_3': 1},
-                #                 {'action_1': 2, 'action_2': 2, 'action_3': 2},
-                #                 {'action_1': 3, 'action_2': 3, 'action_3': 3}
-                #             ]
-                # unique_action_ids = propose_actions(sight, actions_list)
-
-                if FLAGS.deployment_mode == 'local':
-                    client_id = str(sight.id)
-                    worker_location = '0'
-                elif (FLAGS.deployment_mode == 'worker_mode'
-                      # or FLAGS.deployment_mode == 'docker_mode'
-                      ):
-                    client_id = os.environ['PARENT_LOG_ID']
-                    worker_location = os.environ['worker_location']
-
-            # for _ in range(num_samples_to_run):
-            # if(FLAGS.optimizer_type == "worklist_scheduler"):
-            # if (FLAGS.deployment_mode == 'worker_mode'):
-                while (True):
-                    # #? new rpc just to check move forward or not?
-                    req = service_pb2.WorkerAliveRequest(
-                        client_id=client_id,
-                        worker_id=f'client_{client_id}_worker_{worker_location}'
+            elif FLAGS.deployment_mode in [
+                    'local',
+                    'dsub_local',
+                    'docker_local',
+                    'worker_mode',
+            ]:
+                if FLAGS.deployment_mode == 'worker_mode' or 'PARENT_LOG_ID' in os.environ:
+                    # not used anymore - for worklist scheduler
+                    # num_samples_to_run = int(os.environ['num_samples'])
+                    pass
+                else:
+                    trials.launch(
+                        opt_obj,
+                        decision_configuration,
+                        _NUM_TRAIN_WORKERS.value,
+                        sight,
                     )
-                    response = service.call(
-                        lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+                    # not used anymore - for worklist scheduler
+                    num_samples_to_run = _NUM_TRIALS.value
 
-                    logging.info("response from workAlive rpc is : %s",
-                                 response.status_type)
-                    if (response.status_type == service_pb2.
-                            WorkerAliveResponse.StatusType.ST_DONE):
-                        break
-                    elif (response.status_type ==
-                          service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-                        logging.info('sleeping for 5 seconds......')
-                        time.sleep(5)
-                    elif (response.status_type ==
-                          service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-                        sight.enter_block('Decision Sample',
-                                          sight_pb2.Object())
-                        if 'constant_action' in sight.widget_decision_state:
-                            del sight.widget_decision_state['constant_action']
-                        sight.widget_decision_state['discount'] = 0
-                        sight.widget_decision_state['last_reward'] = None
+                # If a docker image is provided, run within it.
+                if (FLAGS.deployment_mode == 'docker_local'
+                    ):  # and _NUM_TRAIN_WORKERS.value==1:
+                    trials.start_job_in_docker(
+                        _NUM_TRIALS.value,
+                        _BINARY_PATH.value,
+                        _OPTIMIZER_TYPE.value,
+                        _DOCKER_IMAGE.value,
+                        _DECISON_MODE.value,
+                        'worker_mode',
+                        'docker_local_worker',
+                        _DECISION_PARAMS.value,
+                        sight,
+                    )
+                # run d-sub locally
+                elif (FLAGS.deployment_mode == 'dsub_local'
+                      ):  # and _NUM_TRAIN_WORKERS.value>1:
+                    trials.start_job_in_dsub_local(
+                        _NUM_TRAIN_WORKERS.value,
+                        _NUM_TRIALS.value,
+                        _BINARY_PATH.value,
+                        _OPTIMIZER_TYPE.value,
+                        _DOCKER_IMAGE.value,
+                        _DECISON_MODE.value,
+                        'worker_mode',
+                        'dsub_local_worker',
+                        sight,
+                    )
+                # Otherwise, run within the current process.
+                else:  # local & worker_mode
+                    # if _OPTIMIZER_TYPE.value == 'dm_acme':
+                    #   opt_obj = acme_optimizer_client.Acme(sight)
+                    # elif _OPTIMIZER_TYPE.value == 'vizier':
+                    #   opt_obj = vizier_optimizer_client.Vizier(sight)
+                    # elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
+                    #   opt_obj = exhaustive_search_client.ExhaustiveSearch(sight)
 
-                        if env:
-                            driver_fn(env, sight)
+                    # actions_list = [
+                    #                 {'action_1': 1, 'action_2': 1, 'action_3': 1},
+                    #                 {'action_1': 2, 'action_2': 2, 'action_3': 2},
+                    #                 {'action_1': 3, 'action_2': 3, 'action_3': 3}
+                    #             ]
+                    # unique_action_ids = propose_actions(sight, actions_list)
+
+                    if FLAGS.deployment_mode == 'local':
+                        client_id = str(sight.id)
+                        worker_location = '0'
+                    elif (FLAGS.deployment_mode == 'worker_mode'
+                          # or FLAGS.deployment_mode == 'docker_mode'
+                          ):
+                        client_id = os.environ['PARENT_LOG_ID']
+                        worker_location = os.environ['worker_location']
+
+                # for _ in range(num_samples_to_run):
+                # if(FLAGS.optimizer_type == "worklist_scheduler"):
+                # if (FLAGS.deployment_mode == 'worker_mode'):
+                    while (True):
+                        # #? new rpc just to check move forward or not?
+                        req = service_pb2.WorkerAliveRequest(
+                            client_id=client_id,
+                            worker_id=f'client_{client_id}_worker_{worker_location}'
+                        )
+                        response = service.call(
+                            lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+
+                        logging.info("response from workAlive rpc is : %s",
+                                    response.status_type)
+                        if (response.status_type == service_pb2.
+                                WorkerAliveResponse.StatusType.ST_DONE):
+                            break
+                        elif (response.status_type ==
+                              service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+                            logging.info('sleeping for 5 seconds......')
+                            time.sleep(5)
+                        elif (response.status_type ==
+                              service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
+                            sight.enter_block('Decision Sample',
+                                              sight_pb2.Object())
+                            if 'constant_action' in sight.widget_decision_state:
+                                del sight.widget_decision_state['constant_action']
+                            sight.widget_decision_state['discount'] = 0
+                            sight.widget_decision_state['last_reward'] = None
+
+                            if env:
+                                driver_fn(env, sight)
+                            else:
+                                driver_fn(sight)
+
+                            finalize_episode(sight)
+                            sight.exit_block('Decision Sample', sight_pb2.Object())
                         else:
-                            driver_fn(sight)
+                            raise ValueError("invalid response from server")
+                    logging.info('exiting from the loop.....')
+                # else:
+                #   for _ in range(num_samples_to_run):
+                #     sight.enter_block('Decision Sample', sight_pb2.Object())
+                #     if 'constant_action' in sight.widget_decision_state:
+                #         del sight.widget_decision_state['constant_action']
+                #     sight.widget_decision_state['discount'] = 0
+                #     sight.widget_decision_state['last_reward'] = None
 
-                        finalize_episode(sight)
-                        sight.exit_block('Decision Sample', sight_pb2.Object())
-                    else:
-                        raise ValueError("invalid response from server")
-                logging.info('exiting from the loop.....')
-            # else:
-            #   for _ in range(num_samples_to_run):
-            #     sight.enter_block('Decision Sample', sight_pb2.Object())
-            #     if 'constant_action' in sight.widget_decision_state:
-            #         del sight.widget_decision_state['constant_action']
-            #     sight.widget_decision_state['discount'] = 0
-            #     sight.widget_decision_state['last_reward'] = None
+                #     if env:
+                #         driver_fn(env, sight)
+                #     else:
+                #         driver_fn(sight)
 
-            #     if env:
-            #         driver_fn(env, sight)
-            #     else:
-            #         driver_fn(sight)
+                #     finalize_episode(sight)
+                #     sight.exit_block('Decision Sample', sight_pb2.Object())
 
-            #     finalize_episode(sight)
-            #     sight.exit_block('Decision Sample', sight_pb2.Object())
+                # req = service_pb2.TestRequest(client_id=str(sight.id))
+                # response = service.call(
+                #     lambda s, meta: s.PrintInsertionTime(req, 300, metadata=meta)
+                # )
 
-            # req = service_pb2.TestRequest(client_id=str(sight.id))
-            # response = service.call(
-            #     lambda s, meta: s.PrintInsertionTime(req, 300, metadata=meta)
-            # )
-
-        logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+            logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
 def get_state_attrs(sight: Any) -> list[str]:
