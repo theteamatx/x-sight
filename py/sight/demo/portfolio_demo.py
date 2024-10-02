@@ -26,6 +26,7 @@ warnings.warn = warn
 import asyncio
 import os
 import threading
+import yaml
 from typing import Sequence, Any
 
 from absl import app
@@ -220,8 +221,12 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
 def main_wrapper(argv):
     start_time = time.perf_counter()
     with get_sight_instance() as sight:
-        decision.run(action_attrs=fvs_api.get_action_attrs(),
-                     outcome_attrs=fvs_api.get_outcome_attrs(),
+        # decision.run(action_attrs=fvs_api.get_action_attrs(),
+        #              outcome_attrs=fvs_api.get_outcome_attrs(),
+        #              sight=sight)
+      with open(f'fvs_sight/config.yaml','r') as f:
+        configs = yaml.safe_load_all(f)
+        decision.run(configs=configs,
                      sight=sight)
         asyncio.run(main(sight, argv))
 
