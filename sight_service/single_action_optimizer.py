@@ -14,25 +14,26 @@
 """An instance of a Sight optimizer dedicated to a single experiment."""
 
 from concurrent import futures
+from typing import Any, Dict, List, Sequence, Tuple
+
 from helpers.logs.logs_handler import logger as logging
-from typing import Any, Dict, List, Tuple, Sequence
+from sight.proto import sight_pb2
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
-from sight.proto import sight_pb2
 
 _file_name = "single_action_optimizer.py"
 
 
 class SingleActionOptimizer(OptimizerInstance):
-    """An SingleActionOptimizer class that is generic for all optimizers.
+  """An SingleActionOptimizer class that is generic for all optimizers.
 
   An optimizer containing base methods which specialized optimizers will
   override while communicating with client.
   """
 
-    def __init__(self):
-        super().__init__()
-        self.unique_id = 1
-        self.pending_samples = {}
-        self.active_samples = {}
-        self.completed_samples = {}
+  def __init__(self):
+    super().__init__()
+    self.unique_id = 1
+    self.pending_samples = {}
+    self.active_samples = {}
+    self.completed_samples = {}

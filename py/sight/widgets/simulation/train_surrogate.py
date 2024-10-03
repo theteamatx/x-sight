@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Trains a surrogate model to capture the observed dynamics of simulations."""
 
 import math
@@ -20,25 +19,23 @@ from typing import Iterable, Iterator, List, Tuple
 
 from absl import app
 from absl import flags
-from helpers.logs.logs_handler import logger as loggingimport apache_beam as beam
-import numpy as np
-from sklearn import metrics
-from sklearn.ensemble import GradientBoostingRegressor
-
+import apache_beam as beam
 from google3.pipeline.flume.py import runner
 from google3.pipeline.flume.py.io import capacitorio
 from google3.pyglib import gfile
 from google3.pyglib.contrib.gpathlib import gpath_flag
+from helpers.logs.logs_handler import logger as logging
+import numpy as np
 from sight.proto import example_pb2
 from sight.proto import sight_pb2
+from sklearn import metrics
+from sklearn.ensemble import GradientBoostingRegressor
 
 _IN_LOG_FILE = flags.DEFINE_list(
     'in_log_file',
     None,
-    (
-        'Input file(s) that contain the Sight log that documents the simulation'
-        ' run.'
-    ),
+    ('Input file(s) that contain the Sight log that documents the simulation'
+     ' run.'),
     required=True,
 )
 
@@ -75,11 +72,8 @@ class BigExamplesToSingleOutputRows(beam.DoFn):
     if task.tensor_flow_example.input_example:
       for feat_name in task.tensor_flow_example.input_example.features.feature:
         # if feat_name in {'tai', 'fiald', 'dcph'}:
-        input_row.append(
-            task.tensor_flow_example.input_example.features.feature[
-                feat_name
-            ].float_list.value[0]
-        )
+        input_row.append(task.tensor_flow_example.input_example.features.
+                         feature[feat_name].float_list.value[0])
 
     # Emit a single output for each output feature.
     if task.tensor_flow_example.output_example:
@@ -88,9 +82,8 @@ class BigExamplesToSingleOutputRows(beam.DoFn):
             feat_key,
             (
                 input_row,
-                task.tensor_flow_example.output_example.features.feature[
-                    feat_key
-                ].float_list.value[0],
+                task.tensor_flow_example.output_example.features.
+                feature[feat_key].float_list.value[0],
             ),
         )
 
@@ -118,10 +111,10 @@ class TrainModel(beam.DoFn):
     logging.info(
         '%s: mae=%s, rmse=%s',
         task[0],
-        metrics.mean_absolute_error(output_array, predicted_array)
-        / np.mean(output_array),
-        math.sqrt(metrics.mean_squared_error(output_array, predicted_array))
-        / np.mean(output_array),
+        metrics.mean_absolute_error(output_array, predicted_array) /
+        np.mean(output_array),
+        math.sqrt(metrics.mean_squared_error(output_array, predicted_array)) /
+        np.mean(output_array),
     )
 
 
@@ -130,8 +123,7 @@ def main(argv):
     raise app.UsageError('Too many command-line arguments.')
 
   root = beam.Pipeline(
-      runner=runner.FlumeRunner()
-  )  # beam.runners.DirectRunner())
+      runner=runner.FlumeRunner())  # beam.runners.DirectRunner())
 
   reads = []
   for file_path in _IN_LOG_FILE.value:
@@ -139,30 +131,18 @@ def main(argv):
       with gfile.GFile(file_path, 'r') as inputs_f:
         for cur_file_path in inputs_f:
           logging.info('cur_file_path=%s', cur_file_path)
-          reads.append(
-              root
-              | f'Read {cur_file_path}'
-              >> capacitorio.ReadFromCapacitor(
-                  cur_file_path, ['*'], beam.coders.ProtoCoder(sight_pb2.Object)
-              )
-          )
+          reads.append(root |
+                       f'Read {cur_file_path}' >> capacitorio.ReadFromCapacitor(
+                           cur_file_path, ['*'],
+                           beam.coders.ProtoCoder(sight_pb2.Object)))
     else:
       logging.info('file_path=%s', file_path)
-      reads.append(
-          root
-          | f'Read {file_path}'
-          >> capacitorio.ReadFromCapacitor(
-              file_path, ['*'], beam.coders.ProtoCoder(sight_pb2.Object)
-          )
-      )
+      reads.append(root | f'Read {file_path}' >> capacitorio.ReadFromCapacitor(
+          file_path, ['*'], beam.coders.ProtoCoder(sight_pb2.Object)))
 
     log = reads | beam.Flatten()
-    _ = (
-        log
-        | beam.ParDo(BigExamplesToSingleOutputRows())
-        | beam.GroupByKey()
-        | beam.ParDo(TrainModel())
-    )
+    _ = (log | beam.ParDo(BigExamplesToSingleOutputRows()) | beam.GroupByKey() |
+         beam.ParDo(TrainModel()))
 
   results = root.run()
   results.wait_until_finish()

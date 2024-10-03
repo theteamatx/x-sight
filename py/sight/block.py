@@ -15,6 +15,7 @@
 
 import inspect
 from typing import Dict, Optional, Text
+
 from helpers.logs.logs_handler import logger as logging
 from sight.exception import exception
 from sight.location import Location
@@ -23,35 +24,34 @@ from sight.sight import Sight
 
 
 class Block(object):
-    """Encapsulates start and stop points where a Sight log block is active."""
+  """Encapsulates start and stop points where a Sight log block is active."""
 
-    def __init__(self, *args):
-        if len(args) == 2:
-            (label, sight) = args
-            self.create_label(label, sight)
-            return
-        if len(args) == 3 and isinstance(args[2], dict):
-            (label, sight, attributes) = args
-            self.create_label(label, sight, attributes)
-            return
+  def __init__(self, *args):
+    if len(args) == 2:
+      (label, sight) = args
+      self.create_label(label, sight)
+      return
+    if len(args) == 3 and isinstance(args[2], dict):
+      (label, sight, attributes) = args
+      self.create_label(label, sight, attributes)
+      return
 
-        if len(args) == 3:
-            (key, value, sight) = args
-            self.create_label('%s=%s' % (key, value), sight,
-                              {str(key): str(value)})
-            return
-        (key, value, sight, attributes) = args
-        full_attributes = attributes.copy()
-        full_attributes[key] = value
-        self.create_label('%s=%s' % (key, value), sight, full_attributes)
+    if len(args) == 3:
+      (key, value, sight) = args
+      self.create_label('%s=%s' % (key, value), sight, {str(key): str(value)})
+      return
+    (key, value, sight, attributes) = args
+    full_attributes = attributes.copy()
+    full_attributes[key] = value
+    self.create_label('%s=%s' % (key, value), sight, full_attributes)
 
-    def create_label(
-        self,
-        label: str,
-        sight: Sight,
-        attributes: Optional[Dict[Text, Text]] = None,
-    ) -> Optional[Location]:
-        """Creates and enters a block with a given label and attributes.
+  def create_label(
+      self,
+      label: str,
+      sight: Sight,
+      attributes: Optional[Dict[Text, Text]] = None,
+  ) -> Optional[Location]:
+    """Creates and enters a block with a given label and attributes.
 
     Args:
       label: The label that identifies this block.
@@ -62,50 +62,50 @@ class Block(object):
     Returns:
       The starting location of this block.
     """
-        self.sight = sight
-        if sight is None:
-            logging.info('<<< %s', label)
-            return None
+    self.sight = sight
+    if sight is None:
+      logging.info('<<< %s', label)
+      return None
 
-        if not self.sight.is_logging_enabled():
-            return None
+    if not self.sight.is_logging_enabled():
+      return None
 
-        self.label = label
-        if attributes:
-            self.attributes = attributes
-        else:
-            self.attributes = dict()
-        for key in sorted(self.attributes.keys()):
-            self.sight.set_attribute(key, self.attributes.get(key))
-        # pytype: disable=attribute-error
-        return self.sight.enter_block(self.label, sight_pb2.Object(),
-                                      inspect.currentframe().f_back.f_back)
-        # pytype: enable=attribute-error
+    self.label = label
+    if attributes:
+      self.attributes = attributes
+    else:
+      self.attributes = dict()
+    for key in sorted(self.attributes.keys()):
+      self.sight.set_attribute(key, self.attributes.get(key))
+    # pytype: disable=attribute-error
+    return self.sight.enter_block(self.label, sight_pb2.Object(),
+                                  inspect.currentframe().f_back.f_back)
+    # pytype: enable=attribute-error
 
-    def __enter__(self):
-        return self
+  def __enter__(self):
+    return self
 
-    def __exit__(self, exc_type, value, traceback):
-        if not self.sight:
-            return
+  def __exit__(self, exc_type, value, traceback):
+    if not self.sight:
+      return
 
-        if not self.sight.is_logging_enabled():
-            return
+    if not self.sight.is_logging_enabled():
+      return
 
-        if exc_type is not None:
-            # pytype: disable=attribute-error
-            exception(exc_type, value, traceback, self.sight,
-                      inspect.currentframe().f_back)
-            # pytype: enable=attribute-error
+    if exc_type is not None:
+      # pytype: disable=attribute-error
+      exception(exc_type, value, traceback, self.sight,
+                inspect.currentframe().f_back)
+      # pytype: enable=attribute-error
 
-        if self.sight is None:
-            logging.info('>>> %s', self.label)
-            return
+    if self.sight is None:
+      logging.info('>>> %s', self.label)
+      return
 
-        # pytype: disable=attribute-error
-        self.sight.exit_block(self.label, sight_pb2.Object(),
-                              inspect.currentframe().f_back)
-        # pytype: enable=attribute-error
+    # pytype: disable=attribute-error
+    self.sight.exit_block(self.label, sight_pb2.Object(),
+                          inspect.currentframe().f_back)
+    # pytype: enable=attribute-error
 
-        for key in sorted(self.attributes.keys(), reverse=True):
-            self.sight.unset_attribute(key)
+    for key in sorted(self.attributes.keys(), reverse=True):
+      self.sight.unset_attribute(key)

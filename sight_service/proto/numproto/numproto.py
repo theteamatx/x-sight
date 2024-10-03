@@ -11,17 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """NumPy ndarray to protobuf serialization and deserialization"""
 from io import BytesIO
 
 import numpy as np
-
 from sight_service.proto.numproto.protobuf.ndarray_pb2 import NDArray
 
 
 def ndarray_to_proto(nda: np.ndarray) -> NDArray:
-    """Serializes a numpy array into an NDArray protobuf message.
+  """Serializes a numpy array into an NDArray protobuf message.
 
     Args:
         nda (np.ndarray): numpy array to serialize.
@@ -29,14 +27,14 @@ def ndarray_to_proto(nda: np.ndarray) -> NDArray:
     Returns:
         Returns an NDArray protobuf message.
     """
-    nda_bytes = BytesIO()
-    np.save(nda_bytes, nda, allow_pickle=False)
+  nda_bytes = BytesIO()
+  np.save(nda_bytes, nda, allow_pickle=False)
 
-    return NDArray(ndarray=nda_bytes.getvalue())
+  return NDArray(ndarray=nda_bytes.getvalue())
 
 
 def proto_to_ndarray(nda_proto: NDArray) -> np.ndarray:
-    """Deserializes an NDArray protobuf message into a numpy array.
+  """Deserializes an NDArray protobuf message into a numpy array.
 
     Args:
         nda_proto (NDArray): NDArray protobuf message to deserialize.
@@ -44,6 +42,6 @@ def proto_to_ndarray(nda_proto: NDArray) -> np.ndarray:
     Returns:
         Returns a numpy.ndarray.
     """
-    nda_bytes = BytesIO(nda_proto.ndarray)
+  nda_bytes = BytesIO(nda_proto.ndarray)
 
-    return np.load(nda_bytes, allow_pickle=False)
+  return np.load(nda_bytes, allow_pickle=False)

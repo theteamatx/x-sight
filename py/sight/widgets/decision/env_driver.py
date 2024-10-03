@@ -14,7 +14,6 @@
 """Default Driver function to be used while training within the Sight log."""
 
 from helpers.logs.logs_handler import logger as logging
-
 import numpy as np
 from sight import data_structures
 # from sight.sight import Sight
@@ -24,33 +23,32 @@ _file_name = "driver.py"
 
 
 def driver_fn(env, sight) -> None:
-    """Executes the logic of searching for a value.
+  """Executes the logic of searching for a value.
 
   Args:
     env: The dm_env type env obcject used to call the reset and step methods.
     sight: The Sight logger object used to drive decisions.
   """
-    method_name = 'driver_fn'
-    logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
+  method_name = 'driver_fn'
+  logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-    timestep = env.reset()
+  timestep = env.reset()
 
-    state_attrs = decision.get_state_attrs(sight)
+  state_attrs = decision.get_state_attrs(sight)
+  for i in range(len(state_attrs)):
+    data_structures.log_var(state_attrs[i], timestep.observation[i], sight)
+
+  while not timestep.last():
+    chosen_action = decision.decision_point("DP_label", sight)
+
+    timestep = env.step(chosen_action)
+
     for i in range(len(state_attrs)):
-        data_structures.log_var(state_attrs[i], timestep.observation[i], sight)
+      data_structures.log_var(state_attrs[i], timestep.observation[i], sight)
 
-    while not timestep.last():
-        chosen_action = decision.decision_point("DP_label", sight)
-
-        timestep = env.step(chosen_action)
-
-        for i in range(len(state_attrs)):
-            data_structures.log_var(state_attrs[i], timestep.observation[i],
-                                    sight)
-
-        decision.decision_outcome(
-            "DO_label",
-            timestep.reward,
-            sight,
-        )
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+    decision.decision_outcome(
+        "DO_label",
+        timestep.reward,
+        sight,
+    )
+  logging.debug("<<<<  Out %s of %s", method_name, _file_name)

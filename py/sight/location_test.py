@@ -11,11 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests for google3.googlex.cortex.sight.py.location."""
 
-from sight import Location
 from absl.testing import absltest
+from sight import Location
 
 
 class LocationTest(absltest.TestCase):
@@ -56,9 +55,8 @@ class LocationTest(absltest.TestCase):
       self.assertEqual(loc.pos(), i)
 
     # ASSERT
-    self.assertEqual(
-        str(loc), '0000000000:0000000001:0000000002:0000000003:0000000004'
-    )
+    self.assertEqual(str(loc),
+                     '0000000000:0000000001:0000000002:0000000003:0000000004')
 
     for i in range(4, 0, -1):
       # ACT
@@ -85,9 +83,8 @@ class LocationTest(absltest.TestCase):
         self.assertEqual(loc.pos(), i + j)
 
     # ASSERT
-    self.assertEqual(
-        str(loc), '0000000000:0000000005:0000000006:0000000007:0000000008'
-    )
+    self.assertEqual(str(loc),
+                     '0000000000:0000000005:0000000006:0000000007:0000000008')
 
   def testNextAllLocation(self):
     # SETUP
@@ -100,9 +97,8 @@ class LocationTest(absltest.TestCase):
     loc.next_all()
 
     # ASSERT
-    self.assertEqual(
-        str(loc), '0000000001:0000000002:0000000003:0000000004:0000000005'
-    )
+    self.assertEqual(str(loc),
+                     '0000000001:0000000002:0000000003:0000000004:0000000005')
 
     for i in range(4, 0, -1):
       # ACT

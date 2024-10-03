@@ -15,7 +15,7 @@
 
 
 def warn(*args, **kwargs):
-    pass
+  pass
 
 
 import warnings
@@ -25,23 +25,23 @@ warnings.warn = warn
 from concurrent import futures
 # from helpers.logs.logs_handler import logger as logging
 import logging
+
 from absl import app
 from absl import flags
-
-import grpc
 from dotenv import load_dotenv
+import grpc
 
 load_dotenv()
 
 import os
-from overrides import overrides
+import time
+from typing import Any, Dict, List, Tuple
 import uuid
 
-from typing import Any, Dict, List, Tuple
-import time
-
-from sight_service import service_utils
+from overrides import overrides
+from readerwriterlock import rwlock
 from sight.proto import sight_pb2
+from sight_service import service_utils
 # from sight_service.acme_optimizer import Acme
 from sight_service.bayesian_opt import BayesianOpt
 from sight_service.exhaustive_search import ExhaustiveSearch
@@ -55,7 +55,6 @@ from sight_service.sensitivity_analysis import SensitivityAnalysis
 from sight_service.smc_py import SMCPy
 from sight_service.vizier import Vizier
 from sight_service.worklist_scheduler_opt import WorklistScheduler
-from readerwriterlock import rwlock
 
 _PORT = flags.DEFINE_integer('port', 8080, 'The port to listen on')
 _file_name = "service_root.py"
@@ -68,294 +67,262 @@ studytableId = os.getenv("SPANNER_STUDY_TABLE_ID")
 
 
 def generate_unique_number() -> int:
-    return uuid.uuid4().int & (1 << 63) - 1
+  return uuid.uuid4().int & (1 << 63) - 1
 
 
 def calculate_resolve_time(start_time):
-    method_name = "calculate_resolve_time"
-    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
-    resolve_time = time.time() - start_time
-    _resolve_times.append(resolve_time)
-    avg_resolve_time = sum(_resolve_times) / len(_resolve_times)
-    logging.info(
-        " logging.info : Average Resolve Time From Server: %s seconds",
-        round(avg_resolve_time, 4))
-    logging.info("<<<<<< Out %s method of %s file.", method_name, _file_name)
+  method_name = "calculate_resolve_time"
+  logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+  resolve_time = time.time() - start_time
+  _resolve_times.append(resolve_time)
+  avg_resolve_time = sum(_resolve_times) / len(_resolve_times)
+  logging.info(" logging.info : Average Resolve Time From Server: %s seconds",
+               round(avg_resolve_time, 4))
+  logging.info("<<<<<< Out %s method of %s file.", method_name, _file_name)
 
 
 class Optimizers:
-    """
+  """
   Optimizer class to create request specific optimizer and use the methods
   provided in those to work with future requests.
   """
 
-    def __init__(self):
-        self.instances: Dict[str, OptimizerInstance] = {}
-        self.instances_lock = rwlock.RWLockFair()
+  def __init__(self):
+    self.instances: Dict[str, OptimizerInstance] = {}
+    self.instances_lock = rwlock.RWLockFair()
 
-    def launch(
-            self,
-            request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
-        """Creates more specific optimizer and use them while responding to clients accordingly.
+  def launch(self,
+             request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
+    """Creates more specific optimizer and use them while responding to clients accordingly.
     """
-        method_name = "launch"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     "Optimizers")
+    method_name = "launch"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, "Optimizers")
 
-        optimizer_type = request.decision_config_params.optimizer_type
-        logging.debug(">>>>>>>  In %s method of %s file. optimizer_type=%s",
-                      method_name, _file_name, optimizer_type)
-        with self.instances_lock.gen_wlock():
-            if optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER:
-                self.instances[request.client_id] = Vizier()
-                return self.instances[request.client_id].launch(request)
-            elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_GENETIC_ALGORITHM:
-                self.instances[request.client_id] = GeneticAlgorithm()
-                return self.instances[request.client_id].launch(request)
-            elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH:
-                self.instances[request.client_id] = ExhaustiveSearch()
-                return self.instances[request.client_id].launch(request)
-            # elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_ACME:
-            #   self.instances[request.client_id] = Acme()
-            #   obj = self.instances[request.client_id].launch(request)
-            #   # logging.info("self of optimizers class:  %s", str(self.__dict__))
-            #   return obj
-            elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM:
-                self.instances[request.client_id] = LLM()
-                obj = self.instances[request.client_id].launch(request)
-                return obj
-            elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT:
-                self.instances[request.client_id] = BayesianOpt()
-                obj = self.instances[request.client_id].launch(request)
-                return obj
-            elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SENSITIVITY_ANALYSIS:
-                self.instances[request.client_id] = SensitivityAnalysis()
-                obj = self.instances[request.client_id].launch(request)
-                return obj
-            elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_NEVER_GRAD:
-                self.instances[request.client_id] = NeverGradOpt()
-                obj = self.instances[request.client_id].launch(request)
-                return obj
-            elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY:
-                self.instances[request.client_id] = SMCPy()
-                obj = self.instances[request.client_id].launch(request)
-                return obj
-            elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER:
-                self.instances[request.client_id] = WorklistScheduler()
-                obj = self.instances[request.client_id].launch(request)
-                return obj
-            else:
-                return service_pb2.LaunchResponse(
-                    display_string=f"OPTIMIZER '{optimizer_type}' NOT VALID!!")
-        logging.info("<<<<<< Out %s method of %s file.", method_name,
-                     _file_name)
+    optimizer_type = request.decision_config_params.optimizer_type
+    logging.debug(">>>>>>>  In %s method of %s file. optimizer_type=%s",
+                  method_name, _file_name, optimizer_type)
+    with self.instances_lock.gen_wlock():
+      if optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER:
+        self.instances[request.client_id] = Vizier()
+        return self.instances[request.client_id].launch(request)
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_GENETIC_ALGORITHM:
+        self.instances[request.client_id] = GeneticAlgorithm()
+        return self.instances[request.client_id].launch(request)
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH:
+        self.instances[request.client_id] = ExhaustiveSearch()
+        return self.instances[request.client_id].launch(request)
+      # elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_ACME:
+      #   self.instances[request.client_id] = Acme()
+      #   obj = self.instances[request.client_id].launch(request)
+      #   # logging.info("self of optimizers class:  %s", str(self.__dict__))
+      #   return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM:
+        self.instances[request.client_id] = LLM()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT:
+        self.instances[request.client_id] = BayesianOpt()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SENSITIVITY_ANALYSIS:
+        self.instances[request.client_id] = SensitivityAnalysis()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_NEVER_GRAD:
+        self.instances[request.client_id] = NeverGradOpt()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY:
+        self.instances[request.client_id] = SMCPy()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
+      elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER:
+        self.instances[request.client_id] = WorklistScheduler()
+        obj = self.instances[request.client_id].launch(request)
+        return obj
+      else:
+        return service_pb2.LaunchResponse(
+            display_string=f"OPTIMIZER '{optimizer_type}' NOT VALID!!")
+    logging.info("<<<<<< Out %s method of %s file.", method_name, _file_name)
 
-    def get_instance(self, client_id: str) -> OptimizerInstance:
-        # method_name = "get_instance"
-        # logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
-        with self.instances_lock.gen_rlock():
-            if (client_id in self.instances):
-                instance_obj = self.instances[client_id]
-                return instance_obj
-            else:
-                #add better mechanism, this require in close rpc for now
-                return None
-        # logging.debug("<<<<<< Out %s method of %s file.", method_name, _file_name)
+  def get_instance(self, client_id: str) -> OptimizerInstance:
+    # method_name = "get_instance"
+    # logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+    with self.instances_lock.gen_rlock():
+      if (client_id in self.instances):
+        instance_obj = self.instances[client_id]
+        return instance_obj
+      else:
+        #add better mechanism, this require in close rpc for now
+        return None
+    # logging.debug("<<<<<< Out %s method of %s file.", method_name, _file_name)
 
 
 class SightService(service_pb2_grpc.SightServiceServicer):
-    """Service class to handle the grpc request send via sight client.
+  """Service class to handle the grpc request send via sight client.
   """
 
-    def __init__(self):
-        super().__init__()
-        self.optimizers = Optimizers()
+  def __init__(self):
+    super().__init__()
+    self.optimizers = Optimizers()
 
-    def Test(self, request, context):
-        method_name = "Test"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     _file_name)
-        obj = service_pb2.TestResponse(val="222")
-        logging.info("<<<<<< Out %s method of %s file.", method_name,
-                     _file_name)
-        return obj
+  def Test(self, request, context):
+    method_name = "Test"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+    obj = service_pb2.TestResponse(val="222")
+    logging.info("<<<<<< Out %s method of %s file.", method_name, _file_name)
+    return obj
 
-    # def GetWeights(self, request, context):
-    #   method_name = "GetWeights"
-    #   logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
-    #   start_time = time.time()
-    #   obj = self.optimizers.get_instance(request.client_id).get_weights(request)
-    #   # calculate_resolve_time(start_time)
-    #   logging.info("<<<<<< Out %s method of %s file.", method_name, _file_name)
-    #   return obj
+  # def GetWeights(self, request, context):
+  #   method_name = "GetWeights"
+  #   logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+  #   start_time = time.time()
+  #   obj = self.optimizers.get_instance(request.client_id).get_weights(request)
+  #   # calculate_resolve_time(start_time)
+  #   logging.info("<<<<<< Out %s method of %s file.", method_name, _file_name)
+  #   return obj
 
-    def DecisionPoint(self, request, context):
-        method_name = "DecisionPoint"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     _file_name)
-        start_time = time.time()
-        obj = self.optimizers.get_instance(
-            request.client_id).decision_point(request)
-        # calculate_resolve_time(start_time)
-        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
-                     _file_name)
-        return obj
+  def DecisionPoint(self, request, context):
+    method_name = "DecisionPoint"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+    start_time = time.time()
+    obj = self.optimizers.get_instance(
+        request.client_id).decision_point(request)
+    # calculate_resolve_time(start_time)
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
 
-    def Tell(self, request, context):
-        method_name = "Tell"
-        logging.debug(">>>>>>>  In %s method of %s file.", method_name,
-                      _file_name)
+  def Tell(self, request, context):
+    method_name = "Tell"
+    logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-        return self.optimizers.get_instance(request.client_id).tell(request)
-        logging.debug("<<<<<<<  Out %s method of %s file.", method_name,
-                      _file_name)
+    return self.optimizers.get_instance(request.client_id).tell(request)
+    logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
-    def Listen(self, request, context):
-        method_name = "Listen"
-        logging.debug(">>>>>>>  In %s method of %s file.", method_name,
-                      _file_name)
+  def Listen(self, request, context):
+    method_name = "Listen"
+    logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-        return self.optimizers.get_instance(request.client_id).listen(request)
-        logging.debug("<<<<<<<  Out %s method of %s file.", method_name,
-                      _file_name)
+    return self.optimizers.get_instance(request.client_id).listen(request)
+    logging.debug("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
-    def CurrentStatus(self, request, context):
-        method_name = "CurrentStatus"
-        # logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+  def CurrentStatus(self, request, context):
+    method_name = "CurrentStatus"
+    # logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-        return self.optimizers.get_instance(
-            request.client_id).current_status(request)
-        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
-                     _file_name)
+    return self.optimizers.get_instance(
+        request.client_id).current_status(request)
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
-    def FetchOptimalAction(self, request, context):
-        method_name = "FetchOptimalAction"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     _file_name)
+  def FetchOptimalAction(self, request, context):
+    method_name = "FetchOptimalAction"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-        obj = self.optimizers.get_instance(
-            request.client_id).fetch_optimal_action(request)
-        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
-                     _file_name)
-        return obj
+    obj = self.optimizers.get_instance(
+        request.client_id).fetch_optimal_action(request)
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
 
-    def ProposeAction(self, request, context):
-        method_name = "ProposeAction"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     _file_name)
+  def ProposeAction(self, request, context):
+    method_name = "ProposeAction"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-        obj = self.optimizers.get_instance(
-            request.client_id).propose_action(request)
-        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
-                     _file_name)
-        return obj
+    obj = self.optimizers.get_instance(
+        request.client_id).propose_action(request)
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
 
-    def GetOutcome(self, request, context):
-        method_name = "GetOutcome"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     _file_name)
+  def GetOutcome(self, request, context):
+    method_name = "GetOutcome"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-        obj = self.optimizers.get_instance(
-            request.client_id).GetOutcome(request)
-        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
-                     _file_name)
-        return obj
+    obj = self.optimizers.get_instance(request.client_id).GetOutcome(request)
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
 
-    def FinalizeEpisode(self, request, context):
-        method_name = "FinalizeEpisode"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     _file_name)
+  def FinalizeEpisode(self, request, context):
+    method_name = "FinalizeEpisode"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-        obj = self.optimizers.get_instance(
-            request.client_id).finalize_episode(request)
-        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
-                     _file_name)
-        return obj
+    obj = self.optimizers.get_instance(
+        request.client_id).finalize_episode(request)
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
 
-    def Launch(self, request, context):
-        method_name = "Launch"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     _file_name)
-        # start_time = time.time()
-        obj = self.optimizers.launch(request)
-        # calculate_resolve_time(start_time)
-        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
-                     _file_name)
-        return obj
+  def Launch(self, request, context):
+    method_name = "Launch"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+    # start_time = time.time()
+    obj = self.optimizers.launch(request)
+    # calculate_resolve_time(start_time)
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
 
-    def Create(self, request, context):
-        method_name = "Create"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     _file_name)
-        # start_time = time.time()
-        unique_id = generate_unique_number()
-        # calculate_resolve_time(start_time)
+  def Create(self, request, context):
+    method_name = "Create"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+    # start_time = time.time()
+    unique_id = generate_unique_number()
+    # calculate_resolve_time(start_time)
 
-        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
-                     _file_name)
-        return service_pb2.CreateResponse(id=unique_id, path_prefix="/tmp/")
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return service_pb2.CreateResponse(id=unique_id, path_prefix="/tmp/")
 
-    def Close(self, request, context):
-        method_name = "Close"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     _file_name)
+  def Close(self, request, context):
+    method_name = "Close"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-        # only call if it's launch called, otherwise no entry of opt for that client
-        if (self.optimizers.get_instance(request.client_id)):
-            obj = self.optimizers.get_instance(
-                request.client_id).close(request)
-        else:
-            obj = service_pb2.CloseResponse()
+    # only call if it's launch called, otherwise no entry of opt for that client
+    if (self.optimizers.get_instance(request.client_id)):
+      obj = self.optimizers.get_instance(request.client_id).close(request)
+    else:
+      obj = service_pb2.CloseResponse()
 
-        #? do we need to remove entry from optimizer dict, if available??
-        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
-                     _file_name)
-        return obj
+    #? do we need to remove entry from optimizer dict, if available??
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
 
-    def WorkerAlive(self, request, context):
-        method_name = "WorkerAlive"
-        logging.info(">>>>>>>  In %s method of %s file.", method_name,
-                     _file_name)
+  def WorkerAlive(self, request, context):
+    method_name = "WorkerAlive"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-        obj = self.optimizers.get_instance(
-            request.client_id).WorkerAlive(request)
-        logging.info("<<<<<<<  Out %s method of %s file.", method_name,
-                     _file_name)
-        return obj
+    obj = self.optimizers.get_instance(request.client_id).WorkerAlive(request)
+    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+    return obj
 
 
 def serve():
-    """Main method that listens on port 8080 and handle requests received from client.
+  """Main method that listens on port 8080 and handle requests received from client.
     """
-    method_name = "serve"
-    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+  method_name = "serve"
+  logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=500),
-                         options=[
-                             ('grpc.max_receive_message_length',
-                              512 * 1024 * 1024),
-                         ])
-    service_pb2_grpc.add_SightServiceServicer_to_server(SightService(), server)
-    server.add_insecure_port(f"[::]:{_PORT.value}")
-    server.start()
-    logging.info(f"server is up and running on port : {_PORT.value}")
+  server = grpc.server(futures.ThreadPoolExecutor(max_workers=500),
+                       options=[
+                           ('grpc.max_receive_message_length',
+                            512 * 1024 * 1024),
+                       ])
+  service_pb2_grpc.add_SightServiceServicer_to_server(SightService(), server)
+  server.add_insecure_port(f"[::]:{_PORT.value}")
+  server.start()
+  logging.info(f"server is up and running on port : {_PORT.value}")
 
-    # flask_app.run(debug=True, host="0.0.0.0", port=_PORT.value)
-    server.wait_for_termination()
-    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+  # flask_app.run(debug=True, host="0.0.0.0", port=_PORT.value)
+  server.wait_for_termination()
+  logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
 
 def main(argv):
-    method_name = "__main__"
-    logging.basicConfig(level=logging.INFO)
-    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
-    try:
-        app.run(serve())
-    except BaseException as e:
-        logging.error("Error occurred : ")
-        logging.error(e)
-    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
+  method_name = "__main__"
+  logging.basicConfig(level=logging.INFO)
+  logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+  try:
+    app.run(serve())
+  except BaseException as e:
+    logging.error("Error occurred : ")
+    logging.error(e)
+  logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
 
 
 if __name__ == "__main__":
-    app.run(main)
+  app.run(main)

@@ -11,17 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Demo for the tensorflow bindings to the Sight logging library."""
 
 from absl import app
 from absl import flags
 import numpy as np
-import tensorflow as tf
-
 from proto import sight_pb2
 from py.sight import Sight
 from py.widgets.tensorflow_sight import tensorflow_sight
+import tensorflow as tf
 
 FLAGS = flags.FLAGS
 
@@ -42,9 +40,10 @@ def main(argv):
   with Sight(params) as sight:
     with tensorflow_sight.TfModelTraining(label="Model Training", sight=sight):
       for epoch in range(0, 3):
-        with tensorflow_sight.TfModelTrainingEpoch(
-            label="Model Epoch", epoch_num=epoch, batch_size=10, sight=sight
-        ):
+        with tensorflow_sight.TfModelTrainingEpoch(label="Model Epoch",
+                                                   epoch_num=epoch,
+                                                   batch_size=10,
+                                                   sight=sight):
           sight.text("hello")
           with tensorflow_sight.TfModelApplication("Model Application", sight):
             a = np.array(
@@ -55,9 +54,8 @@ def main(argv):
                 dtype=np.float32,
             )
             for i in range(0, 5):
-              tensorflow_sight.log(
-                  "tensor %d" % i, tf.convert_to_tensor(a), sight
-              )
+              tensorflow_sight.log("tensor %d" % i, tf.convert_to_tensor(a),
+                                   sight)
               a = a * 2
 
 

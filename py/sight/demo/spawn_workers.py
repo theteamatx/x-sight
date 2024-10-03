@@ -13,10 +13,10 @@
 # limitations under the License.
 """Binary to spawn multiple workers with given file."""
 
-import os
-import math
-import subprocess
 from datetime import datetime
+import math
+import os
+import subprocess
 from typing import Any, Callable, Dict, Optional, Sequence, Text, Tuple
 
 from absl import app
@@ -30,31 +30,31 @@ FLAGS = flags.FLAGS
 
 
 def get_sight_instance():
-    print('creating sight object')
-    params = sight_pb2.Params(
-        label='original_demo',
-        bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-    )
-    sight_obj = Sight(params)
-    return sight_obj
+  print('creating sight object')
+  params = sight_pb2.Params(
+      label='original_demo',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+  )
+  sight_obj = Sight(params)
+  return sight_obj
 
 
 def main(argv: Sequence[str]) -> None:
-    if len(argv) > 1:
-        raise app.UsageError("Too many command-line arguments.")
+  if len(argv) > 1:
+    raise app.UsageError("Too many command-line arguments.")
 
-    with get_sight_instance() as sight:
-        trials.start_jobs(
-            num_train_workers=1,
-            binary_path='py/sight/demo/demo.py',
-            optimizer_type='worklist_scheduler',
-            docker_image='gcr.io/cameltrain/sight-portfolio-worker',
-            decision_mode='train',
-            deployment_mode='worker_mode',
-            worker_mode='dsub_cloud_worker',
-            sight=sight,
-        )
+  with get_sight_instance() as sight:
+    trials.start_jobs(
+        num_train_workers=1,
+        binary_path='py/sight/demo/demo.py',
+        optimizer_type='worklist_scheduler',
+        docker_image='gcr.io/cameltrain/sight-portfolio-worker',
+        decision_mode='train',
+        deployment_mode='worker_mode',
+        worker_mode='dsub_cloud_worker',
+        sight=sight,
+    )
 
 
 if __name__ == "__main__":
-    app.run(main)
+  app.run(main)

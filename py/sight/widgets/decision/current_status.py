@@ -21,14 +21,13 @@ from typing import Any, Callable, Dict, Optional, Sequence, Text, Tuple
 
 from absl import app
 from absl import flags
-from helpers.logs.logs_handler import logger as logging
 import grpc
-from sight_service.proto import service_pb2
-from sight_service.proto import service_pb2_grpc
+from helpers.logs.logs_handler import logger as logging
 from sight import service_utils as service
-
 from sight.proto import sight_pb2
 from sight.service_utils import generate_metadata
+from sight_service.proto import service_pb2
+from sight_service.proto import service_pb2_grpc
 
 _LOG_ID = flags.DEFINE_string(
     "log_id", None, "ID of the Sight log that tracks this execution.")
@@ -42,27 +41,27 @@ _DEPLOYMENT_MODE = flags.DEFINE_enum(
 
 
 def main(argv: Sequence[str]) -> None:
-    if len(argv) > 1:
-        raise app.UsageError("Too many command-line arguments.")
+  if len(argv) > 1:
+    raise app.UsageError("Too many command-line arguments.")
 
-    req = service_pb2.CurrentStatusRequest()
-    req.client_id = _LOG_ID.value
-    response = service.call(
-        lambda s, meta: s.CurrentStatus(req, 300, metadata=meta))
+  req = service_pb2.CurrentStatusRequest()
+  req.client_id = _LOG_ID.value
+  response = service.call(
+      lambda s, meta: s.CurrentStatus(req, 300, metadata=meta))
 
-    # print('response :', response.response_str)
+  # print('response :', response.response_str)
 
-    if response.status == service_pb2.CurrentStatusResponse.Status.DEFAULT:
-        print('Experiment is in Default state')
-    elif response.status == service_pb2.CurrentStatusResponse.Status.IN_PROGRESS:
-        print('Experiment is in-progress state')
-    elif response.status == service_pb2.CurrentStatusResponse.Status.SUCCESS:
-        print('Experiment is in Success state')
-    elif response.status == service_pb2.CurrentStatusResponse.Status.FAILURE:
-        print('Experiment is in Failure state')
-    else:
-        print('response.status = ', response.status)
+  if response.status == service_pb2.CurrentStatusResponse.Status.DEFAULT:
+    print('Experiment is in Default state')
+  elif response.status == service_pb2.CurrentStatusResponse.Status.IN_PROGRESS:
+    print('Experiment is in-progress state')
+  elif response.status == service_pb2.CurrentStatusResponse.Status.SUCCESS:
+    print('Experiment is in Success state')
+  elif response.status == service_pb2.CurrentStatusResponse.Status.FAILURE:
+    print('Experiment is in Failure state')
+  else:
+    print('response.status = ', response.status)
 
 
 if __name__ == "__main__":
-    app.run(main)
+  app.run(main)

@@ -28,51 +28,51 @@ FLAGS = flags.FLAGS
 
 
 def driver(sight: Sight) -> None:
-    """Executes the logic of searching for a value.
+  """Executes the logic of searching for a value.
 
   Args:
     sight: The Sight logger object used to drive decisions.
   """
-    secret_num = random.randrange(0, 1000)
-    logging.info('secret_num=%s', secret_num)
-    choice = decision.decision_point('move', sight)
-    logging.info('choice=%s, error=%s', choice, choice['guess'] - secret_num)
+  secret_num = random.randrange(0, 1000)
+  logging.info('secret_num=%s', secret_num)
+  choice = decision.decision_point('move', sight)
+  logging.info('choice=%s, error=%s', choice, choice['guess'] - secret_num)
 
-    decision.decision_outcome('distance', -abs(choice['guess'] - secret_num),
-                              sight)
+  decision.decision_outcome('distance', -abs(choice['guess'] - secret_num),
+                            sight)
 
-    proposed_guess = secret_num + (choice['guess'] - secret_num) / 2
-    logging.info('proposed_guess=%s', proposed_guess)
-    decision.propose_action(-abs(choice['guess'] - secret_num) / 2,
-                            {'guess': proposed_guess}, sight)
+  proposed_guess = secret_num + (choice['guess'] - secret_num) / 2
+  logging.info('proposed_guess=%s', proposed_guess)
+  decision.propose_action(-abs(choice['guess'] - secret_num) / 2,
+                          {'guess': proposed_guess}, sight)
 
 
 def get_sight_instance():
-    params = sight_pb2.Params(
-        label='secret_find_experiment',
-        bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-    )
-    sight_obj = Sight(params)
-    return sight_obj
+  params = sight_pb2.Params(
+      label='secret_find_experiment',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+  )
+  sight_obj = Sight(params)
+  return sight_obj
 
 
 def main(argv: Sequence[str]) -> None:
-    if len(argv) > 1:
-        raise app.UsageError('Too many command-line arguments.')
+  if len(argv) > 1:
+    raise app.UsageError('Too many command-line arguments.')
 
-    with get_sight_instance() as sight:
-        decision.run(
-            driver_fn=driver,
-            state_attrs={},
-            action_attrs={
-                'guess':
+  with get_sight_instance() as sight:
+    decision.run(
+        driver_fn=driver,
+        state_attrs={},
+        action_attrs={
+            'guess':
                 sight_pb2.DecisionConfigurationStart.AttrProps(min_value=0,
                                                                max_value=1000,
                                                                step_size=10),
-            },
-            sight=sight,
-        )
+        },
+        sight=sight,
+    )
 
 
 if __name__ == '__main__':
-    app.run(main)
+  app.run(main)

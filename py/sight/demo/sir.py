@@ -13,6 +13,7 @@
 # limitations under the License.
 """Simulation of the Susceptible Infected Recovered model using Sight."""
 
+import os
 from typing import Dict, Sequence
 
 from absl import app
@@ -26,7 +27,6 @@ from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation import Simulation
 from sight.widgets.simulation.simulation_state import SimulationState
 from sight.widgets.simulation.simulation_time_step import SimulationTimeStep
-import os
 
 _LAST_TS = flags.DEFINE_integer('last_ts', 10,
                                 'The final day of the simulation.')
@@ -39,65 +39,65 @@ _GAMMA = flags.DEFINE_float('gamnma', .1, 'The disease recovery rate.')
 
 
 def driver(sight: Sight) -> None:
-    """Solves Lotka-Volterra equations using explicit Euler method."""
-    dt = .1
+  """Solves Lotka-Volterra equations using explicit Euler method."""
+  dt = .1
+
+  # data_structures.log_var('S', S, sight)
+  # data_structures.log_var('I', I, sight)
+  # data_structures.log_var('R', R, sight)
+  action = decision.decision_point('init', sight)
+  print('dt=%s, action=%s' % (dt, action))
+  I, R = 1, 0
+  S = int(action['population']) - I - R
+
+  hist = []
+  for idx in range(int(int(action['num_days']) / dt) - 1):
+    dotS = -action['beta'] * S * I / int(action['population'])
+    dotI = action['beta'] * S * I / int(
+        action['population']) - action['gamma'] * I
+    dotR = action['gamma'] * I
+
+    S += dotS * dt
+    I += dotI * dt
+    R += dotR * dt
+
+    print('%d: S=(%s/d%s), dotI=(%s/d%s), dotR=(%s/d%s)' %
+          (idx, S, dotS, I, dotI, R, dotR))
 
     # data_structures.log_var('S', S, sight)
     # data_structures.log_var('I', I, sight)
     # data_structures.log_var('R', R, sight)
-    action = decision.decision_point('init', sight)
-    print('dt=%s, action=%s' % (dt, action))
-    I, R = 1, 0
-    S = int(action['population']) - I - R
-
-    hist = []
-    for idx in range(int(int(action['num_days']) / dt) - 1):
-        dotS = -action['beta'] * S * I / int(action['population'])
-        dotI = action['beta'] * S * I / int(
-            action['population']) - action['gamma'] * I
-        dotR = action['gamma'] * I
-
-        S += dotS * dt
-        I += dotI * dt
-        R += dotR * dt
-
-        print('%d: S=(%s/d%s), dotI=(%s/d%s), dotR=(%s/d%s)' %
-              (idx, S, dotS, I, dotI, R, dotR))
-
-        # data_structures.log_var('S', S, sight)
-        # data_structures.log_var('I', I, sight)
-        # data_structures.log_var('R', R, sight)
-        hist.append([S, I, R])
-    data_structures.log_var('time series',
-                            pd.DataFrame(hist, columns=['S', 'I', 'R']), sight)
-    decision.decision_outcome('out',
-                              sight,
-                              reward=R,
-                              outcome={
-                                  'S': S,
-                                  'I': I,
-                                  'R': R
-                              })
+    hist.append([S, I, R])
+  data_structures.log_var('time series',
+                          pd.DataFrame(hist, columns=['S', 'I', 'R']), sight)
+  decision.decision_outcome('out',
+                            sight,
+                            reward=R,
+                            outcome={
+                                'S': S,
+                                'I': I,
+                                'R': R
+                            })
 
 
 def main(argv: Sequence[str]) -> None:
-    if len(argv) > 1:
-        raise app.UsageError('Too many command-line arguments.')
+  if len(argv) > 1:
+    raise app.UsageError('Too many command-line arguments.')
 
-    with Sight(
-            sight_pb2.Params(
-                label='SIR',
-                bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-            )) as sight:
-        decision.run(
-            driver_fn=driver,
-            description='''
+  with Sight(
+      sight_pb2.Params(
+          label='SIR',
+          bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+      )) as sight:
+    decision.run(
+        driver_fn=driver,
+        description='''
 I am building an SIR model to analyze the progress of Measles infections in Los Angeles during the summer of 2020.
 I need to configure this model's parameters based on data from the Los Angeles County Department of Public Health.
 ''',
-            state_attrs={},
-            action_attrs={
-                'population':
+        state_attrs={},
+        action_attrs={
+            'population':
                 sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=0,
                     max_value=_MAX_POP.value,
@@ -106,7 +106,7 @@ I need to configure this model's parameters based on data from the Los Angeles C
                     discrete_prob_dist=sight_pb2.DiscreteProbDist(
                         uniform=sight_pb2.DiscreteProbDist.Uniform(
                             min_val=0, max_val=_MAX_POP.value))),
-                'num_days':
+            'num_days':
                 sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=0,
                     max_value=_MAX_DAYS.value,
@@ -115,7 +115,7 @@ I need to configure this model's parameters based on data from the Los Angeles C
                     discrete_prob_dist=sight_pb2.DiscreteProbDist(
                         uniform=sight_pb2.DiscreteProbDist.Uniform(
                             min_val=0, max_val=_MAX_DAYS.value))),
-                'beta':
+            'beta':
                 sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=0,
                     max_value=.2,
@@ -123,7 +123,7 @@ I need to configure this model's parameters based on data from the Los Angeles C
                     continuous_prob_dist=sight_pb2.ContinuousProbDist(
                         uniform=sight_pb2.ContinuousProbDist.Uniform(
                             min_val=0, max_val=.2))),
-                'gamma':
+            'gamma':
                 sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=0,
                     max_value=.2,
@@ -131,33 +131,33 @@ I need to configure this model's parameters based on data from the Los Angeles C
                     continuous_prob_dist=sight_pb2.ContinuousProbDist(
                         uniform=sight_pb2.ContinuousProbDist.Uniform(
                             min_val=0, max_val=.2))),
-            },
-            outcome_attrs={
-                'S':
+        },
+        outcome_attrs={
+            'S':
                 sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=0,
                     max_value=_MAX_POP.value,
                     description=
                     'The number of people who are susceptible to the disease.',
                 ),
-                'I':
+            'I':
                 sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=0,
                     max_value=_MAX_POP.value,
                     description=
                     'The number of people who are infected by the disease.',
                 ),
-                'R':
+            'R':
                 sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=0,
                     max_value=_MAX_POP.value,
                     description=
                     'The number of people who have recovered from the disease.',
                 ),
-            },
-            sight=sight,
-        )
+        },
+        sight=sight,
+    )
 
 
 if __name__ == '__main__':
-    app.run(main)
+  app.run(main)

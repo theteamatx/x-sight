@@ -21,14 +21,13 @@ from typing import Any, Callable, Dict, Optional, Sequence, Text, Tuple
 
 from absl import app
 from absl import flags
-from helpers.logs.logs_handler import logger as logging
 import grpc
-from sight_service.proto import service_pb2
-from sight_service.proto import service_pb2_grpc
+from helpers.logs.logs_handler import logger as logging
 from sight import service_utils as service
-
 from sight.proto import sight_pb2
 from sight.service_utils import generate_metadata
+from sight_service.proto import service_pb2
+from sight_service.proto import service_pb2_grpc
 
 _LOG_ID = flags.DEFINE_string(
     'log_id', None, 'ID of the Sight log that tracks this execution.')
@@ -42,29 +41,27 @@ _DEPLOYMENT_MODE = flags.DEFINE_enum(
 
 
 def main(argv: Sequence[str]) -> None:
-    if len(argv) > 1:
-        raise app.UsageError("Too many command-line arguments.")
+  if len(argv) > 1:
+    raise app.UsageError("Too many command-line arguments.")
+
+  while True:
+    message = input('# ')
+    # print ('message=', message)
+    req = service_pb2.TellRequest()
+    req.client_id = _LOG_ID.value
+    req.message_str = message
+    response = service.call(lambda s, meta: s.Tell(req, 300, metadata=meta))
+    print('$ ' + response.response_str)
 
     while True:
-        message = input('# ')
-        # print ('message=', message)
-        req = service_pb2.TellRequest()
-        req.client_id = _LOG_ID.value
-        req.message_str = message
-        response = service.call(
-            lambda s, meta: s.Tell(req, 300, metadata=meta))
-        print('$ ' + response.response_str)
-
-        while True:
-            req = service_pb2.ListenRequest()
-            req.client_id = _LOG_ID.value
-            response = service.call(
-                lambda s, meta: s.Listen(req, 300, metadata=meta))
-            if response.response_ready:
-                print(response.response_str)
-                break
-            time.sleep(5)
+      req = service_pb2.ListenRequest()
+      req.client_id = _LOG_ID.value
+      response = service.call(lambda s, meta: s.Listen(req, 300, metadata=meta))
+      if response.response_ready:
+        print(response.response_str)
+        break
+      time.sleep(5)
 
 
 if __name__ == "__main__":
-    app.run(main)
+  app.run(main)
