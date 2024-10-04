@@ -18,6 +18,9 @@ from typing import Any, Dict, List, Sequence, Tuple
 
 from helpers.logs.logs_handler import logger as logging
 from sight.proto import sight_pb2
+from sight_service.message_queue import IMessageQueue
+from sight_service.message_queue import IncrementalUUID
+from sight_service.message_queue import MessageQueue
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
 
@@ -33,7 +36,4 @@ class SingleActionOptimizer(OptimizerInstance):
 
   def __init__(self):
     super().__init__()
-    self.unique_id = 1
-    self.pending_samples = {}
-    self.active_samples = {}
-    self.completed_samples = {}
+    self.queue: IMessageQueue = MessageQueue(id_generator=IncrementalUUID())
