@@ -1,8 +1,8 @@
 import unittest
 
-from tests.colorful_tests import ColorfulTestRunner
 from helpers.cache.cache_factory import GCSCache
 from helpers.cache.cache_factory import RedisCache
+from tests.colorful_tests import ColorfulTestRunner
 
 
 class CacheGCSTest(unittest.TestCase):

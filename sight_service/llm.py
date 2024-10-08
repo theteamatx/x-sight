@@ -11,13 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """LLM-based optimization for driving Sight applications."""
 
 from concurrent import futures
 import json
-import logging
-import os
 import random
 import threading
 from typing import Any, Dict, List, Optional, Tuple
@@ -25,6 +22,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import google.auth
 import google.auth.transport.requests
 import google.generativeai as genai
+from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 import requests
 from sight.proto import sight_pb2
@@ -60,91 +58,66 @@ class LLM(OptimizerInstance):
     self._waiting_on_llm_response = False
 
   def _attr_summary(
-      self, key: str, attr: sight_pb2.DecisionConfigurationStart.AttrProps
-  ) -> str:
+      self, key: str,
+      attr: sight_pb2.DecisionConfigurationStart.AttrProps) -> str:
     """Returns a summary of an attribute for the LLM."""
     if attr.min_value < attr.max_value:
-      return (
-          f'"{key}": {{ "description": {attr.description}, "min_value":'
-          f' {attr.min_value}, "max_value": {attr.max_value} }},'
-      )
+      return (f'"{key}": {{ "description": {attr.description}, "min_value":'
+              f' {attr.min_value}, "max_value": {attr.max_value} }},')
     return f'"{key}": {{ "description": {attr.description} }},'
 
   @overrides
-  def launch(
-      self, request: service_pb2.LaunchRequest
-  ) -> service_pb2.LaunchResponse:
+  def launch(self,
+             request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
     response = super(LLM, self).launch(request)
     logging.info('LLM request=%s', request)
     self._llm_config = request.decision_config_params.choice_config[
-        request.label
-    ].llm_config
+        request.label].llm_config
     logging.info('LLM config=%s', self._llm_config)
     self._bayesian_opt = BayesianOpt()
     self._bayesian_opt.launch(request)
 
     self._intro += ''
-    if (
-        self._llm_config.goal
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE
-    ):
+    if (self._llm_config.goal ==
+        sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE):
       self._intro = (
           'You are controlling an agent that is trying to reach a goal. The'
-          ' agent is described as follows.\n'
-      )
+          ' agent is described as follows.\n')
     self._intro += f'"{self._llm_config.description}"\n'
-    if (
-        self._llm_config.goal
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE
-    ):
+    if (self._llm_config.goal ==
+        sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_OPTIMIZE):
       self._intro += (
           'The simulation will periodically report its state and then ask you '
           + 'to select an action for it to perform. After it has performed'
-          ' this '
-          + 'action it will report back the numeric outcome of the this'
-          ' action. '
-          + 'Higher outcome values are better than low outcome values. Your'
-          ' job '
-          + 'is to choose actions that maximize the outcome values.\n'
-      )
+          ' this ' +
+          'action it will report back the numeric outcome of the this'
+          ' action. ' +
+          'Higher outcome values are better than low outcome values. Your'
+          ' job ' + 'is to choose actions that maximize the outcome values.\n')
     if len(self.state) > 0:
       self._intro += (
           'The state of the simulation consists of the following attributes: \n'
       )
-      self._intro += (
-          '  {\n    '
-          + '\n    '.join(
-              [self._attr_summary(key, p) for key, p in self.state.items()]
-          )
-          + '}\n'
-      )
+      self._intro += ('  {\n    ' + '\n    '.join(
+          [self._attr_summary(key, p) for key, p in self.state.items()]) +
+                      '}\n')
     self._intro += 'The possible actions you need to select are: \n'
-    self._intro += (
-        '  {\n    '
-        + '\n    '.join(
-            [self._attr_summary(key, p) for key, p in self.actions.items()]
-        )
-        + '}\n'
-    )
+    self._intro += ('  {\n    ' + '\n    '.join(
+        [self._attr_summary(key, p) for key, p in self.actions.items()]) +
+                    '}\n')
     self._intro += 'The possible outcomes you will observe are: \n'
-    self._intro += (
-        '  {\n    '
-        + '\n    '.join(
-            [self._attr_summary(key, p) for key, p in self.outcomes.items()]
-        )
-        + '}\n'
-    )
+    self._intro += ('  {\n    ' + '\n    '.join(
+        [self._attr_summary(key, p) for key, p in self.outcomes.items()]) +
+                    '}\n')
     self._intro += '========================\n'
 
     logging.info(
         'INTERACTIVE=%s',
-        self._llm_config.goal
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE,
+        self._llm_config.goal ==
+        sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE,
     )
-    if (
-        self._llm_config.goal
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE
-    ):
+    if (self._llm_config.goal ==
+        sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE):
       self._waiting_on_tell = True
       self._response_ready = False
       self._response_for_listen = ''
@@ -153,19 +126,15 @@ class LLM(OptimizerInstance):
       detail_prompt = (
           'Please summarize everything you know about these parameters for the'
           ' above application area, detail the steps that need to be taken to'
-          ' create a good estimate these parameters.\n'
-      )
-      self._intro += (
-          detail_prompt + self._ask(self._intro + detail_prompt) + '\n'
-      )
+          ' create a good estimate these parameters.\n')
+      self._intro += (detail_prompt + self._ask(self._intro + detail_prompt) +
+                      '\n')
 
       detail_prompt = (
           'Based on this plan describe the most reasonable estimate of these'
-          ' parameters\n'
-      )
-      self._intro += (
-          detail_prompt + self._ask(self._intro + detail_prompt) + '\n'
-      )
+          ' parameters\n')
+      self._intro += (detail_prompt + self._ask(self._intro + detail_prompt) +
+                      '\n')
 
     response.display_string = 'LLM SUCCESS! ' + self._intro
     logging.info('self._intro=%s', self._intro)
@@ -211,11 +180,10 @@ class LLM(OptimizerInstance):
     ordered_history = sorted(
         ordered_history,
         key=lambda h: -h['outcome']
-        if 'outcome' in h and isinstance(h['outcome'], float)
-        else 0,
+        if 'outcome' in h and isinstance(h['outcome'], float) else 0,
     )
     if len(ordered_history) > self._history_len_for_prompt:
-      ordered_history = ordered_history[0 : self._history_len_for_prompt - 1]
+      ordered_history = ordered_history[0:self._history_len_for_prompt - 1]
     random.shuffle(ordered_history)
 
     # If this is the first question, add a random event to serve as an example
@@ -233,35 +201,26 @@ class LLM(OptimizerInstance):
       return ordered_history
     return ordered_history + [self._history[-1]]
 
-  def _hist_event_to_text(
-      self, event: Dict, last_outcome: float, is_last_event: bool
-  ) -> Tuple[str, Any]:
+  def _hist_event_to_text(self, event: Dict, last_outcome: float,
+                          is_last_event: bool) -> Tuple[str, Any]:
     t = ''
     if len(event['state']) > 0:
       t += 'Decision State:\n'
-      t += (
-          '    {'
-          + ', '.join([f'"{k}": {v}' for k, v in event['state'].items()])
-          + '}\n'
-      )
+      t += ('    {' +
+            ', '.join([f'"{k}": {v}' for k, v in event['state'].items()]) +
+            '}\n')
     # t += 'Decision Action (json format): '
     if event['action'] is not None or is_last_event:
       t += 'Simulation parameters (json format): '
     if event['action'] is not None:
-      t += (
-          '    {'
-          + ', '.join(
-              [f'"{key}": {value}' for key, value in event['action'].items()]
-          )
-          + '}\n'
-      )
+      t += ('    {' + ', '.join(
+          [f'"{key}": {value}' for key, value in event['action'].items()]) +
+            '}\n')
     if event['outcome'] is not None:
       # t += 'Decision Outcome: ' + str(event['outcome']) + '\n'
       t += 'Simulation Outcome (json format): ' + str(event['outcome']) + '\n'
-      if (
-          self._llm_config.goal
-          != sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE
-      ):
+      if (self._llm_config.goal != sight_pb2.DecisionConfigurationStart.
+          LLMConfig.LLMGoal.LM_INTERACTIVE):
         if last_outcome is not None:
           if last_outcome < event['outcome'] - 0.1:
             t += '  This is a better outcome than the last time.\n'
@@ -290,61 +249,49 @@ class LLM(OptimizerInstance):
     for i, event in enumerate(hist):
       logging.info('_history_to_text event=%s', event)
       event_text, last_outcome = self._hist_event_to_text(
-          event, last_outcome, i == len(hist) - 1
-      )
+          event, last_outcome, i == len(hist) - 1)
       t += event_text
     return t
 
   def _history_to_chat(
-      self, worker_id: str, include_example_action: bool = True
-  ) -> List[Dict[str, str]]:
+      self,
+      worker_id: str,
+      include_example_action: bool = True) -> List[Dict[str, str]]:
     chat = []
     last_outcome = None
     last_outcome_message = ''
     for h in self._filtered_history(include_example_action):
       if len(h['state']) > 0:
         chat.append({
-            'author': 'USER',
-            'content': (
-                last_outcome_message
-                + 'Decision State:\n'
-                + '    {'
-                + ', '.join([f'"{k}": {v}' for k, v in h['state'].items()])
-                + '}\n'
-                + 'Please provide the Decision Action (json format):\n'
-            ),
+            'author':
+                'USER',
+            'content':
+                (last_outcome_message + 'Decision State:\n' + '    {' +
+                 ', '.join([f'"{k}": {v}' for k, v in h['state'].items()]) +
+                 '}\n' + 'Please provide the Decision Action (json format):\n'),
         })
       if h['action'] is not None:
         chat.append({
-            'author': 'AI',
-            'content': (
-                +'Decision Action:\n'
-                + '    {{'
-                + ', '.join(
-                    [f'"{key}": {value}' for key, value in h['action'].items()]
-                )
-                + '}'
-            ),
+            'author':
+                'AI',
+            'content': (+ 'Decision Action:\n' + '    {{' + ', '.join(
+                [f'"{key}": {value}' for key, value in h['action'].items()]) +
+                        '}'),
         })
       if h['outcome'] is not None:
         last_outcome_message = 'Decision Outcome: ' + str(h['outcome']) + '\n'
-        if (
-            self._llm_config.goal
-            != sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE
-        ):
+        if (self._llm_config.goal != sight_pb2.DecisionConfigurationStart.
+            LLMConfig.LLMGoal.LM_INTERACTIVE):
           if last_outcome is not None:
             if last_outcome < h['outcome'] - 0.1:
               last_outcome_message += (
-                  '  This is a better outcome than the last time.\n'
-              )
+                  '  This is a better outcome than the last time.\n')
             elif last_outcome > h['outcome'] + 0.1:
               last_outcome_message += (
-                  '  This is a worse outcome than the last time.\n'
-              )
+                  '  This is a worse outcome than the last time.\n')
             else:
               last_outcome_message += (
-                  '  This is a similar outcome to the last time.\n'
-              )
+                  '  This is a similar outcome to the last time.\n')
     return chat
 
   def _params_to_dict(self, dp: sight_pb2) -> Dict[str, float]:
@@ -367,20 +314,14 @@ class LLM(OptimizerInstance):
     }
 
   def _ask(self, prompt) -> str:
-    if (
-        self._llm_config.algorithm
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_TEXT_BISON
-    ):
+    if (self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.
+        LLMConfig.LLMAlgorithm.LA_TEXT_BISON):
       return self._ask_text_bison(prompt)
-    elif (
-        self._llm_config.algorithm
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_CHAT_BISON
-    ):
+    elif (self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.
+          LLMConfig.LLMAlgorithm.LA_CHAT_BISON):
       return self._ask_chat_bison(prompt)
-    elif (
-        self._llm_config.algorithm
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO
-    ):
+    elif (self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.
+          LLMConfig.LLMAlgorithm.LA_GEMINI_PRO):
       return self._ask_gemini_pro(prompt)
     else:
       raise ValueError(f'Invalid algorithm {self._llm_config.algorithm}')
@@ -390,7 +331,9 @@ class LLM(OptimizerInstance):
       response = requests.post(
           f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ['PROJECT_ID']}/locations/us-central1/publishers/google/models/text-bison-32k:predict",
           data=json.dumps({
-              'instances': [{'prompt': prompt}],
+              'instances': [{
+                  'prompt': prompt
+              }],
               'parameters': {
                   'temperature': 0.2,
                   'maxOutputTokens': 2048,
@@ -409,28 +352,20 @@ class LLM(OptimizerInstance):
           headers=self._get_req_headers(),
       ).json()
       # logging.info('response=%s', response)
-      if (
-          'error' in response
-          or response['predictions'][0]['content'].strip() == ''
-      ):
+      if ('error' in response or
+          response['predictions'][0]['content'].strip() == ''):
         continue
       return response['predictions'][0]['content'].strip()
 
   def _get_action(self, worker_id: str) -> List[Dict[str, float]]:
-    if (
-        self._llm_config.algorithm
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_TEXT_BISON
-    ):
+    if (self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.
+        LLMConfig.LLMAlgorithm.LA_TEXT_BISON):
       return self._action_from_text_bison(worker_id)
-    elif (
-        self._llm_config.algorithm
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_CHAT_BISON
-    ):
+    elif (self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.
+          LLMConfig.LLMAlgorithm.LA_CHAT_BISON):
       return self._action_from_chat_bison(worker_id)
-    elif (
-        self._llm_config.algorithm
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO
-    ):
+    elif (self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.
+          LLMConfig.LLMAlgorithm.LA_GEMINI_PRO):
       return self._action_from_gemini_pro(worker_id)
     else:
       raise ValueError(f'Invalid algorithm {self._llm_config.algorithm}')
@@ -455,12 +390,10 @@ class LLM(OptimizerInstance):
     response = requests.post(
         f"https://us-central1-aiplatform.googleapis.com/v1/projects/{os.environ['PROJECT_ID']}/locations/us-central1/publishers/google/models/chat-bison-32k:predict",
         data=json.dumps({
-            'instances': [
-                {
-                    'context': prompt,
-                    'messages': message,
-                },
-            ],
+            'instances': [{
+                'context': prompt,
+                'messages': message,
+            },],
             'parameters': {
                 'temperature': 0.2,
                 'maxOutputTokens': 2048,
@@ -502,7 +435,9 @@ class LLM(OptimizerInstance):
           data=json.dumps({
               'contents': {
                   'role': 'user',
-                  'parts': {'text': prompt},
+                  'parts': {
+                      'text': prompt
+                  },
               },
               'safety_settings': {
                   'category': 'HARM_CATEGORY_SEXUALLY_EXPLICIT',
@@ -534,8 +469,9 @@ class LLM(OptimizerInstance):
     while True:
       logging.info('ask_geminipro')
       prompt = self._intro + '\n'
-      random_sample, _ = self._hist_event_to_text(self._random_event(), None, False)
-      prompt += 'Example request: '+ random_sample + '\n'
+      random_sample, _ = self._hist_event_to_text(self._random_event(), None,
+                                                  False)
+      prompt += 'Example request: ' + random_sample + '\n'
       prompt += self._history_to_text()
       logging.info('prompt=%s', prompt)
       text = self._ask_gemini_pro(prompt)
@@ -564,34 +500,25 @@ class LLM(OptimizerInstance):
     Returns a tuple with a boolean that indicates whether the question can
     be answered and if so, the answer string.
     """
-    if (
-        self._llm_config.algorithm
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMAlgorithm.LA_GEMINI_PRO
-    ):
+    if (self._llm_config.algorithm == sight_pb2.DecisionConfigurationStart.
+        LLMConfig.LLMAlgorithm.LA_GEMINI_PRO):
       return self._is_done_from_gemini_pro(worker_id)
     return False, ''
 
   def _is_done_from_gemini_pro(self, worker_id: str) -> Tuple[bool, str]:
     question = (
-        self._intro
-        + '\n'
-        + self._history_to_text(False)
-        + '\nHas the question been fully answered, including all of its'
+        self._intro + '\n' + self._history_to_text(False) +
+        '\nHas the question been fully answered, including all of its'
         ' clauses? Answer Y if yes or N if there are any additional'
-        ' simulations that need to be performed to fully answer the question.'
-    )
+        ' simulations that need to be performed to fully answer the question.')
     logging.info('_is_done_from_gemini_pro question=%s', question)
     text = self._ask_gemini_pro(question)
     logging.info('_is_done_from_gemini_pro text=%s', text)
     if not text.lower().startswith('y'):
       logging.info('_is_done_from_gemini_pro NOT DONE')
       return False, ''
-    question = (
-        self._intro
-        + '\n'
-        + self._history_to_text(False)
-        + "\nWhat is the answer to the user's question?"
-    )
+    question = (self._intro + '\n' + self._history_to_text(False) +
+                "\nWhat is the answer to the user's question?")
     text = self._ask_gemini_pro(question)
     logging.info('_is_done_from_gemini_pro answer=%s', text)
     return True, text
@@ -606,22 +533,18 @@ class LLM(OptimizerInstance):
 
     dp_response = service_pb2.DecisionPointResponse()
 
-    if (
-        self._llm_config.goal
+    if (self._llm_config.goal
         == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE
-        and self._waiting_on_tell
-    ):
+        and self._waiting_on_tell):
       self._lock.release()
       dp_response.action_type = (
-          service_pb2.DecisionPointResponse.ActionType.AT_RETRY
-      )
+          service_pb2.DecisionPointResponse.ActionType.AT_RETRY)
       return dp_response
 
     if len(self._history) > 0 and 'outcome' not in self._history[0]:
       if len(request.decision_outcome.outcome_params) > 0:
         self._history[-1]['outcome'] = self._params_to_dict(
-            request.decision_point.outcome_params
-        )
+            request.decision_point.outcome_params)
       else:
         self._history[-1]['outcome'] = request.decision_outcome.reward
       # self.last_outcome = self._history[-1]['outcome']
@@ -644,13 +567,9 @@ class LLM(OptimizerInstance):
     elif (
         self._llm_config.goal
         != sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE
-        and len(self._history) > 1
-        and random.random() > 0.1
-    ):
-      logging.info(
-          '##########################\n##### BAYESIAN OPT'
-          ' ######\n##########################'
-      )
+        and len(self._history) > 1 and random.random() > 0.1):
+      logging.info('##########################\n##### BAYESIAN OPT'
+                   ' ######\n##########################')
       # selected_actions = self._random_action()
       dp = self._bayesian_opt.decision_point(request)
       selected_actions = {}
@@ -683,8 +602,7 @@ class LLM(OptimizerInstance):
 
     self._lock.release()
     dp_response.action_type = (
-        service_pb2.DecisionPointResponse.ActionType.AT_ACT
-    )
+        service_pb2.DecisionPointResponse.ActionType.AT_ACT)
     return dp_response
 
   @overrides
@@ -696,8 +614,7 @@ class LLM(OptimizerInstance):
     logging.info('FinalizeEpisode request=%s', request)
     if len(request.decision_outcome.outcome_params) > 0:
       self._history[-1]['outcome'] = self._params_to_dict(
-          request.decision_outcome.outcome_params
-      )
+          request.decision_outcome.outcome_params)
     else:
       self._history[-1]['outcome'] = request.decision_outcome.reward
     # self.last_outcome = self._history[-1]['outcome']
@@ -709,10 +626,8 @@ class LLM(OptimizerInstance):
       a.value.double_value = float(value)
     self._bayesian_opt.finalize_episode(request)
 
-    if (
-        self._llm_config.goal
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE
-    ):
+    if (self._llm_config.goal ==
+        sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE):
       # If there are no outstanding acitions, ask the LLM whether the user's
       # question can be answered via the already-completed model runs.
       if len(self._actions_to_do) == 0:
@@ -735,11 +650,9 @@ class LLM(OptimizerInstance):
     self._lock.acquire()
     logging.info('tell() request=%s', request)
 
-    if (
-        self._llm_config.goal
+    if (self._llm_config.goal
         == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE
-        and self._waiting_on_tell
-    ):
+        and self._waiting_on_tell):
       logging.info('INTERACTIVE')
       self._intro += '\n' + self._history_to_text(False) + '\n'
       self._history = []
@@ -753,9 +666,8 @@ class LLM(OptimizerInstance):
     return tell_response
 
   @overrides
-  def listen(
-      self, request: service_pb2.ListenRequest
-  ) -> service_pb2.ListenResponse:
+  def listen(self,
+             request: service_pb2.ListenRequest) -> service_pb2.ListenResponse:
     listen_response = service_pb2.ListenResponse()
     self._lock.acquire()
     logging.info(
@@ -766,10 +678,8 @@ class LLM(OptimizerInstance):
         self._response_for_listen,
     )
 
-    if (
-        self._llm_config.goal
-        == sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE
-    ):
+    if (self._llm_config.goal ==
+        sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE):
       listen_response.response_ready = self._response_ready
       if self._response_ready:
         listen_response.response_str = self._response_for_listen
@@ -787,5 +697,4 @@ class LLM(OptimizerInstance):
     return service_pb2.CurrentStatusResponse(
         response_str=f"""[LLM: script={self._intro + self._history_to_text(None)}
 -----------------
-BayesianOpt={bayesian_opt_status.response_str}"""
-    )
+BayesianOpt={bayesian_opt_status.response_str}""")

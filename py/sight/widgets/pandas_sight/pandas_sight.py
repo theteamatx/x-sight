@@ -11,24 +11,23 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Documentation of numpy events and data in the Sight log."""
 
 import dataclasses
 import inspect
 from typing import Any, List, Optional, Union
 
-from absl import logging
+from helpers.logs.logs_handler import logger as logging
 import numpy as np
 import pandas as pd
-
-from sight.proto import sight_pb2
 from sight.location import Location
+from sight.proto import sight_pb2
+
 
 def _df_start(
-  label: str,
-  sight: Any,
-  frame: Any,
+    label: str,
+    sight: Any,
+    frame: Any,
 ) -> None:
   start_obj = sight_pb2.Object()
   start_obj.sub_type = sight_pb2.Object.SubType.ST_BLOCK_START
@@ -36,19 +35,21 @@ def _df_start(
   start_obj.block_start.list.sub_type = sight_pb2.ListStart.ST_HETEROGENEOUS
   sight.enter_block(label, start_obj, frame)
 
+
 def _df_end(
-  label: str,
-  sight: Any,
-  frame: Any,
+    label: str,
+    sight: Any,
+    frame: Any,
 ) -> None:
   end_obj = sight_pb2.Object(sub_type=sight_pb2.Object.SubType.ST_BLOCK_END)
   sight.exit_block(label, end_obj)
 
+
 def log(
-  label: str,
-  df: pd.DataFrame,
-  sight: Any,
-  frame: Optional[Any] = None,
+    label: str,
+    df: pd.DataFrame,
+    sight: Any,
+    frame: Optional[Any] = None,
 ) -> Optional[Location]:
   """Documents pandas DataFrame object in the Sight log if Sight is being used.
   Args:
@@ -65,7 +66,6 @@ def log(
 
   if not sight.is_logging_enabled():
     return None
-
 
   if frame is None:
     # pytype: disable=attribute-error
@@ -86,25 +86,22 @@ def log(
     obj.sub_type = sight_pb2.Object.SubType.ST_TENSOR
     obj.tensor.label = str(df.columns[i])
     obj.tensor.shape.append(df.shape[0])
-    if (
-        df.dtypes[df.columns[i]] == float
-        or df.dtypes[df.columns[i]] == np.float32
-        or df.dtypes[df.columns[i]] == np.float64
-    ):
+    if (df.dtypes[df.columns[i]] == float or
+        df.dtypes[df.columns[i]] == np.float32 or
+        df.dtypes[df.columns[i]] == np.float64):
       obj.tensor.sub_type = sight_pb2.Tensor.ST_DOUBLE
       obj.tensor.double_values.value.extend(df[df.columns[i]].tolist())
     elif (
         # df.dtypes[df.columns[i]] == np.int
         # or
-        df.dtypes[df.columns[i]] == np.int32
-        or df.dtypes[df.columns[i]] == np.int64
-    ):
+        df.dtypes[df.columns[i]] == np.int32 or
+        df.dtypes[df.columns[i]] == np.int64):
       obj.tensor.sub_type = sight_pb2.Tensor.ST_INT64
       obj.tensor.int64_values.value.extend(df[df.columns[i]].tolist())
     else:
       obj.tensor.sub_type = sight_pb2.Tensor.ST_STRING
       obj.tensor.string_values.value.extend(
-        [str(v) for v in df[df.columns[i]].tolist()])
+          [str(v) for v in df[df.columns[i]].tolist()])
     obj.tensor.dim_label.append(str(df.columns[i]))
 
     sight.log_object(obj, True)
@@ -114,7 +111,6 @@ def log(
     sight.exit_block(label, nv_end_obj)
 
   _df_end(label, sight, frame)
-
 
 
 def from_log(sub_log: List[sight_pb2.Object]) -> Optional[np.ndarray]:

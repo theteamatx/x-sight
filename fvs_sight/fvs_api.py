@@ -1,4 +1,5 @@
 from typing import Any
+
 from sight.proto import sight_pb2
 
 FVS_PARAMS = {
@@ -26,8 +27,8 @@ def create_attr_props(
   """
   return {
       key: (sight_pb2.DecisionConfigurationStart.AttrProps() if value
-            is not None else sight_pb2.DecisionConfigurationStart.AttrProps())
-      for key, value in config_dict.items()
+            is not None else sight_pb2.DecisionConfigurationStart.AttrProps()
+           ) for key, value in config_dict.items()
   }
 
 
@@ -58,6 +59,7 @@ def get_action_attrs():
   action_config.update(expand_params_for_cycles(fvs_params=FVS_PARAMS))
   return create_attr_props(action_config)
 
+
 # action_attrs = {
 #     "a1":
 #     sight_pb2.DecisionConfigurationStart.AttrProps(
@@ -77,12 +79,12 @@ def get_action_attrs():
 # }
 
 
-
 def get_outcome_attrs():
   """Returns the outcome attributes for the FVS outcome.
   """
   outcome_config = {'time_series': None}
   return create_attr_props(outcome_config)
+
 
 # outcome_attrs = {
 #     "time_series":

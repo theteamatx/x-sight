@@ -11,13 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Demo for the numpy bindings to the Sight logging library."""
 
 from absl import app
 from absl import flags
 import numpy as np
-
 from proto import sight_pb2
 from py.sight import Sight
 from py.widgets.numpy_sight import numpy_sight

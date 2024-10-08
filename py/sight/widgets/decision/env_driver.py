@@ -11,16 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Default Driver function to be used while training within the Sight log."""
 
-import logging
+from helpers.logs.logs_handler import logger as logging
 import numpy as np
 from sight import data_structures
 # from sight.sight import Sight
 from sight.widgets.decision import decision
 
 _file_name = "driver.py"
+
 
 def driver_fn(env, sight) -> None:
   """Executes the logic of searching for a value.

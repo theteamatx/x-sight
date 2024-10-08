@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Setting up configuration for DQN Experiment."""
 
 from absl import flags
@@ -25,7 +24,6 @@ from acme.jax import utils
 import gym
 import haiku as hk
 
-
 # SEED = flags.DEFINE_integer('seed', 0, 'Random seed.')
 # NUM_STEPS = flags.DEFINE_integer(
 #     'num_steps', 10, 'Number of env steps to run.'  # 1_000_000
@@ -37,7 +35,7 @@ def build_d4pg_config(env_name: str = '', possible_action_values: int = 1):
 
   def env_factory():
     if env_name:
-      env =  wrappers.GymWrapper(gym.make(env_name))
+      env = wrappers.GymWrapper(gym.make(env_name))
       # env = wrappers.CanonicalSpecWrapper(env, clip=True)
       # env = wrappers.SinglePrecisionWrapper(env)
       return env

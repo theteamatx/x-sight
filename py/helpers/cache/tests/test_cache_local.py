@@ -1,9 +1,9 @@
 import unittest
 
-from tests.colorful_tests import ColorfulTestRunner
 from helpers.cache.cache_factory import LocalCache
 from helpers.cache.cache_factory import RedisCache
 from helpers.cache.cache_helper import CacheKeyMaker
+from tests.colorful_tests import ColorfulTestRunner
 
 
 class CacheLocalTest(unittest.TestCase):

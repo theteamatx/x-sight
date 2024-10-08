@@ -11,11 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Demo for the python bindings to the Sight logging library."""
 
-import os
 import inspect
+import os
+
 from absl import app
 from absl import flags
 import numpy as np
@@ -44,15 +44,15 @@ def main(argv):
 
   with get_sight_instance() as sight:
     # if(FLAGS.parent_id):
-        # sight_obj = sight_pb2.Object()
-        # # sight_obj.log_uid = str(sight.id)
-        # # sight_obj.set_attribute('log_uid', sight.id)
-        # sight_obj.sub_type = sight_pb2.Object.SubType.ST_LINK
-        # sight_obj.link.linked_sight_id = FLAGS.parent_id
-        # sight_obj.link.link_type = sight_pb2.Link.LinkType.LT_CHILD_TO_PARENT
-        # frame = inspect.currentframe().f_back.f_back.f_back
-        # sight.set_object_code_loc(sight_obj, frame)
-        # sight.log_object(sight_obj, True)
+    # sight_obj = sight_pb2.Object()
+    # # sight_obj.log_uid = str(sight.id)
+    # # sight_obj.set_attribute('log_uid', sight.id)
+    # sight_obj.sub_type = sight_pb2.Object.SubType.ST_LINK
+    # sight_obj.link.linked_sight_id = FLAGS.parent_id
+    # sight_obj.link.link_type = sight_pb2.Link.LinkType.LT_CHILD_TO_PARENT
+    # frame = inspect.currentframe().f_back.f_back.f_back
+    # sight.set_object_code_loc(sight_obj, frame)
+    # sight.log_object(sight_obj, True)
 
     with Block("A-block", sight):
       sight.text("A preText")

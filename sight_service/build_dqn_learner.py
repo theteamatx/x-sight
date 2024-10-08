@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Setting up configuration for DQN Experiment."""
 from absl import flags
 from acme import specs
@@ -32,7 +31,7 @@ def build_dqn_config():
     # if(env_name):
     #   return wrappers.GymWrapper(gym.make(env_name))
     # else:
-      return None
+    return None
 
   def net_factory(environment_spec: specs.EnvironmentSpec) -> dqn.DQNNetworks:
     """Creates networks for training DQN."""
@@ -51,8 +50,7 @@ def build_dqn_config():
     network_hk = hk.without_apply_rng(hk.transform(network))
     obs = utils.add_batch_dim(utils.zeros_like(environment_spec.observations))
     network = networks_lib.FeedForwardNetwork(
-        init=lambda rng: network_hk.init(rng, obs), apply=network_hk.apply
-    )
+        init=lambda rng: network_hk.init(rng, obs), apply=network_hk.apply)
     typed_network = networks_lib.non_stochastic_network_to_typed(network)
     return dqn.DQNNetworks(policy_network=typed_network)
 

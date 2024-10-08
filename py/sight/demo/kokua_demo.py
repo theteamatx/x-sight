@@ -23,12 +23,11 @@ from sight import data_structures
 from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
-
-from sklearn.svm import SVC
 from sklearn.datasets import load_breast_cancer
-from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.svm import SVC
 
 FLAGS = flags.FLAGS
 
@@ -48,66 +47,67 @@ X_test_scaled = scaler.transform(X_test)
 
 # Define the black box function to optimize.
 def black_box_function(C, degree):
-    # C: SVC hyper parameter to optimize for.
-    model = SVC(C=C, degree=degree)
-    model.fit(X_train_scaled, y_train)
-    y_score = model.decision_function(X_test_scaled)
-    f = roc_auc_score(y_test, y_score)
-    return f
+  # C: SVC hyper parameter to optimize for.
+  model = SVC(C=C, degree=degree)
+  model.fit(X_train_scaled, y_train)
+  y_score = model.decision_function(X_test_scaled)
+  f = roc_auc_score(y_test, y_score)
+  return f
 
 
 def driver(sight: Sight) -> None:
-    """Executes the logic of searching for a value.
+  """Executes the logic of searching for a value.
 
   Args:
     sight: The Sight logger object used to drive decisions.
   """
 
-    for _ in range(1):
-        next_point = decision.decision_point("label", sight)
-        next_point["degree"] = int(next_point["degree"])
-        reward = black_box_function(next_point["C"], next_point["degree"])
+  for _ in range(1):
+    next_point = decision.decision_point("label", sight)
+    next_point["degree"] = int(next_point["degree"])
+    reward = black_box_function(next_point["C"], next_point["degree"])
 
-        sight.text("C=%s, degree=%s, f(x)=%s" % (
-            next_point["C"],
-            next_point["degree"],
-            reward,
-        ))
-        print("C : ", next_point["C"], ", degree : ", next_point["degree"], ", reward : ", reward)
-        decision.decision_outcome("target", reward, sight)
+    sight.text("C=%s, degree=%s, f(x)=%s" % (
+        next_point["C"],
+        next_point["degree"],
+        reward,
+    ))
+    print("C : ", next_point["C"], ", degree : ", next_point["degree"],
+          ", reward : ", reward)
+    decision.decision_outcome("target", reward, sight)
 
 
 def get_sight_instance():
-    params = sight_pb2.Params(
-        label='kokua_experiment',
-        bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-    )
-    sight_obj = Sight(params)
-    return sight_obj
+  params = sight_pb2.Params(
+      label='kokua_experiment',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+  )
+  sight_obj = Sight(params)
+  return sight_obj
 
 
 def main(argv: Sequence[str]) -> None:
-    if len(argv) > 1:
-        raise app.UsageError("Too many command-line arguments.")
+  if len(argv) > 1:
+    raise app.UsageError("Too many command-line arguments.")
 
-    with get_sight_instance() as sight:
-        decision.run(
-            driver_fn=driver,
-            action_attrs={
-                "C":
+  with get_sight_instance() as sight:
+    decision.run(
+        driver_fn=driver,
+        action_attrs={
+            "C":
                 sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=0.1,
                     max_value=10,
                 ),
-                "degree":
+            "degree":
                 sight_pb2.DecisionConfigurationStart.AttrProps(
                     min_value=1,
                     max_value=5,
                 ),
-            },
-            sight=sight,
-        )
+        },
+        sight=sight,
+    )
 
 
 if __name__ == "__main__":
-    app.run(main)
+  app.run(main)

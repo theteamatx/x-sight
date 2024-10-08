@@ -11,28 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """LLM-based optimization for driving Sight applications."""
 
-import logging
-from overrides import overrides
+import json
+import os
+import random
+import threading
 from typing import Any, Dict, List, Tuple
 
 from bayes_opt import BayesianOptimization
 from bayes_opt import UtilityFunction
-from sight_service.optimizer_instance import param_dict_to_proto
-from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.proto import service_pb2
-from sight.proto import sight_pb2
-import random
-import requests
 import google.auth
 import google.auth.transport.requests
-import json
-import os
-import threading
+from helpers.logs.logs_handler import logger as logging
+from overrides import overrides
+import requests
+from sight.proto import sight_pb2
+from sight_service.optimizer_instance import OptimizerInstance
+from sight_service.optimizer_instance import param_dict_to_proto
+from sight_service.proto import service_pb2
 
 _file_name = "bayesian_opt.py"
+
 
 class BayesianOpt(OptimizerInstance):
   """Uses an LLM to choose the parameters of the code.
@@ -45,17 +45,18 @@ class BayesianOpt(OptimizerInstance):
     self._completed_count = 0
 
   @overrides
-  def launch(
-      self, request: service_pb2.LaunchRequest
-  ) -> service_pb2.LaunchResponse:
+  def launch(self,
+             request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
     response = super(BayesianOpt, self).launch(request)
     self._total_count = request.decision_config_params.num_trials
     self._optimizer = BayesianOptimization(
-      f=None,
-      pbounds={key: (p.min_value, p.max_value) for key, p in self.actions.items()},
-      verbose=2,
-      allow_duplicate_points=True,
-      # random_state=1,
+        f=None,
+        pbounds={
+            key: (p.min_value, p.max_value) for key, p in self.actions.items()
+        },
+        verbose=2,
+        allow_duplicate_points=True,
+        # random_state=1,
     )
     self._utility = UtilityFunction(kind='ucb', kappa=1.96, xi=0.01)
     response.display_string = 'BayesianOpt Start'
@@ -100,10 +101,9 @@ class BayesianOpt(OptimizerInstance):
       d[a.key] = a.value.double_value
 
     self._lock.acquire()
-    logging.info('FinalizeEpisode outcome=%s / %s', request.decision_outcome.reward, d)
-    self._optimizer.register(
-        params=d,
-        target=request.decision_outcome.reward)
+    logging.info('FinalizeEpisode outcome=%s / %s',
+                 request.decision_outcome.reward, d)
+    self._optimizer.register(params=d, target=request.decision_outcome.reward)
     # self._completed_count += 1
     self._lock.release()
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
@@ -113,13 +113,15 @@ class BayesianOpt(OptimizerInstance):
       self, request: service_pb2.CurrentStatusRequest
   ) -> service_pb2.CurrentStatusResponse:
     output = '[BayesianOpt (#%s trials)\n' % len(self._optimizer.res)
-    for trial in sorted(self._optimizer.res, key=lambda x: x['target'], reverse=True):
-      output += '   '+str(trial) + '\n'
+    for trial in sorted(self._optimizer.res,
+                        key=lambda x: x['target'],
+                        reverse=True):
+      output += '   ' + str(trial) + '\n'
     output += ']\n'
 
-    if(self._completed_count == self._total_count):
+    if (self._completed_count == self._total_count):
       status = service_pb2.CurrentStatusResponse.Status.SUCCESS
-    elif(self._completed_count < self._total_count):
+    elif (self._completed_count < self._total_count):
       status = service_pb2.CurrentStatusResponse.Status.IN_PROGRESS
     else:
       status = service_pb2.CurrentStatusResponse.Status.FAILURE
@@ -132,8 +134,8 @@ class BayesianOpt(OptimizerInstance):
   ) -> service_pb2.WorkerAliveResponse:
     method_name = "WorkerAlive"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    if(self._completed_count == self._total_count):
-        worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+    if (self._completed_count == self._total_count):
+      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
     # elif(not self.pending_samples):
     #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:

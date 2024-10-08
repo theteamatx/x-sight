@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Demo of using the Sight Decision API to train sweetness controller."""
 import warnings
 
@@ -35,6 +34,7 @@ from sight.widgets.decision import decision
 
 FLAGS = flags.FLAGS
 
+
 def driver(sight: Sight) -> None:
   """Executes the logic of searching for a value.
 
@@ -47,18 +47,16 @@ def driver(sight: Sight) -> None:
 
   for _ in range(1):
     choice = decision.decision_point("candy", sight)
-    sight.text(
-        "sweet_tooth=%s, choice=%s, joy=%s"
-        % (
-            sweet_tooth,
-            choice["sweetness"],
-            float(choice["sweetness"]) * sweet_tooth,
-        )
-    )
+    sight.text("sweet_tooth=%s, choice=%s, joy=%s" % (
+        sweet_tooth,
+        choice["sweetness"],
+        float(choice["sweetness"]) * sweet_tooth,
+    ))
 
     reward = float(choice["sweetness"]) * sweet_tooth
 
     decision.decision_outcome("joy", sight, reward)
+
 
 def get_sight_instance():
   params = sight_pb2.Params(
@@ -68,6 +66,7 @@ def get_sight_instance():
   sight_obj = Sight(params)
   return sight_obj
 
+
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
@@ -76,18 +75,20 @@ def main(argv: Sequence[str]) -> None:
     decision.run(
         driver_fn=driver,
         state_attrs={
-            "sweet_tooth": sight_pb2.DecisionConfigurationStart.AttrProps(
-                min_value=0,
-                max_value=10,
-                step_size=1,
-            ),
+            "sweet_tooth":
+                sight_pb2.DecisionConfigurationStart.AttrProps(
+                    min_value=0,
+                    max_value=10,
+                    step_size=1,
+                ),
         },
         action_attrs={
-            "sweetness": sight_pb2.DecisionConfigurationStart.AttrProps(
-                min_value=0,
-                max_value=3,
-                step_size=1,
-            ),
+            "sweetness":
+                sight_pb2.DecisionConfigurationStart.AttrProps(
+                    min_value=0,
+                    max_value=3,
+                    step_size=1,
+                ),
         },
         sight=sight,
     )

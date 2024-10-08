@@ -11,21 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Tests for tensorflow_sight."""
 
 import inspect
 from typing import Any, Optional, Sequence
 
+from absl.testing import absltest
 import numpy as np
-import tensorflow as tf
-
 # from google3.analysis.dremel.core.capacitor.public.python import pywrap_record_reader
 from proto import sight_pb2
 from py.sight import Sight
 from py.widgets.tensorflow_sight import tensorflow_sight
+import tensorflow as tf
 from tensorflow.python.util.protobuf import compare
-from absl.testing import absltest
 
 
 def _read_text_file(file_path: str) -> str:
@@ -39,8 +37,7 @@ def _read_text_file(file_path: str) -> str:
 def _read_capacitor_file(file_path: str) -> Optional[Any]:
   protos = []
   record_reader = pywrap_record_reader.RecordReader.CreateFromPath(
-      file_path, ['*'], 60.0
-  )
+      file_path, ['*'], 60.0)
   protos.extend(record_reader.IterRecords())
   return sorted(protos, key=lambda x: x.index)
 
@@ -49,20 +46,17 @@ def _create_attributes(sight: Sight) -> Sequence[sight_pb2.Attribute]:
   attribute = []
   if hasattr(sight, 'change_list_number'):
     attribute.append(
-        sight_pb2.Attribute(
-            key='change_list_number', value=str(sight.change_list_number)
-        )
-    )
+        sight_pb2.Attribute(key='change_list_number',
+                            value=str(sight.change_list_number)))
   if hasattr(sight, 'citc_snapshot'):
     attribute.append(
-        sight_pb2.Attribute(key='citc_snapshot', value=str(sight.citc_snapshot))
-    )
+        sight_pb2.Attribute(key='citc_snapshot',
+                            value=str(sight.citc_snapshot)))
   return attribute
 
 
-def _create_attributes_text(
-    base_attributes: Sequence[sight_pb2.Attribute], sight: Sight
-) -> str:
+def _create_attributes_text(base_attributes: Sequence[sight_pb2.Attribute],
+                            sight: Sight) -> str:
   attribute = []
   if hasattr(sight, 'change_list_number'):
     attribute.append(f'change_list_number={sight.change_list_number}')
@@ -94,8 +88,7 @@ class TensorflowSightTest(absltest.TestCase):
         tensorflow_sight.log(
             'tensor',
             tf.convert_to_tensor(
-                np.array([[1, 2.2, 3.333], [4.1, 5, 6.2]], dtype=np.float32)
-            ),
+                np.array([[1, 2.2, 3.333], [4.1, 5, 6.2]], dtype=np.float32)),
             sight,
         )
 
@@ -104,9 +97,8 @@ class TensorflowSightTest(absltest.TestCase):
     expected_log = """Model Application<<<%s
 Model Application>>>%s
 """ % (block_attrs, block_attrs)
-    actual_log = _read_text_file(
-        params.log_dir_path + '/testLogFloatArrayToText.txt'
-    )
+    actual_log = _read_text_file(params.log_dir_path +
+                                 '/testLogFloatArrayToText.txt')
     self.assertEqual(
         expected_log,
         actual_log,
@@ -130,8 +122,7 @@ Model Application>>>%s
         tensorflow_sight.log(
             'tensor',
             tf.convert_to_tensor(
-                np.array([[1, 2.5, 3], [4, 5.5, 6]], dtype=np.float32)
-            ),
+                np.array([[1, 2.5, 3], [4, 5.5, 6]], dtype=np.float32)),
             sight,
         )
 
@@ -165,8 +156,7 @@ Model Application>>>%s
                 label='tensor',
                 shape=[2, 3],
                 double_values=sight_pb2.Tensor.DoubleValues(
-                    value=[1, 2.5, 3, 4, 5.5, 6]
-                ),
+                    value=[1, 2.5, 3, 4, 5.5, 6]),
             ),
         ),
         sight_pb2.Object(
@@ -189,8 +179,7 @@ Model Application>>>%s
     ]
 
     actual_log = _read_capacitor_file(
-        params.log_dir_path + '/testLogFloatArrayToCapacitorFile.capacitor'
-    )
+        params.log_dir_path + '/testLogFloatArrayToCapacitorFile.capacitor')
 
     self.assertEqual(len(expected_log), len(actual_log))
     for i in range(0, len(expected_log)):
@@ -199,8 +188,8 @@ Model Application>>>%s
           expected_log[i],
           actual_log[i],
           'Target code and generated logs are different. Expected'
-          ' log[%d]:\n%s\nActual log[%d]:\n%s\n'
-          % (i, expected_log[i], i, actual_log[i]),
+          ' log[%d]:\n%s\nActual log[%d]:\n%s\n' %
+          (i, expected_log[i], i, actual_log[i]),
           ignored_fields=['line'],
       )
 
@@ -220,8 +209,7 @@ Model Application>>>%s
         tensorflow_sight.log(
             'tensor',
             tf.convert_to_tensor(
-                np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64)
-            ),
+                np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64)),
             sight,
         )
 
@@ -255,8 +243,7 @@ Model Application>>>%s
                 label='tensor',
                 shape=[2, 3],
                 int64_values=sight_pb2.Tensor.Int64Values(
-                    value=[1, 2, 3, 4, 5, 6]
-                ),
+                    value=[1, 2, 3, 4, 5, 6]),
             ),
         ),
         sight_pb2.Object(
@@ -279,8 +266,7 @@ Model Application>>>%s
     ]
 
     actual_log = _read_capacitor_file(
-        params.log_dir_path + '/testLogIntArrayToCapacitorFile.capacitor'
-    )
+        params.log_dir_path + '/testLogIntArrayToCapacitorFile.capacitor')
 
     self.assertEqual(len(expected_log), len(actual_log))
     for i in range(0, len(expected_log)):
@@ -289,8 +275,8 @@ Model Application>>>%s
           expected_log[i],
           actual_log[i],
           'Target code and generated logs are different. Expected'
-          ' log[%d]:\n%s\nActual log[%d]:\n%s\n'
-          % (i, expected_log[i], i, actual_log[i]),
+          ' log[%d]:\n%s\nActual log[%d]:\n%s\n' %
+          (i, expected_log[i], i, actual_log[i]),
           ignored_fields=['line'],
       )
 
