@@ -141,7 +141,8 @@ cd venvs
 virtualenv sight_env --python=python3.10
 source ~/venvs/sight_env/bin/activate
 
-# Install necessary dependencies from requirement.txt file
+# Install setup.py compatible setuptools and necessary dependencies from requirement.txt file
+pip install setuptools==58.2.0
 pip install -r ~/x-sight/py/sight/requirements.txt
 ```
 Note : if error ```ModuleNotFoundError: No module named 'virtualenv'``` occurs, try installing virtualenv using pip,
