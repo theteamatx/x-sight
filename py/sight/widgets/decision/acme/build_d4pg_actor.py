@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Setting up configuration for DQN Experiment."""
 
 from absl import flags
@@ -24,7 +23,6 @@ from acme.jax import networks as networks_lib
 from acme.jax import utils
 import gym
 import haiku as hk
-
 
 # SEED = flags.DEFINE_integer('seed', 0, 'Random seed.')
 # NUM_STEPS = flags.DEFINE_integer(
@@ -39,7 +37,7 @@ def build_d4pg_config():
     # if env_name:
     #   return  wrappers.GymWrapper(gym.make(env_name))
     # else:
-      return None
+    return None
 
   vmax_values = {
       'gym': 1000.,

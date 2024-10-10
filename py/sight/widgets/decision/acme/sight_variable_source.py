@@ -11,24 +11,25 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Custom implementation of core variable_source."""
-import os
-import time
-import numpy as np
 import json
+import os
 import pickle
+import time
 from typing import Any, List, Sequence
-from absl import flags, logging
+
+from absl import flags
+from absl import logging
 from acme import core
 from acme import types
 import jax.numpy as jnp
-from sight_service.proto import service_pb2
-from sight_service.proto.numproto.numproto import ndarray_to_proto, proto_to_ndarray
+import numpy as np
 from sight import data_structures
 from sight import service_utils as service
-
 from sight.widgets.decision.acme import sight_adder
+from sight_service.proto import service_pb2
+from sight_service.proto.numproto.numproto import ndarray_to_proto
+from sight_service.proto.numproto.numproto import proto_to_ndarray
 
 _file_name = "custom_variable_source.py"
 
@@ -36,7 +37,7 @@ _file_name = "custom_variable_source.py"
 # Convert lists back to NumPy arrays during deserialization
 def convert_list_to_np(obj):
   if 'data' in obj and 'shape' in obj:
-      return np.array(obj['data']).reshape(obj['shape'])
+    return np.array(obj['data']).reshape(obj['shape'])
   return obj
 
 
@@ -86,7 +87,8 @@ class SightVariableSource(core.VariableSource):
         if layer.weights.b:
           layer_dict['weights']['b'] = jnp.array(layer.weights.b)
         if layer.weights.w and len(layer.weights.w.ndarray) > 0:
-          layer_dict['weights']['w'] = jnp.array(proto_to_ndarray(layer.weights.w))
+          layer_dict['weights']['w'] = jnp.array(
+              proto_to_ndarray(layer.weights.w))
       # layer_dict = {
       #     "name": layer.name,
       #     "weights": {
@@ -119,20 +121,17 @@ class SightVariableSource(core.VariableSource):
 
     # if len(self._adder._observation_list) > 0:
     request, final_observation = self._adder.fetch_and_reset_observation_list(
-        self._client_id, self._worker_id, names
-    )
+        self._client_id, self._worker_id, names)
     # print("request here is : ", request)
     # raise SystemExit
 
     start_time = time.time()
     if final_observation:
       response = service.call(
-          lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)
-      )
+          lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta))
     else:
       response = service.call(
-          lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
-      )
+          lambda s, meta: s.DecisionPoint(request, 300, metadata=meta))
 
     # weights = json.loads(response.weights.decode('utf-8'), object_hook=convert_list_to_np)
     weights = pickle.loads(response.weights)

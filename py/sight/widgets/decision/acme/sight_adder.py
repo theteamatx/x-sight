@@ -11,18 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Custom implementation of base Adder."""
 
-import logging
 from typing import Any, Optional
+
 from acme import types
 from acme.adders import base
 import dm_env
+from helpers.logs.logs_handler import logger as logging
 from sight_service.proto import service_pb2
 from sight_service.proto.numproto.numproto import ndarray_to_proto
 
 _file_name = "sight_adder.py"
+
 
 class SightAdder(base.Adder):
   """A custom adder based on the base.Adder with some logic changes.
@@ -38,10 +39,8 @@ class SightAdder(base.Adder):
   def reset(self, timeout_ms: Optional[int] = None):
     """Resets the adder's buffer."""
     # reset called at initial stage or afrer whole episode completed
-    if (
-        not self._existing_batch_last_record
-        or self._existing_batch_last_record["next_timestep"].last()
-    ):
+    if (not self._existing_batch_last_record or
+        self._existing_batch_last_record["next_timestep"].last()):
       self._observation_list = []
     # whole episode not completed so, converting last record of this batch
     # as FIRST type record for next batch
@@ -50,9 +49,8 @@ class SightAdder(base.Adder):
           step_type=dm_env.StepType.FIRST,
           reward=None,
           discount=None,
-          observation=self._existing_batch_last_record[
-              "next_timestep"
-          ].observation,
+          observation=self._existing_batch_last_record["next_timestep"].
+          observation,
       )
       observation_dict = {"action": None, "next_timestep": timestep}
       self._observation_list = [observation_dict]
@@ -69,15 +67,14 @@ class SightAdder(base.Adder):
       obs.reward.CopyFrom(ndarray_to_proto(observation["next_timestep"].reward))
     if observation["next_timestep"].discount:
       obs.discount.CopyFrom(
-          ndarray_to_proto(observation["next_timestep"].discount)
-      )
+          ndarray_to_proto(observation["next_timestep"].discount))
     obs.observation.CopyFrom(
-        ndarray_to_proto(observation["next_timestep"].observation)
-    )
+        ndarray_to_proto(observation["next_timestep"].observation))
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return obs
 
-  def fetch_and_reset_observation_list(self, sight_client_id, sight_worker_id, learner_keys):
+  def fetch_and_reset_observation_list(self, sight_client_id, sight_worker_id,
+                                       learner_keys):
     method_name = "fetch_and_reset_observation_list"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     final_observation = False
@@ -92,7 +89,7 @@ class SightAdder(base.Adder):
         acme_config.episode_observations.append(obs)
     # print("learner_keys : ", learner_keys)
 
-    if(learner_keys!=['']):
+    if (learner_keys != ['']):
       for key in learner_keys:
         acme_config.learner_keys.append(key)
 

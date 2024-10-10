@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Analyze the impact of decisions on subsequent outcomes."""
 
 import io
@@ -21,9 +20,12 @@ from typing import Any, Dict, Iterable, Iterator, List, Tuple, Union
 
 from absl import app
 from absl import flags
-from absl import logging
-import apache_beam as beam
 from apache_beam.coders import ProtoCoder
+from google3.pipeline.flume.py import runner
+from google3.pipeline.flume.py.io import capacitorio
+from google3.pyglib import gfile
+from google3.pyglib.contrib.gpathlib import gpath_flag
+from helpers.logs.logs_handler import logger as logging
 import joblib
 import numpy as np
 import pandas as pd
@@ -43,18 +45,11 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.svm import SVR
 
-from google3.pipeline.flume.py import runner
-from google3.pipeline.flume.py.io import capacitorio
-from google3.pyglib import gfile
-from google3.pyglib.contrib.gpathlib import gpath_flag
-
 _IN_LOG_FILE = flags.DEFINE_list(
     'in_log_file',
     None,
-    (
-        'Input file(s) that contain the Sight log that documents the simulation'
-        ' run.'
-    ),
+    ('Input file(s) that contain the Sight log that documents the simulation'
+     ' run.'),
     required=True,
 )
 
@@ -85,19 +80,16 @@ class AnalyzeSequence(beam.DoFn):
 
   def process(
       self,
-      task: Tuple[
-          Any, Dict[str, Union[List[Any], List[Dict[str, sight_pb2.Object]]]]
-      ],
-  ) -> Iterator[
+      task: Tuple[Any, Dict[str, Union[List[Any],
+                                       List[Dict[str, sight_pb2.Object]]]]],
+  ) -> Iterator[Tuple[
+      str,
       Tuple[
-          str,
-          Tuple[
-              List[Tuple[Dict[str, Any], float]],
-              Dict[str, sight_pb2.DecisionConfigurationStart.StateProps],
-              Dict[str, sight_pb2.DecisionConfigurationStart.StateProps],
-          ],
-      ]
-  ]:
+          List[Tuple[Dict[str, Any], float]],
+          Dict[str, sight_pb2.DecisionConfigurationStart.StateProps],
+          Dict[str, sight_pb2.DecisionConfigurationStart.StateProps],
+      ],
+  ]]:
     """Time-orders the sequence of objects for a given simulation attribute.
 
     Args:
@@ -111,30 +103,22 @@ class AnalyzeSequence(beam.DoFn):
         (x['named_value'].location, x)
         for x in task[1][self.named_value_and_object_label]
     ]
-    decision_point = [
-        (x['decision_point'].location, x)
-        for x in task[1][self.decision_point_label]
-    ]
-    decision_outcome = [
-        (x['decision_outcome'].location, x)
-        for x in task[1][self.decision_outcome_label]
-    ]
+    decision_point = [(x['decision_point'].location, x)
+                      for x in task[1][self.decision_point_label]]
+    decision_outcome = [(x['decision_outcome'].location, x)
+                        for x in task[1][self.decision_outcome_label]]
 
     # Get the attributes used by the application within this simulation
     state_attrs = None
     action_attrs = None
     for cfg in task[1][self.configuration_label]:
-      if (
-          cfg['configuration'].block_start.configuration.sub_type
-          == sight_pb2.ConfigurationStart.ST_DECISION_CONFIGURATION
-      ):
+      if (cfg['configuration'].block_start.configuration.sub_type ==
+          sight_pb2.ConfigurationStart.ST_DECISION_CONFIGURATION):
         if state_attrs:
           raise ValueError(
-              'Multiple decision configurations present in run %s' % task[0]
-          )
+              'Multiple decision configurations present in run %s' % task[0])
         decision_configuration = cfg[
-            'configuration'
-        ].block_start.configuration.decision_configuration
+            'configuration'].block_start.configuration.decision_configuration
         state_attrs = decision_configuration.state_attrs
         action_attrs = decision_configuration.action_attrs
 
@@ -142,8 +126,7 @@ class AnalyzeSequence(beam.DoFn):
       raise ValueError('No decision configuration present in run %s' % task[0])
 
     log = [
-        x[1]
-        for x in sorted(
+        x[1] for x in sorted(
             named_value_and_object + decision_point + decision_outcome,
             key=lambda x: x[0],
         )
@@ -171,8 +154,7 @@ class AnalyzeSequence(beam.DoFn):
           if last_decision_point.choice_label not in dataset:
             dataset[last_decision_point.choice_label] = []
           dataset[last_decision_point.choice_label].append(
-              (observation, accumulated_outcome)
-          )
+              (observation, accumulated_outcome))
           logging.info(
               'observation=%s, accumulated_outcome=%s, last_decision_point=%s',
               observation,
@@ -186,11 +168,9 @@ class AnalyzeSequence(beam.DoFn):
         accumulated_outcome = 0
       elif 'decision_outcome' in obj:
         accumulated_outcome += float(
-            obj['decision_outcome'].decision_outcome.outcome_value
-        )
-        logging.info(
-            'outcome=%s', obj['decision_outcome'].decision_outcome.outcome_value
-        )
+            obj['decision_outcome'].decision_outcome.outcome_value)
+        logging.info('outcome=%s',
+                     obj['decision_outcome'].decision_outcome.outcome_value)
 
     if last_decision_point:
       observation = last_decision_point_state.copy()
@@ -199,8 +179,7 @@ class AnalyzeSequence(beam.DoFn):
       if last_decision_point.choice_label not in dataset:
         dataset[last_decision_point.choice_label] = []
       dataset[last_decision_point.choice_label].append(
-          (observation, accumulated_outcome)
-      )
+          (observation, accumulated_outcome))
       state = {}
 
     for choice_label, obs_data in dataset.items():
@@ -221,13 +200,11 @@ class TrainOutcomePrediction(beam.DoFn):
       self,
       task: Tuple[
           str,
-          Iterable[
-              Tuple[
-                  List[Tuple[Dict[str, Any], float]],
-                  Dict[str, sight_pb2.DecisionConfigurationStart.StateProps],
-                  Dict[str, sight_pb2.DecisionConfigurationStart.StateProps],
-              ]
-          ],
+          Iterable[Tuple[
+              List[Tuple[Dict[str, Any], float]],
+              Dict[str, sight_pb2.DecisionConfigurationStart.StateProps],
+              Dict[str, sight_pb2.DecisionConfigurationStart.StateProps],
+          ]],
       ],
   ) -> None:
     choice_label = task[0]
@@ -268,9 +245,8 @@ class TrainOutcomePrediction(beam.DoFn):
 
     np.set_printoptions(threshold=sys.maxsize)
 
-    with gfile.Open(
-        '/tmp/decision_outcomes.' + choice_label + '.csv', 'w'
-    ) as f:
+    with gfile.Open('/tmp/decision_outcomes.' + choice_label + '.csv',
+                    'w') as f:
       pd.DataFrame(
           np.concatenate(
               (
@@ -278,8 +254,7 @@ class TrainOutcomePrediction(beam.DoFn):
                   np.reshape(output_array, (output_array.shape[0], 1)),
               ),
               axis=1,
-          )
-      ).to_csv(f)
+          )).to_csv(f)
 
     lowest_error = 1e100
     best_model = None
@@ -293,24 +268,20 @@ class TrainOutcomePrediction(beam.DoFn):
 
       predicted_array = model.predict(eval_input_data)
 
-      logging.info(
-          'eval_input_data%s=\n%s', eval_input_data.shape, eval_input_data
-      )
-      logging.info(
-          'eval_output_data%s=\n%s', eval_output_data.shape, eval_output_data
-      )
-      logging.info(
-          'predicted_array%s=%s', predicted_array.shape, predicted_array
-      )
+      logging.info('eval_input_data%s=\n%s', eval_input_data.shape,
+                   eval_input_data)
+      logging.info('eval_output_data%s=\n%s', eval_output_data.shape,
+                   eval_output_data)
+      logging.info('predicted_array%s=%s', predicted_array.shape,
+                   predicted_array)
       mae = metrics.mean_absolute_error(eval_output_data, predicted_array)
       logging.info(
           '%s: mae=%s, rmse=%s',
           task[0],
           mae / abs(np.mean(eval_output_data)),
           math.sqrt(
-              metrics.mean_squared_error(eval_output_data, predicted_array)
-          )
-          / abs(np.mean(eval_output_data)),
+              metrics.mean_squared_error(eval_output_data, predicted_array)) /
+          abs(np.mean(eval_output_data)),
       )
       if lowest_error > mae:
         lowest_error = mae
@@ -324,17 +295,14 @@ class TrainOutcomePrediction(beam.DoFn):
               label='Decision Outcomes',
               log_owner='bronevet@google.com',
               capacitor_output=True,
-          )
-      ) as sight:
+          )) as sight:
         scikit_learn_algorithm = (
-            sight_pb2.DecisionConfigurationStart.ScikitLearnAlgorithm()
-        )
+            sight_pb2.DecisionConfigurationStart.ScikitLearnAlgorithm())
         scikit_learn_algorithm.model_encoding = model_bytes.getvalue()
         scikit_learn_algorithm.input_fields.extend(list(columns))
 
         choice_algorithm = (
-            sight_pb2.DecisionConfigurationStart.ChoiceAlgorithm()
-        )
+            sight_pb2.DecisionConfigurationStart.ChoiceAlgorithm())
         choice_algorithm.scikit_learn.CopyFrom(scikit_learn_algorithm)
 
         decision_configuration = sight_pb2.DecisionConfigurationStart()
@@ -343,20 +311,18 @@ class TrainOutcomePrediction(beam.DoFn):
         for attr_name, props in action_attrs.items():
           decision_configuration.action_attrs[attr_name].CopyFrom(props)
         decision_configuration.choice_algorithm[choice_label].CopyFrom(
-            choice_algorithm
-        )
+            choice_algorithm)
 
         sight.enter_block(
             'Decision Configuration',
-            sight_pb2.Object(
-                block_start=sight_pb2.BlockStart(
-                    sub_type=sight_pb2.BlockStart.ST_CONFIGURATION,
-                    configuration=sight_pb2.ConfigurationStart(
-                        sub_type=sight_pb2.ConfigurationStart.ST_DECISION_CONFIGURATION,
-                        decision_configuration=decision_configuration,
-                    ),
-                )
-            ),
+            sight_pb2.Object(block_start=sight_pb2.BlockStart(
+                sub_type=sight_pb2.BlockStart.ST_CONFIGURATION,
+                configuration=sight_pb2.ConfigurationStart(
+                    sub_type=sight_pb2.ConfigurationStart.
+                    ST_DECISION_CONFIGURATION,
+                    decision_configuration=decision_configuration,
+                ),
+            )),
         )
         sight.exit_block('Decision Configuration', sight_pb2.Object())
 
@@ -366,43 +332,30 @@ def main(argv):
     raise app.UsageError('Too many command-line arguments.')
 
   root = beam.Pipeline(
-      runner=runner.FlumeRunner()
-  )  # beam.runners.DirectRunner())
+      runner=runner.FlumeRunner())  # beam.runners.DirectRunner())
   reads = []
   for file_path in _IN_LOG_FILE.value:
-    reads.append(
-        root
-        | f'Read {file_path}'
-        >> capacitorio.ReadFromCapacitor(
-            file_path, ['*'], ProtoCoder(sight_pb2.Object)
-        )
-    )
+    reads.append(root | f'Read {file_path}' >> capacitorio.ReadFromCapacitor(
+        file_path, ['*'], ProtoCoder(sight_pb2.Object)))
 
   log: beam.pvalue.PCollection[sight_pb2.Object] = reads | beam.Flatten()
 
   objects_with_ancestors = log | beam.ParDo(
-      analysis_utils.ExtractAncestorBlockStartLocations()
-  )
+      analysis_utils.ExtractAncestorBlockStartLocations())
 
   named_value = analysis_utils.block_start_objects_key_self(
-      log, sight_pb2.BlockStart.ST_NAMED_VALUE, 'named_value'
-  )
+      log, sight_pb2.BlockStart.ST_NAMED_VALUE, 'named_value')
   decision_point = analysis_utils.single_objects_key_log_uid(
-      log, sight_pb2.Object.ST_DECISION_POINT, 'decision_point'
-  )
+      log, sight_pb2.Object.ST_DECISION_POINT, 'decision_point')
   decision_outcome = analysis_utils.single_objects_key_log_uid(
-      log, sight_pb2.Object.ST_DECISION_OUTCOME, 'decision_outcome'
-  )
+      log, sight_pb2.Object.ST_DECISION_OUTCOME, 'decision_outcome')
   configuration = analysis_utils.block_start_objects_key_log_uid(
-      log, sight_pb2.BlockStart.ST_CONFIGURATION, 'configuration'
-  )
+      log, sight_pb2.BlockStart.ST_CONFIGURATION, 'configuration')
 
   _ = decision_point | 'decision_point' >> beam.io.WriteToText(
-      str(_OUT_FILE.value) + '.decision_point'
-  )
+      str(_OUT_FILE.value) + '.decision_point')
   _ = decision_outcome | 'decision_outcome' >> beam.io.WriteToText(
-      str(_OUT_FILE.value) + '.decision_outcome'
-  )
+      str(_OUT_FILE.value) + '.decision_outcome')
 
   named_value_and_object = analysis_utils.create_log_uid_key(
       'named_values_to_objects log_uid_key',
@@ -415,8 +368,7 @@ def main(argv):
       ),
   )
   _ = named_value_and_object | 'named_value_and_object' >> beam.io.WriteToText(
-      str(_OUT_FILE.value) + '.named_value_and_object'
-  )
+      str(_OUT_FILE.value) + '.named_value_and_object')
 
   analyzed = (
       {
@@ -424,29 +376,23 @@ def main(argv):
           'decision_point': decision_point,
           'decision_outcome': decision_outcome,
           'configuration': configuration,
-      }
-      | 'named_value_and_object decision_point decision_outcome configuration CoGroupByKey'
-      >> beam.CoGroupByKey()
-      | 'named_value_and_object decision_point decision_outcome configuration AnalyzeSequence'
+      } |
+      'named_value_and_object decision_point decision_outcome configuration CoGroupByKey'
+      >> beam.CoGroupByKey() |
+      'named_value_and_object decision_point decision_outcome configuration AnalyzeSequence'
       >> beam.ParDo(
           AnalyzeSequence(
               'named_value_and_object',
               'decision_point',
               'decision_outcome',
               'configuration',
-          )
-      )
-  )
+          )))
 
   _ = analyzed | 'analyzed' >> beam.io.WriteToText(
-      str(_OUT_FILE.value) + '.analyzed'
-  )
+      str(_OUT_FILE.value) + '.analyzed')
 
-  _ = (
-      analyzed
-      | 'TrainOutcomePrediction GroupByKey' >> beam.GroupByKey()
-      | 'TrainOutcomePrediction' >> beam.ParDo(TrainOutcomePrediction())
-  )
+  _ = (analyzed | 'TrainOutcomePrediction GroupByKey' >> beam.GroupByKey() |
+       'TrainOutcomePrediction' >> beam.ParDo(TrainOutcomePrediction()))
 
   results = root.run()
   results.wait_until_finish()

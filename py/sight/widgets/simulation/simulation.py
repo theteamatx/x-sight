@@ -11,15 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Simulation runs in the Sight log."""
 
 import inspect
 from typing import Any, Callable, Dict, Optional, Text, Tuple
-from absl import logging
 
-from sight.proto import sight_pb2
+from helpers.logs.logs_handler import logger as logging
 from sight.exception import exception
+from sight.proto import sight_pb2
 from sight.trace import Trace
 from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation_parameters import SimulationParameters
@@ -67,20 +66,15 @@ class Simulation(object):
 
     if reference_trace_file_path:
       sight.widget_simulation_state.reference_trace = Trace(
-          trace_file_path=reference_trace_file_path
-      )
+          trace_file_path=reference_trace_file_path)
       sight.widget_simulation_state.reference_trace.advance_to_within_block(
-          [sight_pb2.Object.ST_BLOCK_START, sight_pb2.BlockStart.ST_SIMULATION]
-      )
+          [sight_pb2.Object.ST_BLOCK_START, sight_pb2.BlockStart.ST_SIMULATION])
 
     # pytype: disable=attribute-error
     self.sight.enter_block(
         self.label,
-        sight_pb2.Object(
-            block_start=sight_pb2.BlockStart(
-                sub_type=sight_pb2.BlockStart.ST_SIMULATION
-            )
-        ),
+        sight_pb2.Object(block_start=sight_pb2.BlockStart(
+            sub_type=sight_pb2.BlockStart.ST_SIMULATION)),
         inspect.currentframe().f_back.f_back,
     )
     # pytype: enable=attribute-error
@@ -100,9 +94,8 @@ class Simulation(object):
 
     if exc_type is not None:
       # pytype: disable=attribute-error
-      exception(
-          exc_type, value, traceback, self.sight, inspect.currentframe().f_back
-      )
+      exception(exc_type, value, traceback, self.sight,
+                inspect.currentframe().f_back)
       # pytype: enable=attribute-error
 
     # logging.info('>>> %s', self.label)
@@ -118,9 +111,8 @@ class Simulation(object):
     self.sight.widget_simulation_state.state = {}
 
     # pytype: disable=attribute-error
-    self.sight.exit_block(
-        self.label, sight_pb2.Object(), inspect.currentframe().f_back
-    )
+    self.sight.exit_block(self.label, sight_pb2.Object(),
+                          inspect.currentframe().f_back)
     # pytype: enable=attribute-error
 
   @classmethod

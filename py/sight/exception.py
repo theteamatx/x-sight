@@ -11,10 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Documentation of exception events in the sight log."""
 
-from absl import logging
+from helpers.logs.logs_handler import logger as logging
 from sight.proto import sight_pb2
 
 

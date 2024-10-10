@@ -1,0 +1,2 @@
+yapf -ir -vv --style .config/.style.yapf .
+isort . --settings-path .config/ -v

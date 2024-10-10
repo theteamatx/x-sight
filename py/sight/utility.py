@@ -25,16 +25,15 @@ from google.protobuf.json_format import _NAN
 from google.protobuf.json_format import _NEG_INFINITY
 from google.protobuf.json_format import _Printer as BasePrinter
 from google.protobuf.json_format import SerializeToJsonError
+from sight import service_utils as service
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight_service.optimizer_instance import param_proto_to_dict
 from sight_service.proto import service_pb2
-from sight import service_utils as service
 
-
-
-POLL_LIMIT = 10 # POLL_TIME_INTERVAL th part of second
-POLL_TIME_INTERVAL = 6 # seconds
+POLL_LIMIT = 10  # POLL_TIME_INTERVAL th part of second
+POLL_TIME_INTERVAL = 6  # seconds
 global_outcome_mapping = RWLockDictWrapper()
+
 
 def get_all_outcomes(sight_id, action_ids):
 
@@ -58,7 +57,8 @@ def get_all_outcomes(sight_id, action_ids):
     # service_pb2.GetOutcomeResponse.Status.COMPLETED
     # print(f'Response => {[outcome for outcome in response.outcome]}')
     for outcome in response.outcome:
-      if (outcome.status == service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED):
+      if (outcome.status ==
+          service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED):
         outcome_dict = {}
         outcome_dict['action_id'] = outcome.action_id
         outcome_dict['reward'] = outcome.reward
@@ -80,8 +80,7 @@ def poll_network_batch_outcome(sight_id):
     try:
       resource_dict = global_outcome_mapping.get()
       pending_action_ids = [
-          id for id in resource_dict
-          if resource_dict[id] is None
+          id for id in resource_dict if resource_dict[id] is None
       ]
 
       # print("pending action ids : ", pending_action_ids)
@@ -98,15 +97,16 @@ def poll_network_batch_outcome(sight_id):
         global_outcome_mapping.update(new_dict)
 
       else:
-        print(f'Not sending request as no pending ids ...=> {pending_action_ids} with counter => {counter}')
+        print(
+            f'Not sending request as no pending ids ...=> {pending_action_ids} with counter => {counter}'
+        )
         if counter <= 0:
           return
-        counter -=1
+        counter -= 1
       time.sleep(POLL_TIME_INTERVAL)
     except Exception as e:
       print(f"Error updating outcome mapping: {e}")
       raise e
-
 
 
 def MessageToJson(
@@ -190,7 +190,7 @@ def MessageToDict(
       preserving_proto_field_name,
       use_integers_for_enums,
       descriptor_pool,
- #     float_precision=float_precision,
+      #     float_precision=float_precision,
   )
   # pylint: disable=protected-access
   return printer._MessageToJsonObject(message)
@@ -213,10 +213,8 @@ class _Printer(BasePrinter):
       else:
         if field.file.syntax == 'proto3':
           return value
-        raise SerializeToJsonError(
-            'Enum field contains an integer value '
-            'which can not mapped to an enum value.'
-        )
+        raise SerializeToJsonError('Enum field contains an integer value '
+                                   'which can not mapped to an enum value.')
     elif field.cpp_type == descriptor.FieldDescriptor.CPPTYPE_STRING:
       if field.type == descriptor.FieldDescriptor.TYPE_BYTES:
         # Use base64 Data encoding for bytes

@@ -1,4 +1,3 @@
-
 # Copyright 2023 Google LLC
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,13 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Demo for the python bindings to the Sight logging library."""
 
+import asyncio
 import os
+from typing import Sequence
+
 from absl import app
 from absl import flags
-import asyncio
 import numpy as np
 import pandas as pd
 from sight import data_structures
@@ -26,7 +26,6 @@ from sight.attribute import Attribute
 from sight.block import Block
 from sight.proto import sight_pb2
 from sight.sight import Sight
-from typing import Sequence
 
 FLAGS = flags.FLAGS
 
@@ -46,16 +45,18 @@ def main(argv):
 
 
 async def coroutine_one(sight) -> None:
-    with Block("1", sight):
-      print('1 sight.location=', sight.location.get())
-      await asyncio.sleep(2)
-      sight.text('Coroutine one finished')
+  with Block("1", sight):
+    print('1 sight.location=', sight.location.get())
+    await asyncio.sleep(2)
+    sight.text('Coroutine one finished')
+
 
 async def coroutine_two(sight) -> None:
-    with Block("2", sight):
-      print('2 sight.location=', sight.location.get())
-      await asyncio.sleep(1)
-      sight.text('Coroutine two finished')
+  with Block("2", sight):
+    print('2 sight.location=', sight.location.get())
+    await asyncio.sleep(1)
+    sight.text('Coroutine two finished')
+
 
 async def main(argv: Sequence[str]) -> None:
   with get_sight_instance() as sight:
@@ -68,8 +69,10 @@ async def main(argv: Sequence[str]) -> None:
       await task1
       await task2
 
+
 def main_wrapper(argv: Sequence[str]):
   asyncio.run(main(argv))
+
 
 if __name__ == "__main__":
   app.run(main_wrapper)

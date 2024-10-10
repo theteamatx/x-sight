@@ -11,11 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Demo of using the environment created using dm_env to train shower maintenance system."""
 
 import os
 from typing import Sequence
+
 from absl import app
 from absl import flags
 from sight.proto import sight_pb2
@@ -24,6 +24,7 @@ from sight.widgets.decision import decision
 from sight.widgets.decision.acme import shower_env
 
 FLAGS = flags.FLAGS
+
 
 def get_sight_instance():
   params = sight_pb2.Params(

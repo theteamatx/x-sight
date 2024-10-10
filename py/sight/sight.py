@@ -11,28 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Core logging class that provides APIs for creating a structured log."""
 
 from __future__ import annotations
 
+import asyncio
 from collections import defaultdict
+import contextvars
+import dataclasses
 import inspect
 import io
 import os
-import time
 import threading
+import time
 from typing import Any, Optional, Sequence
 
-from absl import logging
 from absl import flags
-import asyncio
-import contextvars
-import dataclasses
 from dotenv import load_dotenv
 import fastavro
 from fastavro.schema import load_schema
-from sight_service.proto import service_pb2
+from helpers.logs.logs_handler import logger as logging
 from sight import service_utils as service
 from sight.exception import exception
 from sight.gcs_utils import create_external_bq_table
@@ -40,17 +38,22 @@ from sight.gcs_utils import upload_blob_from_stream
 from sight.location import Location
 from sight.proto import sight_pb2
 from sight.service_utils import finalize_server
-from sight.utility import MessageToDict, poll_network_batch_outcome
+from sight.utility import MessageToDict
+from sight.utility import poll_network_batch_outcome
 from sight.widgets.decision import decision
-from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
-from sight.widgets.simulation.simulation_widget_state import SimulationWidgetState
+from sight.widgets.simulation.simulation_widget_state import (
+    SimulationWidgetState
+)
+from sight_service.proto import service_pb2
 
 load_dotenv()
-_PARENT_ID = flags.DEFINE_string(
-    'parent_id', None, 'Sight log Id of super script')
+_PARENT_ID = flags.DEFINE_string('parent_id', None,
+                                 'Sight log Id of super script')
 FLAGS = flags.FLAGS
 current_script_directory = os.path.dirname(os.path.abspath(__file__))
-_SCHEMA_FILE_PATH = os.path.join(current_script_directory, '..', 'avrofile-schema.avsc')
+_SCHEMA_FILE_PATH = os.path.join(current_script_directory, '..',
+                                 'avrofile-schema.avsc')
+
 
 def generate_default_sight_params():
   """Returns a sight object with default parameters.
@@ -75,6 +78,7 @@ def generate_default_sight_params():
   )
   return default_prams
 
+
 @dataclasses.dataclass
 class SightLocationState:
   location: Location
@@ -84,6 +88,7 @@ class SightLocationState:
   num_direct_contents: Location
   num_transitive_contents: Location
   active_block_labels: list[Any]
+
 
 class Sight(object):
   """Object that manages writing a Sight log in some structured format.
@@ -175,7 +180,6 @@ class Sight(object):
     self.widget_simulation_state = SimulationWidgetState()
     # self._configure(configuration)
 
-
     # Configure the tracking state of the Sight object, which records the current location
     # in the log of the current task, including its hierarchical nesting.
     self.pause_logging_depth = 0
@@ -198,11 +202,12 @@ class Sight(object):
     self.open_block_start_locations.set([])
     self.num_direct_contents = contextvars.ContextVar('num_direct_contents')
     self.num_direct_contents.set(Location())
-    self.num_transitive_contents = contextvars.ContextVar('num_transitive_contents')
+    self.num_transitive_contents = contextvars.ContextVar(
+        'num_transitive_contents')
     self.num_transitive_contents.set(Location())
     self.active_block_labels = contextvars.ContextVar('active_block_labels')
     self.active_block_labels.set([])
-    
+
     self.attributes = {}
     self.open = True
 
@@ -244,25 +249,16 @@ class Sight(object):
           if 'PARENT_LOG_ID' in os.environ:
             logging.info('PARENT_LOG_ID found - worker process')
             worker_location = os.environ['worker_location'].replace(':', '_')
-            self.path_prefix = (
-                self.params.label
-                + '_'
-                + os.environ['PARENT_LOG_ID']
-                + '_'
-                + 'worker'
-                + '_'
-                + worker_location
-                + '_'
-                + 'log'
-            )
+            self.path_prefix = (self.params.label + '_' +
+                                os.environ['PARENT_LOG_ID'] + '_' + 'worker' +
+                                '_' + worker_location + '_' + 'log')
             self.id = os.environ['PARENT_LOG_ID']
             print("log id is : ", self.id)
           elif (FLAGS.sight_log_id):
             logging.info('Using provided sight id')
             self.id = FLAGS.sight_log_id
-            self.path_prefix = (
-                self.params.label + '_' + self.id + '_' + 'log' + '_run_mode'
-            )
+            self.path_prefix = (self.params.label + '_' + self.id + '_' +
+                                'log' + '_run_mode')
           else:
             # logging.info('calling generate metadata')
             req = service_pb2.CreateRequest(
@@ -272,14 +268,12 @@ class Sight(object):
                 # format='LF_AVRO',
             )
             response = service.call(
-                lambda s, meta: s.Create(req, 300, metadata=meta)
-            )
+                lambda s, meta: s.Create(req, 300, metadata=meta))
             logging.info('##### response=%s #####', response)
             self.id = response.id
             # logging.info('PARENT_LOG_ID not found - parent process')
-            self.path_prefix = (
-                self.params.label + '_' + str(response.id) + '_' + 'log'
-            )
+            self.path_prefix = (self.params.label + '_' + str(response.id) +
+                                '_' + 'log')
 
         except Exception as e:
           logging.info('RPC ERROR: %s', e)
@@ -294,11 +288,7 @@ class Sight(object):
           self.params.local = True
 
         self.avro_log_file_path = (
-            self.params.label
-            + '_'
-            + str(self.id)
-            + '/'
-            + self.path_prefix
+            self.params.label + '_' + str(self.id) + '/' + self.path_prefix
             # 'client_' + str(self.id) + '/' + self.path_prefix
         )
         self.file_name = self.avro_log_file_path.split('/')[-1]
@@ -307,8 +297,7 @@ class Sight(object):
 
         if 'SIGHT_PATH' in os.environ:
           self.avro_schema = load_schema(
-              f'{os.environ["SIGHT_PATH"]}/../avrofile-schema.avsc'
-          )
+              f'{os.environ["SIGHT_PATH"]}/../avrofile-schema.avsc')
         else:
           # print('avro-schema path is : ', _SCHEMA_FILE_PATH)
           self.avro_schema = load_schema(_SCHEMA_FILE_PATH)
@@ -331,15 +320,15 @@ class Sight(object):
 
   def get_location_state(self) -> SightLocationState:
     return SightLocationState(
-      self.location.get().clone(),
-      self.line_prefix.get(),
-      self.line_suffix.get(),
-      self.open_block_start_locations.get().copy(),
-      self.num_direct_contents.get().clone(),
-      self.num_transitive_contents.get().clone(),
-      self.active_block_labels.get().copy(),
+        self.location.get().clone(),
+        self.line_prefix.get(),
+        self.line_suffix.get(),
+        self.open_block_start_locations.get().copy(),
+        self.num_direct_contents.get().clone(),
+        self.num_transitive_contents.get().clone(),
+        self.active_block_labels.get().copy(),
     )
-  
+
   def set_location_state(self, state: SightLocationState) -> None:
     self.location.set(state.location)
     self.line_prefix.set(state.line_prefix)
@@ -348,10 +337,10 @@ class Sight(object):
     self.num_direct_contents.set(state.num_direct_contents)
     self.num_transitive_contents.set(state.num_transitive_contents)
     self.active_block_labels.set(state.active_block_labels)
-  
 
   def create_task(self, func):
     frame = inspect.currentframe().f_back
+
     async def go(func, state):
       # self.location.set(temp_location)
       self.set_location_state(state)
@@ -361,13 +350,16 @@ class Sight(object):
       # print('%s/%s: inside self.location=%s/%s' % (task_id, asyncio.current_task().get_name(), self.location.get(), id(self.location.get())))
       return await func
       # self.exit_block(label, sight_pb2.Object(), frame)
-    
-    self.enter_block(f'asyncio.create_task: {asyncio.current_task().get_name()}', sight_pb2.Object(), frame)
-    state = self.get_location_state() #self.location.get().clone()
+
+    self.enter_block(
+        f'asyncio.create_task: {asyncio.current_task().get_name()}',
+        sight_pb2.Object(), frame)
+    state = self.get_location_state()  #self.location.get().clone()
     # print('%s/%s: temp_location=%s=%s' % (task_id, asyncio.current_task().get_name(), state, id(state)))
-    
-    new_task = asyncio.create_task(go(func, state))#, name=f'task_{task_id}')
-    self.exit_block(f'asyncio.create_task: {asyncio.current_task().get_name()}', sight_pb2.Object(), frame)
+
+    new_task = asyncio.create_task(go(func, state))  #, name=f'task_{task_id}')
+    self.exit_block(f'asyncio.create_task: {asyncio.current_task().get_name()}',
+                    sight_pb2.Object(), frame)
     return new_task
 
   @classmethod
@@ -396,20 +388,19 @@ class Sight(object):
     return self
 
   def __exit__(self, exc_type, value, traceback):
-    # last rpc call to server for this sight id
-    req = service_pb2.CloseRequest()
-    req.client_id = str(self.id)
-    response = service.call(
-                lambda s, meta: s.Close(req, 300, metadata=meta)
-            )
-    # print("close rpc status :", response.response_str)
-
     if self.params.silent_logger:
       self.close()
+      return
     if exc_type is not None:
       # pytype: disable=attribute-error
       exception(exc_type, value, traceback, self, inspect.currentframe().f_back)
       # pytype: enable=attribute-error
+
+    # last rpc call to server for this sight id
+    req = service_pb2.CloseRequest()
+    req.client_id = str(self.id)
+    response = service.call(lambda s, meta: s.Close(req, 300, metadata=meta))
+    # print("close rpc status :", response.response_str)
     self.close()
 
   def __del__(self):
@@ -446,13 +437,9 @@ class Sight(object):
           create_external_bq_table(self.params, self.table_name, self.id)
         logging.info(
             'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-            'log_id=%s.%s&log_owner=%s&project_id=%s',
-            self.SIGHT_API_KEY,
-            self.params.dataset_name,
-            self.table_name,
-            self.params.log_owner,
-            os.environ['PROJECT_ID']
-        )
+            'log_id=%s.%s&log_owner=%s&project_id=%s', self.SIGHT_API_KEY,
+            self.params.dataset_name, self.table_name, self.params.log_owner,
+            os.environ['PROJECT_ID'])
         print(f'table generated : {self.params.dataset_name}.{self.table_name}')
       self.avro_log.close()
 
@@ -461,16 +448,14 @@ class Sight(object):
           (
               #'Log : https://script.google.com/a/google.com/macros/s/%s/exec?'
               'Log : https://script.google.com/a/google.com/macros/s/%s/dev?'
-              'log_id=%s.%s&log_owner=%s&project_id=%s',
-          ),
+              'log_id=%s.%s&log_owner=%s&project_id=%s',),
           self.SIGHT_API_KEY,
           self.params.dataset_name,
           self.table_name,
           self.params.log_owner,
-          os.environ['PROJECT_ID']
-      )
+          os.environ['PROJECT_ID'])
 
-    if(FLAGS.decision_mode == 'train'):
+    if (FLAGS.decision_mode == 'train'):
       decision.finalize(self)
     finalize_server()
     self.open = False
@@ -504,9 +489,8 @@ class Sight(object):
     frameinfo = inspect.getframeinfo(frame)
     google3_loc = frameinfo.filename.find(self.CODE_FILES_PATH_PREFIX)
     if google3_loc >= 0:
-      obj.file = frameinfo.filename[
-          google3_loc + len(self.CODE_FILES_PATH_PREFIX) :
-      ]
+      obj.file = frameinfo.filename[google3_loc +
+                                    len(self.CODE_FILES_PATH_PREFIX):]
     else:
       obj.file = frameinfo.filename
     obj.line = frameinfo.lineno
@@ -592,12 +576,12 @@ class Sight(object):
 
     if self.is_binary_logged():
       return self.log_object(
-          sight_pb2.Object(sub_type=sight_pb2.Object.SubType.ST_GAP), True
-      )
+          sight_pb2.Object(sub_type=sight_pb2.Object.SubType.ST_GAP), True)
 
-  def enter_block(
-      self, label: str, obj: sight_pb2.Object, frame: Optional[Any] = None
-  ) -> Optional[Location]:
+  def enter_block(self,
+                  label: str,
+                  obj: sight_pb2.Object,
+                  frame: Optional[Any] = None) -> Optional[Location]:
     """Documents in the Sight log that a hierarchical block was entered.
 
     Args:
@@ -621,7 +605,8 @@ class Sight(object):
     # self.emit_text_to_file(
     #     self.line_prefix + label + '<<<' + self.line_suffix + '\n'
     # )
-    self.emit_text_to_file(self.line_prefix.get() + label + '\n' + '>>> ' + '\n')
+    self.emit_text_to_file(self.line_prefix.get() + label + '\n' + '>>> ' +
+                           '\n')
     self.line_prefix.set(self.line_prefix.get() + label + ': ')
 
     obj_location = self.location.get()
@@ -682,10 +667,10 @@ class Sight(object):
         obj.block_end = sight_pb2.BlockEnd()
       obj.block_end.label = label
       obj.block_end.num_direct_contents = self.num_direct_contents.get().pos()
-      obj.block_end.num_transitive_contents = self.num_transitive_contents.get().pos()
-      obj.block_end.location_of_block_start = self.open_block_start_locations.get()[
-          -1
-      ]
+      obj.block_end.num_transitive_contents = self.num_transitive_contents.get(
+      ).pos()
+      obj.block_end.location_of_block_start = self.open_block_start_locations.get(
+      )[-1]
       self.open_block_start_locations.get().pop()
 
       if frame is None:
@@ -698,9 +683,7 @@ class Sight(object):
 
     self.emit_text_to_file(
         # self.line_prefix + label + '>>>' + self.line_suffix + '\n'
-        '<<< '
-        + '\n'
-    )
+        '<<< ' + '\n')
 
     self.num_direct_contents.get().exit()
     self.num_transitive_contents.get().exit()
@@ -709,8 +692,7 @@ class Sight(object):
     # Each value in self.attributes is non-empty since empty values are removed
     # in unset_attribute.
     self.line_suffix.set('| ' + ','.join(
-        [f'{key}={value[-1]}' for key, value in self.attributes.items()]
-    ))
+        [f'{key}={value[-1]}' for key, value in self.attributes.items()]))
 
   def set_attribute(self, key: str, value: str) -> None:
     """Documents in the Sight log a new key-value attribute mapping.
@@ -747,13 +729,13 @@ class Sight(object):
 
     self._update_line_suffix()
 
-  def fetch_attributes(self) -> dict[str,str]:
+  def fetch_attributes(self) -> dict[str, str]:
     """Fetches all the values of attributes that is currently set to within Sight.
     Returns:
       The dictionary that contains key-value pairs of attributes currently set to.
     """
     attr_dict = {}
-    for k,v in self.attributes.items():
+    for k, v in self.attributes.items():
       attr_dict[k] = v[-1]
     return attr_dict
 
@@ -771,9 +753,9 @@ class Sight(object):
       return ''
     return values[-1]
 
-  def log_object(
-      self, obj: sight_pb2.Object, advance_location: bool = True
-  ) -> Optional[Location]:
+  def log_object(self,
+                 obj: sight_pb2.Object,
+                 advance_location: bool = True) -> Optional[Location]:
     """Emits a single object to the Sight log.
 
     Args:
@@ -835,14 +817,12 @@ class Sight(object):
             create_external_bq_table(self.params, self.table_name, self.id)
             logging.info(
                 'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-                'log_id=%s.%s&log_owner=%s&project_id=%s',
-                self.SIGHT_API_KEY,
-                self.params.dataset_name,
-                self.table_name,
-                self.params.log_owner,
-                os.environ['PROJECT_ID']
+                'log_id=%s.%s&log_owner=%s&project_id=%s', self.SIGHT_API_KEY,
+                self.params.dataset_name, self.table_name,
+                self.params.log_owner, os.environ['PROJECT_ID'])
+            print(
+                f'table generated : {self.params.dataset_name}.{self.table_name}'
             )
-            print(f'table generated : {self.params.dataset_name}.{self.table_name}')
           self.avro_log.close()
           self.avro_log = io.BytesIO()
 
@@ -913,7 +893,6 @@ class Sight(object):
   #       configuration log objects.
   #   """
   #   self.add_config(_read_capacitor_file(config_file_path))  # pytype: disable=wrong-arg-types  # dynamic-method-lookup
-
 
 
 def text(text_val: str, sight, end='\n', frame=None) -> str:

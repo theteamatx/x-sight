@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """An instance of a Sight optimizer dedicated to a single experiment."""
 
 from concurrent import futures
-import logging
-from typing import Any, Dict, List, Tuple, Sequence
+from typing import Any, Dict, List, Sequence, Tuple
+
+from helpers.logs.logs_handler import logger as logging
+from sight.proto import sight_pb2
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
-from sight.proto import sight_pb2
 
 _file_name = "single_action_optimizer.py"
 
@@ -37,5 +37,3 @@ class SingleActionOptimizer(OptimizerInstance):
     self.pending_samples = {}
     self.active_samples = {}
     self.completed_samples = {}
-
-

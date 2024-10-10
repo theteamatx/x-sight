@@ -11,15 +11,15 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Common resources used in the gRPC sight_service example."""
 
-import os
 import json
+import os
 import time
-import logging
+
 from absl import flags
 from google.cloud import spanner
+from helpers.logs.logs_handler import logger as logging
 
 OPERATION_TIMEOUT_SECONDS = 240
 _file_name = "server_utils.py"
@@ -56,8 +56,7 @@ def create_database(instance_id, database_id, log_table_id, study_table_id):
     print("Instance with ID {} exists.".format(instance_id))
   else:
     config_name = "{}/instanceConfigs/regional-us-central1".format(
-        spanner_client.project_name
-    )
+        spanner_client.project_name)
 
     instance = spanner_client.instance(
         instance_id,
@@ -82,40 +81,35 @@ def create_database(instance_id, database_id, log_table_id, study_table_id):
     operation.result(OPERATION_TIMEOUT_SECONDS)
     print("Created database {} on instance {}".format(database_id, instance_id))
 
-    operation = database.update_ddl(["""CREATE TABLE """ + log_table_id + """ (
+    operation = database.update_ddl([
+        """CREATE TABLE """ + log_table_id + """ (
                     Id     INT64 NOT NULL,
                     LogFormat    INT64,
                     LogPathPrefix     STRING(MAX),
                     LogOwner   STRING(MAX),
                     LogLabel   STRING(MAX)
-                ) PRIMARY KEY (Id)"""])
+                ) PRIMARY KEY (Id)"""
+    ])
     print("Waiting for operation to complete...")
     operation.result(OPERATION_TIMEOUT_SECONDS)
-    print(
-        "Created {} table on database {} on instance {}".format(
-            log_table_id, database_id, instance_id
-        )
-    )
+    print("Created {} table on database {} on instance {}".format(
+        log_table_id, database_id, instance_id))
 
-    operation = database.update_ddl(
-        ["""CREATE TABLE """ + study_table_id + """ (
+    operation = database.update_ddl([
+        """CREATE TABLE """ + study_table_id + """ (
                     LogId     INT64 NOT NULL,
                     StudyName   STRING(MAX)
-                ) PRIMARY KEY (LogId)"""]
-    )
+                ) PRIMARY KEY (LogId)"""
+    ])
     print("Waiting for operation to complete...")
     operation.result(OPERATION_TIMEOUT_SECONDS)
-    print(
-        "Created {} table on database {} on instance {}".format(
-            study_table_id, database_id, instance_id
-        )
-    )
+    print("Created {} table on database {} on instance {}".format(
+        study_table_id, database_id, instance_id))
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
-def Insert_In_StudyDetails_Table(
-    study_details, instance_id, database_id, study_table_id
-):
+def Insert_In_StudyDetails_Table(study_details, instance_id, database_id,
+                                 study_table_id):
   """adds study details to table mapped to unique LogId."""
   method_name = "Insert_In_StudyDetails_Table"
   logging.debug(">>>>  In %s of %s", method_name, _file_name)
@@ -125,24 +119,20 @@ def Insert_In_StudyDetails_Table(
   database = instance.database(database_id)
 
   def insert_StudyDetails(transaction):
-    query = (
-        f"INSERT {study_table_id} (LogId, StudyName) VALUES"
-        f" ({study_details['LogId']}, '{study_details['StudyName']}')"
-    )
+    query = (f"INSERT {study_table_id} (LogId, StudyName) VALUES"
+             f" ({study_details['LogId']}, '{study_details['StudyName']}')")
     # print("StudyDetail query : ", query)
 
     row_ct = transaction.execute_update(query)
-    print(
-        "{} record inserted to spanner table {}".format(row_ct, study_table_id)
-    )
+    print("{} record inserted to spanner table {}".format(
+        row_ct, study_table_id))
 
   database.run_in_transaction(insert_StudyDetails)
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
-def Fetch_From_StudyDetails_Table(
-    log_id, instance_id, database_id, study_table_id
-):
+def Fetch_From_StudyDetails_Table(log_id, instance_id, database_id,
+                                  study_table_id):
   """fetch study name from table mapped to unique LogId."""
   method_name = "Fetch_From_StudyDetails_Table"
   logging.debug(">>>>  In %s of %s", method_name, _file_name)
@@ -162,9 +152,8 @@ def Fetch_From_StudyDetails_Table(
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
-def Insert_In_LogDetails_Table(
-    new_log_entry, instance_id, database_id, table_id
-):
+def Insert_In_LogDetails_Table(new_log_entry, instance_id, database_id,
+                               table_id):
   """Writes in the sight service database to spanner table.
 
   Returns:
@@ -181,8 +170,7 @@ def Insert_In_LogDetails_Table(
         f"INSERT {table_id} (Id, LogFormat, LogPathPrefix, LogOwner, LogLabel)"
         f" VALUES ({new_log_entry['Id']}, {new_log_entry['LogFormat']},"
         f" '{new_log_entry['LogPathPrefix']}', '{new_log_entry['LogOwner']}',"
-        f" '{new_log_entry['LogLabel']}')"
-    )
+        f" '{new_log_entry['LogLabel']}')")
     # print("LogDetail query : ", query)
 
     row_ct = transaction.execute_update(query)
@@ -192,9 +180,8 @@ def Insert_In_LogDetails_Table(
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
-def Insert_In_ClientData_Table(
-    client_details, instance_id, database_id, clientdata_table_id
-):
+def Insert_In_ClientData_Table(client_details, instance_id, database_id,
+                               clientdata_table_id):
   """adds client details to table."""
 
   method_name = "Insert_In_ClientData_Table"
@@ -210,16 +197,12 @@ def Insert_In_ClientData_Table(
         f" learner_path, replay_address) VALUES ({client_details['sight_id']},"
         f" '{client_details['env']}', '{client_details['network_path']}',"
         f" '{client_details['learner_path']}',"
-        f" '{client_details['replay_address']}')"
-    )
+        f" '{client_details['replay_address']}')")
     # print("StudyDetail query : ", query)
 
     row_ct = transaction.execute_update(query)
-    print(
-        "{} record inserted to spanner table {}".format(
-            row_ct, clientdata_table_id
-        )
-    )
+    print("{} record inserted to spanner table {}".format(
+        row_ct, clientdata_table_id))
 
   database.run_in_transaction(insert_ClientDetails)
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)

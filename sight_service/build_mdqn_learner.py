@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Setting up configuration for DQN Experiment."""
 
 from absl import flags
@@ -47,21 +46,18 @@ def build_mdqn_config():
     network_hk = hk.without_apply_rng(hk.transform(network))
     obs = utils.add_batch_dim(utils.zeros_like(environment_spec.observations))
     network = networks_lib.FeedForwardNetwork(
-        init=lambda rng: network_hk.init(rng, obs), apply=network_hk.apply
-    )
+        init=lambda rng: network_hk.init(rng, obs), apply=network_hk.apply)
     typed_network = networks_lib.non_stochastic_network_to_typed(network)
     return dqn.DQNNetworks(policy_network=typed_network)
 
-   # Construct the agent.
-  config = dqn.DQNConfig(
-      discount=0.99,
-      n_step=1,
-      epsilon=0.1
-  )
+  # Construct the agent.
+  config = dqn.DQNConfig(discount=0.99, n_step=1, epsilon=0.1)
 
-  loss_fn = losses.MunchausenQLearning(
-      discount=config.discount, max_abs_reward=1., huber_loss_parameter=1.,
-      entropy_temperature=0.03, munchausen_coefficient=0.9)
+  loss_fn = losses.MunchausenQLearning(discount=config.discount,
+                                       max_abs_reward=1.,
+                                       huber_loss_parameter=1.,
+                                       entropy_temperature=0.03,
+                                       munchausen_coefficient=0.9)
 
   dqn_builder = dqn.DQNBuilder(config, loss_fn=loss_fn)
 

@@ -11,17 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Demo of Drivier function to be used in case Sight used without any environment."""
 
-import logging
 import random
+
+from helpers.logs.logs_handler import logger as logging
 import numpy as np
 from sight import data_structures
 from sight.sight import Sight
 from sight.widgets.decision import decision
 
 _file_name = "shower_env_driver.py"
+
 
 def driver_fn(sight: Sight) -> None:
   """Executes the logic of searching for a value.
@@ -34,7 +35,6 @@ def driver_fn(sight: Sight) -> None:
 
   logging.info('sight.widget_decision_state : %s', sight.widget_decision_state)
 
-
   temperature = 38 + random.randint(-3, 3)
   shower_length = 60
   data_structures.log_var("Temperature", temperature, sight)
@@ -46,7 +46,8 @@ def driver_fn(sight: Sight) -> None:
 
     # Change temperature based on the Sight-recommended direction.
     temperature += chosen_action["Direction"]
-    logging.info('temperature=%s, direction=%s', temperature, chosen_action["Direction"])
+    logging.info('temperature=%s, direction=%s', temperature,
+                 chosen_action["Direction"])
     data_structures.log_var("Temperature", temperature, sight)
 
     # Calculate reward based on whether the temperature target has

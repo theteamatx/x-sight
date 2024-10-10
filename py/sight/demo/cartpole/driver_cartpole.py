@@ -13,16 +13,17 @@
 # limitations under the License.
 """Default Driver function to be used while training within the Sight log."""
 
-import logging
-import gym
-import numpy as np
-import dm_env
 import math
+
+from acme import specs
 from acme import wrappers
+import dm_env
+import gym
+from gym.utils import seeding
+from helpers.logs.logs_handler import logger as logging
+import numpy as np
 from sight import data_structures
 from sight.widgets.decision import decision
-from gym.utils import seeding
-from acme import specs
 import tree
 
 _file_name = "driver.py"
@@ -48,103 +49,95 @@ state = None
 
 
 def reset():
-    global reset_next_step
-    global state
-    reset_next_step = False
-    np_random, seed = seeding.np_random()
-    low = -0.05
-    high = 0.05
-    state = np_random.uniform(low=low, high=high, size=(4, ))
-    observation = np.array(state, dtype=np.float32)
-    return dm_env.restart(observation)
+  global reset_next_step
+  global state
+  reset_next_step = False
+  np_random, seed = seeding.np_random()
+  low = -0.05
+  high = 0.05
+  state = np_random.uniform(low=low, high=high, size=(4,))
+  observation = np.array(state, dtype=np.float32)
+  return dm_env.restart(observation)
 
 
 def step(action):
-    global reset_next_step
-    global state
-    if reset_next_step:
-        return reset()
+  global reset_next_step
+  global state
+  if reset_next_step:
+    return reset()
 
-    # observation, reward, done, info = self._environment.step(action)
+  # observation, reward, done, info = self._environment.step(action)
 
-    x, x_dot, theta, theta_dot = state
-    force = force_mag if action == 1 else -force_mag
-    costheta = math.cos(theta)
-    sintheta = math.sin(theta)
+  x, x_dot, theta, theta_dot = state
+  force = force_mag if action == 1 else -force_mag
+  costheta = math.cos(theta)
+  sintheta = math.sin(theta)
 
-    temp = (
-            force + polemass_length * theta_dot**2 * sintheta
-        ) / total_mass
-    thetaacc = (gravity * sintheta - costheta * temp) / (
-            length * (4.0 / 3.0 - masspole * costheta**2 / total_mass)
-        )
-    xacc = temp - polemass_length * thetaacc * costheta / total_mass
+  temp = (force + polemass_length * theta_dot**2 * sintheta) / total_mass
+  thetaacc = (gravity * sintheta - costheta * temp) / (
+      length * (4.0 / 3.0 - masspole * costheta**2 / total_mass))
+  xacc = temp - polemass_length * thetaacc * costheta / total_mass
 
-    x = x + tau * x_dot
-    x_dot = x_dot + tau * xacc
-    theta = theta + tau * theta_dot
-    theta_dot = theta_dot + tau * thetaacc
-    state = (x, x_dot, theta, theta_dot)
+  x = x + tau * x_dot
+  x_dot = x_dot + tau * xacc
+  theta = theta + tau * theta_dot
+  theta_dot = theta_dot + tau * thetaacc
+  state = (x, x_dot, theta, theta_dot)
 
-    terminated = bool(
-            x < -x_threshold
-            or x > x_threshold
-            or theta < -theta_threshold_radians
-            or theta > theta_threshold_radians
-        )
-    if not terminated:
-        reward = 1.0
-    else:
-        reward = 0.0
+  terminated = bool(x < -x_threshold or x > x_threshold or
+                    theta < -theta_threshold_radians or
+                    theta > theta_threshold_radians)
+  if not terminated:
+    reward = 1.0
+  else:
+    reward = 0.0
 
-    observation, reward, done, info = np.array(state, dtype=np.float32), reward, terminated, {}
-    reset_next_step = done
+  observation, reward, done, info = np.array(
+      state, dtype=np.float32), reward, terminated, {}
+  reset_next_step = done
 
-    # Convert the type of the reward based on the spec, respecting the scalar or
-    # array property.
-    reward = tree.map_structure(
-        lambda x, t: (  # pylint: disable=g-long-lambda
-            t.dtype.type(x)
-            if np.isscalar(x) else np.asarray(x, dtype=t.dtype)),
-        reward,
-        specs.Array(shape=(), dtype=float, name='reward'))
+  # Convert the type of the reward based on the spec, respecting the scalar or
+  # array property.
+  reward = tree.map_structure(
+      lambda x, t: (  # pylint: disable=g-long-lambda
+          t.dtype.type(x) if np.isscalar(x) else np.asarray(x, dtype=t.dtype)),
+      reward,
+      specs.Array(shape=(), dtype=float, name='reward'))
 
-    if done:
-      truncated = info.get('TimeLimit.truncated', False)
-      if truncated:
-        return dm_env.truncation(reward, observation)
-      return dm_env.termination(reward, observation)
-    return dm_env.transition(reward, observation)
+  if done:
+    truncated = info.get('TimeLimit.truncated', False)
+    if truncated:
+      return dm_env.truncation(reward, observation)
+    return dm_env.termination(reward, observation)
+  return dm_env.transition(reward, observation)
 
 
 def driver_fn(sight) -> None:
-    """Executes the logic of searching for a value.
+  """Executes the logic of searching for a value.
 
   Args:
     env: The dm_env type env obcject used to call the reset and step methods.
     sight: The Sight logger object used to drive decisions.
   """
-    method_name = 'driver_fn'
-    logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
+  method_name = 'driver_fn'
+  logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-    timestep = reset()
+  timestep = reset()
 
-    state_attrs = decision.get_state_attrs(sight)
+  state_attrs = decision.get_state_attrs(sight)
+  for i in range(len(state_attrs)):
+    data_structures.log_var(state_attrs[i], timestep.observation[i], sight)
+
+  while not timestep.last():
+    chosen_action = decision.decision_point("DP_label", sight)
+    timestep = step(chosen_action)
+
     for i in range(len(state_attrs)):
-        data_structures.log_var(state_attrs[i], timestep.observation[i], sight)
+      data_structures.log_var(state_attrs[i], timestep.observation[i], sight)
 
-
-    while not timestep.last():
-        chosen_action = decision.decision_point("DP_label", sight)
-        timestep = step(chosen_action)
-
-        for i in range(len(state_attrs)):
-            data_structures.log_var(state_attrs[i], timestep.observation[i],
-                                    sight)
-
-        decision.decision_outcome(
-            "DO_label",
-            timestep.reward,
-            sight,
-        )
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+    decision.decision_outcome(
+        "DO_label",
+        timestep.reward,
+        sight,
+    )
+  logging.debug("<<<<  Out %s of %s", method_name, _file_name)
