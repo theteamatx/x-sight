@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Functionality for using Vizier to drive decisions."""
 
 from datetime import datetime
@@ -20,21 +19,19 @@ import os
 import random
 import subprocess
 import time
-import pytz
 from typing import Any, Dict, Optional
 
 from absl import flags
-import logging
-import grpc
-from sight_service.proto import service_pb2
-
 from dotenv import load_dotenv
+import grpc
+from helpers.logs.logs_handler import logger as logging
+import pytz
 from sight import service_utils as service
-
 from sight.proto import sight_pb2
+from sight.widgets.decision import decision
 # from sight.widgets.decision.acme import acme_optimizer_client
 from sight.widgets.decision.optimizer_client import OptimizerClient
-from sight.widgets.decision import decision
+from sight_service.proto import service_pb2
 
 load_dotenv()
 
@@ -46,6 +43,7 @@ _EXPERIMENT_NAME = flags.DEFINE_string(
 # _PROJECT_ID = flags.DEFINE_string(
 #     'project_id', None, 'Id of cloud project'
 # )
+<<<<<<< HEAD
 _PROJECT_ID = flags.DEFINE_string(
     'project_id', os.environ.get('PROJECT_ID', os.environ.get('GOOGLE_CLOUD_PROJECT', '')), 'Id of cloud project'
 )
@@ -55,6 +53,14 @@ _PROJECT_REGION = flags.DEFINE_string(
 _DSUB_MACHINE_TYPE = flags.DEFINE_string(
     'dsub_machine_type', 'e2-standard-2', ''
 )
+=======
+_PROJECT_ID = flags.DEFINE_string('project_id', os.environ['PROJECT_ID'],
+                                  'Id of cloud project')
+_PROJECT_REGION = flags.DEFINE_string('project_region', 'us-central1',
+                                      'location to store project-data')
+_DSUB_MACHINE_TYPE = flags.DEFINE_string('dsub_machine_type', 'e2-standard-2',
+                                         '')
+>>>>>>> dev
 # _DSUB_LOGGING = flags.DEFINE_string(
 #     'log_path',
 #     # 'tmp/logs',
@@ -78,14 +84,9 @@ def _get_experiment_name(sight: Any) -> str:
   if _EXPERIMENT_NAME.value:
     return _EXPERIMENT_NAME.value
   else:
-    return (
-        'Sight_Decision_Study_'
-        + sight.params.label.replace(' ', '_')
-        + '_'
-        + str(sight.id)
-        + '_'
-        + datetime.now().strftime('%Y%m%d_%H%M%S')
-    )
+    return ('Sight_Decision_Study_' + sight.params.label.replace(' ', '_') +
+            '_' + str(sight.id) + '_' +
+            datetime.now().strftime('%Y%m%d_%H%M%S'))
 
 
 def launch(
@@ -123,23 +124,25 @@ def launch(
   req.label = sight.params.label
   req.client_id = str(sight.id)
 
-
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
   # start polling thread, fetching outcome from server for proposed actions
-  if(decision_configuration.optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER
-      and response.display_string == "Worklist Scheduler SUCCESS!"):
-      decision.init_sight_polling_thread(sight.id)
+  if (decision_configuration.optimizer_type == sight_pb2.
+      DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER and
+      response.display_string == "Worklist Scheduler SUCCESS!"):
+    decision.init_sight_polling_thread(sight.id)
   logging.info('##### Launch response=%s #####', response)
 
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
 
+
 def append_ist_time_to_logging_path_12hr():
-    # Define IST timezone
-    ist = pytz.timezone('Asia/Kolkata')
-    # Get the current date and time in IST
-    current_time = datetime.now(ist)
-    formatted_time = current_time.strftime('%Y-%m-%d-%I-%M-%S')
-    return formatted_time
+  # Define IST timezone
+  ist = pytz.timezone('Asia/Kolkata')
+  # Get the current date and time in IST
+  current_time = datetime.now(ist)
+  formatted_time = current_time.strftime('%Y-%m-%d-%I-%M-%S')
+  return formatted_time
+
 
 def start_job_in_docker(
     num_trials: int,
@@ -170,9 +173,8 @@ def start_job_in_docker(
 
   sight.enter_block('Worker Spawning', sight_pb2.Object())
   # Write the script that will execute the binary within the docker container.
-  decision_params_arg = (
-      f' --decision_params={decision_params}' if decision_params else ''
-  )
+  decision_params_arg = (f' --decision_params={decision_params}'
+                         if decision_params else '')
   os.makedirs('/tmp/sight_script', exist_ok=True)
   with open('/tmp/sight_script/sight_decision_command.sh', 'w') as f:
     f.write('#!/bin/bash\n')
@@ -271,51 +273,47 @@ def start_jobs(
       outf.write(f'{worker_id}\t{sight.location.get()}\n')
       sight.location.get().next()
 
-
   remote_script = (
       # 'gs://dsub_cameltrain/cameltrain/' + binary_path.split('/')[-1]
-      f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/{str(sight.id)}/' + binary_path.split('/')[-1]
-  )
+      f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/{str(sight.id)}/' +
+      binary_path.split('/')[-1])
   print(f'Uploading {binary_path}...')
   subprocess.run(['gsutil', 'cp', '-c', binary_path, remote_script], check=True)
 
   if not FLAGS.service_account:
     raise ValueError(
-        'flag --service_account required for worker_mode as dsub_cloud_worker.'
-    )
+        'flag --service_account required for worker_mode as dsub_cloud_worker.')
 
   # provider = 'local' if deployment_mode == 'local' else 'google-cls-v2'
 
   # cd /x-sight &&
   command = (
       'ls -l && echo "${SCRIPT}" && echo "${PYTHONPATH}" && python3 "${SCRIPT}"'
-      + f' --decision_mode={decision_mode}'
-      + f' --deployment_mode={deployment_mode}'
-      + f' --worker_mode={worker_mode}'
-      + f' --optimizer_type={optimizer_type}'
+      + f' --decision_mode={decision_mode}' +
+      f' --deployment_mode={deployment_mode}' +
+      f' --worker_mode={worker_mode}' + f' --optimizer_type={optimizer_type}'
       # + f' --project_id={os.environ["PROJECT_ID"]}'
   )
   if FLAGS.env_name:
     command += f' --env_name={FLAGS.env_name}'
 
   logging_path = f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{sight.params.label}/{append_ist_time_to_logging_path_12hr()}/'
-  if(FLAGS.parent_id):
+  if (FLAGS.parent_id):
     logging_path += f'{FLAGS.parent_id}/'
   logging_path += str(sight.id)
 
   env_vars = [
-    '--env', f'PARENT_LOG_ID={sight.id}',
-    '--env', f'PORT={service.get_port_number()}'
+      '--env', f'PARENT_LOG_ID={sight.id}', '--env',
+      f'PORT={service.get_port_number()}'
   ]
 
   print("FLAGS.deployment_mode : ", FLAGS.deployment_mode)
   if FLAGS.deployment_mode == 'vm':
-      if FLAGS.ip_addr == 'localhost':
-          raise ValueError("ip_address must be provided for workers")
-      env_vars += ['--env', f'IP_ADDR={FLAGS.ip_addr}']
+    if FLAGS.ip_addr == 'localhost':
+      raise ValueError("ip_address must be provided for workers")
+    env_vars += ['--env', f'IP_ADDR={FLAGS.ip_addr}']
   elif FLAGS.deployment_mode == 'distributed':
-      env_vars += ['--env', f'SIGHT_SERVICE_ID={service._SERVICE_ID}']
-
+    env_vars += ['--env', f'SIGHT_SERVICE_ID={service._SERVICE_ID}']
 
   print('sight.id=%s' % sight.id)
   args = [
@@ -351,7 +349,8 @@ def start_jobs(
   subprocess.run(args, check=True)
 
   sight.exit_block('Worker Spawning', sight_pb2.Object())
-  logging.info('worker logs available at : %s', f'gs://{os.environ["PROJECT_ID"]}/d-sub/logs/default')
+  logging.info('worker logs available at : %s',
+               f'gs://{os.environ["PROJECT_ID"]}/d-sub/logs/default')
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
 
 
@@ -392,24 +391,25 @@ def start_job_in_dsub_local(
       # the extra extra tasks to the first few workers.
       if worker_id < num_trials % num_train_workers:
         tasks_for_cur_worker += 1
-      outf.write(f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location.get()}\n')
+      outf.write(
+          f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location.get()}\n')
       sight.location.get().next()
 
-  remote_script = (
-      f'gs://{os.environ["PROJECT_ID"]}/sight/d-sub/binary/' + binary_path.split('/')[-1]
-  )
-  print(f'Uploading {binary_path}...')
-  subprocess.run(['gsutil', 'cp', '-c', binary_path, remote_script], check=True)
+  # remote_script = (f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/{str(sight.id)}/' +
+  #                  binary_path.split('/')[-1])
+  remote_script = binary_path
+  # print(f'Uploading {binary_path}...')
+  # subprocess.run(['gsutil', 'cp', '-c', binary_path, remote_script],
+  #                check=True)
 
   # provider = 'google-cls-v2' if deployment_mode == 'distributed' else 'local'
 
   script_args = (
       f'--decision_mode={decision_mode} --deployment_mode={deployment_mode} --worker_mode={worker_mode} --optimizer_type={optimizer_type} '
   )
-  if FLAGS.service_account:
-    script_args = (
-        script_args + f'--service_account={FLAGS.service_account}'
-    )
+  # if FLAGS.service_account:
+  #     script_args = (script_args +
+  #                    f'--service_account={FLAGS.service_account}')
 
   print('sight.id=%s' % sight.id)
   args = [
@@ -417,7 +417,8 @@ def start_job_in_dsub_local(
       '--provider=local',
       f'--image={docker_image}',
       f'--project={_PROJECT_ID.value}',
-      f'--logging=gs://{os.environ["PROJECT_ID"]}/d-sub/logs/local/{sight.id}',
+      # f'--logging=gs://{os.environ["PROJECT_ID"]}/d-sub/logs/local/{sight.id}',
+      f'--logging=extra/dsub-logs',
       '--env',
       f'GOOGLE_CLOUD_PROJECT={os.environ["PROJECT_ID"]}',
       '--env',
@@ -433,10 +434,12 @@ def start_job_in_dsub_local(
       f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
       '--input',
       f'SCRIPT={remote_script}',
-      f'--command=cd /x-sight && python3 "${{SCRIPT}}" {script_args}',
+      '--input-recursive',
+      f'CLOUDSDK_CONFIG={os.path.expanduser("~")}/.config/gcloud',
+      f'--command=python3 "${{SCRIPT}}" {script_args}',
       # + f'--optimizer_type={optimizer_type}',
-      '--mount',
-      'RESOURCES=file:/' + f'{FLAGS.gcloud_dir_path}',
+      # '--mount',
+      # 'RESOURCES=file:/' + f'{FLAGS.gcloud_dir_path}',
       # + f'{os.path.expanduser("~")}/.config/gcloud',
       '--tasks',
       '/tmp/optimization_tasks.tsv',

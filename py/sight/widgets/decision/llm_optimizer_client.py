@@ -11,20 +11,20 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Client for LLM optimizer to communicate with server."""
 
+import time
 from typing import Optional, Sequence, Tuple
 
-from absl import logging
-from sight_service.proto import service_pb2
+from helpers.logs.logs_handler import logger as logging
+from overrides import override
 from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient
-from overrides import override
-import time
+from sight_service.proto import service_pb2
 
-class LLMOptimizerClient (OptimizerClient):
+
+class LLMOptimizerClient(OptimizerClient):
   """LLM client for the Sight service."""
 
   def __init__(self, llm_name: str, description: str, sight):
@@ -54,13 +54,11 @@ class LLMOptimizerClient (OptimizerClient):
 
   @override
   def create_config(self) -> sight_pb2.DecisionConfigurationStart.ChoiceConfig:
-    choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig(
-    )
+    choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig()
     llm_config = sight_pb2.DecisionConfigurationStart.LLMConfig(
         algorithm=self._algorithm,
         goal=self._goal,
-        description=self._description
-      )
+        description=self._description)
     choice_config.llm_config.CopyFrom(llm_config)
     return choice_config
 
@@ -74,8 +72,7 @@ class LLMOptimizerClient (OptimizerClient):
 
     while True:
       response = service.call(
-          lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
-      )
+          lambda s, meta: s.DecisionPoint(request, 300, metadata=meta))
       logging.info('decision_point() response=%s' % response)
       if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
         return self._get_dp_action(response)
@@ -83,9 +80,9 @@ class LLMOptimizerClient (OptimizerClient):
         time.sleep(5)
 
   @override
-  def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
+  def finalize_episode(self, sight,
+                       request: service_pb2.FinalizeEpisodeRequest):
     logging.info('LLMOptimizerClient() finalize_episode, request=%s', request)
     response = service.call(
-        lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)
-    )
+        lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta))
     return response

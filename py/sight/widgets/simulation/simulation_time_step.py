@@ -11,15 +11,14 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Individual simulation time steps in the Sight log."""
 
 import inspect
 from typing import Any, Sequence
-from absl import logging
 
-from sight.proto import sight_pb2
+from helpers.logs.logs_handler import logger as logging
 from sight.exception import exception
+from sight.proto import sight_pb2
 
 
 class SimulationTimeStep(object):
@@ -73,17 +72,15 @@ class SimulationTimeStep(object):
     # pytype: disable=attribute-error
     self.sight.enter_block(
         'SimulationTimeStep',
-        sight_pb2.Object(
-            block_start=sight_pb2.BlockStart(
-                sub_type=sight_pb2.BlockStart.ST_SIMULATION_TIME_STEP,
-                simulation_time_step_start=sight_pb2.SimulationTimeStepStart(
-                    time_step_index=time_step_index,
-                    time_step=time_step,
-                    time_step_size=time_step_size,
-                    time_step_units=time_step_units,
-                ),
-            )
-        ),
+        sight_pb2.Object(block_start=sight_pb2.BlockStart(
+            sub_type=sight_pb2.BlockStart.ST_SIMULATION_TIME_STEP,
+            simulation_time_step_start=sight_pb2.SimulationTimeStepStart(
+                time_step_index=time_step_index,
+                time_step=time_step,
+                time_step_size=time_step_size,
+                time_step_units=time_step_units,
+            ),
+        )),
         inspect.currentframe().f_back.f_back,
     )
     # pytype: enable=attribute-error
@@ -100,9 +97,8 @@ class SimulationTimeStep(object):
 
     if exc_type is not None:
       # pytype: disable=attribute-error
-      exception(
-          exc_type, value, traceback, self.sight, inspect.currentframe().f_back
-      )
+      exception(exc_type, value, traceback, self.sight,
+                inspect.currentframe().f_back)
       # pytype: enable=attribute-error
 
     if self.sight is None:
@@ -117,11 +113,8 @@ class SimulationTimeStep(object):
     # pytype: disable=attribute-error
     self.sight.exit_block(
         'SimulationTimeStep',
-        sight_pb2.Object(
-            block_end=sight_pb2.BlockEnd(
-                sub_type=sight_pb2.BlockEnd.ST_SIMULATION_TIME_STEP
-            )
-        ),
+        sight_pb2.Object(block_end=sight_pb2.BlockEnd(
+            sub_type=sight_pb2.BlockEnd.ST_SIMULATION_TIME_STEP)),
         inspect.currentframe().f_back,
     )
     # pytype: enable=attribute-error

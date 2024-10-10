@@ -11,15 +11,21 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Utilities for analyzing Sight logs that document simulation runs."""
 
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Sequence, Tuple
+from typing import (
+    Any,
+    Dict,
+    Iterable,
+    Iterator,
+    List,
+    Optional,
+    Sequence,
+    Tuple
+)
 
-from absl import logging
-import apache_beam as beam
+from helpers.logs.logs_handler import logger as logging
 import numpy as np
-
 from sight import data_structures
 from sight.proto import sight_pb2
 
@@ -29,19 +35,15 @@ ObjMap = Dict[str, sight_pb2.Object]
 KeyedObjMap = Tuple[str, Dict[str, Any]]
 
 
-def single_objects_filter(
-    obj: sight_pb2.Object, sub_type: sight_pb2.Object.SubType
-) -> bool:
+def single_objects_filter(obj: sight_pb2.Object,
+                          sub_type: sight_pb2.Object.SubType) -> bool:
   return obj.sub_type == sub_type
 
 
-def start_objects_filter(
-    obj: sight_pb2.Object, block_sub_type: sight_pb2.BlockStart.SubType
-) -> bool:
-  return (
-      obj.sub_type == sight_pb2.Object.ST_BLOCK_START
-      and obj.block_start.sub_type == block_sub_type
-  )
+def start_objects_filter(obj: sight_pb2.Object,
+                         block_sub_type: sight_pb2.BlockStart.SubType) -> bool:
+  return (obj.sub_type == sight_pb2.Object.ST_BLOCK_START and
+          obj.block_start.sub_type == block_sub_type)
 
 
 def log_uid(obj: sight_pb2.Object) -> str:
@@ -57,18 +59,14 @@ def single_objects_key_parent(
     sub_type: sight_pb2.Object.SubType,
     label: str,
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
-  return (
-      object_col
-      | 'single_objects_key_parent Filter ' + label
-      >> beam.Filter(lambda obj: single_objects_filter(obj, sub_type))
-      | 'single_objects_key_parent Map ' + label
-      >> beam.Map(
-          lambda x: (
+  return (object_col | 'single_objects_key_parent Filter ' + label >>
+          beam.Filter(lambda obj: single_objects_filter(obj, sub_type)) |
+          'single_objects_key_parent Map ' + label >> beam.Map(lambda x: (
               f'{x.ancestor_start_location[-2]} - {log_uid(x)}',
-              {label: x},
-          )
-      )
-  )
+              {
+                  label: x
+              },
+          )))
 
 
 def single_objects_key_log_uid(
@@ -76,13 +74,12 @@ def single_objects_key_log_uid(
     sub_type: sight_pb2.Object.SubType,
     label: str,
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
-  return (
-      object_col
-      | 'single_objects_key_log_uid Filter ' + label
-      >> beam.Filter(lambda obj: single_objects_filter(obj, sub_type))
-      | 'single_objects_key_log_uid Map ' + label
-      >> beam.Map(lambda x: (log_uid(x), {label: x}))
-  )
+  return (object_col | 'single_objects_key_log_uid Filter ' + label >>
+          beam.Filter(lambda obj: single_objects_filter(obj, sub_type)) |
+          'single_objects_key_log_uid Map ' + label >> beam.Map(lambda x:
+                                                                (log_uid(x), {
+                                                                    label: x
+                                                                })))
 
 
 def block_start_objects(
@@ -90,12 +87,11 @@ def block_start_objects(
     block_sub_type: sight_pb2.BlockStart.SubType,
     label: str,
 ) -> beam.pvalue.PCollection[ObjMap]:
-  return (
-      object_col
-      | 'objects Filter ' + label
-      >> beam.Filter(lambda obj: start_objects_filter(obj, block_sub_type))
-      | 'objects Map ' + label >> beam.Map(lambda x: ({label: x}))
-  )
+  return (object_col | 'objects Filter ' + label >>
+          beam.Filter(lambda obj: start_objects_filter(obj, block_sub_type)) |
+          'objects Map ' + label >> beam.Map(lambda x: ({
+              label: x
+          })))
 
 
 def block_start_objects_key_self(
@@ -103,13 +99,12 @@ def block_start_objects_key_self(
     block_sub_type: sight_pb2.BlockStart.SubType,
     label: str,
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
-  return (
-      object_col
-      | 'objects_key_self Filter ' + label
-      >> beam.Filter(lambda obj: start_objects_filter(obj, block_sub_type))
-      | 'objects_key_self Map ' + label
-      >> beam.Map(lambda x: (f'{x.location} - {log_uid(x)}', {label: x}))
-  )
+  return (object_col | 'objects_key_self Filter ' + label >>
+          beam.Filter(lambda obj: start_objects_filter(obj, block_sub_type)) |
+          'objects_key_self Map ' + label >>
+          beam.Map(lambda x: (f'{x.location} - {log_uid(x)}', {
+              label: x
+          })))
 
 
 def block_start_objects_key_parent(
@@ -117,18 +112,14 @@ def block_start_objects_key_parent(
     block_sub_type: sight_pb2.BlockStart.SubType,
     label: str,
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
-  return (
-      object_col
-      | 'objects_key_parent Filter ' + label
-      >> beam.Filter(lambda obj: start_objects_filter(obj, block_sub_type))
-      | 'objects_key_parent Map ' + label
-      >> beam.Map(
-          lambda x: (
+  return (object_col | 'objects_key_parent Filter ' + label >>
+          beam.Filter(lambda obj: start_objects_filter(obj, block_sub_type)) |
+          'objects_key_parent Map ' + label >> beam.Map(lambda x: (
               f'{x.ancestor_start_location[-2]} - {log_uid(x)}',
-              {label: x},
-          )
-      )
-  )
+              {
+                  label: x
+              },
+          )))
 
 
 def block_start_objects_key_log_uid(
@@ -137,92 +128,70 @@ def block_start_objects_key_log_uid(
     label: str,
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
   return (
-      object_col
-      | 'objects_key_log_uid Filter ' + label
-      >> beam.Filter(lambda obj: start_objects_filter(obj, block_sub_type))
-      | 'objects_key_log_uid Map ' + label
-      >> beam.Map(lambda x: (log_uid(x), {label: x}))
-  )
+      object_col | 'objects_key_log_uid Filter ' + label >>
+      beam.Filter(lambda obj: start_objects_filter(obj, block_sub_type)) |
+      'objects_key_log_uid Map ' + label >> beam.Map(lambda x: (log_uid(x), {
+          label: x
+      })))
 
 
 def create_constant_key(
     pcol_label: str, pcol: beam.pvalue.PCollection[ObjMap]
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
-  return pcol | pcol_label + ' create_constant_key' >> beam.Map(
-      lambda x: ('', x)
-  )
+  return pcol | pcol_label + ' create_constant_key' >> beam.Map(lambda x:
+                                                                ('', x))
 
 
 def create_log_uid_key(
     pcol_label: str, new_key_label: str, pcol: beam.pvalue.PCollection[ObjMap]
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
-  return (
-      pcol
-      | pcol_label + ' ' + new_key_label + ' create_log_uid_key'
-      >> beam.Map(lambda x: (log_uid(x[new_key_label]), x))
-  )
+  return (pcol | pcol_label + ' ' + new_key_label + ' create_log_uid_key' >>
+          beam.Map(lambda x: (log_uid(x[new_key_label]), x)))
 
 
 def create_loc_log_uid_key(
     pcol_label: str, new_key_label: str, pcol: beam.pvalue.PCollection[ObjMap]
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
-  return (
-      pcol
-      | pcol_label + ' ' + new_key_label + ' create_loc_log_uid_key'
-      >> beam.Map(
-          lambda x: (
+  return (pcol | pcol_label + ' ' + new_key_label + ' create_loc_log_uid_key' >>
+          beam.Map(lambda x: (
               f'{x[new_key_label].location} - {log_uid(x[new_key_label])}',
               x,
-          )
-      )
-  )
+          )))
 
 
 def create_named_value_label_log_uid_key(
     pcol_label: str, pcol: beam.pvalue.PCollection[ObjMap]
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
-  return (
-      pcol
-      | pcol_label + ' create_named_value_label_log_uid_key'
-      >> beam.Map(
-          lambda x: (
-              (
-                  f'{x["named_value"].block_start.label} -'
-                  f' {log_uid(x["named_value"])}'
-              ),
+  return (pcol | pcol_label + ' create_named_value_label_log_uid_key' >>
+          beam.Map(lambda x: (
+              (f'{x["named_value"].block_start.label} -'
+               f' {log_uid(x["named_value"])}'),
               x,
-          )
-      )
-  )
+          )))
 
 
 def create_var_key(
     pcol_label: str, pcol: beam.pvalue.PCollection[ObjMap]
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
-  return pcol | pcol_label + ' create_var_key' >> beam.Map(
-      lambda x: (x['variable'], x)
-  )
+  return pcol | pcol_label + ' create_var_key' >> beam.Map(lambda x:
+                                                           (x['variable'], x))
 
 
 def create_sim_ts_index_key(
     pcol_label: str, pcol: beam.pvalue.PCollection[ObjMap]
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
-  return pcol | pcol_label + ' create_sim_ts_index_key' >> beam.Map(
-      lambda x: (
-          (
-              f'{log_uid(x["simulation"])}-{x["simulation"].location} {x["simulation_time_step"].block_start.simulation_time_step_start.time_step_index[0]}'
-          ),
-          x,
-      )
-  )
+  return pcol | pcol_label + ' create_sim_ts_index_key' >> beam.Map(lambda x: (
+      (f'{log_uid(x["simulation"])}-{x["simulation"].location} {x["simulation_time_step"].block_start.simulation_time_step_start.time_step_index[0]}'
+      ),
+      x,
+  ))
 
 
 def adjust_sim_ts_to_next_index_key(
     pcol_label: str, pcol: beam.pvalue.PCollection[Dict[str, sight_pb2.Object]]
 ) -> beam.pvalue.PCollection[KeyedObjMap]:
   return pcol | pcol_label + ' adjust_sim_ts_to_next_index_key' >> beam.Map(
-      lambda x: (f'{x[0].split()[0]} {int(x[0].split()[1]) + 1}', x[1])
-  )
+      lambda x: (f'{x[0].split()[0]} {int(x[0].split()[1]) + 1}', x[1]))
 
 
 def remove_key(
@@ -234,26 +203,20 @@ def remove_key(
 def change_key_to_self(
     pcol_label: str, obj_label: str, pcol: beam.pvalue.PCollection[KeyedObjMap]
 ) -> beam.pvalue.PCollection[ObjMap]:
-  return pcol | pcol_label + ' change_key_to_self' >> beam.Map(
-      lambda x: (
-          f'{x[1][obj_label].location} - {log_uid(x[1][obj_label])}',
-          x[1],
-      )
-  )
+  return pcol | pcol_label + ' change_key_to_self' >> beam.Map(lambda x: (
+      f'{x[1][obj_label].location} - {log_uid(x[1][obj_label])}',
+      x[1],
+  ))
 
 
 def change_key_to_parent(
     pcol_label: str, obj_label: str, pcol: beam.pvalue.PCollection[KeyedObjMap]
 ) -> beam.pvalue.PCollection[ObjMap]:
-  return pcol | pcol_label + ' change_key_to_parent' >> beam.Map(
-      lambda x: (
-          (
-              f'{x[1][obj_label].ancestor_start_location[-2]} -'
-              f' {log_uid(x[1][obj_label])}'
-          ),
-          x[1],
-      )
-  )
+  return pcol | pcol_label + ' change_key_to_parent' >> beam.Map(lambda x: (
+      (f'{x[1][obj_label].ancestor_start_location[-2]} -'
+       f' {log_uid(x[1][obj_label])}'),
+      x[1],
+  ))
 
 
 class ExtractAncestorBlockStartLocations(beam.DoFn):
@@ -278,7 +241,9 @@ class ExtractAncestorBlockStartLocations(beam.DoFn):
     if obj.sub_type == sight_pb2.Object.ST_BLOCK_END:
       yield (
           f'{obj.block_end.location_of_block_start} - {log_uid(obj)}',
-          {'object': obj},
+          {
+              'object': obj
+          },
       )
 
 
@@ -310,13 +275,12 @@ class AddAncestorKeysToObjs(beam.DoFn):
 
 
 def objs_with_ancestor_keys(
-    objects_map: KeyedObjMap, anchor_obj_label: str
-) -> beam.pvalue.PCollection[KeyedObjMap]:
+    objects_map: KeyedObjMap,
+    anchor_obj_label: str) -> beam.pvalue.PCollection[KeyedObjMap]:
   return remove_key(
       'objs_with_ancestor_keys ' + anchor_obj_label, objects_map
   ) | 'objs_with_ancestor_keys ' + anchor_obj_label >> beam.ParDo(
-      AddAncestorKeysToObjs(anchor_obj_label)
-  )
+      AddAncestorKeysToObjs(anchor_obj_label))
 
 
 class CombineRecords(beam.DoFn):
@@ -419,10 +383,8 @@ class ParentChildPairs(beam.DoFn):
 
     if len(ancestors_objs) != 1:
       logging.error(
-          (
-              'Child objects cannot be contained within multiple ancestors!.'
-              ' task=%s'
-          ),
+          ('Child objects cannot be contained within multiple ancestors!.'
+           ' task=%s'),
           task,
       )
       return
@@ -435,10 +397,8 @@ class ParentChildPairs(beam.DoFn):
       if self.index_by_parent:
         location_idx = task[0]
       else:
-        location_idx = (
-            f'{child_obj[self.child].location} -'
-            f' {log_uid(child_obj[self.child])}'
-        )
+        location_idx = (f'{child_obj[self.child].location} -'
+                        f' {log_uid(child_obj[self.child])}')
       yield (location_idx, cur)
 
 
@@ -478,10 +438,8 @@ class SimulationStateNamedValuesToObjects(beam.DoFn):
 
     if len(task[1][self.ancestors]) != 1:
       logging.error(
-          (
-              'Named values sub-logs cannot be contained within multiple named'
-              ' values or containers!. task=%s'
-          ),
+          ('Named values sub-logs cannot be contained within multiple named'
+           ' values or containers!. task=%s'),
           task,
       )
       return
@@ -491,13 +449,10 @@ class SimulationStateNamedValuesToObjects(beam.DoFn):
     else:
       log_and_obj: ObjMap = {}
     log_and_obj['object'] = data_structures.from_log(
-        [o['object'] for o in task[1][self.value_objects]]
-    )
+        [o['object'] for o in task[1][self.value_objects]])
     yield (
-        (
-            f'{log_and_obj["named_value"].location} -'
-            f' {log_uid(log_and_obj["named_value"])}'
-        ),
+        (f'{log_and_obj["named_value"].location} -'
+         f' {log_uid(log_and_obj["named_value"])}'),
         log_and_obj,
     )
 
@@ -505,9 +460,8 @@ class SimulationStateNamedValuesToObjects(beam.DoFn):
 class NamedObjectsToSequence(beam.DoFn):
   """Converts sets of named value objects to time-ordered sequences."""
 
-  def process(
-      self, task: Tuple[Any, Iterable[AnyObjMap]]
-  ) -> Iterator[AnyObjMap]:
+  def process(self, task: Tuple[Any,
+                                Iterable[AnyObjMap]]) -> Iterator[AnyObjMap]:
     """Time-orders the sequence of objects for a given simulation attribute.
 
     Args:
@@ -519,28 +473,17 @@ class NamedObjectsToSequence(beam.DoFn):
     """
     ordered_seq = sorted(
         task[1],
-        key=lambda x: list(
-            x[
-                'simulation_time_step'
-            ].block_start.simulation_time_step_start.time_step_index
-        ),
+        key=lambda x: list(x['simulation_time_step'].block_start.
+                           simulation_time_step_start.time_step_index),
     )
-    ts_indexes = np.array(
-        [
-            x[
-                'simulation_time_step'
-            ].block_start.simulation_time_step_start.time_step_index
-            for x in ordered_seq
-        ],
-    )
-    time_steps = np.array(
-        [
-            x[
-                'simulation_time_step'
-            ].block_start.simulation_time_step_start.time_step
-            for x in ordered_seq
-        ],
-    )
+    ts_indexes = np.array([
+        x['simulation_time_step'].block_start.simulation_time_step_start.
+        time_step_index for x in ordered_seq
+    ],)
+    time_steps = np.array([
+        x['simulation_time_step'].block_start.simulation_time_step_start.
+        time_step for x in ordered_seq
+    ],)
     values = np.array([x['object'][1] for x in ordered_seq])
 
     yield {
@@ -609,18 +552,13 @@ def combine_parent_and_child(
     (the parent Object's location and log_uid). This collection is keyed by
     the location and log_uid of the child Object.
   """
-  return (
-      {
-          parent_label: parent_pcol,
-          child_label: child_pcol,
-      }
-      | parent_label + ' ' + child_label + ' CoGroupByKey'
-      >> beam.CoGroupByKey()
-      | parent_label + ' ' + child_label + ' ParentChildPairs'
-      >> beam.ParDo(
-          ParentChildPairs(parent_label, child_label, index_by_parent)
-      )
-  )
+  return ({
+      parent_label: parent_pcol,
+      child_label: child_pcol,
+  } | parent_label + ' ' + child_label + ' CoGroupByKey' >> beam.CoGroupByKey()
+          |
+          parent_label + ' ' + child_label + ' ParentChildPairs' >> beam.ParDo(
+              ParentChildPairs(parent_label, child_label, index_by_parent)))
 
 
 def named_values_to_objects(
@@ -644,21 +582,13 @@ def named_values_to_objects(
     Maps that contain the ST_NAMED_VALUES and their corresponding Python value
     objects and with the key of the ST_NAMED_VALUES Object.
   """
-  return (
-      {
-          parent_label: parent_pcol,
-          child_label: objects_with_ancestors,
-      }
-      | parent_label + ' ' + child_label + ' CoGroupByKey'
-      >> beam.CoGroupByKey()
-      | parent_label
-      + ' '
-      + child_label
-      + ' SimulationStateNamedValuesToObjects'
-      >> beam.ParDo(
-          SimulationStateNamedValuesToObjects(parent_label, child_label)
-      )
-  )
+  return ({
+      parent_label: parent_pcol,
+      child_label: objects_with_ancestors,
+  } | parent_label + ' ' + child_label + ' CoGroupByKey' >> beam.CoGroupByKey()
+          | parent_label + ' ' + child_label +
+          ' SimulationStateNamedValuesToObjects' >> beam.ParDo(
+              SimulationStateNamedValuesToObjects(parent_label, child_label)))
 
 
 def create_simulation_and_parameter_objects(
@@ -700,8 +630,7 @@ def create_simulation_and_parameter_objects(
           'named_value',
           named_value,
           index_by_parent=False,
-      )
-  )
+      ))
 
   return remove_key(
       'simulation_and_parameter_objects',
@@ -720,9 +649,8 @@ def create_simulation_states_params_and_named_value_objects(
     simulation_parameters: beam.pvalue.PCollection[KeyedObjMap],
     named_value: beam.pvalue.PCollection[KeyedObjMap],
     log_file_path_prefix: Optional[str],
-) -> Tuple[
-    beam.pvalue.PCollection[AnyObjMap], beam.pvalue.PCollection[AnyObjMap]
-]:
+) -> Tuple[beam.pvalue.PCollection[AnyObjMap],
+           beam.pvalue.PCollection[AnyObjMap]]:
   """Combines simulation states and the named values within them.
 
   Args:
@@ -745,14 +673,12 @@ def create_simulation_states_params_and_named_value_objects(
       objects_with_ancestors,
   )
   named_value_objects_to_key_parent = change_key_to_parent(
-      'named_value_objects_to_key_parent', 'named_value', named_value_objects
-  )
+      'named_value_objects_to_key_parent', 'named_value', named_value_objects)
 
   sim_state_named_values_key_state = combine_parent_and_child(
       'simulation_state',
-      change_key_to_self(
-          'simulation_state_to_key_self', 'simulation_state', simulation_state
-      ),
+      change_key_to_self('simulation_state_to_key_self', 'simulation_state',
+                         simulation_state),
       'named_value',
       named_value_objects_to_key_parent,
       index_by_parent=True,
@@ -806,9 +732,8 @@ def create_simulation_time_step_state_objects(
   # Connect simulation states to the named values logged within them.
   sim_state_named_values_key_state = combine_parent_and_child(
       'simulation_state',
-      change_key_to_self(
-          'simulation_state_to_key_self', 'simulation_state', simulation_state
-      ),
+      change_key_to_self('simulation_state_to_key_self', 'simulation_state',
+                         simulation_state),
       'named_value',
       change_key_to_parent(
           'named_value_objects_to_key_parent',

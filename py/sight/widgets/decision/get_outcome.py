@@ -11,32 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Binary that checks the current status of a given Sight optimization run."""
 
 from typing import Any, Callable, Dict, Optional, Sequence, Text, Tuple
 
 from absl import app
 from absl import flags
-from absl import logging
+from helpers.logs.logs_handler import logger as logging
+from sight import service_utils as service
 from sight_service.proto import service_pb2
 from sight_service.proto import service_pb2_grpc
-from sight import service_utils as service
 
 FLAGS = flags.FLAGS
 
 _LOG_ID = flags.DEFINE_string(
-    "log_id", None, "ID of the Sight log that tracks this execution."
-)
+    "log_id", None, "ID of the Sight log that tracks this execution.")
 _DEPLOYMENT_MODE = flags.DEFINE_enum(
     'deployment_mode',
     None,
     ['distributed', 'dsub_local', 'docker_local', 'local', 'worker_mode'],
-    (
-        'The procedure to use when training a model to drive applications that '
-        'use the Decision API.'
-    ),
+    ('The procedure to use when training a model to drive applications that '
+     'use the Decision API.'),
 )
+
 
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
@@ -46,10 +43,9 @@ def main(argv: Sequence[str]) -> None:
   request.client_id = str(FLAGS.log_id)
   # request.unique_ids.append(1)
   response = service.call(
-      lambda s, meta: s.GetOutcome(request, 300, metadata=meta)
-  )
+      lambda s, meta: s.GetOutcome(request, 300, metadata=meta))
 
-  if(response.response_str):
+  if (response.response_str):
     return response.response_str
 
   outcome_list = []

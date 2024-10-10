@@ -11,24 +11,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Client for dm-acme optimizer to communicate with server."""
 import math
-import logging
 from typing import Optional, Sequence, Tuple
+
 from absl import flags
 from acme import specs
 from acme.jax.experiments import config
 import dm_env
+from helpers.logs.logs_handler import logger as logging
 import jax
 import numpy as np
+from overrides import override
 import reverb
-from sight_service.proto import service_pb2
 from sight.proto import sight_pb2
 from sight.widgets.decision.acme import sight_adder
 from sight.widgets.decision.acme import sight_variable_source
-from sight.widgets.decision.acme.build_dqn_actor import build_dqn_config
 from sight.widgets.decision.acme.build_d4pg_actor import build_d4pg_config
+from sight.widgets.decision.acme.build_dqn_actor import build_dqn_config
 # from sight.widgets.decision.acme.build_impala_actor import build_impala_config
 from sight.widgets.decision.acme.build_mdqn_actor import build_mdqn_config
 from sight.widgets.decision.acme.build_qrdqn_actor import build_qrdqn_config
@@ -37,7 +37,7 @@ from sight.widgets.decision.acme.build_qrdqn_actor import build_qrdqn_config
 # from sight.widgets.decision.acme.build_sac_actor import build_sac_config
 from sight.widgets.decision.acme.build_td3_actor import build_td3_config
 from sight.widgets.decision.optimizer_client import OptimizerClient
-from overrides import override
+from sight_service.proto import service_pb2
 
 _ACME_AGENT = flags.DEFINE_enum(
     'acme_agent',
@@ -58,7 +58,6 @@ _file_name = "acme_optimizer_client.py"
 #         + 1
 #     )
 #   return possible_actions
-
 
 # def generate_spec_details(attr_dict):
 #   """convert the spec details of environment into usable format."""
@@ -93,7 +92,7 @@ _file_name = "acme_optimizer_client.py"
 #   )
 
 
-class AcmeOptimizerClient (OptimizerClient):
+class AcmeOptimizerClient(OptimizerClient):
   """Acme client for the Sight service."""
 
   def __init__(self, sight):
@@ -117,15 +116,15 @@ class AcmeOptimizerClient (OptimizerClient):
     print("in create config")
     choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig()
 
-    if(FLAGS.acme_agent == 'dqn'):
+    if (FLAGS.acme_agent == 'dqn'):
       choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_DQN
-    elif(FLAGS.acme_agent == 'd4pg'):
+    elif (FLAGS.acme_agent == 'd4pg'):
       choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_D4PG
     # elif(FLAGS.acme_agent == 'impala'):
     #   choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_IMPALA
-    elif(FLAGS.acme_agent == 'mdqn'):
+    elif (FLAGS.acme_agent == 'mdqn'):
       choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_MDQN
-    elif(FLAGS.acme_agent == 'qrdqn'):
+    elif (FLAGS.acme_agent == 'qrdqn'):
       choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_QRDQN
     # elif(FLAGS.acme_agent == 'ppo'):
     #   choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_PPO
@@ -133,11 +132,8 @@ class AcmeOptimizerClient (OptimizerClient):
     #   choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_MPO
     # elif(FLAGS.acme_agent == 'sac'):
     #   choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_SAC
-    elif(FLAGS.acme_agent == 'td3'):
+    elif (FLAGS.acme_agent == 'td3'):
       choice_config.acme_config.acme_agent = sight_pb2.DecisionConfigurationStart.AcmeConfig.AA_TD3
-
-
-
 
     # possible_actions = fetch_possible_actions(self._sight.widget_decision_state['decision_episode_fn'])
     # choice_config.acme_config.possible_actions = possible_actions
@@ -176,7 +172,7 @@ class AcmeOptimizerClient (OptimizerClient):
       # action_max,
       # action_param_length,
       attr_dict
-  )-> specs.EnvironmentSpec:
+  ) -> specs.EnvironmentSpec:
     """Generates the environment spec for the environment."""
 
     method_name = "generate_env_spec"
@@ -195,13 +191,13 @@ class AcmeOptimizerClient (OptimizerClient):
     state_param_length = len(attr_dict.state_attrs)
     # state_dtype = dtype_mapping[attr_dict.state_dtype]
     observations = specs.BoundedArray(
-            shape=(state_param_length,),
-            # dtype=state_dtype,
-            dtype=default_dtype,
-            name="observation",
-            minimum=state_min,
-            maximum=state_max,
-        ),
+        shape=(state_param_length,),
+        # dtype=state_dtype,
+        dtype=default_dtype,
+        name="observation",
+        minimum=state_min,
+        maximum=state_max,
+    ),
 
     action_param_length = len(attr_dict.action_attrs)
     # if(attr_dict.action_min):
@@ -212,25 +208,25 @@ class AcmeOptimizerClient (OptimizerClient):
     #   action_dtype = dtype_mapping[attr_dict.action_dtype]
 
     # create discrete spec
-    if(attr_dict.valid_action_values):
+    if (attr_dict.valid_action_values):
       possible_values_list = list(attr_dict.valid_action_values.values())[0]
       actions = specs.DiscreteArray(
-        num_values=len(possible_values_list),
-        dtype=np.int64,
-        name="action",
+          num_values=len(possible_values_list),
+          dtype=np.int64,
+          name="action",
       )
     # create bounded spec
     else:
-      if(attr_dict.step_size):
-          default_dtype=np.int64
+      if (attr_dict.step_size):
+        default_dtype = np.int64
       actions = specs.BoundedArray(
-              shape=(action_param_length,),
-              # dtype=action_dtype,
-              dtype=default_dtype,
-              name="action",
-              minimum=action_min,
-              maximum=action_max,
-          )
+          shape=(action_param_length,),
+          # dtype=action_dtype,
+          dtype=default_dtype,
+          name="action",
+          minimum=action_min,
+          maximum=action_max,
+      )
 
     # print(state_dtype, action_dtype)
 
@@ -239,9 +235,11 @@ class AcmeOptimizerClient (OptimizerClient):
         observations=observations,
         actions=actions,
         rewards=specs.Array(shape=(), dtype=float, name="reward"),
-        discounts=specs.BoundedArray(
-            shape=(), dtype=float, minimum=0.0, maximum=1.0, name="discount"
-        ),
+        discounts=specs.BoundedArray(shape=(),
+                                     dtype=float,
+                                     minimum=0.0,
+                                     maximum=1.0,
+                                     name="discount"),
     )
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     # print("new_env_spec : ", new_env_spec)
@@ -265,19 +263,17 @@ class AcmeOptimizerClient (OptimizerClient):
 
     # else:
     attr_dict = self._sight.widget_decision_state['decision_episode_fn']
-    environment_spec = self.generate_env_spec(
-      attr_dict
-    )
+    environment_spec = self.generate_env_spec(attr_dict)
 
-    if(FLAGS.acme_agent == 'dqn'):
+    if (FLAGS.acme_agent == 'dqn'):
       experiment = build_dqn_config()
-    elif(FLAGS.acme_agent == 'd4pg'):
+    elif (FLAGS.acme_agent == 'd4pg'):
       experiment = build_d4pg_config()
     # elif(FLAGS.acme_agent == 'impala'):
     #   experiment = build_impala_config()
-    elif(FLAGS.acme_agent == 'mdqn'):
+    elif (FLAGS.acme_agent == 'mdqn'):
       experiment = build_mdqn_config()
-    elif(FLAGS.acme_agent == 'qrdqn'):
+    elif (FLAGS.acme_agent == 'qrdqn'):
       experiment = build_qrdqn_config()
     # elif(FLAGS.acme_agent == 'ppo'):
     #   experiment = build_ppo_config()
@@ -285,9 +281,8 @@ class AcmeOptimizerClient (OptimizerClient):
     #   experiment = build_mpo_config()
     # elif(FLAGS.acme_agent == 'sac'):
     #   experiment = build_sac_config(environment_spec)
-    elif(FLAGS.acme_agent == 'td3'):
+    elif (FLAGS.acme_agent == 'td3'):
       experiment = build_td3_config()
-
 
     # (
     #   state_min,
@@ -317,9 +312,7 @@ class AcmeOptimizerClient (OptimizerClient):
 
     self._adder = sight_adder.SightAdder()
     self._variable_source = sight_variable_source.SightVariableSource(
-        adder=self._adder, client_id=self._sight.id, sight=self._sight
-    )
-
+        adder=self._adder, client_id=self._sight.id, sight=self._sight)
 
     key = jax.random.PRNGKey(0)
     actor_key, key = jax.random.split(key)
@@ -334,7 +327,7 @@ class AcmeOptimizerClient (OptimizerClient):
 
   @override
   def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
-  # def decision_point(self, sight):
+    # def decision_point(self, sight):
     """communicates with decision_point method on server.
 
     Stores the trajectories locally, after storing 50 trajectories, calls
@@ -376,12 +369,10 @@ class AcmeOptimizerClient (OptimizerClient):
       # logging.info("subsequent call of decision_point...")
       timestep = dm_env.TimeStep(
           step_type=dm_env.StepType.MID,
-          reward=np.array(
-              sight.widget_decision_state["outcome_value"], dtype=np.float64
-          ),
-          discount=np.array(
-              sight.widget_decision_state["discount"], dtype=np.float64
-          ),
+          reward=np.array(sight.widget_decision_state["outcome_value"],
+                          dtype=np.float64),
+          discount=np.array(sight.widget_decision_state["discount"],
+                            dtype=np.float64),
           observation=observation,
       )
 
@@ -401,10 +392,9 @@ class AcmeOptimizerClient (OptimizerClient):
     # raise SystemError
 
     # todo:meetashah- for dqn-cartpole, we get dtype int32 but require int64
-    if(self._last_acme_action.dtype == 'int32'):
+    if (self._last_acme_action.dtype == 'int32'):
       self._last_acme_action = np.array(self._last_acme_action, dtype=np.int64)
       # self._last_acme_action = self._last_acme_action.reshape((1,))
-
 
     # print("last_Acme_Action : ", self._last_acme_action, self._last_acme_action.dtype, self._last_acme_action.shape)
     # raise SystemError
@@ -412,7 +402,8 @@ class AcmeOptimizerClient (OptimizerClient):
     return self._last_acme_action
 
   @override
-  def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
+  def finalize_episode(self, sight,
+                       request: service_pb2.FinalizeEpisodeRequest):
     """completes episode and stores remaining local trajectories to server.
 
     Args:
@@ -427,12 +418,10 @@ class AcmeOptimizerClient (OptimizerClient):
     )
     timestep = dm_env.TimeStep(
         step_type=dm_env.StepType.LAST,
-        reward=np.array(
-            sight.widget_decision_state["outcome_value"], dtype=np.float64
-        ),
-        discount=np.array(
-            sight.widget_decision_state["discount"], dtype=np.float64
-        ),
+        reward=np.array(sight.widget_decision_state["outcome_value"],
+                        dtype=np.float64),
+        discount=np.array(sight.widget_decision_state["discount"],
+                          dtype=np.float64),
         observation=np.array(observation, dtype=np.float32),
     )
     # action = np.array(self._last_acme_action, dtype=np.int64)
@@ -440,7 +429,6 @@ class AcmeOptimizerClient (OptimizerClient):
     # action = np.array(self._last_acme_action, dtype=np.float32)
     # self._actor.observe(action, next_timestep=timestep)
     self._actor.observe(self._last_acme_action, next_timestep=timestep)
-
 
     # send remaining records to server and fetch latest weights in response
     # if len(self._actor._adder._observation_list) % 50 == 0:

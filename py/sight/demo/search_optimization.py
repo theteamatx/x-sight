@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Demo of using the Sight Decision API to optimize an application."""
 
 import math
@@ -19,7 +18,7 @@ import random
 from typing import Sequence
 
 from absl import app
-from absl import logging
+from helpers.logs.logs_handler import logger as logging
 from sight import data_structures
 from sight.proto import sight_pb2
 from sight.sight import Sight
@@ -54,13 +53,10 @@ def driver(sight: Sight) -> None:
           'move',
           sight,
           lambda: {
-              'go1': (
-                  random.randrange(
-                      current // 2 if current < target else target // 2,
-                      current * 2 if current > target else target * 2,
-                  )
-                  - current
-              ),
+              'go1': (random.randrange(
+                  current // 2 if current < target else target // 2,
+                  current * 2 if current > target else target * 2,
+              ) - current),
               # 'go2':
               #     random.randrange(
               #         current // 2
@@ -72,8 +68,7 @@ def driver(sight: Sight) -> None:
       logging.info('choice=%s', choice)
 
       current += int(
-          choice['go1']
-      )  # + choice['go2'])  #int((choice*2 - 1)*100)
+          choice['go1'])  # + choice['go2'])  #int((choice*2 - 1)*100)
       logging.info(
           '%d: %d: amount=%s, current=%s, target=%s',
           i,
@@ -103,17 +98,17 @@ def main(argv: Sequence[str]) -> None:
     decision.run(
         driver_fn=driver,
         state_attrs={
-            'current': sight_pb2.DecisionConfigurationStart.AttrProps(
-                min_value=0, max_value=1000
-            ),
-            'target': sight_pb2.DecisionConfigurationStart.AttrProps(
-                min_value=0, max_value=1000
-            ),
+            'current':
+                sight_pb2.DecisionConfigurationStart.AttrProps(min_value=0,
+                                                               max_value=1000),
+            'target':
+                sight_pb2.DecisionConfigurationStart.AttrProps(min_value=0,
+                                                               max_value=1000),
         },
         action_attrs={
-            'go1': sight_pb2.DecisionConfigurationStart.AttrProps(
-                min_value=0, max_value=100
-            ),
+            'go1':
+                sight_pb2.DecisionConfigurationStart.AttrProps(min_value=0,
+                                                               max_value=100),
         },
         sight=sight,
     )

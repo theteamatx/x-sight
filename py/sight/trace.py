@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Access to traces of Sight-logged executions."""
 
 from typing import Any, List, Optional, Sequence
@@ -48,11 +47,9 @@ class Trace:
     """
     if trace_file_path:
       self._trace_file = pywrap_record_reader.RecordReader.CreateFromPath(
-          trace_file_path, ['*'], 60.0
-      )
-      log = sorted(
-          list(self._trace_file.IterRecords()), key=lambda x: x.location
-      )
+          trace_file_path, ['*'], 60.0)
+      log = sorted(list(self._trace_file.IterRecords()),
+                   key=lambda x: x.location)
       self._trace_iter = log.__iter__()
     else:
       self._trace_iter = iter(trace)
@@ -63,8 +60,7 @@ class Trace:
     return self._cur_obj
 
   def advance_to_within_block(
-      self, obj_type: Sequence[Any]
-  ) -> Optional[sight_pb2.Object]:
+      self, obj_type: Sequence[Any]) -> Optional[sight_pb2.Object]:
     """Advances to the next object of a given type in the current block.
 
     This method focuses on singleton or start-of-block objects.
@@ -81,10 +77,8 @@ class Trace:
     Returns:
       The next log object of this type, if any.
     """
-    if (
-        self._cur_obj is None
-        or self._cur_obj.sub_type == sight_pb2.Object.ST_BLOCK_END
-    ):
+    if (self._cur_obj is None or
+        self._cur_obj.sub_type == sight_pb2.Object.ST_BLOCK_END):
       return None
 
     start_obj = self._cur_obj
@@ -97,10 +91,9 @@ class Trace:
         return None
 
       if self._cur_obj.sub_type == sight_pb2.Object.ST_BLOCK_END and (
-          not container_location
-          or self._cur_obj.block_end.location_of_block_start
-          == container_location
-      ):
+          not container_location or
+          self._cur_obj.block_end.location_of_block_start
+          == container_location):
         target_obj = None
         # Advance the current object to the next log location.
         self._cur_obj = self._trace_iter.__next__()
@@ -112,44 +105,32 @@ class Trace:
           target_obj = self._cur_obj
           break
         if len(obj_type) >= 2:
-          if (
-              obj_type[0] == sight_pb2.Object.ST_BLOCK_START
-              and self._cur_obj.block_start.sub_type == obj_type[1]
-          ):
+          if (obj_type[0] == sight_pb2.Object.ST_BLOCK_START and
+              self._cur_obj.block_start.sub_type == obj_type[1]):
             if len(obj_type) == 2:
               target_obj = self._cur_obj
               break
-            if (
-                len(obj_type) >= 3
-                and obj_type[1] == sight_pb2.BlockStart.ST_LIST
-                and self._cur_obj.block_start.list.sub_type == obj_type[2]
-            ):
+            if (len(obj_type) >= 3 and
+                obj_type[1] == sight_pb2.BlockStart.ST_LIST and
+                self._cur_obj.block_start.list.sub_type == obj_type[2]):
               target_obj = self._cur_obj
               break
-            if (
-                len(obj_type) >= 3
-                and obj_type[1] == sight_pb2.BlockStart.ST_CONFIGURATION
-                and self._cur_obj.block_start.configuration.sub_type
-                == obj_type[2]
-            ):
+            if (len(obj_type) >= 3 and
+                obj_type[1] == sight_pb2.BlockStart.ST_CONFIGURATION and
+                self._cur_obj.block_start.configuration.sub_type
+                == obj_type[2]):
               target_obj = self._cur_obj
               break
-          elif (
-              obj_type[0] == sight_pb2.Object.ST_TEXT
-              and self._cur_obj.text.sub_type == obj_type[1]
-          ):
+          elif (obj_type[0] == sight_pb2.Object.ST_TEXT and
+                self._cur_obj.text.sub_type == obj_type[1]):
             target_obj = self._cur_obj
             break
-          elif (
-              obj_type[0] == sight_pb2.Object.ST_VALUE
-              and self._cur_obj.value.sub_type == obj_type[1]
-          ):
+          elif (obj_type[0] == sight_pb2.Object.ST_VALUE and
+                self._cur_obj.value.sub_type == obj_type[1]):
             target_obj = self._cur_obj
             break
-          elif (
-              obj_type[0] == sight_pb2.Object.ST_TENSOR
-              and self._cur_obj.tensor.sub_type == obj_type[1]
-          ):
+          elif (obj_type[0] == sight_pb2.Object.ST_TENSOR and
+                self._cur_obj.tensor.sub_type == obj_type[1]):
             target_obj = self._cur_obj
             break
 
@@ -177,11 +158,10 @@ class Trace:
     block_objects = []
 
     # Iterate until we reach an block-end object that matches block_start_obj.
-    while self._cur_obj and not (
-        self._cur_obj.sub_type == sight_pb2.Object.ST_BLOCK_END
-        and self._cur_obj.block_end.location_of_block_start
-        == block_start_obj.location
-    ):
+    while self._cur_obj and not (self._cur_obj.sub_type
+                                 == sight_pb2.Object.ST_BLOCK_END and
+                                 self._cur_obj.block_end.location_of_block_start
+                                 == block_start_obj.location):
       block_objects.append(self._cur_obj)
       self._cur_obj = self._trace_iter.__next__()
     block_objects.append(self._cur_obj)

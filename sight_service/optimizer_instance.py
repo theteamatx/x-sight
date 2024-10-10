@@ -11,29 +11,29 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """An instance of a Sight optimizer dedicated to a single experiment."""
 
 from concurrent import futures
-import logging
-from typing import Any, Dict, List, Tuple, Sequence
+from typing import Any, Dict, List, Sequence, Tuple
+
+from helpers.logs.logs_handler import logger as logging
+from sight.proto import sight_pb2
 from sight.widgets.decision import utils
 from sight_service.proto import service_pb2
-from sight.proto import sight_pb2
 
 _file_name = "optimizer_instance.py"
 
+
 def param_dict_to_proto(
-    param_dict: Dict[str, float]
-) -> List[sight_pb2.DecisionParam]:
+    param_dict: Dict[str, float]) -> List[sight_pb2.DecisionParam]:
   """converting dictionary of parameters into proto."""
   param_proto: List[sight_pb2.DecisionParam] = []
   for k, v in sorted(param_dict.items()):
     if isinstance(v, str):
       val = sight_pb2.Value(
-                  sub_type=sight_pb2.Value.ST_STRING,
-                  string_value=v,
-              )
+          sub_type=sight_pb2.Value.ST_STRING,
+          string_value=v,
+      )
     elif isinstance(v, float):
       val = sight_pb2.Value(
                   sub_type=sight_pb2.Value.ST_DOUBLE,
@@ -47,24 +47,18 @@ def param_dict_to_proto(
     elif (not utils.is_scalar(v)):
       print('here v is : ', v, type(v))
       val = sight_pb2.Value(
-                  sub_type=sight_pb2.Value.ST_JSON,
-                  json_value=v,
-              )
+          sub_type=sight_pb2.Value.ST_JSON,
+          json_value=v,
+      )
     else:
       raise ValueError(f'action attribute type of key "{k}", value "{v}" must be either string or float')
 
-    param_proto.append(
-        sight_pb2.DecisionParam(
-            key=k,
-            value=val
-        )
-    )
+    param_proto.append(sight_pb2.DecisionParam(key=k, value=val))
   return param_proto
 
 
 def param_proto_to_dict(
-    param_proto: Sequence[sight_pb2.DecisionParam],
-) -> Dict[str, float]:
+    param_proto: Sequence[sight_pb2.DecisionParam],) -> Dict[str, float]:
   """converting proto back into dictionary of parameters."""
   param_dict = {}
   for param in param_proto:
@@ -101,9 +95,8 @@ class OptimizerInstance:
     self.state = {}
     self.outcomes = {}
 
-  def launch(
-      self, request: service_pb2.LaunchRequest
-  ) -> service_pb2.LaunchResponse:
+  def launch(self,
+             request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
     """Initializing new study and storing state and action attributes for the same.
     """
     method_name = "launch"
@@ -144,14 +137,11 @@ class OptimizerInstance:
   ) -> service_pb2.FinalizeEpisodeResponse:
     return service_pb2.FinalizeEpisodeResponse()
 
-  def tell(
-      self, request: service_pb2.TellRequest
-  ) -> service_pb2.TellResponse:
+  def tell(self, request: service_pb2.TellRequest) -> service_pb2.TellResponse:
     return service_pb2.TellResponse()
 
-  def listen(
-      self, request: service_pb2.ListenRequest
-  ) -> service_pb2.ListenResponse:
+  def listen(self,
+             request: service_pb2.ListenRequest) -> service_pb2.ListenResponse:
     return service_pb2.ListenResponse()
 
   def current_status(
@@ -165,8 +155,8 @@ class OptimizerInstance:
     return service_pb2.ProposeActionResponse()
 
   def GetOutcome(
-      self, request: service_pb2.GetOutcomeRequest
-  ) -> service_pb2.GetOutcomeResponse:
+      self,
+      request: service_pb2.GetOutcomeRequest) -> service_pb2.GetOutcomeResponse:
     return service_pb2.GetOutcomeResponse()
 
   def fetch_optimal_action(
@@ -174,9 +164,8 @@ class OptimizerInstance:
   ) -> service_pb2.FetchOptimalActionResponse:
     return service_pb2.FetchOptimalActionResponse()
 
-  def close(
-      self, request: service_pb2.CloseRequest
-  ) -> service_pb2.CloseResponse:
+  def close(self,
+            request: service_pb2.CloseRequest) -> service_pb2.CloseResponse:
     return service_pb2.CloseResponse()
 
   def WorkerAlive(

@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Unique IDs for locations within the Sight log."""
 
 
@@ -21,7 +20,7 @@ class Location(object):
   def __init__(self):
     self.id = [0]
 
-  def clone(self):# -> Location:
+  def clone(self):  # -> Location:
     new_loc = Location()
     new_loc.id = list(self.id)
     return new_loc
