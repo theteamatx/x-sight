@@ -29,9 +29,9 @@ RUN apt-get -y install python3-pip
 WORKDIR /x-sight
 
 # download necessary dependency in container
-COPY py/sight/requirements.txt py/sight/requirements.txt
+COPY py/sight/requirements-worker.txt py/sight/requirements-worker.txt
 RUN pip3 install --upgrade pip
-RUN pip install -r py/sight/requirements.txt
+RUN pip install -r py/sight/requirements-worker.txt
 
 # copy sight code
 COPY py/ py/

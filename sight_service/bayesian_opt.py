@@ -13,22 +13,14 @@
 # limitations under the License.
 """LLM-based optimization for driving Sight applications."""
 
-import json
-import os
-import random
 import threading
-from typing import Any, Dict, List, Tuple
 
 from bayes_opt import BayesianOptimization
 from bayes_opt import UtilityFunction
-import google.auth
-import google.auth.transport.requests
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
-import requests
 from sight.proto import sight_pb2
 from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.proto import service_pb2
 
 _file_name = "bayesian_opt.py"

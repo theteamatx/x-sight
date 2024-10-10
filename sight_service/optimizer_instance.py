@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Sequence, Tuple
 
 from helpers.logs.logs_handler import logger as logging
 from sight.proto import sight_pb2
-from sight.widgets.decision import utils
+from sight_service import utils
 from sight_service.proto import service_pb2
 
 _file_name = "optimizer_instance.py"

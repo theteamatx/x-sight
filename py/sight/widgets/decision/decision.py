@@ -22,7 +22,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Text
 
 from absl import flags
-import dm_env
+# import dm_env
 # from absl import logging
 from helpers.logs.logs_handler import logger as logging
 import numpy as np
@@ -34,9 +34,9 @@ from sight.utility import poll_network_batch_outcome
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
 from sight.widgets.decision import utils
-from sight.widgets.decision.acme.acme_optimizer_client import (
-    AcmeOptimizerClient
-)
+# from sight.widgets.decision.acme.acme_optimizer_client import (
+#     AcmeOptimizerClient
+# )
 from sight.widgets.decision.env_driver import driver_fn
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
 from sight.widgets.decision.single_action_optimizer_client import (

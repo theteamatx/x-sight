@@ -1,0 +1,27 @@
+absl-py
+protobuf
+pandas
+google-cloud-logging
+python-dotenv
+readerwriterlock
+overrides
+fastavro
+google-cloud-bigquery
+google-cloud-storage
+pyyaml
+
+
+
+
+
+# absl-py==2.1.0
+# protobuf==5.28.2
+# pandas==2.2.3
+# google-cloud-logging==3.11.2
+# python-dotenv==1.0.1
+# readerwriterlock==1.0.9
+# overrides==7.7.0
+# fastavro==1.9.7
+# google-cloud-bigquery==3.26.0
+# google-cloud-storage==2.18.2
+# pyyaml==6.0.2
