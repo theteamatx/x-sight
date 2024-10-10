@@ -73,27 +73,10 @@ class SensitivityAnalysis(OptimizerInstance):
     for i, key in enumerate(self.actions):
       if key in self.possible_values:
         print('selecting from possible values')
-<<<<<<< HEAD
         action[key] = self.possible_values[key][
             random.randint(0, len(self.possible_values[key]) - 1)
         ]
       elif self.actions[key].HasField('continuous_prob_dist'):
-=======
-        next_action[key] = self.possible_values[key][random.randint(
-            0,
-            len(self.possible_values[key]) - 1)]
-      elif self.actions[key].HasField('continuous_prob_dist'):
-        rand_val = random.gauss(
-            self.actions[key].continuous_prob_dist.gaussian.mean,
-            self.actions[key].continuous_prob_dist.gaussian.stdev)
-        print('self.actions[key].continuous_prob_dist=%s, rand_val=%s' %
-              (self.actions[key].continuous_prob_dist, rand_val))
-        if rand_val < self.actions[key].min_value:
-          rand_val = self.actions[key].min_value
-        elif rand_val > self.actions[key].max_value:
-          rand_val = self.actions[key].max_value
-        next_action[key] = rand_val
->>>>>>> dev
         if self.actions[key].continuous_prob_dist.HasField('gaussian'):
           rand_val = random.gauss(
               self.actions[key].continuous_prob_dist.gaussian.mean,
@@ -106,50 +89,27 @@ class SensitivityAnalysis(OptimizerInstance):
             rand_val = self.actions[key].max_value
           action[key] = rand_val
         elif self.actions[key].continuous_prob_dist.HasField('uniform'):
-<<<<<<< HEAD
           rand_val = random.uniform(self.actions[key].continuous_prob_dist.uniform.min_val,
                                   self.actions[key].continuous_prob_dist.uniform.max_val)
           print ('self.actions[key].continuous_prob_dist=%s, rand_val=%s' % (self.actions[key].continuous_prob_dist, rand_val))
           action[key] = rand_val
-=======
-          rand_val = random.uniform(
-              self.actions[key].continuous_prob_dist.uniform.min_val,
-              self.actions[key].continuous_prob_dist.uniform.max_val)
-          print('self.actions[key].continuous_prob_dist=%s, rand_val=%s' %
-                (self.actions[key].continuous_prob_dist, rand_val))
-          next_action[key] = rand_val
->>>>>>> dev
         else:
           raise ValueError('Only support Gaussian and Uniform continuous distributions.')
       elif self.actions[key].HasField('discrete_prob_dist'):
         if self.actions[key].discrete_prob_dist.HasField('uniform'):
-<<<<<<< HEAD
           rand_val = random.randint(self.actions[key].discrete_prob_dist.uniform.min_val,
                                     self.actions[key].discrete_prob_dist.uniform.max_val)
           print ('self.actions[key].discrete_prob_dist=%s, rand_val=%s' % (self.actions[key].discrete_prob_dist, rand_val))
           action[key] = rand_val
-=======
-          rand_val = random.randint(
-              self.actions[key].discrete_prob_dist.uniform.min_val,
-              self.actions[key].discrete_prob_dist.uniform.max_val)
-          print('self.actions[key].discrete_prob_dist=%s, rand_val=%s' %
-                (self.actions[key].discrete_prob_dist, rand_val))
-          next_action[key] = rand_val
->>>>>>> dev
         else:
           raise ValueError('Only support Uniform discrete distribution.')
       else:
         print('selecting from random.uniform')
-<<<<<<< HEAD
         action[key] = random.uniform(
             self.actions[key].min_value, self.actions[key].max_value
         )
     print('action=', action)
     return action
-=======
-        next_action[key] = random.uniform(self.actions[key].min_value,
-                                          self.actions[key].max_value)
->>>>>>> dev
 
   @overrides
   def decision_point(
@@ -177,19 +137,11 @@ class SensitivityAnalysis(OptimizerInstance):
 
     self._lock.acquire()
     # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
-<<<<<<< HEAD
     logging.info('FinalizeEpisode: %s: %s', request.worker_id, request.worker_id in self.active_samples)
     self.complete_samples[self.active_samples[request.worker_id]['sample_num']] = {
         'outcome': param_proto_to_dict(request.decision_outcome.outcome_params),
         'action': self.active_samples[request.worker_id]['action'],
     }
-=======
-    self.complete_samples[self.active_samples[
-        request.worker_id]['sample_num']] = {
-            'outcome': request.decision_outcome.outcome_value,
-            'action': self.active_samples[request.worker_id]['action'],
-        }
->>>>>>> dev
     del self.active_samples[request.worker_id]
     self._lock.release()
 

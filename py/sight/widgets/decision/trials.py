@@ -40,10 +40,6 @@ _EXPERIMENT_NAME = flags.DEFINE_string(
     None,
     'The name of the experiment this worker will participate in.',
 )
-# _PROJECT_ID = flags.DEFINE_string(
-#     'project_id', None, 'Id of cloud project'
-# )
-<<<<<<< HEAD
 _PROJECT_ID = flags.DEFINE_string(
     'project_id', os.environ.get('PROJECT_ID', os.environ.get('GOOGLE_CLOUD_PROJECT', '')), 'Id of cloud project'
 )
@@ -53,14 +49,6 @@ _PROJECT_REGION = flags.DEFINE_string(
 _DSUB_MACHINE_TYPE = flags.DEFINE_string(
     'dsub_machine_type', 'e2-standard-2', ''
 )
-=======
-_PROJECT_ID = flags.DEFINE_string('project_id', os.environ['PROJECT_ID'],
-                                  'Id of cloud project')
-_PROJECT_REGION = flags.DEFINE_string('project_region', 'us-central1',
-                                      'location to store project-data')
-_DSUB_MACHINE_TYPE = flags.DEFINE_string('dsub_machine_type', 'e2-standard-2',
-                                         '')
->>>>>>> dev
 # _DSUB_LOGGING = flags.DEFINE_string(
 #     'log_path',
 #     # 'tmp/logs',
