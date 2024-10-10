@@ -193,8 +193,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
         logging.info(">>>>>>>  In %s method of %s file.", method_name,
                      _file_name)
         start_time = time.time()
-        print('DP: client=%s, instance=%s', request.client_id, self.optimizers.get_instance(
-            request.client_id))
         obj = self.optimizers.get_instance(
             request.client_id).decision_point(request)
         # calculate_resolve_time(start_time)
@@ -319,8 +317,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
         logging.info(">>>>>>>  In %s method of %s file.", method_name,
                      _file_name)
 
-        logging.info('WA client=%s, instance=%s', request.client_id, self.optimizers.get_instance(
-            request.client_id))
         obj = self.optimizers.get_instance(
             request.client_id).WorkerAlive(request)
         logging.info("<<<<<<<  Out %s method of %s file.", method_name,
