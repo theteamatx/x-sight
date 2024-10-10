@@ -47,13 +47,9 @@ class OptimizerClient:
     for a in dp_response.action:
       if (a.value.sub_type == sight_pb2.Value.ST_DOUBLE):
         d[a.key] = a.value.double_value
-<<<<<<< HEAD
       elif(a.value.sub_type == sight_pb2.Value.ST_INT64):
         d[a.key] = a.value.int64_value
       elif(a.value.sub_type == sight_pb2.Value.ST_STRING):
-=======
-      elif (a.value.sub_type == sight_pb2.Value.ST_STRING):
->>>>>>> dev
         d[a.key] = a.value.string_value
       else:
         raise ValueError(f"Not supported type: {a.key}: {a.value}")
@@ -63,14 +59,12 @@ class OptimizerClient:
                      action: Dict[str, Any]) -> None:
     """Add to dp the attributes of action."""
     for key, val in action.items():
-<<<<<<< HEAD
       if(isinstance(val,str)):
         dp.value.add(sight_pb2.DecisionParam(key=key, value=sight_pb2.Value(string_value=val)))
       elif(isinstance(val,float)):
         dp.value.add(sight_pb2.DecisionParam(key=key, value=sight_pb2.Value(double_value=val)))
       elif(isinstance(val,int)):
         dp.value.add(sight_pb2.DecisionParam(key=key, value=sight_pb2.Value(int64_value=val)))
-=======
       if (isinstance(val, str)):
         dp.value.add(
             sight_pb2.DecisionParam(key=key,
@@ -79,7 +73,6 @@ class OptimizerClient:
         dp.value.add(
             sight_pb2.DecisionParam(key=key,
                                     value=sight_pb2.Value(double_value=val)))
->>>>>>> dev
       else:
         raise ValueError(f"Not supported type: {key}: {val}")
 
