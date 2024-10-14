@@ -105,13 +105,7 @@ def get_service_id() -> str:
 
 
 def get_port_number() -> str:
-  if 'PORT' in os.environ:
-    return os.environ['PORT']
-  # need to use secure channel for cloud run server
-  elif (FLAGS.deployment_mode in ['local', 'vm']):
-    return '8080'
-  else:
-    return FLAGS.port
+    return os.environ.get('PORT', FLAGS.port)
 
 
 def _service_addr() -> str:

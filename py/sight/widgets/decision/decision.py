@@ -622,7 +622,6 @@ def run(
       #         driver_fn(env, sight)
       #     else:
       #         driver_fn(sight)
-
       #     finalize_episode(sight)
       #     sight.exit_block('Decision Sample', sight_pb2.Object())
 
@@ -632,6 +631,7 @@ def run(
       # )
 
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+
 
 
 def get_state_attrs(sight: Any) -> list[str]:
@@ -820,6 +820,11 @@ def decision_point(
           sub_type=sight_pb2.Value.ST_DOUBLE,
           double_value=chosen_action[attr],
       )
+    elif isinstance(chosen_action[attr], int):
+        val = sight_pb2.Value(
+            sub_type=sight_pb2.Value.ST_INT64,
+            int64_value=chosen_action[attr],
+        )
     else:
       raise ValueError("unsupported type!!")
 
