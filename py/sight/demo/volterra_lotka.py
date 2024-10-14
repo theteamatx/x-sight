@@ -28,6 +28,10 @@ from sight import data_structures
 from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
+from sight.widgets.simulation.simulation import Simulation
+from sight.widgets.simulation.simulation_state import SimulationState
+from sight.widgets.simulation.simulation_time_step import SimulationTimeStep
+import os
 
 _LAST_TS = flags.DEFINE_integer('last_ts', 10,
                                 'The final day of the simulation.')
@@ -69,29 +73,35 @@ def driver(sight: Sight) -> None:
   action = decision.decision_point('init', sight)  #, default_params)
   logging.info('action=%s', action)
   print(len(steps))
+
+  with Simulation('Lotka-Volterra', sight, action):
+    with SimulationState({}, sight, type=SimulationState.Type.INITIAL):
+      for key, val in action.items():
+        data_structures.log_var(key, val, sight)
+
   for idx in range(len(steps) - 1):
-    # with SimulationTimeStep(
-    #     time_step_index=[idx],
-    #     time_step=steps[idx],
-    #     time_step_size=_LAST_TS.value / _NUM_ITERS.value,
-    #     time_step_units=sight_pb2.SimulationTimeStepStart.TSU_UNKNOWN,
-    #     sight=sight,
-    # ):
+    with SimulationTimeStep(
+        time_step_index=[idx],
+        time_step=steps[idx],
+        time_step_size=_LAST_TS.value / _NUM_ITERS.value,
+        time_step_units=sight_pb2.SimulationTimeStepStart.TSU_UNKNOWN,
+        sight=sight,
+    ):
+      if idx == 0:
+        r = action['R0']
+        f = action['F0']
+      alpha = action['alpha']
+      beta = action['beta']
+      gamma = action['gamma']
+      delta = action['delta']
 
-    if idx == 0:
-      r = action['R0']
-      f = action['F0']
-    alpha = action['alpha']
-    beta = action['beta']
-    gamma = action['gamma']
-    delta = action['delta']
-
-    dt = steps[idx + 1] - steps[idx]
-    last_r = r
-    #   logging.info('%s:  dt=%s', idx, dt)
-    r = r * (1 + alpha * dt - gamma * dt * f)
-    f = f * (1 - beta * dt + delta * dt * last_r)
-  #   logging.info('%s:  r=%s, f=%s', idx, r, f)
+      dt = steps[idx + 1] - steps[idx]
+      last_r = r
+      r = r * (1 + alpha * dt - gamma * dt * f)
+      f = f * (1 - beta * dt + delta * dt * last_r)
+      with SimulationState({}, sight, type=SimulationState.Type.DYNAMIC):
+        data_structures.log_var('r', r, sight)
+        data_structures.log_var('f', f, sight)
 
   logging.info('r=%s', r)
   if math.isinf(r):

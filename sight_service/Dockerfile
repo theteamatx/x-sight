@@ -29,14 +29,13 @@ RUN set -xe \
 WORKDIR /x-sight
 
 # download necessary dependency in container
-# COPY x-sight/sight_service/requirements.txt sight_service/requirements.txt
-COPY py/sight/requirements.txt sight_service/requirements.txt
+COPY sight_service/requirements.txt sight_service/requirements.txt
+# COPY py/sight/requirements.txt sight_service/requirements.txt
 RUN pip3 install --upgrade pip
 RUN pip3 install -r sight_service/requirements.txt
 
 # copy sight code
 COPY py/sight/proto/ py/sight/proto/
-COPY py/sight/widgets/decision py/sight/widgets/decision
 COPY py/helpers/logs py/helpers/logs
 COPY sight_service/ sight_service/
 COPY fvs_sight/ fvs_sight/

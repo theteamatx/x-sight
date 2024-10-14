@@ -308,6 +308,10 @@ message BlockStart {
     ST_SIMULATION_STATE = 13;
     // A single simulation time step.
     ST_SIMULATION_TIME_STEP = 14;
+    // The initial state of a simulation.
+    ST_SIMULATION_INITIAL_STATE = 17;
+    // The intermediate boundary state of a simulation.
+    ST_SIMULATION_BOUNDARY_STATE = 18;
     // Assignment of object ids to cluster ids.
     ST_CLUSTER_ASSIGNMENT = 15;
     // An object that describes the configuration of some aspect of Sight or
@@ -367,6 +371,10 @@ message BlockEnd {
     ST_SIMULATION_STATE = 13;
     // A single simulation time step.
     ST_SIMULATION_TIME_STEP = 14;
+    // The initial state of a simulation.
+    ST_SIMULATION_INITIAL_STATE = 17;
+    // The intermediate boundary state of a simulation.
+    ST_SIMULATION_BOUNDARY_STATE = 18;
     // Assignment of object ids to cluster ids.
     ST_CLUSTER_ASSIGNMENT = 15;
   }
