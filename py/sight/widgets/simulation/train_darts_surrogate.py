@@ -10,7 +10,11 @@ from absl import app
 from absl import flags
 from darts import TimeSeries
 from darts.metrics.metrics import mae
-from darts.models import LinearRegressionModel, RandomForest, RNNModel, NBEATSModel, LightGBMModel
+from darts.models import LightGBMModel
+from darts.models import LinearRegressionModel
+from darts.models import NBEATSModel
+from darts.models import RandomForest
+from darts.models import RNNModel
 from darts.models.forecasting.block_rnn_model import BlockRNNModel
 import numpy as np
 import pandas as pd
@@ -33,6 +37,7 @@ _OUT_MODEL_FILE = flags.DEFINE_string(
     ' from.',
 )
 #'GF': '1601933670369823365'
+
 
 def create_list_of_timeseries(df: pd.DataFrame) -> List[pd.DataFrame]:
   series = []
@@ -69,16 +74,13 @@ def create_darts_time_series(
         row.append(s_row[v])
       s_data.append(row)
 
-    lagged_s = pd.DataFrame(
-        s_data, columns=boundary_cond_vars + state_vars
-    ).reset_index()
+    lagged_s = pd.DataFrame(s_data, columns=boundary_cond_vars +
+                            state_vars).reset_index()
     # print('lagged_s', lagged_s)
     time_series.append(
-        TimeSeries.from_dataframe(
-            lagged_s, 'index', boundary_cond_vars + state_vars
-        )
-    )
-  
+        TimeSeries.from_dataframe(lagged_s, 'index',
+                                  boundary_cond_vars + state_vars))
+
   return time_series
 
 
@@ -91,7 +93,7 @@ def train_model(time_series: List[TimeSeries]):
       output_chunk_length=10,
       multi_models=True,
   )
-  
+
   # model = LightGBMModel(lags=[-10, -9, -8, -7, -6, -5, -4, -3, -2, -1],
   #                    output_chunk_length=10,
   #                    multi_models=True)
@@ -119,9 +121,9 @@ def eval_model(model, time_series, split_point) -> float:
     total_steps = len(time_series[pred_idx])
     # print(time_series[pred_idx])
     train, val = time_series[pred_idx].split_before(split_point)
-    prediction = model.predict(
-        total_steps - split_point, series=train, num_samples=1
-    )
+    prediction = model.predict(total_steps - split_point,
+                               series=train,
+                               num_samples=1)
 
     # print (prediction)
     avg_err += mae(prediction, val) / len(time_series)
@@ -144,24 +146,23 @@ def main(argv: Sequence[str]) -> None:
     raise app.UsageError('Too many command-line arguments.')
 
   dataset_df = pd.read_csv(_INFILE.value)
-  
+
   control_vars = ['sim_location', 'time_step_index', 'next_time_step_index']
   state_vars = [
-      v
-      for v in dataset_df.columns
+      v for v in dataset_df.columns
       if v not in _BOUNDARY_COND_VARS.value and v not in control_vars
   ]
   # pd.set_option('display.max_columns', None)
   # print(dataset_df)
   # return
-  
 
-  time_series = create_darts_time_series(
-      create_list_of_timeseries(dataset_df), state_vars, _BOUNDARY_COND_VARS.value)
+  time_series = create_darts_time_series(create_list_of_timeseries(dataset_df),
+                                         state_vars, _BOUNDARY_COND_VARS.value)
 
   model = train_model(time_series)
 
   error = eval_model(model, time_series, 10)
-  
+
+
 if __name__ == '__main__':
   app.run(main)

@@ -11,19 +11,17 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Documentation of numpy events and data in the Sight log."""
 
 import inspect
 from typing import Any, Optional
 
-from absl import logging
-import tensorflow as tf
-
+from helpers.logs.logs_handler import logger as logging
 from proto import sight_pb2
 from py.exception import exception
 from py.location import Location
 from py.widgets.numpy_sight import numpy_sight
+import tensorflow as tf
 
 
 class TfModelApplication(object):
@@ -41,11 +39,8 @@ class TfModelApplication(object):
     # pytype: disable=attribute-error
     self.sight.enter_block(
         self.label,
-        sight_pb2.Object(
-            block_start=sight_pb2.BlockStart(
-                sub_type=sight_pb2.BlockStart.ST_TENSORFLOW_MODEL_APPLICATION
-            )
-        ),
+        sight_pb2.Object(block_start=sight_pb2.BlockStart(
+            sub_type=sight_pb2.BlockStart.ST_TENSORFLOW_MODEL_APPLICATION)),
         inspect.currentframe().f_back,
     )
     # pytype: enable=attribute-error
@@ -59,9 +54,8 @@ class TfModelApplication(object):
 
     if exc_type is not None:
       # pytype: disable=attribute-error
-      exception(
-          exc_type, value, traceback, self.sight, inspect.currentframe().f_back
-      )
+      exception(exc_type, value, traceback, self.sight,
+                inspect.currentframe().f_back)
       # pytype: enable=attribute-error
 
     if self.sight is None:
@@ -71,11 +65,8 @@ class TfModelApplication(object):
     # pytype: disable=attribute-error
     self.sight.exit_block(
         self.label,
-        sight_pb2.Object(
-            block_end=sight_pb2.BlockEnd(
-                sub_type=sight_pb2.BlockEnd.ST_TENSORFLOW_MODEL_APPLICATION
-            )
-        ),
+        sight_pb2.Object(block_end=sight_pb2.BlockEnd(
+            sub_type=sight_pb2.BlockEnd.ST_TENSORFLOW_MODEL_APPLICATION)),
         inspect.currentframe().f_back,
     )
     # pytype: enable=attribute-error
@@ -96,11 +87,8 @@ class TfModelTraining(object):
     # pytype: disable=attribute-error
     self.sight.enter_block(
         self.label,
-        sight_pb2.Object(
-            block_start=sight_pb2.BlockStart(
-                sub_type=sight_pb2.BlockStart.ST_TENSORFLOW_MODEL_TRAINING
-            )
-        ),
+        sight_pb2.Object(block_start=sight_pb2.BlockStart(
+            sub_type=sight_pb2.BlockStart.ST_TENSORFLOW_MODEL_TRAINING)),
         inspect.currentframe().f_back,
     )
 
@@ -115,9 +103,8 @@ class TfModelTraining(object):
 
     if exc_type is not None:
       # pytype: disable=attribute-error
-      exception(
-          exc_type, value, traceback, self.sight, inspect.currentframe().f_back
-      )
+      exception(exc_type, value, traceback, self.sight,
+                inspect.currentframe().f_back)
       # pytype: enable=attribute-error
 
     if self.sight is None:
@@ -127,11 +114,8 @@ class TfModelTraining(object):
     # pytype: disable=attribute-error
     self.sight.exit_block(
         self.label,
-        sight_pb2.Object(
-            block_end=sight_pb2.BlockEnd(
-                sub_type=sight_pb2.BlockEnd.ST_TENSORFLOW_MODEL_TRAINING
-            )
-        ),
+        sight_pb2.Object(block_end=sight_pb2.BlockEnd(
+            sub_type=sight_pb2.BlockEnd.ST_TENSORFLOW_MODEL_TRAINING)),
         inspect.currentframe().f_back,
     )
     # pytype: enable=attribute-error
@@ -153,14 +137,12 @@ class TfModelTrainingEpoch(object):
     # pytype: disable=attribute-error
     self.sight.enter_block(
         self.label,
-        sight_pb2.Object(
-            block_start=sight_pb2.BlockStart(
-                sub_type=sight_pb2.BlockStart.ST_TENSORFLOW_MODEL_TRAINING_EPOCH,
-                tensor_flow_model_training_epoch=sight_pb2.TensorFlowModelTrainingEpochStart(
-                    epoch_num=epoch_num, batch_size=batch_size
-                ),
-            )
-        ),
+        sight_pb2.Object(block_start=sight_pb2.BlockStart(
+            sub_type=sight_pb2.BlockStart.ST_TENSORFLOW_MODEL_TRAINING_EPOCH,
+            tensor_flow_model_training_epoch=sight_pb2.
+            TensorFlowModelTrainingEpochStart(epoch_num=epoch_num,
+                                              batch_size=batch_size),
+        )),
         inspect.currentframe().f_back,
     )
     # pytype: enable=attribute-error
@@ -178,9 +160,8 @@ class TfModelTrainingEpoch(object):
 
     if exc_type is not None:
       # pytype: disable=attribute-error
-      exception(
-          exc_type, value, traceback, self.sight, inspect.currentframe().f_back
-      )
+      exception(exc_type, value, traceback, self.sight,
+                inspect.currentframe().f_back)
       # pytype: enable=attribute-error
 
     if self.sight is None:
@@ -191,19 +172,17 @@ class TfModelTrainingEpoch(object):
     # pytype: disable=attribute-error
     self.sight.exit_block(
         self.label,
-        sight_pb2.Object(
-            block_end=sight_pb2.BlockEnd(
-                sub_type=sight_pb2.BlockEnd.ST_TENSORFLOW_MODEL_TRAINING_EPOCH
-            )
-        ),
+        sight_pb2.Object(block_end=sight_pb2.BlockEnd(
+            sub_type=sight_pb2.BlockEnd.ST_TENSORFLOW_MODEL_TRAINING_EPOCH)),
         inspect.currentframe().f_back,
     )
     # pytype: enable=attribute-error
 
 
-def log(
-    label: str, tensor: tf.Tensor, sight: Any, frame: Optional[Any] = None
-) -> Optional[Location]:
+def log(label: str,
+        tensor: tf.Tensor,
+        sight: Any,
+        frame: Optional[Any] = None) -> Optional[Location]:
   """Documents a TensorFlow tensor in the Sight log if Sight is being used.
 
   Args:

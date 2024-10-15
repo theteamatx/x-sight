@@ -11,20 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Genetic Algorithms for driving Sight applications."""
 
 from concurrent import futures
-import logging
-from overrides import overrides
-from typing import Any, Dict, List, Tuple
-
 import math
 import random
-from sight_service.proto import service_pb2
-from sight_service.optimizer_instance import param_dict_to_proto
-from sight_service.optimizer_instance import OptimizerInstance
+from typing import Any, Dict, List, Tuple
 
+from helpers.logs.logs_handler import logger as logging
+from overrides import overrides
+from sight_service.optimizer_instance import OptimizerInstance
+from sight_service.optimizer_instance import param_dict_to_proto
+from sight_service.proto import service_pb2
 
 
 class GeneticAlgorithm(OptimizerInstance):
@@ -42,25 +40,23 @@ class GeneticAlgorithm(OptimizerInstance):
     self.history = []
 
   @overrides
-  def launch(
-      self, request: service_pb2.LaunchRequest
-  ) -> service_pb2.LaunchResponse:
+  def launch(self,
+             request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
     response = super(GeneticAlgorithm, self).launch(request)
     response.display_string = 'Genetic Algorithm Launch SUCCESS!'
-    logging.info(
-        'request.genetic_algorithm_config=%s', request.genetic_algorithm_config
-    )
+    logging.info('request.genetic_algorithm_config=%s',
+                 request.genetic_algorithm_config)
     # if request.genetic_algorithm_config.max_population_size:
     #   self.max_population_size = max(
     #       3, request.genetic_algorithm_config.max_population_size
     #   )
-    ga_config = request.decision_config_params.choice_config[request.label].genetic_algorithm_config
+    ga_config = request.decision_config_params.choice_config[
+        request.label].genetic_algorithm_config
     self.max_population_size = ga_config.max_population_size
     return response
 
   def find_best_worst(
-      self, options: List[Dict[str, Any]]
-  ) -> Tuple[float, int, float, int]:
+      self, options: List[Dict[str, Any]]) -> Tuple[float, int, float, int]:
     largest_outcome = -math.inf
     largest_idx = -1
     smallest_outcome = math.inf
@@ -84,8 +80,7 @@ class GeneticAlgorithm(OptimizerInstance):
     )
 
   def find_best_worst_probweighted(
-      self, options: List[Dict[str, Any]]
-  ) -> Tuple[float, int, float, int]:
+      self, options: List[Dict[str, Any]]) -> Tuple[float, int, float, int]:
     (
         largest_outcome,
         largest_idx,
@@ -113,11 +108,9 @@ class GeneticAlgorithm(OptimizerInstance):
         return largest_outcome, largest_idx, unit['outcome'], i
 
     logging.error(
-        (
-            'WARNING: smallest_outcome_choice=%s,'
-            ' sum_of_max_adjusted_outcomes=%s but we failed to find the index'
-            ' of this unit'
-        ),
+        ('WARNING: smallest_outcome_choice=%s,'
+         ' sum_of_max_adjusted_outcomes=%s but we failed to find the index'
+         ' of this unit'),
         smallest_outcome_choice,
         sum_of_max_adjusted_outcomes,
     )
@@ -127,36 +120,30 @@ class GeneticAlgorithm(OptimizerInstance):
   def decision_point(
       self, request: service_pb2.DecisionPointRequest
   ) -> service_pb2.DecisionPointResponse:
-    logging.info(
-        '%s| ga_population(#%d)=', request.worker_id, len(self.ga_population)
-    )
-    for member in sorted(
-        self.ga_population, key=lambda p: p['outcome'], reverse=True
-    ):
-      logging.info(
-          '%s| %s: %s', request.worker_id, member['outcome'], member['action']
-      )
+    logging.info('%s| ga_population(#%d)=', request.worker_id,
+                 len(self.ga_population))
+    for member in sorted(self.ga_population,
+                         key=lambda p: p['outcome'],
+                         reverse=True):
+      logging.info('%s| %s: %s', request.worker_id, member['outcome'],
+                   member['action'])
 
     self.num_decisions += 1
-    if (
-        len(self.ga_population) < self.max_population_size
-        or random.randint(1, 100) <= 5
-    ):
+    if (len(self.ga_population) < self.max_population_size or
+        random.randint(1, 100) <= 5):
       algorithm = 'random_sample'
       # Randomly sample an action.
       next_action = {}
       for key in self.actions.keys():
-        next_action[key] = random.uniform(
-            self.actions[key].min_value, self.actions[key].max_value
-        )
+        next_action[key] = random.uniform(self.actions[key].min_value,
+                                          self.actions[key].max_value)
         # logging.info("   [%s - %s]: %s", self.actions[key].min_value,
         #           self.actions[key].max_value,
         #           next_action[key])
 
       if len(self.ga_population) >= self.max_population_size:
         largest_outcome, largest_idx, smallest_outcome, smallest_idx = (
-            self.find_best_worst_probweighted(self.ga_population)
-        )
+            self.find_best_worst_probweighted(self.ga_population))
         # Remove the worst member of the population
         del self.ga_population[smallest_idx]
 
@@ -167,8 +154,7 @@ class GeneticAlgorithm(OptimizerInstance):
       )
     else:
       largest_outcome, largest_idx, smallest_outcome, smallest_idx = (
-          self.find_best_worst_probweighted(self.ga_population)
-      )
+          self.find_best_worst_probweighted(self.ga_population))
 
       # logging.info('Retrying largest=%s', self.ga_population[spouse_idx])
       # next_action = dict(self.ga_population[largest_idx]['action'])
@@ -242,9 +228,8 @@ class GeneticAlgorithm(OptimizerInstance):
           next_action = {}
           for key in self.actions.keys():
             if random.randint(0, 999) <= mutation_prob:
-              next_action[key] = random.uniform(
-                  self.actions[key].min_value, self.actions[key].max_value
-              )
+              next_action[key] = random.uniform(self.actions[key].min_value,
+                                                self.actions[key].max_value)
               # next_action[key] = self.ga_population[spouse_idx]['action'][key] * random.uniform(.9, 1.1)
               # if next_action[key] < self.actions[key].min_value:
               #   next_action[key] = self.actions[key].min_value
@@ -283,8 +268,7 @@ class GeneticAlgorithm(OptimizerInstance):
 
     if self.ga_population:
       largest_outcome, largest_idx, smallest_outcome, smallest_idx = (
-          self.find_best_worst_probweighted(self.ga_population)
-      )
+          self.find_best_worst_probweighted(self.ga_population))
       if request.decision_outcome.reward >= smallest_outcome:
         self.algorithms_succeeded_above_min[algorithm] += 1
       if request.decision_outcome.reward >= largest_outcome:
@@ -321,57 +305,43 @@ class GeneticAlgorithm(OptimizerInstance):
   ) -> service_pb2.CurrentStatusResponse:
     response = (
         f'[GeneticAlgorithm (max_population_size={self.max_population_size},'
-        f' num_decisions={self.num_decisions}):\n'
-    )
+        f' num_decisions={self.num_decisions}):\n')
     response += f'  ga_population(#{len(self.ga_population)}):\n'
     keys = sorted(self.actions.keys())
     response += '  idx,outcome,' + ','.join(keys) + '\n'
     for i, unit in enumerate(
-        sorted(self.ga_population, key=lambda p: p['outcome'], reverse=True)
-    ):
-      response += (
-          f'  {i},{unit["outcome"]:.5F},'
-          + ','.join([str(unit['action'][key]) for key in keys])
-          + '\n'
-      )
+        sorted(self.ga_population, key=lambda p: p['outcome'], reverse=True)):
+      response += (f'  {i},{unit["outcome"]:.5F},' +
+                   ','.join([str(unit['action'][key]) for key in keys]) + '\n')
 
     response += f'  ga_active_samples(#{len(self.ga_active_samples)}):\n'
     response += '  worker_id,algorithm,' + ','.join(keys) + '\n'
     for worker_id, sample in self.ga_active_samples.items():
-      response += (
-          f'  {worker_id},{sample["algorithm"]},'
-          + ','.join([str(sample['action'][key]) for key in keys])
-          + '\n'
-      )
+      response += (f'  {worker_id},{sample["algorithm"]},' +
+                   ','.join([str(sample['action'][key]) for key in keys]) +
+                   '\n')
     response += ']'
 
     response += f'  proposals(#{len(self.proposals)}):\n'
     response += '  idx,outcome,' + ','.join(keys) + '\n'
     for i, unit in enumerate(
-        sorted(self.proposals, key=lambda p: p['outcome'], reverse=True)
-    ):
-      response += (
-          f'  {i},{unit["outcome"]:.5F},'
-          + ','.join([str(unit['action'][key]) for key in keys])
-          + '\n'
-      )
+        sorted(self.proposals, key=lambda p: p['outcome'], reverse=True)):
+      response += (f'  {i},{unit["outcome"]:.5F},' +
+                   ','.join([str(unit['action'][key]) for key in keys]) + '\n')
       if i > 50:
         break
 
     response += f'  algorithms:\n'
     for algorithm in sorted(self.algorithms_tried.keys()):
-      response += (
-          '    %s: tried=%s, algorithms_succeeded_above_min=%.4E,'
-          ' algorithms_succeeded_best=%.4E\n'
-          % (
-              algorithm,
-              self.algorithms_tried[algorithm],
-              self.algorithms_succeeded_above_min[algorithm]
-              / self.algorithms_tried[algorithm],
-              self.algorithms_succeeded_best[algorithm]
-              / self.algorithms_tried[algorithm],
-          )
-      )
+      response += ('    %s: tried=%s, algorithms_succeeded_above_min=%.4E,'
+                   ' algorithms_succeeded_best=%.4E\n' % (
+                       algorithm,
+                       self.algorithms_tried[algorithm],
+                       self.algorithms_succeeded_above_min[algorithm] /
+                       self.algorithms_tried[algorithm],
+                       self.algorithms_succeeded_best[algorithm] /
+                       self.algorithms_tried[algorithm],
+                   ))
 
     response += '  history:\n'
     for i, h in enumerate(self.history):
@@ -387,8 +357,7 @@ class GeneticAlgorithm(OptimizerInstance):
       action[key] = value
 
     largest_outcome, largest_idx, smallest_outcome, smallest_idx = (
-        self.find_best_worst_probweighted(self.ga_population)
-    )
+        self.find_best_worst_probweighted(self.ga_population))
     if request.outcome.reward >= smallest_outcome:
       self.proposals.append({
           'action': action,

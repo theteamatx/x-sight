@@ -11,19 +11,19 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Exhaustive search for driving Sight applications."""
 
-import logging
-from overrides import overrides
+import threading
 from typing import Any, Dict, List, Tuple
 
-from sight_service.proto import service_pb2
-from sight_service.optimizer_instance import param_dict_to_proto
+from helpers.logs.logs_handler import logger as logging
+from overrides import overrides
 from sight_service.optimizer_instance import OptimizerInstance
-import threading
+from sight_service.optimizer_instance import param_dict_to_proto
+from sight_service.proto import service_pb2
 
 _file_name = "exhaustive_search.py"
+
 
 class ExhaustiveSearch(OptimizerInstance):
   """Exhaustively searches over all the possible values of the action attributes.
@@ -45,9 +45,8 @@ class ExhaustiveSearch(OptimizerInstance):
     self._lock = threading.RLock()
 
   @overrides
-  def launch(
-      self, request: service_pb2.LaunchRequest
-  ) -> service_pb2.LaunchResponse:
+  def launch(self,
+             request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
     method_name = "launch"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
@@ -79,10 +78,8 @@ class ExhaustiveSearch(OptimizerInstance):
     method_name = "decision_point"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     logging.info(
-        (
-            'Running for exhaustive search...., last_sample=%s,'
-            ' sweep_issue_done=%s'
-        ),
+        ('Running for exhaustive search...., last_sample=%s,'
+         ' sweep_issue_done=%s'),
         self.last_sample,
         self.sweep_issue_done,
     )
@@ -143,22 +140,22 @@ class ExhaustiveSearch(OptimizerInstance):
 
     # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
     self._lock.acquire()
-    self.complete_samples[
-        tuple(self.active_samples[request.worker_id]['sample'])
-    ] = {
-        'reward': request.decision_outcome.reward,
-        'action': self.active_samples[request.worker_id]['action'],
-        'outcome': request.decision_outcome.outcome_params
-    }
+    self.complete_samples[tuple(
+        self.active_samples[request.worker_id]['sample'])] = {
+            'reward': request.decision_outcome.reward,
+            'action': self.active_samples[request.worker_id]['action'],
+            'outcome': request.decision_outcome.outcome_params
+        }
     logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
 
     # if(self.max_reward_sample == {} or self.max_reward_sample['outcome'] < request.decision_outcome.outcome_value):
-    if(self.max_reward_sample == {} or self.max_reward_sample['reward'] < request.decision_outcome.reward):
+    if (self.max_reward_sample == {} or
+        self.max_reward_sample['reward'] < request.decision_outcome.reward):
       self.max_reward_sample = {
-        # 'outcome': request.decision_outcome.outcome_value,
-        'reward': request.decision_outcome.reward,
-        'action': self.active_samples[request.worker_id]['action'],
-    }
+          # 'outcome': request.decision_outcome.outcome_value,
+          'reward': request.decision_outcome.reward,
+          'action': self.active_samples[request.worker_id]['action'],
+      }
     self._lock.release()
 
     del self.active_samples[request.worker_id]
@@ -172,10 +169,8 @@ class ExhaustiveSearch(OptimizerInstance):
   ) -> service_pb2.CurrentStatusResponse:
     method_name = "current_status"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    response = (
-        '[ExhaustiveSearch: {"Done" if self.sweep_issue_done else "In'
-        ' Progress"}\n'
-    )
+    response = ('[ExhaustiveSearch: {"Done" if self.sweep_issue_done else "In'
+                ' Progress"}\n')
     self._lock.acquire()
     response += f'  #active_samples={len(self.active_samples)}\n'
     response += '  completed_samples=\n'
@@ -189,9 +184,9 @@ class ExhaustiveSearch(OptimizerInstance):
     reached_last = False
     while not reached_last:
       logging.info('cur(#%d)=%s', len(cur), cur)
-      response += ', '.join(
-          [str(self.possible_values[key][cur[i]]) for i, key in enumerate(keys)]
-      )
+      response += ', '.join([
+          str(self.possible_values[key][cur[i]]) for i, key in enumerate(keys)
+      ])
       if tuple(cur) in self.complete_samples:
         response += ', ' + str(self.complete_samples[tuple(cur)]['outcome'])
       else:
@@ -222,7 +217,7 @@ class ExhaustiveSearch(OptimizerInstance):
 
   @overrides
   def fetch_optimal_action(
-    self, request: service_pb2.FetchOptimalActionRequest
+      self, request: service_pb2.FetchOptimalActionRequest
   ) -> service_pb2.FetchOptimalActionResponse:
     method_name = "fetch_optimal_action"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
@@ -237,8 +232,8 @@ class ExhaustiveSearch(OptimizerInstance):
   ) -> service_pb2.WorkerAliveResponse:
     method_name = "WorkerAlive"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    if(self.sweep_issue_done):
-        worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+    if (self.sweep_issue_done):
+      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
     # elif(not self.pending_samples):
     #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:

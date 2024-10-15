@@ -1,8 +1,8 @@
 import json
 import os
-import logging
 from pathlib import Path
 
+from helpers.logs.logs_handler import logger as logging
 from redis import StrictRedis
 
 from .cache_interface import CacheInterface

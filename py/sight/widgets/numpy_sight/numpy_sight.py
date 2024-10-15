@@ -11,18 +11,16 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Documentation of numpy events and data in the Sight log."""
 
 import dataclasses
 import inspect
 from typing import Any, List, Optional, Union
 
-from absl import logging
+from helpers.logs.logs_handler import logger as logging
 import numpy as np
-
-from sight.proto import sight_pb2
 from sight.location import Location
+from sight.proto import sight_pb2
 
 
 @dataclasses.dataclass
@@ -95,10 +93,9 @@ def log(
     labeled_array = LabeledNpArray(
         obj_to_log,
         [f'dim{i}' for i in range(len(obj_to_log.shape))],
-        [
-            [f'v{v}' for v in range(obj_to_log.shape[i])]
-            for i in range(len(obj_to_log.shape))
-        ],
+        [[f'v{v}'
+          for v in range(obj_to_log.shape[i])]
+         for i in range(len(obj_to_log.shape))],
     )
   elif isinstance(obj_to_log, LabeledNpArray):
     labeled_array = obj_to_log
@@ -111,25 +108,20 @@ def log(
   obj.tensor.shape.extend(labeled_array.array.shape)
   # print('labeled_array=%s' % labeled_array)
   # print('labeled_array.array.dtype=%s' % labeled_array.array.dtype)
-  if (
-      labeled_array.array.dtype == float
-      or labeled_array.array.dtype == np.float32
-      or labeled_array.array.dtype == np.float64
-  ):
+  if (labeled_array.array.dtype == float or
+      labeled_array.array.dtype == np.float32 or
+      labeled_array.array.dtype == np.float64):
     obj.tensor.sub_type = sight_pb2.Tensor.ST_DOUBLE
     obj.tensor.double_values.value.extend(
-        labeled_array.array.reshape(labeled_array.array.size).tolist()
-    )
+        labeled_array.array.reshape(labeled_array.array.size).tolist())
   elif (
       # labeled_array.array.dtype == np.int
       # or
-      labeled_array.array.dtype == np.int32
-      or labeled_array.array.dtype == np.int64
-  ):
+      labeled_array.array.dtype == np.int32 or
+      labeled_array.array.dtype == np.int64):
     obj.tensor.sub_type = sight_pb2.Tensor.ST_INT64
     obj.tensor.int64_values.value.extend(
-        labeled_array.array.reshape(labeled_array.array.size).tolist()
-    )
+        labeled_array.array.reshape(labeled_array.array.size).tolist())
   obj.tensor.dim_label.extend(labeled_array.dim_label)
   for dav in labeled_array.dim_axis_values:
     obj.tensor.dim_axis_values.append(sight_pb2.Tensor.StringValues(value=dav))

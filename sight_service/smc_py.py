@@ -11,25 +11,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """LLM-based optimization for driving Sight applications."""
 
-import logging
-from overrides import overrides
-from typing import Any, Dict, List, Tuple
-
-from scipy.stats import uniform
-from sight_service.optimizer_instance import param_dict_to_proto
-from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.proto import service_pb2
-from sight.proto import sight_pb2
 import json
-import numpy as np
 import os
 import queue
-from smcpy import AdaptiveSampler as Sampler
-from smcpy import VectorMCMC, VectorMCMCKernel
 import threading
+from typing import Any, Dict, List, Tuple
+
+from helpers.logs.logs_handler import logger as logging
+import numpy as np
+from overrides import overrides
+from scipy.stats import uniform
+from sight.proto import sight_pb2
+from sight_service.optimizer_instance import OptimizerInstance
+from sight_service.optimizer_instance import param_dict_to_proto
+from sight_service.proto import service_pb2
+from smcpy import AdaptiveSampler as Sampler
+from smcpy import VectorMCMC
+from smcpy import VectorMCMCKernel
+
 
 # Initialize model
 class ModelSamplingDriver():
@@ -37,28 +38,30 @@ class ModelSamplingDriver():
   Driver for communicating with SMC.
   '''
 
-  def __init__(self, param_names: List[str], priors: List, std_dev:float):
+  def __init__(self, param_names: List[str], priors: List, std_dev: float):
     self._buf_size = 50
     self._model_inputs_meta_q = queue.Queue(1)
     self._model_inputs_q = queue.Queue(self._buf_size)
     self._model_outputs_meta_q = queue.Queue(1)
     self._model_outputs_q = queue.Queue(self._buf_size)
-    
+
     # Define prior distributions & MCMC kernel
     self._vector_mcmc = VectorMCMC(self.evaluate, [0], priors, std_dev)
-    self._mcmc_kernel = VectorMCMCKernel(self._vector_mcmc, param_order=param_names)
+    self._mcmc_kernel = VectorMCMCKernel(self._vector_mcmc,
+                                         param_order=param_names)
     self._smc = Sampler(self._mcmc_kernel)
     self._num_mcmc_samples = 5
-    
+
   def sample(self):
-    step_list, mll_list = self._smc.sample(num_particles=self._buf_size,
-                                  num_mcmc_samples=self._num_mcmc_samples,
-                                  target_ess=0.8)
+    step_list, mll_list = self._smc.sample(
+        num_particles=self._buf_size,
+        num_mcmc_samples=self._num_mcmc_samples,
+        target_ess=0.8)
     self._model_inputs_meta_q.put(-1)
     # print ('step_list=', step_list.__dict__)
     # print ('step_list=', step_list.mean())
     # print ('mll_list=', mll_list)
-    
+
     print(f'phi_sequence={self._smc.phi_sequence}')
     print(f'fbf norm index={self._smc.req_phi_index}')
     print('marginal log likelihood = {}'.format(mll_list[-1]))
@@ -72,8 +75,8 @@ class ModelSamplingDriver():
 
     results = [None] * len(params)
     for i in range(len(params)):
-        v = self._model_outputs_q.get()
-        results[v['idx']] = v['result']
+      v = self._model_outputs_q.get()
+      results[v['idx']] = v['result']
     print('>>> ModelSamplingDriver evaluate() #results=', len(results))
     return np.array(results)
 
@@ -96,11 +99,10 @@ class SMCPy(OptimizerInstance):
     self._driver = None
 
   @overrides
-  def launch(
-      self, request: service_pb2.LaunchRequest
-  ) -> service_pb2.LaunchResponse:
+  def launch(self,
+             request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
     response = super(SMCPy, self).launch(request)
-    
+
     # self.possible_values = {}
     # for i, key in enumerate(sorted(self.actions.keys())):
     #   if self.actions[key].valid_float_values:
@@ -112,13 +114,16 @@ class SMCPy(OptimizerInstance):
     #       self.possible_values[key].append(cur)
     #       cur += self.actions[key].step_size
     # print('possible_values=%s' % self.possible_values)
-    
+
     self._param_names = list(sorted(self.actions.keys()))
-    self._driver = ModelSamplingDriver(
-      param_names = self._param_names,
-      priors = [uniform(self.actions[key].min_value, self.actions[key].max_value) for key in self._param_names],
-      std_dev = 0.5)
-    self._smc_thread = threading.Thread(target = self._driver.sample, args = ())
+    self._driver = ModelSamplingDriver(param_names=self._param_names,
+                                       priors=[
+                                           uniform(self.actions[key].min_value,
+                                                   self.actions[key].max_value)
+                                           for key in self._param_names
+                                       ],
+                                       std_dev=0.5)
+    self._smc_thread = threading.Thread(target=self._driver.sample, args=())
     self._smc_thread.start()
 
     self._num_samples_in_cur_batch = 0
@@ -136,7 +141,7 @@ class SMCPy(OptimizerInstance):
     for a in dp:
       d[a.key] = a.value.double_value
     return d
-  
+
   @overrides
   def decision_point(
       self, request: service_pb2.DecisionPointRequest
@@ -145,9 +150,11 @@ class SMCPy(OptimizerInstance):
     logging.info('DecisionPoint self._lock=%s', self._lock)
 
     self._lock.acquire()
-    logging.info('decision_point() _sample_idx=%s, self._num_samples_in_cur_batch=%s, self._num_samples_remaining=%s, self._num_samples_complete=%s', 
-                 self._sample_idx, self._num_samples_in_cur_batch, self._num_samples_remaining, self._num_samples_complete)
-    
+    logging.info(
+        'decision_point() _sample_idx=%s, self._num_samples_in_cur_batch=%s, self._num_samples_remaining=%s, self._num_samples_complete=%s',
+        self._sample_idx, self._num_samples_in_cur_batch,
+        self._num_samples_remaining, self._num_samples_complete)
+
     dp_response = service_pb2.DecisionPointResponse()
     logging.info('dp_response=%s', dp_response)
     params = []
@@ -157,7 +164,7 @@ class SMCPy(OptimizerInstance):
       self._lock.release()
       dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_RETRY
       return dp_response
-    
+
     logging.info('Start new batch')
     # Start new batch
     if self._sample_idx == self._num_samples_in_cur_batch:
@@ -165,11 +172,11 @@ class SMCPy(OptimizerInstance):
       self._num_samples_in_cur_batch = self._driver._model_inputs_meta_q.get()
       self._sample_idx = 0
       self._num_samples_complete = 0
-    
+
     logging.info('Getting Params')
-    
+
     params = self._driver._model_inputs_q.get()['params']
-    
+
     self.active_samples[request.worker_id] = {
         'action': params,
         'sample_num': self.num_samples_issued,
@@ -201,12 +208,13 @@ class SMCPy(OptimizerInstance):
 
     self._lock.acquire()
     self._driver._model_outputs_q.put({
-        'idx': self.active_samples[request.worker_id]['idx'], 
+        'idx': self.active_samples[request.worker_id]['idx'],
         'result': result,
-      })
+    })
     self._num_samples_complete += 1
-    
-    logging.info('FinalizeEpisode outcome=%s / %s', request.decision_outcome.reward, d)
+
+    logging.info('FinalizeEpisode outcome=%s / %s',
+                 request.decision_outcome.reward, d)
     del self.active_samples[request.worker_id]
     self._lock.release()
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
@@ -215,22 +223,25 @@ class SMCPy(OptimizerInstance):
   def current_status(
       self, request: service_pb2.CurrentStatusRequest
   ) -> service_pb2.CurrentStatusResponse:
-    response = '[SMCPy (num_ask=#%s, num_tell=#%s)\n' % (self._optimizer.num_ask, self._optimizer.num_tell)
-    
+    response = '[SMCPy (num_ask=#%s, num_tell=#%s)\n' % (
+        self._optimizer.num_ask, self._optimizer.num_tell)
+
     self._lock.acquire()
     response += 'sample_num, ' + ', '.join(list(self.actions)) + ', outcome\n'
     cur = [0] * len(self.actions)
     keys = sorted(self.actions.keys())
     logging.info('self.complete_samples=%s', self.complete_samples)
-    for s in sorted(self.complete_samples.items(), key=lambda x: x[1]['outcome'], reverse=True):
-      response += str(s[0])+', '
+    for s in sorted(self.complete_samples.items(),
+                    key=lambda x: x[1]['outcome'],
+                    reverse=True):
+      response += str(s[0]) + ', '
       response += ', '.join([str(s[1]['action'][key]) for key in keys])
-      response += ', '+str(s[1]['outcome'])+'\n'
-    
+      response += ', ' + str(s[1]['outcome']) + '\n'
+
     response += 'pareto_front:\n'
     for trial in self._optimizer.pareto_front():
-      response += ', '.join([str(trial.args[0][key]) for key in keys])+'\n'
+      response += ', '.join([str(trial.args[0][key]) for key in keys]) + '\n'
     response += ']\n'
     self._lock.release()
-    
+
     return service_pb2.CurrentStatusResponse(response_str=response)

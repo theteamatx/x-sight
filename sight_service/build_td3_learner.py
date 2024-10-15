@@ -11,7 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Setting up configuration for DQN Experiment."""
 
 from acme.agents.jax import td3
@@ -25,7 +24,7 @@ def build_td3_config():
     # if env_name:
     #   return  wrappers.GymWrapper(gym.make(env_name))
     # else:
-      return None
+    return None
 
   network_factory = (
       lambda spec: td3.make_networks(spec, hidden_layer_sizes=(256, 256, 256)))
@@ -37,10 +36,8 @@ def build_td3_config():
   )
   td3_builder = td3.TD3Builder(config)
 
-  return experiments.ExperimentConfig(
-    builder=td3_builder,
-    environment_factory=env_factory,
-    network_factory=network_factory,
-    seed=0,
-    max_num_actor_steps=10)
-
+  return experiments.ExperimentConfig(builder=td3_builder,
+                                      environment_factory=env_factory,
+                                      network_factory=network_factory,
+                                      seed=0,
+                                      max_num_actor_steps=10)

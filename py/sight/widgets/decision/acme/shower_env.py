@@ -11,10 +11,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Custom implementation of manage shower temperature environment."""
 
 import random
+
 import dm_env
 import numpy as np
 
@@ -27,9 +27,11 @@ class ShowerEnv(dm_env.Environment):
     self.shower_length = 60
 
   def action_spec(self):
-    return dm_env.specs.BoundedArray(
-        shape=(), dtype=int, name='action', minimum=0, maximum=2
-    )
+    return dm_env.specs.BoundedArray(shape=(),
+                                     dtype=int,
+                                     name='action',
+                                     minimum=0,
+                                     maximum=2)
 
   def observation_spec(self):
     return dm_env.specs.BoundedArray(
@@ -63,9 +65,8 @@ class ShowerEnv(dm_env.Environment):
 
     # Return step information
     if done:
-      return dm_env.termination(
-          reward, np.array([self.state], dtype=np.float32)
-      )
+      return dm_env.termination(reward, np.array([self.state],
+                                                 dtype=np.float32))
     else:
       return dm_env.transition(reward, np.array([self.state], dtype=np.float32))
 

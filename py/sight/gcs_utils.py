@@ -11,28 +11,27 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """GCS related helper functions."""
 
 import os
 import subprocess
 
-from absl import logging
 from google.cloud import bigquery
 from google.cloud import storage
+from helpers.logs.logs_handler import logger as logging
 from sight.proto import sight_pb2
 
 
 def upload_blob_from_stream(bucket_name, gcp_path, file_obj, file_name, count):
   """uploads given file to the bucket.
 
-  Args:
-    bucket_name: name of the bucket to store the file
-    gcp_path: directory path to store the file
-    file_obj: file object to be stored
-    file_name: name given to file
-    count: chunk number of file
-  """
+    Args:
+      bucket_name: name of the bucket to store the file
+      gcp_path: directory path to store the file
+      file_obj: file object to be stored
+      file_name: name given to file
+      count: chunk number of file
+    """
   storage_client = storage.Client()
   bucket = storage_client.bucket(bucket_name)
   if not bucket.exists():
@@ -81,7 +80,6 @@ def create_table(
     dataset = client.create_dataset(dataset)
   #   logging.info(f"Dataset {dataset_name} created.")
 
-
   # logging.info(
   #     'Creating external table %s mapping to : %s.',
   #     table_name,
@@ -102,9 +100,8 @@ def create_table(
     logging.info(f"Error creating table: {e}")
 
 
-def create_external_bq_table(
-    params: sight_pb2.Params, file_name: str, client_id: int
-):
+def create_external_bq_table(params: sight_pb2.Params, file_name: str,
+                             client_id: int):
   """create external table in BigQuery from avro files using URI, located in the bucket.
 
   Args:
@@ -113,19 +110,10 @@ def create_external_bq_table(
     client_id: sight client id
   """
   external_file_uri = (
-      params.external_file_uri
-      + params.bucket_name
-      + '/'
-      + params.gcp_path
-      + '/'
+      params.external_file_uri + params.bucket_name + '/' + params.gcp_path +
+      '/'
       # + '/client_'
-      + params.label
-      + '_'
-      + str(client_id)
-      + '/'
-      + '*'
-      + params.file_format
-  )
+      + params.label + '_' + str(client_id) + '/' + '*' + params.file_format)
   if 'PARENT_LOG_ID' not in os.environ:
     create_table(
         os.environ["PROJECT_ID"],

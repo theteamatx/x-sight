@@ -135,6 +135,8 @@
                             "ST_SIMULATION_PARAMETERS",
                             "ST_SIMULATION_STATE",
                             "ST_SIMULATION_TIME_STEP",
+                            "ST_SIMULATION_INITIAL_STATE",
+                            "ST_SIMULATION_BOUNDARY_STATE",
                             "ST_CLUSTER_ASSIGNMENT",
                             "ST_CONFIGURATION"
                         ],
@@ -639,6 +641,8 @@
                             "ST_SIMULATION_PARAMETERS",
                             "ST_SIMULATION_STATE",
                             "ST_SIMULATION_TIME_STEP",
+                            "ST_SIMULATION_INITIAL_STATE",
+                            "ST_SIMULATION_BOUNDARY_STATE",
                             "ST_CLUSTER_ASSIGNMENT"
                         ],
                         "doc": "sub-type"

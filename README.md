@@ -141,7 +141,8 @@ cd venvs
 virtualenv sight_env --python=python3.10
 source ~/venvs/sight_env/bin/activate
 
-# Install necessary dependencies from requirement.txt file
+# Install setup.py compatible setuptools and necessary dependencies from requirement.txt file
+pip install setuptools==58.2.0
 pip install -r ~/x-sight/py/sight/requirements.txt
 ```
 Note : if error ```ModuleNotFoundError: No module named 'virtualenv'``` occurs, try installing virtualenv using pip,
@@ -154,6 +155,64 @@ source  ~/.bashrc
 source ~/venvs/sight_env/bin/activate
 cd ~/x-sight
 ```
+
+#### Setup yapf in vscode
+
+add extention eeyore.yapf in vscode.
+add .vscode folder in the repo and create settings.json file which will override the defauls settings of the vscode
+add following code snippet there or change accordingly if you already have custom setting
+
+```
+{
+  "[python]": {
+    "editor.formatOnSaveMode": "file",
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.defaultFormatter": "eeyore.yapf",
+  },
+  "python.analysis.typeCheckingMode": "off",
+  "yapf.args": ["--style", "{based_on_style: Google, indent_width: 2, column_limit: 80}"],
+}
+```
+you might need to restart vscode to see the changes
+
+If you are setting up this first time and want to apply this style to existing repo
+create .config folder in the repo
+
+1.  Create .style.yapf file with following content in .config folder
+```
+[style]
+based_on_style = google
+indent_width = 2
+column_limit = 80
+```
+
+2.  Create .isort.cfg file with following content in .config folder
+```
+[settings]
+profile = google
+use_parentheses = true
+line_length = 80
+multi_line_output = 3
+```
+
+run the following commands from root folder of the repo to apply those style changes
+```
+yapf -ir -vv --style .config/.style.yapf .
+isort . --settings-path .config/ -v
+```
+#### setup pre-commit hook
+
+
+this pre-commit hook checks for the same formatting style we just setup locally
+```
+pip install pre-commit
+```
+
+-   make sure you created .style.yapf and .isort.cfg file in .config folder from the previous step.
+-   make sure your repo contains .pre-commit-config.yaml file in root directory of repo
+
+
 
 ### User Permissions:
 
@@ -247,11 +306,9 @@ account can have required permissions.
 2) Create service image from the code and host it on [gcr.io](http://gcr.io)
 
     ```bash
-    docker build --tag gcr.io/$PROJECT_ID/sight-default -f sight_service/Dockerfile .
-
-    gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
-
-    docker push gcr.io/$PROJECT_ID/sight-default
+    docker build --tag gcr.io/$PROJECT_ID/sight-default:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD) -f sight_service/Dockerfile . && \
+    gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io && \
+    docker push gcr.io/$PROJECT_ID/sight-default:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD)
     ```
 
 3) With the help of the image, launch cloud run service
@@ -266,11 +323,9 @@ Host the worker image in a cloud which will be used as default image by the
 workers spawned using sight unless specified otherwise.
 
 ```bash
-docker build --tag gcr.io/$PROJECT_ID/sight-worker -f py/Dockerfile .
-
-gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io
-
-docker push gcr.io/$PROJECT_ID/sight-worker
+docker build --tag gcr.io/$PROJECT_ID/sight-worker:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD) -f py/Dockerfile . && \
+gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io && \
+docker push gcr.io/$PROJECT_ID/sight-worker:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD)
 ```
 
 ## Logging API
@@ -763,3 +818,5 @@ cd ~/x-sight
 python sight_service/service_root.py
 ```
 And from another terminal session, User can run any valid command from [this](#example-training-invocation-commands) section and change the flag ```--deployment_mode=local``` to indicate that sight_service is running locally.
+
+

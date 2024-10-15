@@ -11,27 +11,31 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 """Client for optimizers that are called once per episode to communicate with server."""
-from absl import logging
+import time
 from typing import Optional, Sequence, Tuple
-from sight_service.proto import service_pb2
+
+from helpers.logs.logs_handler import logger as logging
+from overrides import override
 from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient
-from overrides import override
-import time
+from sight_service.proto import service_pb2
 
 
 class SingleActionOptimizerClient(OptimizerClient):
   """Single-action Client for the Sight service."""
 
-  def __init__(self, optimizer_type: sight_pb2.DecisionConfigurationStart.OptimizerType, sight, algorithm=None):
+  def __init__(
+      self,
+      optimizer_type: sight_pb2.DecisionConfigurationStart.OptimizerType,
+      sight,
+      algorithm=None):
     super().__init__(optimizer_type)
     self._sight = sight
     self._last_action = None
     self.exp_completed = False
-    if(algorithm == None):
+    if (algorithm == None):
       self._algorithm = algorithm
     elif algorithm == 'auto':
       self._algorithm = sight_pb2.DecisionConfigurationStart.NeverGradConfig.NeverGradAlgorithm.NG_AUTO
@@ -70,42 +74,39 @@ class SingleActionOptimizerClient(OptimizerClient):
 
   @override
   def create_config(self) -> sight_pb2.DecisionConfigurationStart.ChoiceConfig:
-    choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig(
-    )
-    if(self._algorithm):
+    choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig()
+    if (self._algorithm):
       ng_config = sight_pb2.DecisionConfigurationStart.NeverGradConfig(
-          algorithm=self._algorithm
-        )
+          algorithm=self._algorithm)
       choice_config.never_grad_config.CopyFrom(ng_config)
     return choice_config
 
   @override
   def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     # while True:
-      response = service.call(
-          lambda s, meta: s.DecisionPoint(request, 300, metadata=meta)
-      )
-      logging.info('response: %s', response)
-      if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
-        self._last_action = response.action
-        return self._get_dp_action(response)
-      # elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_DONE:
-      #   self.exp_completed = True
-      #   return None
-      # elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_RETRY:
-      #   print('waiting in decision point to get server from response......')
-      #   logging.info('sleeping for 5 seconds......')
-      #   time.sleep(5)
-      else:
-        raise ValueError("No action received from server")
+    response = service.call(
+        lambda s, meta: s.DecisionPoint(request, 300, metadata=meta))
+    logging.info('response: %s', response)
+    if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
+      self._last_action = response.action
+      return self._get_dp_action(response)
+    # elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_DONE:
+    #   self.exp_completed = True
+    #   return None
+    # elif response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_RETRY:
+    #   print('waiting in decision point to get server from response......')
+    #   logging.info('sleeping for 5 seconds......')
+    #   time.sleep(5)
+    else:
+      raise ValueError("No action received from server")
 
   @override
-  def finalize_episode(self, sight, request: service_pb2.FinalizeEpisodeRequest):
+  def finalize_episode(self, sight,
+                       request: service_pb2.FinalizeEpisodeRequest):
     # logging.info('SingleActionOptimizerClient() finalize_episode')
     if self._last_action:
       for a in self._last_action:
         request.decision_point.choice_params.append(a)
     response = service.call(
-        lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta)
-    )
+        lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta))
     return response
