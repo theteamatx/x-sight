@@ -1,7 +1,7 @@
 __pycache__
 *.pyc
 .env
-.vscode/
+.vscode/launch.json
 */.cache_local_data/*
 */.cache_redis_data/*
 extra/*

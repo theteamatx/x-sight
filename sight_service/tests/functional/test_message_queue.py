@@ -3,6 +3,7 @@ import unittest
 
 from readerwriterlock import rwlock
 from sight_service.message_queue import IncrementalUUID
+from sight_service.message_queue import MessageLocation
 from sight_service.message_queue import MessageQueue
 from sight_service.message_queue import RandomUUID
 from sight_service.tests.colorful_tests import ColorfulTestRunner
@@ -28,7 +29,7 @@ class TestMessageQueue(unittest.TestCase):
         self.queue.push_message(200)
         self.queue.push_message(300)
 
-        batch = self.queue.process_messages(worker_id="worker1")
+        batch = self.queue.create_active_batch(worker_id="worker1")
         self.assertEqual(len(batch), 2)
         self.assertIn(1, batch)
         self.assertIn(2, batch)
@@ -42,7 +43,7 @@ class TestMessageQueue(unittest.TestCase):
         self.queue.push_message(100)
         self.queue.push_message(200)
 
-        batch = self.queue.process_messages(worker_id="worker1")
+        batch = self.queue.create_active_batch(worker_id="worker1")
         self.queue.complete_message(1, "worker1")
 
         status = self.queue.get_status()
@@ -56,7 +57,7 @@ class TestMessageQueue(unittest.TestCase):
         self.queue.push_message(200)
         self.queue.push_message(300)
 
-        batch = self.queue.process_messages(worker_id="worker1", new_batch_size=1)
+        batch = self.queue.create_active_batch(worker_id="worker1", new_batch_size=1)
         self.assertEqual(len(batch), 1)
         self.assertIn(1, batch)
 
@@ -70,12 +71,12 @@ class TestMessageQueue(unittest.TestCase):
         self.queue.push_message(100)
         self.queue.push_message(200)
 
-        batch = self.queue.process_messages(worker_id="worker1")
+        batch = self.queue.create_active_batch(worker_id="worker1")
         with self.assertRaises(ValueError):
             self.queue.complete_message(999, "worker1")
 
     def test_empty_process_messages(self):
-        batch = self.queue.process_messages(worker_id="worker1")
+        batch = self.queue.create_active_batch(worker_id="worker1")
         self.assertEqual(len(batch), 0)
         status = self.queue.get_status()
         self.assertEqual(status['pending'], 0)
@@ -85,9 +86,9 @@ class TestMessageQueue(unittest.TestCase):
     def test_find_message_location(self):
         self.queue.push_message(100)
         self.queue.push_message(200)
-        self.queue.process_messages(worker_id="worker1")
+        self.queue.create_active_batch(worker_id="worker1")
         location = self.queue.find_message_location(1)
-        self.assertEqual(location, "active")
+        self.assertEqual(location, MessageLocation.ACTIVE)
 
     def test_get_all_messages(self):
         self.queue.push_message(100)
@@ -99,7 +100,7 @@ class TestMessageQueue(unittest.TestCase):
         self.assertEqual(len(all_messages['completed']), 0)
 
         # Process the messages, which should move them to 'active' under a specific worker_id
-        self.queue.process_messages(worker_id="worker1")
+        self.queue.create_active_batch(worker_id="worker1")
         all_messages = self.queue.get_all_messages()
 
         # After processing, 'pending' should be empty, 'active' should have 2 messages under 'worker1'
@@ -116,8 +117,6 @@ class TestMessageQueue(unittest.TestCase):
         self.assertIn("worker1", all_messages['active'])
         self.assertEqual(len(all_messages['active']["worker1"]), 1)
         self.assertEqual(len(all_messages['completed']), 1)
-
-
 
     def test_add_message_with_uuid(self):
         uuid_id_generator = RandomUUID()

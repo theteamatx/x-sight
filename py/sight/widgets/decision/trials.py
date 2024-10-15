@@ -411,9 +411,9 @@ def start_job_in_dsub_local(
       f'GOOGLE_CLOUD_PROJECT={os.environ["PROJECT_ID"]}',
       '--env',
       f'PROJECT_ID={os.environ["PROJECT_ID"]}',
-      '--env',
-      'GOOGLE_APPLICATION_CREDENTIALS=/mnt/data/mount/file'
-      + f'{FLAGS.gcloud_dir_path}/application_default_credentials.json',
+      # '--env',
+      # 'GOOGLE_APPLICATION_CREDENTIALS=/mnt/data/mount/file'
+      # + f'{FLAGS.gcloud_dir_path}/application_default_credentials.json',
       '--env',
       f'PARENT_LOG_ID={sight.id}',
       # '--env',

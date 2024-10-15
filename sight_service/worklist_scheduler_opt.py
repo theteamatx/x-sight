@@ -129,7 +129,7 @@ class WorklistScheduler(SingleActionOptimizer):
     ) -> service_pb2.DecisionPointResponse:
     method_name = "decision_point"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    logging.info('seld.queue ==> %s', self.queue)
+    logging.info('self.queue ==> %s', self.queue)
 
     all_messages = self.queue.get_all_messages()
 
@@ -258,7 +258,7 @@ class WorklistScheduler(SingleActionOptimizer):
     else:
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
 
-      self.queue.process_messages(worker_id=request.worker_id)
+      self.queue.create_active_batch(worker_id=request.worker_id)
 
     logging.info("self.queue => %s", self.queue)
     logging.info("worker_alive_status is %s", worker_alive_status)
