@@ -1,0 +1,11 @@
+{
+  "[python]": {
+    "editor.formatOnSaveMode": "file",
+    "editor.formatOnSave": true,
+    "editor.formatOnType": true,
+    "editor.defaultFormatter": "eeyore.yapf",
+  },
+  "python.analysis.typeCheckingMode": "off",
+  "yapf.args": ["--style", "{based_on_style: Google, indent_width: 2, column_limit: 80}"],
+}
+
