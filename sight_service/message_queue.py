@@ -136,6 +136,18 @@ class IMessageQueue(Protocol, Generic[T]):
     """Returns all messages in the message queue."""
     ...
 
+  def get_pending(self) -> Dict[ID, T]:
+      """Returns all pending messages in the queue."""
+      ...
+
+  def get_active(self) -> Dict[str, Dict[ID, T]]:
+      """Returns all active messages in the queue."""
+      ...
+
+  def get_completed(self) -> Dict[ID, T]:
+      """Returns all completed messages in the queue."""
+      ...
+
   def find_message_location(self, message_id: ID) -> MessageLocation:
     """Returns the location of the message in the message queue."""
     ...
@@ -319,6 +331,24 @@ class MessageQueue(IMessageQueue[T]):
         'active': active_copy,
         'completed': completed_copy,
     }
+
+  @overrides
+  def get_pending(self) -> Dict[ID, T]:
+      """Returns all pending messages in the queue."""
+      with self.pending_lock.gen_rlock():
+          return copy.deepcopy(self.pending)
+
+  @overrides
+  def get_active(self) -> Dict[str, Dict[ID, T]]:
+      """Returns all active messages in the queue."""
+      with self.active_lock.gen_rlock():
+          return copy.deepcopy(self.active)
+
+  @overrides
+  def get_completed(self) -> Dict[ID, T]:
+      """Returns all completed messages in the queue."""
+      with self.completed_lock.gen_rlock():
+          return copy.deepcopy(self.completed)
 
   @overrides
   def find_message_location(self, message_id: ID) -> MessageLocation:

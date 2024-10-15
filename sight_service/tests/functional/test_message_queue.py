@@ -52,6 +52,28 @@ class TestMessageQueue(unittest.TestCase):
         self.assertEqual(status['completed'], 1)
         self.assertIn(1, self.queue.get_all_messages()['completed'])
 
+
+    def test_get_pending_messages(self):
+        self.queue.push_message(100)
+        self.queue.push_message(200)
+        pending_messages = self.queue.get_pending()
+        self.assertEqual(len(pending_messages), 2)
+
+    def test_get_active_messages(self):
+        self.queue.push_message(100)
+        self.queue.push_message(200)
+        self.queue.create_active_batch(worker_id="worker1")
+        active_messages = self.queue.get_active()
+        self.assertIn("worker1", active_messages)
+        self.assertEqual(len(active_messages["worker1"]), 2)
+
+    def test_get_completed_messages(self):
+        self.queue.push_message(100)
+        self.queue.create_active_batch(worker_id="worker1")
+        self.queue.complete_message(1, "worker1")
+        completed_messages = self.queue.get_completed()
+        self.assertEqual(len(completed_messages), 1)
+
     def test_process_and_complete_message(self):
         self.queue.push_message(100)
         self.queue.push_message(200)
