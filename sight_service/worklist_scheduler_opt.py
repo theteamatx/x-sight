@@ -20,7 +20,6 @@ from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
 from sight.proto import sight_pb2
-from sight.widgets.decision import utils
 # from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.optimizer_instance import param_proto_to_dict

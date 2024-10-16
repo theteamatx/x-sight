@@ -22,7 +22,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Text
 
 from absl import flags
-import dm_env
+# import dm_env
 # from absl import logging
 from helpers.logs.logs_handler import logger as logging
 import numpy as np
@@ -34,9 +34,9 @@ from sight.utility import poll_network_batch_outcome
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
 from sight.widgets.decision import utils
-from sight.widgets.decision.acme.acme_optimizer_client import (
-    AcmeOptimizerClient
-)
+# from sight.widgets.decision.acme.acme_optimizer_client import (
+#     AcmeOptimizerClient
+# )
 from sight.widgets.decision.env_driver import driver_fn
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
 from sight.widgets.decision.single_action_optimizer_client import (
@@ -622,7 +622,6 @@ def run(
       #         driver_fn(env, sight)
       #     else:
       #         driver_fn(sight)
-
       #     finalize_episode(sight)
       #     sight.exit_block('Decision Sample', sight_pb2.Object())
 
@@ -632,6 +631,7 @@ def run(
       # )
 
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+
 
 
 def get_state_attrs(sight: Any) -> list[str]:
@@ -820,6 +820,11 @@ def decision_point(
           sub_type=sight_pb2.Value.ST_DOUBLE,
           double_value=chosen_action[attr],
       )
+    elif isinstance(chosen_action[attr], int):
+        val = sight_pb2.Value(
+            sub_type=sight_pb2.Value.ST_INT64,
+            int64_value=chosen_action[attr],
+        )
     else:
       raise ValueError("unsupported type!!")
 

@@ -38,10 +38,10 @@ import time
 from typing import Any, Dict, List, Tuple
 import uuid
 
-from overrides import overrides
+# from overrides import overrides
 from readerwriterlock import rwlock
 from sight.proto import sight_pb2
-from sight_service import service_utils
+# from sight_service import service_utils
 # from sight_service.acme_optimizer import Acme
 from sight_service.bayesian_opt import BayesianOpt
 from sight_service.exhaustive_search import ExhaustiveSearch
