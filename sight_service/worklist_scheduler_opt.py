@@ -24,6 +24,7 @@ from sight.proto import sight_pb2
 from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.optimizer_instance import param_proto_to_dict
 from sight_service.proto import service_pb2
+from sight_service.single_action_optimizer import MessageDetails
 from sight_service.single_action_optimizer import SingleActionOptimizer
 
 _file_name = "exhaustive_search.py"
@@ -45,6 +46,16 @@ class WorklistScheduler(SingleActionOptimizer):
     self.possible_values = {}
     self.max_reward_sample = {}
 
+
+  def add_outcome_to_outcome_response(self,msg_details : MessageDetails, sample_id, outcome: service_pb2.GetOutcomeResponse.outcome):
+    outcome.action_id = sample_id
+    outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
+    outcome.reward = msg_details.reward
+    outcome.action_attrs.extend(param_dict_to_proto(msg_details.action))
+    outcome.outcome_attrs.extend(param_dict_to_proto(msg_details.outcome))
+    outcome.attributes.extend(param_dict_to_proto(msg_details.attributes))
+
+
   @overrides
   def launch(self,
              request: service_pb2.LaunchRequest) -> service_pb2.LaunchResponse:
@@ -64,10 +75,10 @@ class WorklistScheduler(SingleActionOptimizer):
     attributes = param_proto_to_dict(request.attributes)
     action_attrs = param_proto_to_dict(request.action_attrs)
 
-    unique_id = self.queue.push_message(message={
-        "action_atrrs": action_attrs,
-        "attributes": attributes
-    })
+    message = MessageDetails.create(action=action_attrs,attributes=attributes)
+
+
+    unique_id = self.queue.push_message(message)
 
     logging.info("self.queue => %s", self.queue)
 
@@ -81,41 +92,26 @@ class WorklistScheduler(SingleActionOptimizer):
 
     logging.info('self.queue => %s', self.queue)
 
-    all_messages = self.queue.get_all_messages()
+    all_completed_messages = self.queue.get_completed()
 
     response = service_pb2.GetOutcomeResponse()
     if not request.unique_ids:
-      for sample_id in all_messages["completed"]:
-        sample_details = all_messages["completed"][sample_id]
+      for sample_id in all_completed_messages:
         outcome = response.outcome.add()
-        outcome.action_id = sample_id
-        outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
-        outcome.reward = sample_details['reward']
-        outcome.action_atrrs.extend(
-            param_dict_to_proto(sample_details['action']))
-        outcome.outcome_attrs.extend(
-            param_dict_to_proto(sample_details['outcome']))
-        outcome.attributes.extend(
-            param_dict_to_proto(sample_details['attribute']))
+        given_msg_details = all_completed_messages[sample_id]
+        self.add_outcome_to_outcome_response(msg_details=given_msg_details,sample_id=sample_id,outcome=response)
     else:
       required_samples = list(request.unique_ids)
       for sample_id in required_samples:
         outcome = response.outcome.add()
         outcome.action_id = sample_id
-        if sample_id in all_messages['completed']:
-          sample_details = all_messages['completed'][sample_id]
-          outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
-          outcome.reward = sample_details['reward']
-          outcome.action_attrs.extend(
-              param_dict_to_proto(sample_details['action']))
-          outcome.outcome_attrs.extend(
-              param_dict_to_proto(sample_details['outcome']))
-          outcome.attributes.extend(
-              param_dict_to_proto(sample_details['attribute']))
-        elif sample_id in all_messages['pending']:
+        if sample_id in all_completed_messages:
+          given_msg_details = all_completed_messages[sample_id]
+          self.add_outcome_to_outcome_response(msg_details=given_msg_details,sample_id=sample_id,outcome=outcome)
+        elif self.queue.is_message_in_pending(sample_id):
           outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.PENDING
           outcome.response_str = '!! requested sample not yet assigned to any worker !!'
-        elif sample_id in all_messages['active']:
+        elif self.queue.is_message_in_active(sample_id):
           outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.ACTIVE
           outcome.response_str = '!! requested sample not completed yet !!'
         else:
@@ -131,14 +127,14 @@ class WorklistScheduler(SingleActionOptimizer):
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     logging.info('self.queue ==> %s', self.queue)
 
-    all_messages = self.queue.get_all_messages()
+    all_active_messages = self.queue.get_active()
 
     response = service_pb2.DecisionPointResponse()
-    if request.worker_id in all_messages['active']:
-      samples = all_messages['active'][request.worker_id]
+    if request.worker_id in all_active_messages:
+      samples = all_active_messages[request.worker_id]
     else:
       raise ValueError("Key not found in active_samples")
-    next_action = list(samples.values())[0]["action_atrrs"]
+    next_action = list(samples.values())[0].action
     logging.info('next_action=%s', next_action)
     response.action.extend(param_dict_to_proto(next_action))
     response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
@@ -188,25 +184,16 @@ class WorklistScheduler(SingleActionOptimizer):
 
     logging.info("self.queue => %s", self.queue)
 
-    all_messages = self.queue.get_all_messages()
+    all_active_messages = self.queue.get_active()
 
-    active_messages = all_messages["active"][request.worker_id]
+    active_messages : Dict[str,MessageDetails] = all_active_messages[request.worker_id]
 
     for action_id, message in active_messages.items():
       self.queue.complete_message(
           message_id=action_id,
           worker_id=request.worker_id,
-          extra_details={
-              'action':
-                  param_proto_to_dict(request.decision_point.choice_params),
-              'attribute':
-                  message["attributes"],
-              'reward':
-                  request.decision_outcome.reward,
-              'outcome':
-                  param_proto_to_dict(request.decision_outcome.outcome_params)
-          })
-
+          update_fn = lambda msg: msg.update(reward =  request.decision_outcome.reward, outcome = param_proto_to_dict(request.decision_outcome.outcome_params), action = param_proto_to_dict(request.decision_point.choice_params))
+      )
     logging.info("self.queue => %s", self.queue)
 
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
@@ -249,11 +236,11 @@ class WorklistScheduler(SingleActionOptimizer):
 
     logging.info("self.queue => %s", self.queue)
 
-    all_messages = self.queue.get_all_messages()
+    all_pending_messages = self.queue.get_pending()
 
     if (self.exp_completed):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
-    elif (not all_messages['pending']):
+    elif (not all_pending_messages):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT

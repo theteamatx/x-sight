@@ -6,6 +6,7 @@ import enum
 from typing import Any, Callable, Dict, Generic, Optional, Protocol, TypeVar
 import uuid
 
+from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
 
@@ -107,15 +108,14 @@ class IMessageQueue(Protocol, Generic[T]):
     ...
 
   def complete_message(
-      self, message_id: ID, worker_id: str, extra_details: Optional[any] = None
+      self, message_id: ID, worker_id: str, update_fn: Callable[[T], T] = None
     ) -> None:
     """Completes a message of the given message ID of the given worker it moves it to the completed queue.
 
     Args:
       message_id: The ID of the message to complete.
       worker_id: The ID of the worker that completed the message.
-      extra_details: Any extra details to add to the completed message. (only
-        for dict types messages)
+      update_fn: A function that takes the current message and returns the updated message.
 
     Note:
         The use of `extra_details` is unusual and specific to this
@@ -152,6 +152,17 @@ class IMessageQueue(Protocol, Generic[T]):
     """Returns the location of the message in the message queue."""
     ...
 
+  def is_message_in_pending(self, message_id: ID) -> bool:
+      """Checks if the message is in the pending state."""
+      ...
+
+  def is_message_in_active(self, message_id: ID) -> bool:
+      """Checks if the message is in the active state."""
+      ...
+
+  def is_message_in_completed(self, message_id: ID) -> bool:
+      """Checks if the message is in the completed state."""
+      ...
 
 class MessageQueue(IMessageQueue[T]):
   """A message queue is a data structure that stores messages.
@@ -274,27 +285,27 @@ class MessageQueue(IMessageQueue[T]):
 
   @overrides
   def complete_message(
-      self, message_id: ID, worker_id: str, extra_details: Optional[any] = None
+      self, message_id: ID, worker_id: str, update_fn: Callable[[T], T] = None
     ) -> None:
     """Completes a message of the given message ID of the given worker it moves it to the completed queue.
 
     Args:
       message_id: The ID of the message to complete.
       worker_id: The ID of the worker that completed the message.
-      extra_details: Any extra details to add to the completed message. (only
-        for dict types messages)
+      update_fn: A function that takes the current message and returns the updated message.
     """
     with self.active_lock.gen_wlock():
       if message_id in self.active.get(worker_id, {}):
         message = copy.deepcopy(self.active[worker_id][message_id])
         del self.active[worker_id][message_id]
 
+        if update_fn is not None:
+            logging.info('Before update_fn msg: %s', message)
+            message = update_fn(message)  # Apply the lambda to update the message
+            logging.info('After update_fn msg: %s', message)
+
         with self.completed_lock.gen_wlock():
           self.completed[message_id] = message
-          if extra_details is not None and isinstance(
-              self.completed[message_id], dict
-          ):
-            self.completed[message_id].update(extra_details)  # pytype: disable=attribute-error
       else:
         raise ValueError(
             f'Failed while completing the msg ,as Message ID {message_id} not found for worker {worker_id}'
@@ -349,6 +360,26 @@ class MessageQueue(IMessageQueue[T]):
       """Returns all completed messages in the queue."""
       with self.completed_lock.gen_rlock():
           return copy.deepcopy(self.completed)
+
+
+  @overrides
+  def is_message_in_pending(self,message_id: ID) -> bool:
+    """Returns the true if the message in the pending queue."""
+    with self.pending_lock.gen_rlock():
+      return message_id in self.pending
+
+  @overrides
+  def is_message_in_active(self,message_id: ID) -> bool:
+    """Returns the true if the message in the active queue."""
+    with self.active_lock.gen_rlock():
+      for _, messages in self.active.items():
+        return message_id in messages
+
+  @overrides
+  def is_message_in_completed(self,message_id: ID) -> bool:
+    """Returns the true if the message in the completed queue."""
+    with self.completed_lock.gen_rlock():
+      return message_id in self.completed
 
   @overrides
   def find_message_location(self, message_id: ID) -> MessageLocation:

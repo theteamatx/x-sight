@@ -2,23 +2,23 @@
 
 This document details the key steps needed to start using the Sight system.
 
-1.  The [Prerequisites](#prerequisites)      section details all the steps
+1. The [Prerequisites](#prerequisites)      section details all the steps
     needed to configure Sight to work within a given GCP project, including
     accounts, accessing the Sight codebase and launching the Sight server.
-2.  The [Logging API](#logging-api) section summarizes Sight's APIs
+2. The [Logging API](#logging-api) section summarizes Sight's APIs
     for logging the application's execution so that it can be visualized,
     searched or analyzed by external tools.
-3.  Section [Decision API](#decision-api) describes Sight's APIs for
+3. Section [Decision API](#decision-api) describes Sight's APIs for
     using external ML libraries to control or optimize the application's
     execution to achieve the user's objectives.
-4.  Section [Sight Utilities](#sight-utilities) details useful supporting
+4. Section [Sight Utilities](#sight-utilities) details useful supporting
     tools that make it easier to use Sight.
 
 ## Prerequisites
 
-### Fetching Sight code:
+### Fetching Sight code
 
-#### Install packages:
+#### Install packages
 
 ```bash
 # Install basic libraries
@@ -28,7 +28,7 @@ sudo apt install virtualenv
 sudo apt-get install python3-pip
 ```
 
-#### Install docker:
+#### Install docker
 
 ##### for Google-internal user (on cloudtop)
 
@@ -79,7 +79,7 @@ sudo docker run hello-world
 sudo usermod -aG docker $USER
 ```
 
-#### Get code from github:
+#### Get code from github
 
 ```bash
 #clone and fetch latest sigh code from gerrit
@@ -130,7 +130,7 @@ pyenv global
 
 After installing the supported Python version (3.9 or 3.10), you can proceed with creating virtualenv and install required depencies.
 
-#### Create virtual env:
+#### Create virtual env
 
 ```bash
 # Create and set-up new virtual environment
@@ -145,6 +145,7 @@ source ~/venvs/sight_env/bin/activate
 pip install setuptools==58.2.0
 pip install -r ~/x-sight/py/sight/requirements.txt
 ```
+
 Note : if error ```ModuleNotFoundError: No module named 'virtualenv'``` occurs, try installing virtualenv using pip,
 ```sudo pip install virtualenv```
 
@@ -162,7 +163,7 @@ add extention eeyore.yapf in vscode.
 add .vscode folder in the repo and create settings.json file which will override the defauls settings of the vscode
 add following code snippet there or change accordingly if you already have custom setting
 
-```
+```json
 {
   "[python]": {
     "editor.formatOnSaveMode": "file",
@@ -174,21 +175,24 @@ add following code snippet there or change accordingly if you already have custo
   "yapf.args": ["--style", "{based_on_style: Google, indent_width: 2, column_limit: 80}"],
 }
 ```
+
 you might need to restart vscode to see the changes
 
 If you are setting up this first time and want to apply this style to existing repo
 create .config folder in the repo
 
-1.  Create .style.yapf file with following content in .config folder
-```
+1. Create .style.yapf file with following content in .config folder
+
+```text
 [style]
 based_on_style = google
 indent_width = 2
 column_limit = 80
 ```
 
-2.  Create .isort.cfg file with following content in .config folder
-```
+1. Create .isort.cfg file with following content in .config folder
+
+```text
 [settings]
 profile = google
 use_parentheses = true
@@ -197,43 +201,178 @@ multi_line_output = 3
 ```
 
 run the following commands from root folder of the repo to apply those style changes
-```
+
+```bash
 yapf -ir -vv --style .config/.style.yapf .
 isort . --settings-path .config/ -v
 ```
+
 #### setup pre-commit hook
 
-
 this pre-commit hook checks for the same formatting style we just setup locally
-```
+
+```bash
 pip install pre-commit
 ```
 
--   make sure you created .style.yapf and .isort.cfg file in .config folder from the previous step.
--   make sure your repo contains .pre-commit-config.yaml file in root directory of repo
+- make sure you created .style.yapf and .isort.cfg file in .config folder from the previous step.
+- make sure your repo contains .pre-commit-config.yaml file in root directory of repo
 
+## Test Cases
 
+### 🧪 Test Suite Structure and Automation Overview
 
-### User Permissions:
+Welcome to the test automation setup of this repository! Our test suite is designed for clarity, scalability, and seamless automation using **pre-commit hooks** and **GitHub Actions**. This ensures that all code changes are validated through a robust testing pipeline before integration.
+
+### 📂 Test Suite Structure
+
+The test cases are organized in a **folder-based hierarchy** to provide clear separation between different features and test types. This organization makes it easy to locate, manage, and run specific tests. Here's an overview of the structure:
+
+```text
+root/
+  ├── feature1/
+  │ └── tests/
+  │   ├── functional/
+  │   ├── integration/
+  │   └── performance/
+  ├── feature2/
+  │ └── tests/
+  │   ├── functional/
+  │   ├── integration/
+  │   └── performance/
+  └── tests/
+    └── discover_and_run_tests.py
+
+```
+
+### 🔍 Test Types Explained
+
+- **Functional Tests**: Located under each feature’s `tests/functional/` folder. These tests validate that each feature works according to the requirements.
+- **Integration Tests**: Found in `tests/integration/`, these tests verify the interactions between different modules and components.
+- **Performance Tests**: Stored in `tests/performance/`, these tests assess the performance and responsiveness of different features.
+
+### 🛠 Utility Scripts
+
+- **`discover_and_run_tests.py`**: This script is responsible for discovering and running tests based on the type and pattern specified. It automates test discovery and execution using `unittest` and a custom test runner for enhanced output.
+
+### ⚙️ Automation with Pre-commit Hooks
+
+We use **pre-commit hooks** to ensure that tests are run before any commit is made. This prevents breaking changes from being committed to the repository. The configuration is set up in `.pre-commit-config.yml`:
+
+```yaml
+.pre-commit-config.yml
+
+- repo: local
+  hooks:
+    - id: run-functional-tests
+      name: Run all functional unit-tests
+      entry: python tests/discover_and_run_tests.py --type functional
+      language: system
+      always_run:
+```
+
+#### 💡 How It Works
+
+- **Hook ID**: `run-functional-tests` – This hook is configured to run all functional tests before a commit is made, ensuring no breaking changes are introduced.
+- **Entry Point**: The hook uses the command `python tests/discover_and_run_tests.py --type functional` to execute the `discover_and_run_tests.py` script. The `--type functional` argument specifies that only functional tests are to be executed.
+- **Always Run**: The `always_run` option ensures that the hook executes every time a commit attempt is made, making it a reliable safeguard against introducing untested changes.
+
+### 🚀 Continuous Integration with GitHub Actions
+
+GitHub Actions automate the execution of tests whenever changes are pushed to the repository. The configuration is defined in `.github/workflows/functional-test.yml`:
+
+```yaml
+## .github/workflows/functional-test.yml
+
+name: Run test-cases
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      PYTHONPATH: ${{ github.workspace }} # Set the PYTHONPATH
+
+    strategy:
+      matrix:
+        test-type: [functional] # Test types
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Print Python Path
+        run: |
+          which python
+          python -c "import sys; print(sys.executable)"
+          python -c "import sys; print(sys.path)"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r fvs/requirements.txt
+          pip install absl-py==1.4.0
+          pip install colorama==0.4.6
+
+      - name: Run ${{ matrix.test-type }} test-cases
+        run: |
+          python tests/discover_and_run_tests.py --type ${{ matrix.test-type }}
+```
+
+#### 🔧 Key Details
+
+- **Job Trigger**: The GitHub Action is triggered on every push event to the repository, ensuring that tests are continuously run and code changes are validated automatically.
+- **Test Strategy**: A matrix strategy is used to specify different types of tests (e.g., functional). This makes it easy to expand the testing setup by adding new types of tests in the future.
+- **Dependencies**: The action installs dependencies listed in the `requirements.txt` files, ensuring the testing environment is properly set up before tests are executed. This guarantees that the correct versions and dependencies are used during the test run.
+
+### 🎯 Running Tests Locally
+
+To manually run tests, you can use the `discover_and_run_tests.py` script. This allows developers to run specific test types directly from their local environment. Example usage:
+
+```bash
+python tests/discover_and_run_tests.py --type functional
+```
+
+- `--type`: Specify the type of tests to run (e.g., `functional`, `integration`, `performance`).
+
+- `--pattern`: Optionally use --pattern test_*.py to specify the naming pattern for test files (default is test_*.py)
+
+This flexible setup enables developers to execute tests based on specific criteria, ensuring efficient and targeted test runs.
+
+### 📢 Summary
+
+By structuring the tests and integrating **pre-commit hooks** and **GitHub Actions**, we achieve the following:
+
+- **Code Quality**: Consistent testing ensures that code changes are validated before they are integrated, maintaining high code quality.
+- **Immediate Feedback**: Developers receive immediate feedback on code changes, preventing errors and issues from being introduced into the codebase.
+- **Continuous Integration**: Automated testing with GitHub Actions ensures that the repository remains stable and reliable as new changes are pushed.
+
+This setup enhances the development experience, ensuring robust, high-quality software delivery and minimizing the risk of integration issues. 🚀
+
+### User Permissions
 
 Note : all the follow up commands using $PROJECT_ID assumes you have it already set to your gcp project id. If not, set it via
+
 ```bash
 export PROJECT_ID=YOUR_ACTUAL_PROJECT_ID
 ```
-
 
 For completing rest of the task from prerequisites, one needs either owner role
 and directly continue to [this](#heading=h.gmwxj9f1df9f) section or one can
 create Sight Manager role as following and assign that role to any user and
 delegate the remaining tasks from prerequisites.
 
-#### Creating Sight Manager role:
+#### Creating Sight Manager role
 
 ```bash
 gcloud iam roles create sight_manager --project=$PROJECT_ID --file=infra/sight-manager-role.yaml
 ```
 
-#### Assigning role to User:
+#### Assigning role to User
 
 ```bash
 gcloud projects add-iam-policy-binding $PROJECT_ID \
@@ -247,28 +386,30 @@ permissions to run the Sight.
 
 Make sure following APIs are enabled in your gcp project
 
--   aiplatform.googleapis.com
--   lifesciences.googleapis.com
--   run.googleapis.com
--   cloudresourcemanager.googleapis.com
+- aiplatform.googleapis.com
+- lifesciences.googleapis.com
+- run.googleapis.com
+- cloudresourcemanager.googleapis.com
 
-### Custom Roles/Service-account:
+### Custom Roles/Service-account
 
-#### Sight User:
+#### Sight User
 
-1)  Create a custom role for User working with Sight from the sight-user-role.yaml file available in the root directory of repo.
+1) Create a custom role for User working with Sight from the sight-user-role.yaml file available in the root directory of repo.
+
     ```bash
     gcloud iam roles create sight_user --project=$PROJECT_ID --file=infra/sight-user-role.yaml
     ```
 
-2)  Assign the custom role to user.
+2) Assign the custom role to user.
 
     ```bash
     gcloud projects add-iam-policy-binding $PROJECT_ID \
     --member="user:$USER_ACCOUNT" \
     --role="projects/$PROJECT_ID/roles/sight_user"
     ```
-#### Sight Service Account:
+
+#### Sight Service Account
 
 1) Create the service account for sight related work
 
@@ -294,7 +435,7 @@ account can have required permissions.
     --role="projects/$PROJECT_ID/roles/sight_service_account"
     ```
 
-### Launching Default-service:
+### Launching Default-service
 
 1) Add your project details to .env file in the code
 
@@ -317,7 +458,7 @@ account can have required permissions.
     gcloud run deploy sight-default --image=gcr.io/$PROJECT_ID/sight-default:latest --allow-unauthenticated --service-account=sight-service-account@$PROJECT_ID.iam.gserviceaccount.com --concurrency=default --cpu=2 --memory=8Gi --min-instances=1 --max-instances=1 --no-cpu-throttling --region=us-central1 --project=$PROJECT_ID
     ```
 
-### Hosting worker image:
+### Hosting worker image
 
 Host the worker image in a cloud which will be used as default image by the
 workers spawned using sight unless specified otherwise.
@@ -437,7 +578,7 @@ log may be viewed:
 
 ![image](images/image4.png)
 
-## Decision API:
+## Decision API
 
 ### Overview
 
@@ -464,17 +605,17 @@ application into a form that allows Sight to run it many times as it trains the
 model and then start execution via Sight's `decision.run()` function. Currently
 Sight supports the following package types:
 
-1.  If the application logic is implemented via a dm_env-type environment (e.g.
+1. If the application logic is implemented via a dm_env-type environment (e.g.
     the OpenAI gym) users can provide this environment with no modification and
     Sight will call the gym's step and reward functions.
-1.  Alternatively, application logic can be encapsulated in a call-back driver
+1. Alternatively, application logic can be encapsulated in a call-back driver
     function that calls Sight's Decision API directly. Sight will then call this
     driver function one or more times during the model's training process, as
     well as during normal program execution.
 
 ### Decision API using an Environment
 
--   To start the program users must create their environment object and pass it
+- To start the program users must create their environment object and pass it
     to the `decision.run()` function. This environment may be implemented by the
     application developer (e.g. ShowerEnv) or may be a ready-made environment
     from AI gym:
@@ -486,7 +627,7 @@ Sight supports the following package types:
         )
     ```
 
--   The code below provides an example implementation of a gym, which must
+- The code below provides an example implementation of a gym, which must
     implement methods reset(), step(), action_spec() and observation_spec().
 
     ```python
@@ -551,13 +692,13 @@ identify the questions that need to be asked, the format of the answers that
 need to be given and add explicit calls where the application asks for guidance
 and reports back on the outcomes of the ML algorithm's suggestions.
 
--   The first step is to implement the application's entry point as a driver
+- The first step is to implement the application's entry point as a driver
     function that is passed as a parameter to the `decision.run()`call.
--   Next developers must document the properties of the application's dynamic
+- Next developers must document the properties of the application's dynamic
     execution that will be communicated to the ML algorithm as context for the
     decisions it makes. These are passed to the `state_attrs`parameter and
     document the range of possible values of each state parameter.
--   Finally, developers must document the format of the guidance it needs back
+- Finally, developers must document the format of the guidance it needs back
     from the ML algorithm as a set of named attributes and their allowed value
     ranges. These are passed to the `action_attrs`parameter.
 
@@ -582,27 +723,27 @@ and reports back on the outcomes of the ML algorithm's suggestions.
         )
     ```
 
--   The driver function performs all the logic of the application and calls the
+- The driver function performs all the logic of the application and calls the
     following functions to interact with the ML algorithm:
-    -   `data_structures.log_var():`When the application logs a variable
+  - `data_structures.log_var():`When the application logs a variable
         explicitly named as a state variable, it is communicated to the ML
-        algorithm as part of the application's current state. ` `
-    -   `decision.decision_point()`: Asks the ML algorithm for suggestions about
+        algorithm as part of the application's current state. ``
+  - `decision.decision_point()`: Asks the ML algorithm for suggestions about
         how the application should execute. The response a dict with same keys
         as the `action_attrs`parameter in the `decision.run()`call and values in
         the allowed range for each such parameter.
 
-        ```python
-        action = decision_point("label", sight)
-        ```
+    ```python
+    action = decision_point("label", sight)
+    ```
 
-    -  `decision.decision_outcome()`: Communicates to the ML algorithm
+  - `decision.decision_outcome()`: Communicates to the ML algorithm
         the effectiveness of the preceding suggestion, with higher values of
         the `reward` parameter indicating that the
 
-        ```python
-        decision_outcome("label",updated_timestep.reward,sight)
-        ```
+    ```python
+    decision_outcome("label",updated_timestep.reward,sight)
+    ```
 
 - Driver function should looks something like:
 
@@ -638,75 +779,75 @@ and reports back on the outcomes of the ML algorithm's suggestions.
         )
     ```
 
--   In the case of the dm_env type RL environment provided, the default driver
+- In the case of the dm_env type RL environment provided, the default driver
     function gets run multiple times while running the simulation, if the custom
     function is not provided. The usage of decision_point and decision_outcome
     call in this driver function is shown below:
 
-### Running Decision API-enabled applications on the command line:
+### Running Decision API-enabled applications on the command line
 
 Applications the use the Decision API may be run in two modes:
 
--   Training: the ML algorithm observes many runs of the application to learn
+- Training: the ML algorithm observes many runs of the application to learn
     how to make high-quality decisions, and
--   Run: the ML algorithm has been trained and the application is run normally,
+- Run: the ML algorithm has been trained and the application is run normally,
     guided by the trained ML algorithm.
 
 To run the application in training mode users must run the application's binary
 while setting the command line flag ```--decision_mode``` as ```train``` and must use the
 following flags to control the training process:
 
--   ```deployment_mode```: The procedure to use when training a model to drive
+- ```deployment_mode```: The procedure to use when training a model to drive
     applications that use the Decision API.
 
-    -   distributed: The application is executed in parallel on the GCP cloud.
-    -   docker_local: The application is executed locally in a docker container
-    -   local: The application is executed locally in the current OS environment
+  - distributed: The application is executed in parallel on the GCP cloud.
+  - docker_local: The application is executed locally in a docker container
+  - local: The application is executed locally in the current OS environment
 
--   ```optimizer_type```: The optimizer to be used while training (vizier, dm-acme,
+- ```optimizer_type```: The optimizer to be used while training (vizier, dm-acme,
     exhaustive_search)
 
--   num_train_workers: Number of workers to use on the GCP cloud in a training
+- num_train_workers: Number of workers to use on the GCP cloud in a training
     run in distributed mode.
 
--   num_trials: Total number of training trials to perform across all the local
+- num_trials: Total number of training trials to perform across all the local
     or distributed worker nodes.
 
--   docker_image: docker image to used by worker nodes while running the taks
+- docker_image: docker image to used by worker nodes while running the taks
 
--   log_path: path to store the logs of workers
+- log_path: path to store the logs of workers
 
 Once the ML model has been trained users can use this model to guide ordinary
 application runs by executing the application's binary while setting the command
 line flag: ```--decision_mode``` as ```run``` and ```--trained_model_log_id``` as ```$log_id``` of generated
 sight run while training.
 
-### Example demo applications:
+### Example demo applications
 
 To make it easier to experiment with the Decision API the sight/demo directory
 contains the following demo applications that use the Decision API in the
 different ways described above:
 
-1.  shower_demo_without_env.py (dm_acme): driver function that uses the Decision
+1. shower_demo_without_env.py (dm_acme): driver function that uses the Decision
     API explicitly.
-1.  shower_demo_with_env.py (dm_acme): uses the Decision API implicitly via an
+1. shower_demo_with_env.py (dm_acme): uses the Decision API implicitly via an
     RL environment that is driven from Sight.
-1.  gym_demo_env.py (dm_acme): uses the Decision API implicitly to drive an AI
+1. gym_demo_env.py (dm_acme): uses the Decision API implicitly to drive an AI
     gym environment that is specified via the ```--env_name``` command line flag.
-1.  sweetness.py: Simple program that tries to learn the level of sweetness a
+1. sweetness.py: Simple program that tries to learn the level of sweetness a
     user likes and uses the explicit Decision API to describe the state and
     action attributes, as well as the decision point and outcome. Used most
     effectively with the following optimizers: vizier, exhaustive_search.
-1.  volterra_lotka.py: Simulation of the Volterra-Lotka predator-prey model
+1. volterra_lotka.py: Simulation of the Volterra-Lotka predator-prey model
     using the explicit Decision API. Used most effectively with the following
     optimizers: vizier, exhaustive_search.
 
-#### Example Training Invocation Commands:
+#### Example Training Invocation Commands
 
 To make it easier to start experimenting with Sight, below are some example
 commands for running demo files with different optimizers.
 
-##### Without any environment:
+##### Without any environment
 
 To use the sight for training optimizer, without any environment, run following
 command with all the mandatory flags mentioned [here](#running-decision-api-enabled-applications-on-the-command-line):
@@ -722,7 +863,7 @@ python py/sight/demo/shower_demo_without_env.py \
 --docker_image=gcr.io/$PROJECT_ID/sight-worker
 ```
 
-##### With environment:
+##### With environment
 
 To use the sight for training optimizer with gym environment, add env_name flag
 in addition to all the mandatory flags for any other dm_env type environment, no
@@ -740,7 +881,7 @@ python py/sight/demo/gym_demo_env.py \
 --env_name=CartPole-v1
 ```
 
-#### Vizier:
+#### Vizier
 
 To use sight with vertex AI vizier for hyperparameter turning one can use the
 following
@@ -755,7 +896,7 @@ python py/sight/demo/sweetness.py \
 --docker_image=gcr.io/$PROJECT_ID/sight-worker
 ```
 
-#### Exhaustive Search:
+#### Exhaustive Search
 
 ```python
 python py/sight/demo/sweetness.py \
@@ -817,6 +958,5 @@ For this, User can run service_root script from one terminal session
 cd ~/x-sight
 python sight_service/service_root.py
 ```
+
 And from another terminal session, User can run any valid command from [this](#example-training-invocation-commands) section and change the flag ```--deployment_mode=local``` to indicate that sight_service is running locally.
-
-
