@@ -35,8 +35,9 @@ RUN pip3 install --upgrade pip
 RUN pip3 install -r sight_service/requirements.txt
 
 # copy sight code
+COPY py/helpers/logs/ py/helpers/logs/
 COPY py/sight/proto/ py/sight/proto/
-COPY py/helpers/logs py/helpers/logs
+# COPY py/sight/widgets/decision py/sight/widgets/decision
 COPY sight_service/ sight_service/
 COPY fvs_sight/ fvs_sight/
 COPY .env .env

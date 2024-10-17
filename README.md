@@ -16,9 +16,7 @@ This document details the key steps needed to start using the Sight system.
 
 ## Prerequisites
 
-### Fetching Sight code
-
-#### Install packages
+### Installation of Basic Packages
 
 ```bash
 # Install basic libraries
@@ -48,7 +46,9 @@ sudo apt install docker-ce
 # Sudoless Docker
 sudo addgroup docker
 sudo usermod -aG docker $USER
-# In order for the above to take effect, logout and log back in (or reboot if that does not work), or use newgrp docker to change your primary group within a terminal.
+# In order for the above to take effect, logout and log back in
+# (or reboot if that does not work), or use newgrp docker to
+# change your primary group within a terminal.
 ```
 
 ##### for GCP (on VM)
@@ -82,7 +82,7 @@ sudo usermod -aG docker $USER
 #### Get code from github
 
 ```bash
-#clone and fetch latest sigh code from gerrit
+# clone and fetch latest sigh code from github
 cd ~/
 git clone https://github.com/theteamatx/x-sight.git
 ```
@@ -141,18 +141,22 @@ cd venvs
 virtualenv sight_env --python=python3.10
 source ~/venvs/sight_env/bin/activate
 
-# Install setup.py compatible setuptools and necessary dependencies from requirement.txt file
+# Install setup.py compatible setuptools
 pip install setuptools==58.2.0
+# Install necessary dependencies from requirement.txt file
 pip install -r ~/x-sight/py/sight/requirements.txt
 ```
 
 Note : if error ```ModuleNotFoundError: No module named 'virtualenv'``` occurs, try installing virtualenv using pip,
 ```sudo pip install virtualenv```
 
+#### Activate virtual env
+
 ```bash
-# Set python path to x-sight directory and reload the bashrc file
+# Set python path and reload the bashrc file
 echo 'export PYTHONPATH="$HOME/x-sight/py:$HOME/x-sight:$PYTHONPATH"' >> ~/.bashrc
 source  ~/.bashrc
+# Activate virtual env
 source ~/venvs/sight_env/bin/activate
 cd ~/x-sight
 ```
@@ -361,8 +365,13 @@ Note : all the follow up commands using $PROJECT_ID assumes you have it already 
 export PROJECT_ID=YOUR_ACTUAL_PROJECT_ID
 ```
 
-For completing rest of the task from prerequisites, one needs either owner role
-and directly continue to [this](#heading=h.gmwxj9f1df9f) section or one can
+For completing rest of the task from prerequisites,
+
+- one needs owner role and directly continue to the [next](#custom-rolesservice-account) section
+
+or
+
+- one can
 create Sight Manager role as following and assign that role to any user and
 delegate the remaining tasks from prerequisites.
 
@@ -960,3 +969,36 @@ python sight_service/service_root.py
 ```
 
 And from another terminal session, User can run any valid command from [this](#example-training-invocation-commands) section and change the flag ```--deployment_mode=local``` to indicate that sight_service is running locally.
+
+### VM server
+
+As cloud-run periodically restarts the container, if you want to run the experiment for longer duration (24 hours), you can deploy the server on vm, client and worker can hit that server using internal IP of the VM. Here's the setup you'll need
+
+- Create VM with sight-service-account
+- SSH into the VM and pull the server docker image on VM
+
+```bash
+docker pull gcr.io/cameltrain/sight-dev-service:15oct
+```
+
+- Bind your cloudtop's 8080 port to VM's 8080 port so, we can send request to server on VM using localhost from cloudtop (as this VM and our cloudtop are not in the same network, we can't connect to it's internal/external IP)
+
+```bash
+gcloud compute ssh $INSTANCE_NAME --project $PROJECT_ID --zone $INSTANCE_ZONE  -- -o ProxyCommand='corp-ssh-helper %h %p' -L localhost:8080:localhost:8080
+```
+
+- once you ssh'ed into the vm from the above command, start server container on VM
+
+```bash
+docker run -it -p 8080:8080 gcr.io/cameltrain/sight-dev-service:15oct
+```
+
+- this will bind container's 8080 port to VM's 8080 port, which enventually points to cloudtop's 8080 port so, client can direcly ping localhost from cloudtop but will be using the server deployed on VM
+
+Note :
+
+while spawning mulitple workers, It may hit the limit of maximum allowed IP address in the given region, so we're spawning workers with only internal IP. This creates another issue as this VM, can't connect with any external link but what if our server is deployed on cloud run?
+
+for that, we have to enable Private Google Access in the default subnet vpc network to allow all the VMs in that region to reach the external IP addresses of Google APIs and services, in our case - cloud run.
+
+So, make sure the subnet of the vpc network for region you specified while spawning workers has this Private Google Access enabled
