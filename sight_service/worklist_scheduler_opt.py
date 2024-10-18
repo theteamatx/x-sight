@@ -77,11 +77,6 @@ class WorklistScheduler(SingleActionOptimizer):
 
     message = MessageDetails.create(action=action_attrs,attributes=attributes)
 
-    # Create response
-    response = service_pb2.ProposeActionResponse(action_id=self.unique_id)
-    self.unique_id += 1
-    return response
-
     unique_id = self.queue.push_message(message)
 
     logging.info("self.queue => %s", self.queue)

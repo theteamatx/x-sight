@@ -60,11 +60,12 @@ class MessageDetails:
     return self
 
   def __str__(self):
-      return (f"MessageDetails(\n"
-              f"action: {self.action},\n"
-              f"attributes: {self.attributes},\n"
-              f"reward: {self.reward},\n"
-              f"outcome: {self.outcome}\n)")
+      return (f"[X]")
+              # (f"MessageDetails(\n"
+              # f"action: {self.action},\n"
+              # f"attributes: {self.attributes},\n"
+              # f"reward: {self.reward},\n"
+              # f"outcome: {self.outcome}\n)")
 
 class SingleActionOptimizer(OptimizerInstance):
   """An SingleActionOptimizer class that is generic for all optimizers.
