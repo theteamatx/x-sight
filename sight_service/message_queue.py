@@ -14,8 +14,8 @@ from readerwriterlock import rwlock
 ID = int
 
 
-class MessageLocation(enum.Enum):
-  """The location of a message in the message queue.
+class MessageState(enum.Enum):
+  """The state of a message in the message queue.
   """
   PENDING = 'pending'
   ACTIVE = 'active'
@@ -148,7 +148,7 @@ class IMessageQueue(Protocol, Generic[T]):
       """Returns all completed messages in the queue."""
       ...
 
-  def find_message_location(self, message_id: ID) -> MessageLocation:
+  def find_message_location(self, message_id: ID) -> MessageState:
     """Returns the location of the message in the message queue."""
     ...
 
@@ -296,7 +296,7 @@ class MessageQueue(IMessageQueue[T]):
     """
     with self.active_lock.gen_wlock():
       if message_id in self.active.get(worker_id, {}):
-        message = copy.deepcopy(self.active[worker_id][message_id])
+        message = self.active[worker_id][message_id]
         del self.active[worker_id][message_id]
 
         if update_fn is not None:
@@ -382,19 +382,19 @@ class MessageQueue(IMessageQueue[T]):
       return message_id in self.completed
 
   @overrides
-  def find_message_location(self, message_id: ID) -> MessageLocation:
+  def find_message_location(self, message_id: ID) -> MessageState:
     """Returns the location of the message in the message queue."""
     with self.pending_lock.gen_rlock():
       if message_id in self.pending:
-        return  MessageLocation.PENDING
+        return  MessageState.PENDING
 
     with self.active_lock.gen_rlock():
       for _, messages in self.active.items():
         if message_id in messages:
-          return MessageLocation.ACTIVE
+          return MessageState.ACTIVE
 
     with self.completed_lock.gen_rlock():
       if message_id in self.completed:
-        return MessageLocation.COMPLETED
+        return MessageState.COMPLETED
 
-    return MessageLocation.NOT_FOUND
+    return MessageState.NOT_FOUND

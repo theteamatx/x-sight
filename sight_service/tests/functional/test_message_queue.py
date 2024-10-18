@@ -60,7 +60,7 @@ class TestMessageQueue(unittest.TestCase):
     self.assertEqual(status['pending'], 0)
     self.assertEqual(status['active'], 1)
     self.assertEqual(status['completed'], 1)
-    self.assertIn(1, self.queue.get_all_messages()['completed'])
+    self.assertIn(1, self.queue.get_completed())
 
   def test_complete_message_with_lambda_update(self):
     self.queue.push_message(500)
@@ -136,7 +136,7 @@ class TestMessageQueue(unittest.TestCase):
     self.queue.push_message(200)
     self.queue.create_active_batch(worker_id='worker1')
     location = self.queue.find_message_location(1)
-    self.assertEqual(location, mq.MessageLocation.ACTIVE)
+    self.assertEqual(location, mq.MessageState.ACTIVE)
 
   def test_get_all_messages(self):
     """Test get_all_messages() with 2 pending messages and 1 completed message."""
@@ -185,8 +185,8 @@ class TestMessageQueue(unittest.TestCase):
 
     # Check that the UUIDs are unique and have been assigned correctly
     self.assertNotEqual(message_id1, message_id2)
-    self.assertIn(message_id1, queue_with_uuid.get_all_messages()['pending'])
-    self.assertIn(message_id2, queue_with_uuid.get_all_messages()['pending'])
+    self.assertIn(message_id1, queue_with_uuid.get_pending())
+    self.assertIn(message_id2, queue_with_uuid.get_pending())
 
 
 if __name__ == '__main__':

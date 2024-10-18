@@ -240,11 +240,9 @@ class WorklistScheduler(SingleActionOptimizer):
 
     logging.info("self.queue => %s", self.queue)
 
-    all_pending_messages = self.queue.get_pending()
-
     if (self.exp_completed):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
-    elif (not all_pending_messages):
+    elif (not self.queue.get_status()["pending"]):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
