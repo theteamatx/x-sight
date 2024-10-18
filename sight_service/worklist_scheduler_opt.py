@@ -187,7 +187,7 @@ class WorklistScheduler(SingleActionOptimizer):
 
     active_messages : Dict[str,MessageDetails] = all_active_messages[request.worker_id]
 
-    for action_id, message in active_messages.items():
+    for action_id, message in list(active_messages.items()):
       self.queue.complete_message(
           message_id=action_id,
           worker_id=request.worker_id,

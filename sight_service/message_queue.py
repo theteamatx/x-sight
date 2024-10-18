@@ -117,14 +117,6 @@ class IMessageQueue(Protocol, Generic[T]):
       worker_id: The ID of the worker that completed the message.
       update_fn: A function that takes the current message and returns the updated message.
 
-    Note:
-        The use of `extra_details` is unusual and specific to this
-          implementation.
-        It allows additional data to be recorded for a completed message if the
-          message
-        is of type `dict`. This can be useful for tracking metadata or other
-          information
-        relevant to the message's processing history.
     """
     ...
 
