@@ -331,11 +331,11 @@ class MessageQueue(IMessageQueue[T]):
   def get_all_messages(self) -> Dict[str, Any]:
     """Returns all messages in the message queue."""
     with self.pending_lock.gen_rlock():
-      pending_copy = copy.deepcopy(self.pending)
+      pending_copy = copy.copy(self.pending)
     with self.active_lock.gen_rlock():
-      active_copy = copy.deepcopy(self.active)
+      active_copy = copy.copy(self.active)
     with self.completed_lock.gen_rlock():
-      completed_copy = copy.deepcopy(self.completed)
+      completed_copy = copy.copy(self.completed)
 
     return {
         'pending': pending_copy,
@@ -347,19 +347,19 @@ class MessageQueue(IMessageQueue[T]):
   def get_pending(self) -> Dict[ID, T]:
       """Returns all pending messages in the queue."""
       with self.pending_lock.gen_rlock():
-          return copy.deepcopy(self.pending)
+          return copy.copy(self.pending)
 
   @overrides
   def get_active(self) -> Dict[str, Dict[ID, T]]:
       """Returns all active messages in the queue."""
       with self.active_lock.gen_rlock():
-          return copy.deepcopy(self.active)
+          return copy.copy(self.active)
 
   @overrides
   def get_completed(self) -> Dict[ID, T]:
       """Returns all completed messages in the queue."""
       with self.completed_lock.gen_rlock():
-          return copy.deepcopy(self.completed)
+          return copy.copy(self.completed)
 
 
   @overrides
