@@ -111,7 +111,9 @@ def launch(
 
   req.label = sight.params.label
   req.client_id = str(sight.id)
-
+  req.question_id = decision_configuration.question_id
+  req.question_label = decision_configuration.question_label
+  
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
   # start polling thread, fetching outcome from server for proposed actions
   if (decision_configuration.optimizer_type == sight_pb2.

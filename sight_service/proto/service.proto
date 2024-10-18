@@ -291,6 +291,8 @@ message LaunchRequest {
   sight.x.proto.DecisionConfigurationStart decision_config_params = 1;
   string label = 3;
   string client_id = 4;
+  int64 question_id = 5;
+  string question_label = 6;
 }
 message LaunchResponse {
   string display_string = 1;
