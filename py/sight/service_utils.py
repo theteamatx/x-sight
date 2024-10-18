@@ -462,11 +462,11 @@ def obtain_insecure_channel(options):
     service_handle: to communicate with server
   """
   if 'IP_ADDR' in os.environ:
-    host = os.environ["IP_ADDR"]
+      host = os.environ["IP_ADDR"]
   else:
-    host = 'localhost'
+      host = 'localhost'
   target = '{}:{}'.format(host, get_port_number())
-  # print("service_url here : ", targpending action ids :et)
+  # print("service_url here : ", target)
 
   channel = grpc.insecure_channel(
       target,

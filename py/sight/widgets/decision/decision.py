@@ -597,6 +597,10 @@ def run(
                                 client_id=client_id,
                                 worker_id=f'client_{client_id}_worker_{worker_location}'
                             )
+                            if(config["question_id"]):
+                                req.question_id = config["question_id"]
+                            if(config["question_label"]):
+                                req.question_label = config["question_label"]
                             response = service.call(
                                 lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
 

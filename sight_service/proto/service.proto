@@ -401,6 +401,8 @@ message CloseResponse {
 message WorkerAliveRequest {
   string client_id = 1;
   string worker_id = 2;
+  int64 question_id = 3;
+  string question_label = 4;
 }
 
 message WorkerAliveResponse {

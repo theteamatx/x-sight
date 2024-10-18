@@ -123,7 +123,7 @@ class OptimizerInstance:
     for k in outcome_keys:
       self.outcomes[k] = request.decision_config_params.outcome_attrs[k]
 
-    print(f"<<<<<<<<<  Out {method_name} of {_file_name}.")
+    # print(f"<<<<<<<<<  Out {method_name} of {_file_name}.")
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return service_pb2.LaunchResponse()
 
