@@ -14,7 +14,7 @@ repos:
     rev: v0.32.0
     hooks:
       - id: yapf
-        args: ["--style", ".config/.style.yapf"]
+        args: ["-ir", "--style", ".config/.style.yapf"]
 
   - repo: https://github.com/pre-commit/mirrors-isort
     rev: v5.10.1
