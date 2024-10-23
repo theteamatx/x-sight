@@ -1,0 +1,44 @@
+name: Run test-cases
+
+on:
+  push:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    env:
+      PYTHONPATH: ${{ github.workspace }} # Add the tests directory to PYTHONPATH
+
+    strategy:
+      matrix:
+        test-type: [functional] # Test types
+
+    steps:
+      # Checkout the repository to the runner
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Print Python Path
+        run: |
+          which python
+          python -c "import sys; print(sys.executable)"
+          python -c "import sys; print(sys.path)"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r sight_service/requirements.txt
+          pip install absl-py==1.4.0
+          pip install colorama==0.4.6
+
+      - name: Set and print python path
+        run: |
+          echo "PYTHONPATH=$PYTHONPATH:$(pwd)/py" >> $GITHUB_ENV
+          which python
+          python -c "import sys; print(sys.executable)"
+          python -c "import sys; print(sys.path)"
+
+      - name: Run ${{ matrix.test-type }} test-cases
+        run: |
+          python py/tests/discover_and_run_tests.py --type ${{ matrix.test-type }}

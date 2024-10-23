@@ -3,10 +3,10 @@ repos:
     rev: v4.0.1
     hooks:
       - id: trailing-whitespace
-        exclude:  ^.*\.patch$
+        exclude: ^.*\.patch$
 
       - id: end-of-file-fixer
-        exclude:  ^.*\.patch$
+        exclude: ^.*\.patch$
 
       - id: check-yaml
 
@@ -14,10 +14,18 @@ repos:
     rev: v0.32.0
     hooks:
       - id: yapf
-        args: ['--style', '.config/.style.yapf']
+        args: ["-ir", "--style", ".config/.style.yapf"]
 
   - repo: https://github.com/pre-commit/mirrors-isort
     rev: v5.10.1
     hooks:
       - id: isort
-        args: ['--settings-path', '.config/.isort.cfg']
+        args: ["--settings-path", ".config/.isort.cfg"]
+
+  - repo: local
+    hooks:
+      - id: run-functional-tests
+        name: Run all functional unit-tests
+        entry: python py/tests/discover_and_run_tests.py --type functional
+        language: system
+        always_run: true
