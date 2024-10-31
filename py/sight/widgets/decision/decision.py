@@ -914,6 +914,8 @@ def decision_outcome(
 
 def propose_actions(sight, action_dict):
   request = service_pb2.ProposeActionRequest()
+  if sight.params.silent_logger:
+    raise ValueError('Cannot use Decision API using Sight silent logger.')
   request.client_id = str(sight.id)
 
   actions_data = []
@@ -1020,10 +1022,7 @@ def finalize_episode(sight):  # , optimizer_obj
             sight_pb2.DecisionConfigurationStart.OptimizerType.
             OT_WORKLIST_SCHEDULER, sight)
       req.decision_outcome.CopyFrom(
-          #     get_fvs_outcome_proto('outcome', sight))
-          # whole output of key "fvs_outcome" is stringified, not individual key-value
           get_decision_outcome_proto('outcome', sight))
-      # print('request : ', req)
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight, req)
     elif _OPTIMIZER_TYPE.value == 'dm_acme':
