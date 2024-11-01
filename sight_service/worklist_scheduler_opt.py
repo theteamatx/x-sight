@@ -47,7 +47,7 @@ class WorklistScheduler(SingleActionOptimizer):
     self.max_reward_sample = {}
 
 
-  def add_outcome_to_outcome_response(self,msg_details : MessageDetails, sample_id, outcome: service_pb2.GetOutcomeResponse.outcome):
+  def add_outcome_to_outcome_response(self,msg_details : MessageDetails, sample_id, outcome: service_pb2.GetOutcomeResponse.Outcome):
     outcome.action_id = sample_id
     outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
     outcome.reward = msg_details.reward
