@@ -734,6 +734,11 @@
                                 "name": "elapsed_time_ns",
                                 "type": ["long", "null"],
                                 "doc": ""
+                            },
+                            {
+                                "name": "exclusive_elapsed_time_ns",
+                                "type": ["long", "null"],
+                                "doc": ""
                             }
                       ]
                     }],

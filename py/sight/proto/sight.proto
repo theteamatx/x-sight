@@ -402,6 +402,7 @@ message BlockEnd {
   // at or near the time of the logged event.
   message Metrics {
     int64 elapsed_time_ns = 1;
+    int64 exclusive_elapsed_time_ns = 2;
   }
   Metrics metrics = 12;
 }
