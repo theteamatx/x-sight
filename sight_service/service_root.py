@@ -30,6 +30,7 @@ from dotenv import load_dotenv
 import functools
 import grpc
 import logging
+import math
 
 load_dotenv()
 
@@ -73,6 +74,7 @@ def generate_unique_number() -> int:
 import logging
 
 func_to_elapsed_time = defaultdict(float)
+func_to_elapsed_time_sq = defaultdict(float)
 func_call_count = defaultdict(float)
 
 def rpc_call(func):
@@ -89,13 +91,18 @@ def rpc_call(func):
     result = func(*args, **kwargs)
     elapsed_time = time.time() - start_time
     func_to_elapsed_time[func.__name__] += elapsed_time
+    func_to_elapsed_time_sq[func.__name__] += elapsed_time*elapsed_time
     func_call_count[func.__name__] += 1
 
-    logging.info('>>>>>> %s, file %s, elapsed: (this=%f, avg=%f, count=%d)', 
+    mean = func_to_elapsed_time[func.__name__]/func_call_count[func.__name__]
+    mean_sq = func_to_elapsed_time_sq[func.__name__]/func_call_count[func.__name__]
+
+    logging.info('>>>>>> %s, file %s, elapsed: (this=%f, avg=%f, rel_sd=%f, count=%d)', 
                  func.__name__,
                  os.path.basename(__file__),
                  elapsed_time, 
-                 func_to_elapsed_time[func.__name__]/func_call_count[func.__name__],
+                 mean,
+                 math.sqrt(mean_sq - mean*mean)/mean if mean != 0 else 0,
                  func_call_count[func.__name__],
                  )
     return result
