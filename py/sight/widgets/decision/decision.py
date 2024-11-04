@@ -679,12 +679,12 @@ def get_decision_outcome_proto(outcome_label: str,
             double_value=val,
         )
       else:
-        if (isinstance(val, dict)):
+        if (isinstance(val, dict) or isinstance(val, list)):
           json_value = json.dumps(val)
         elif (isinstance(val, pd.Series)):
           json_value = json.dumps(val.to_dict())
         else:
-          raise TypeError("value needs to be dict type")
+          raise TypeError(f'Value of {key} needs to be dict, list or pd.Series type. Actual type is {type(val)}, val={val}.')
 
         value = sight_pb2.Value(sub_type=sight_pb2.Value.ST_JSON,
                                 json_value=json_value)

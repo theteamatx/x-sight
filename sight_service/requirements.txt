@@ -3,7 +3,7 @@ python-dotenv
 grpcio
 readerwriterlock
 protobuf
-bayesian-optimization
+bayesian-optimization==1.4.3
 google-cloud-logging
 overrides
 google-generativeai
