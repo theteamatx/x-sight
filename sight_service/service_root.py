@@ -80,7 +80,7 @@ func_call_count = defaultdict(float)
 def rpc_call(func):
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
-    logging.info(f"<<<<<< {func.__name__}, file {os.path.basename(__file__)} with args={args}")
+    logging.debug(f"<<<<<< {func.__name__}, file {os.path.basename(__file__)} with args={args}")
     
     if 'request' in kwargs:
       if 'client_id' in kwargs['request'].keys():
@@ -97,7 +97,7 @@ def rpc_call(func):
     mean = func_to_elapsed_time[func.__name__]/func_call_count[func.__name__]
     mean_sq = func_to_elapsed_time_sq[func.__name__]/func_call_count[func.__name__]
 
-    logging.info('>>>>>> %s, file %s, elapsed: (this=%f, avg=%f, rel_sd=%f, count=%d)', 
+    logging.debug('>>>>>> %s, file %s, elapsed: (this=%f, avg=%f, rel_sd=%f, count=%d)', 
                  func.__name__,
                  os.path.basename(__file__),
                  elapsed_time, 
@@ -107,16 +107,6 @@ def rpc_call(func):
                  )
     return result
   return wrapper
-
-def calculate_resolve_time(start_time):
-  logging.info(">>>>>>>  In %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
-  resolve_time = time.time() - start_time
-  _resolve_times.append(resolve_time)
-  avg_resolve_time = sum(_resolve_times) / len(_resolve_times)
-  logging.info(" logging.info : Average Resolve Time From Server: %s seconds",
-               round(avg_resolve_time, 4))
-  logging.info("<<<<<< Out %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
-
 
 class Optimizers:
   """
@@ -148,7 +138,7 @@ class Optimizers:
       # elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_ACME:
       #   self.instances[request.client_id] = Acme()
       #   obj = self.instances[request.client_id].launch(request)
-      #   # logging.info("self of optimizers class:  %s", str(self.__dict__))
+      #   # logging.debug("self of optimizers class:  %s", str(self.__dict__))
       #   return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM:
         self.instances[request.client_id] = LLM()
@@ -178,7 +168,7 @@ class Optimizers:
         return service_pb2.LaunchResponse(
             display_string=f"OPTIMIZER '{optimizer_type}' NOT VALID!!")
       
-    logging.info("<<<<<< Out %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
+    logging.debug("<<<<<< Out %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
 
   def get_instance(self, client_id: str) -> OptimizerInstance:
     # logging.debug(">>>>>>>  In %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
@@ -199,7 +189,7 @@ class SightService(service_pb2_grpc.SightServiceServicer):
   def __init__(self):
     super().__init__()
     self.optimizers = Optimizers()
-    logging.info('SightService::__init__')
+    logging.debug('SightService::__init__')
 
 
   @rpc_call
@@ -207,11 +197,11 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     return service_pb2.TestResponse(val="222")
 
   # def GetWeights(self, request, context):
-  #   logging.info(">>>>>>>  In %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
+  #   logging.debug(">>>>>>>  In %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
   #   start_time = time.time()
   #   obj = self.optimizers.get_instance(request.client_id).get_weights(request)
   #   # calculate_resolve_time(start_time)
-  #   logging.info("<<<<<< Out %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
+  #   logging.debug("<<<<<< Out %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
   #   return obj
 
   @rpc_call
