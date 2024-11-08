@@ -26,9 +26,9 @@ import nevergrad as ng
 from overrides import overrides
 import requests
 from sight.proto import sight_pb2
+from sight.utils.common import convert_dict_to_proto
 from sight_service.normalizer import Normalizer
 from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.proto import service_pb2
 
 _file_name = "nevergrad_opt.py"
@@ -202,16 +202,10 @@ class NeverGradOpt(OptimizerInstance):
     # print("denormalized_actions : ", denormalized_actions)
 
     dp_response = service_pb2.DecisionPointResponse()
-    for key, value in denormalized_actions.items():
-      a = dp_response.action.add()
-      a.key = key
-      a.value.sub_type = sight_pb2.Value.ST_DOUBLE
-      a.value.double_value = float(value)
 
-    # self.last_outcome = request.decision_outcome.outcome_value
-    # print('DecisionPoint response=%s' % dp_response)
+    dp_response.action.CopyFrom(
+        convert_dict_to_proto(dict=denormalized_actions))
 
-    # print('DecisionPoint response=%s' % dp_response)
     dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
     return dp_response
 

@@ -24,8 +24,8 @@ import numpy as np
 from overrides import overrides
 from scipy.stats import uniform
 from sight.proto import sight_pb2
+from sight.utils.common import convert_proto_to_dict
 from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.proto import service_pb2
 from smcpy import AdaptiveSampler as Sampler
 from smcpy import VectorMCMC
@@ -201,9 +201,7 @@ class SMCPy(OptimizerInstance):
       self, request: service_pb2.FinalizeEpisodeRequest
   ) -> service_pb2.FinalizeEpisodeResponse:
     logging.info('FinalizeEpisode request=%s', request)
-    d = {}
-    for a in request.decision_point.choice_params:
-      d[a.key] = a.value.double_value
+    d = convert_proto_to_dict(proto=request.decision_point.choice_params)
     result = [d[key] for key in self._param_names]
 
     self._lock.acquire()

@@ -41,7 +41,6 @@ from sight_service.build_qrdqn_learner import build_qrdqn_config
 # from sight_service.build_sac_learner import build_sac_config
 from sight_service.build_td3_learner import build_td3_config
 from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.proto import service_pb2
 from sight_service.proto.numproto.numproto import ndarray_to_proto
 from sight_service.proto.numproto.numproto import proto_to_ndarray
@@ -462,40 +461,6 @@ class Acme(OptimizerInstance):
     executor.submit(self.insert_to_replay, request)
     # Manually shutdown the executor after submitting tasks
     executor.shutdown(wait=False)
-
-    # observation = np.array(
-    #     list(param_proto_to_dict(request.decision_point.state_params).values()),
-    #     dtype=np.float32,
-    # )
-    # # logging.info('observation : %s', observation)
-    # with self.last_action_lock.gen_wlock():
-    #   if request.worker_id in self.last_action:
-    #     action = self.last_action[request.worker_id]
-
-    #     timestep = dm_env.TimeStep(
-    #         step_type=dm_env.StepType.LAST,
-    #         reward=np.array(
-    #             request.decision_outcome.outcome_value, dtype=np.float64
-    #         ),
-    #         discount=np.array(
-    #             request.decision_outcome.discount, dtype=np.float64
-    #         ),
-    #         observation=np.frombuffer(observation, dtype=np.float32),
-    #     )
-
-    #     with self.agents_lock.gen_rlock():
-    #       self.agents[request.worker_id].observe(
-    #           np.int64(action), next_timestep=timestep
-    #       )
-    #
-    #       # self.agents[request.worker_id].observe(
-    #       #     np.float32(action), next_timestep=timestep
-    #       # )
-    #       self.agents[request.worker_id].update()
-    # self._learner_checkpointer.save(force=True)
-
-    # Resetting last action for agent since it is the end of the episode.
-    # del self.last_action[request.worker_id]
 
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return service_pb2.FinalizeEpisodeResponse(response_str="Success!")

@@ -22,23 +22,24 @@ import warnings
 
 warnings.warn = warn
 
-from absl import app
-from absl import flags
-from concurrent import futures
 from collections import defaultdict
-from dotenv import load_dotenv
+from concurrent import futures
 import functools
-import grpc
 import logging
 import math
+
+from absl import app
+from absl import flags
+from dotenv import load_dotenv
+import grpc
 
 load_dotenv()
 
 import os
+import sys
 import time
 from typing import Any, Dict, List, Tuple
 import uuid
-import sys
 
 # from overrides import overrides
 from readerwriterlock import rwlock
@@ -77,11 +78,15 @@ func_to_elapsed_time = defaultdict(float)
 func_to_elapsed_time_sq = defaultdict(float)
 func_call_count = defaultdict(float)
 
+
 def rpc_call(func):
+
   @functools.wraps(func)
   def wrapper(*args, **kwargs):
-    logging.debug(f"<<<<<< {func.__name__}, file {os.path.basename(__file__)} with args={args}")
-    
+    logging.debug(
+        f"<<<<<< {func.__name__}, file {os.path.basename(__file__)} with args={args}"
+    )
+
     if 'request' in kwargs:
       if 'client_id' in kwargs['request'].keys():
         if kwargs['request'].client_id == 0:
@@ -91,22 +96,26 @@ def rpc_call(func):
     result = func(*args, **kwargs)
     elapsed_time = time.time() - start_time
     func_to_elapsed_time[func.__name__] += elapsed_time
-    func_to_elapsed_time_sq[func.__name__] += elapsed_time*elapsed_time
+    func_to_elapsed_time_sq[func.__name__] += elapsed_time * elapsed_time
     func_call_count[func.__name__] += 1
 
-    mean = func_to_elapsed_time[func.__name__]/func_call_count[func.__name__]
-    mean_sq = func_to_elapsed_time_sq[func.__name__]/func_call_count[func.__name__]
+    mean = func_to_elapsed_time[func.__name__] / func_call_count[func.__name__]
+    mean_sq = func_to_elapsed_time_sq[func.__name__] / func_call_count[
+        func.__name__]
 
-    logging.debug('>>>>>> %s, file %s, elapsed: (this=%f, avg=%f, rel_sd=%f, count=%d)', 
-                 func.__name__,
-                 os.path.basename(__file__),
-                 elapsed_time, 
-                 mean,
-                 math.sqrt(mean_sq - mean*mean)/mean if mean != 0 else 0,
-                 func_call_count[func.__name__],
-                 )
+    logging.debug(
+        '>>>>>> %s, file %s, elapsed: (this=%f, avg=%f, rel_sd=%f, count=%d)',
+        func.__name__,
+        os.path.basename(__file__),
+        elapsed_time,
+        mean,
+        math.sqrt(mean_sq - mean * mean) / mean if mean != 0 else 0,
+        func_call_count[func.__name__],
+    )
     return result
+
   return wrapper
+
 
 class Optimizers:
   """
@@ -124,7 +133,8 @@ class Optimizers:
     """
     optimizer_type = request.decision_config_params.optimizer_type
     logging.debug(">>>>>>>  In %s method of %s file. optimizer_type=%s",
-                  sys._getframe().f_code.co_name, os.path.basename(__file__), optimizer_type)
+                  sys._getframe().f_code.co_name, os.path.basename(__file__),
+                  optimizer_type)
     with self.instances_lock.gen_wlock():
       if optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER:
         self.instances[request.client_id] = Vizier()
@@ -167,8 +177,9 @@ class Optimizers:
       else:
         return service_pb2.LaunchResponse(
             display_string=f"OPTIMIZER '{optimizer_type}' NOT VALID!!")
-      
-    logging.debug("<<<<<< Out %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
+
+    logging.debug("<<<<<< Out %s method of %s file.",
+                  sys._getframe().f_code.co_name, os.path.basename(__file__))
 
   def get_instance(self, client_id: str) -> OptimizerInstance:
     # logging.debug(">>>>>>>  In %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
@@ -182,6 +193,70 @@ class Optimizers:
     # logging.debug("<<<<<< Out %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
 
 
+import json
+from typing import Any, Callable, Dict, List, Optional
+
+from sight.proto import sight_pb2
+from sight_service.proto import service_pb2
+
+
+def get_proto_value_from_value(v) -> sight_pb2.Value:
+  val = sight_pb2.Value()
+  if isinstance(v, str):
+    try:
+      # Try to parse as JSON if possible
+      json.loads(v)
+      val.sub_type = sight_pb2.Value.ST_JSON
+      val.json_value = v
+    except (ValueError, TypeError):
+      val.sub_type = sight_pb2.Value.ST_STRING
+      val.string_value = v
+  elif isinstance(v, int):
+    val.sub_type = sight_pb2.Value.ST_INT64
+    val.int64_value = v
+  elif isinstance(v, float):
+    val.sub_type = sight_pb2.Value.ST_DOUBLE
+    val.double_value = v
+  elif isinstance(v, bool):
+    val.sub_type = sight_pb2.Value.ST_BOOL
+    val.bool_value = v
+  elif isinstance(v, bytes):
+    val.sub_type = sight_pb2.Value.ST_BYTES
+    val.bytes_value = v
+  elif v is None:
+    val.sub_type = sight_pb2.Value.ST_NONE
+    val.none_value = True
+  else:
+    raise ValueError(f"Unsupported type: {type(v)}")
+  return val
+
+
+def convert_dict_to_proto(dict: Dict[str, Any]) -> sight_pb2.DecisionParam:
+  proto_map = sight_pb2.DecisionParam()
+  for k, v in dict.items():
+    print(f" k=> {k} , v => {v}")
+    proto_map.params[k].CopyFrom(get_proto_value_from_value(v))
+  return proto_map
+
+
+next_action = {
+    'fire-SIMFIRE_2-6_stand_area_burned': 100,
+    'fire-SIMFIRE_1-6_stand_area_burned': 71,
+    'project_id': '133a6365-01cf-4b5e-8197-d4779e5ce25c',
+    'fire-SIMFIRE_2-1_cycle': 2015,
+    'base-FERTILIZ-extra_offset': 0.0,
+    'fire-SIMFIRE_81-6_stand_area_burned': 45,
+    'fire-SIMFIRE_63-1_cycle': 2076,
+    'fire-SIMFIRE_17-1_cycle': 2030,
+    'fire-SIMFIRE_28-6_stand_area_burned': 100,
+    'fire-SIMFIRE_84-6_stand_area_burned': 100,
+    'base-FERTILIZ-extra_step': 0.0,
+    'region': 'NC',
+    'fire-SIMFIRE_19-6_stand_area_burned': 45,
+    'fire-SIMFIRE_76-1_cycle': 2089
+}
+
+
 class SightService(service_pb2_grpc.SightServiceServicer):
   """Service class to handle the grpc request send via sight client.
   """
@@ -191,10 +266,15 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     self.optimizers = Optimizers()
     logging.debug('SightService::__init__')
 
-
   @rpc_call
   def Test(self, request, context):
-    return service_pb2.TestResponse(val="222")
+    method_name = "Test"
+    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+    obj = service_pb2.TestResponse()
+    obj.val = str(222)
+    obj.action.CopyFrom(convert_dict_to_proto(dict=next_action))
+    logging.info("<<<<<< Out %s method of %s file.", method_name, _file_name)
+    return obj
 
   # def GetWeights(self, request, context):
   #   logging.debug(">>>>>>>  In %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
@@ -268,7 +348,8 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 def serve():
   """Main method that listens on port 8080 and handle requests received from client.
     """
-  logging.info(">>>>>>>  In %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
+  logging.info(">>>>>>>  In %s method of %s file.",
+               sys._getframe().f_code.co_name, os.path.basename(__file__))
 
   server = grpc.server(futures.ThreadPoolExecutor(max_workers=500),
                        options=[
@@ -282,18 +363,21 @@ def serve():
 
   # flask_app.run(debug=True, host="0.0.0.0", port=_PORT.value)
   server.wait_for_termination()
-  logging.info("<<<<<<<  Out %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
+  logging.info("<<<<<<<  Out %s method of %s file.",
+               sys._getframe().f_code.co_name, os.path.basename(__file__))
 
 
 def main(argv):
   logging.basicConfig(level=logging.INFO)
-  logging.info(">>>>>>>  In %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
+  logging.info(">>>>>>>  In %s method of %s file.",
+               sys._getframe().f_code.co_name, os.path.basename(__file__))
   try:
     app.run(serve())
   except BaseException as e:
     logging.error("Error occurred : ")
     logging.error(e)
-  logging.info("<<<<<<<  Out %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
+  logging.info("<<<<<<<  Out %s method of %s file.",
+               sys._getframe().f_code.co_name, os.path.basename(__file__))
 
 
 if __name__ == "__main__":

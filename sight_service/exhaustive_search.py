@@ -18,8 +18,8 @@ from typing import Any, Dict, List, Tuple
 
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
+from sight.utils.common import convert_dict_to_proto
 from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.proto import service_pb2
 
 _file_name = "exhaustive_search.py"
@@ -124,7 +124,7 @@ class ExhaustiveSearch(OptimizerInstance):
 
     logging.info('next_action=%s', next_action)
     dp_response = service_pb2.DecisionPointResponse()
-    dp_response.action.extend(param_dict_to_proto(next_action))
+    dp_response.action.CopyFrom(convert_dict_to_proto(dict=next_action))
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
     return dp_response

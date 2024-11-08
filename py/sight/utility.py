@@ -26,8 +26,8 @@ from google.protobuf.json_format import _NEG_INFINITY
 from google.protobuf.json_format import _Printer as BasePrinter
 from google.protobuf.json_format import SerializeToJsonError
 from sight import service_utils as service
+from sight.utils.common import convert_proto_to_dict
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
-from sight_service.optimizer_instance import param_proto_to_dict
 from sight_service.proto import service_pb2
 
 POLL_LIMIT = 10  # POLL_TIME_INTERVAL th part of second
@@ -62,9 +62,12 @@ def get_all_outcomes(sight_id, action_ids):
         outcome_dict = {}
         outcome_dict['action_id'] = outcome.action_id
         outcome_dict['reward'] = outcome.reward
-        outcome_dict['action'] = param_proto_to_dict(outcome.action_attrs)
-        outcome_dict['outcome'] = param_proto_to_dict(outcome.outcome_attrs)
-        outcome_dict['attributes'] = param_proto_to_dict(outcome.attributes)
+        outcome_dict['action'] = convert_proto_to_dict(
+            proto=outcome.action_attrs)
+        outcome_dict['outcome'] = convert_proto_to_dict(
+            proto=outcome.outcome_attrs)
+        outcome_dict['attributes'] = convert_proto_to_dict(
+            proto=outcome.attributes)
       else:
         outcome_dict = None
       outcome_list.append(outcome_dict)

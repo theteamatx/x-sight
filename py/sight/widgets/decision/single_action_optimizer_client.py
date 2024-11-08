@@ -19,6 +19,8 @@ from helpers.logs.logs_handler import logger as logging
 from overrides import override
 from sight import service_utils as service
 from sight.proto import sight_pb2
+from sight.utils.common import convert_proto_to_dict
+from sight.utils.common import update_proto_map
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from sight_service.proto import service_pb2
 
@@ -86,7 +88,6 @@ class SingleActionOptimizerClient(OptimizerClient):
     # while True:
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta))
-    logging.info('response: %s', response)
     if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
       self._last_action = response.action
       return self._get_dp_action(response)
@@ -105,8 +106,12 @@ class SingleActionOptimizerClient(OptimizerClient):
                        request: service_pb2.FinalizeEpisodeRequest):
     # logging.info('SingleActionOptimizerClient() finalize_episode')
     if self._last_action:
-      for a in self._last_action:
-        request.decision_point.choice_params.append(a)
+      logging.info('finalize episode => %s',
+                   request.decision_point.choice_params)
+      update_proto_map(
+          existing_proto_map=request.decision_point.choice_params,
+          new_proto_map=convert_proto_to_dict(proto=self._last_action))
+      # request.decision_point.choice_params.update(self._last_action)
     response = service.call(
         lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta))
     return response

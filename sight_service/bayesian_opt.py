@@ -20,6 +20,8 @@ from bayes_opt import UtilityFunction
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from sight.proto import sight_pb2
+from sight.utils.common import convert_dict_to_proto
+from sight.utils.common import convert_proto_to_dict
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
 
@@ -73,11 +75,8 @@ class BayesianOpt(OptimizerInstance):
     self._lock.release()
 
     dp_response = service_pb2.DecisionPointResponse()
-    for key, value in selected_actions.items():
-      a = dp_response.action.add()
-      a.key = key
-      a.value.sub_type = sight_pb2.Value.ST_DOUBLE
-      a.value.double_value = float(value)
+
+    dp_response.action.CopyFrom(convert_dict_to_proto(dict=selected_actions))
 
     print('DecisionPoint response=%s' % dp_response)
     dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
@@ -88,9 +87,11 @@ class BayesianOpt(OptimizerInstance):
       self, request: service_pb2.FinalizeEpisodeRequest
   ) -> service_pb2.FinalizeEpisodeResponse:
     logging.info('FinalizeEpisode request=%s', request)
-    d = {}
-    for a in request.decision_point.choice_params:
-      d[a.key] = a.value.double_value
+
+    d = convert_proto_to_dict(proto=request.decision_point.choice_params)
+    # d = {}
+    # for a in request.decision_point.choice_params:
+    #   d[a.key] = a.value.double_value
 
     self._lock.acquire()
     logging.info('FinalizeEpisode outcome=%s / %s',
