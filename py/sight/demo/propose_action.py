@@ -40,12 +40,12 @@ from sight.attribute import Attribute
 from sight.block import Block
 from sight.proto import sight_pb2
 from sight.sight import Sight
+from sight.utils.proto_conversion import convert_proto_to_dict
 from sight.widgets.decision import decision
 from sight.widgets.decision import trials
 from sight.widgets.decision.single_action_optimizer_client import (
     SingleActionOptimizerClient
 )
-from sight_service.optimizer_instance import param_proto_to_dict
 from sight_service.proto import service_pb2
 
 _RUN_MODE = flags.DEFINE_enum(
@@ -194,11 +194,14 @@ def main(argv: Sequence[str]) -> None:
           outcome_dict = {}
           outcome_dict['action_id'] = outcome.action_id
           outcome_dict['reward'] = outcome.reward
-          outcome_dict['action'] = param_proto_to_dict(outcome.action_attrs)
-          outcome_dict['outcome'] = param_proto_to_dict(outcome.outcome_attrs)
+          outcome_dict['action'] = convert_proto_to_dict(
+              proto=outcome.action_attrs)
+          outcome_dict['outcome'] = convert_proto_to_dict(
+              proto=outcome.outcome_attrs)
           print('here  : ', outcome_dict['outcome']['time_series'],
                 type(outcome_dict['outcome']['time_series']))
-          outcome_dict['attributes'] = param_proto_to_dict(outcome.attributes)
+          outcome_dict['attributes'] = convert_proto_to_dict(
+              proto=outcome.attributes)
           outcome_list.append(outcome_dict)
 
         id += 1

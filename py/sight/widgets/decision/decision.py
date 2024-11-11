@@ -30,6 +30,7 @@ import pandas as pd
 from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.utility import poll_network_batch_outcome
+from sight.utils.proto_conversion import convert_dict_to_proto
 # from sight.widgets.decision.cartpole_driver import driver_fn
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
@@ -633,7 +634,6 @@ def run(
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
-
 def get_state_attrs(sight: Any) -> list[str]:
   state_attrs = []
   state_details = sight.widget_decision_state['decision_episode_fn']
@@ -669,31 +669,8 @@ def get_decision_outcome_proto(outcome_label: str,
     decision_outcome.reward = sight.widget_decision_state['sum_reward']
 
   if 'sum_outcome' in sight.widget_decision_state:
-    outcome_params: List[sight_pb2.DecisionParam] = []
-    for key in sight.widget_decision_state['sum_outcome']:
-      val = sight.widget_decision_state['sum_outcome'][key]
-      if (utils.is_scalar(val)):
-        #todo: assuming only double for now in scalar
-        value = sight_pb2.Value(
-            sub_type=sight_pb2.Value.ST_DOUBLE,
-            double_value=val,
-        )
-      else:
-        if (isinstance(val, dict) or isinstance(val, list)):
-          json_value = json.dumps(val)
-        elif (isinstance(val, pd.Series)):
-          json_value = json.dumps(val.to_dict())
-        else:
-          raise TypeError(f'Value of {key} needs to be dict, list or pd.Series type. Actual type is {type(val)}, val={val}.')
-
-        value = sight_pb2.Value(sub_type=sight_pb2.Value.ST_JSON,
-                                json_value=json_value)
-
-      outcome_params.append(sight_pb2.DecisionParam(
-          key=key,
-          value=value,
-      ))
-    decision_outcome.outcome_params.extend(outcome_params)
+    decision_outcome.outcome_params.CopyFrom(
+        convert_dict_to_proto(dict=sight.widget_decision_state['sum_outcome']))
 
   if 'discount' in sight.widget_decision_state:
     decision_outcome.discount = sight.widget_decision_state['discount']
@@ -790,48 +767,14 @@ def decision_point(
     if 'reward' in sight.widget_decision_state:
       req.decision_outcome.reward = sight.widget_decision_state['reward']
     if 'outcome_value' in sight.widget_decision_state:
-      outcome_params: List[sight_pb2.DecisionParam] = []
-      for key in sight.widget_decision_state['outcome_value']:
-        outcome_params.append(
-            sight_pb2.DecisionParam(
-                key=key,
-                value=sight_pb2.Value(
-                    sub_type=sight_pb2.Value.ST_DOUBLE,
-                    double_value=sight.widget_decision_state['outcome_value']
-                    [key],
-                ),
-            ))
-      req.decision_outcome.outcome_params.extend(outcome_params)
+      req.decision.outcome.outcome_params.CopyFrom(
+          convert_dict_to_proto(
+              dict=sight.widget_decision_state["outcome_value"]))
     req.decision_outcome.discount = sight.widget_decision_state['discount']
     chosen_action = optimizer_obj.decision_point(sight, req)
 
-  choice_params: List[sight_pb2.DecisionParam] = []
-  # for attr in sight.widget_decision_state[
-  #         'decision_episode_fn'].action_attrs:
-  for attr in chosen_action.keys():
-    #? keep this might need to change sub_type of deicision param value
-    if isinstance(chosen_action[attr], str):
-      val = sight_pb2.Value(
-          sub_type=sight_pb2.Value.ST_STRING,
-          string_value=chosen_action[attr],
-      )
-    elif isinstance(chosen_action[attr], float):
-      val = sight_pb2.Value(
-          sub_type=sight_pb2.Value.ST_DOUBLE,
-          double_value=chosen_action[attr],
-      )
-    elif isinstance(chosen_action[attr], int):
-        val = sight_pb2.Value(
-            sub_type=sight_pb2.Value.ST_INT64,
-            int64_value=chosen_action[attr],
-        )
-    else:
-      raise ValueError("unsupported type!!")
-
-    choice_params.append(sight_pb2.DecisionParam(
-        key=attr,
-        value=val,
-    ))
+  choice_params = sight_pb2.DecisionParam()
+  choice_params.CopyFrom(convert_dict_to_proto(dict=chosen_action))
 
   # pytype: disable=attribute-error
   obj = sight_pb2.Object(
@@ -840,7 +783,7 @@ def decision_point(
                                              # choice_params=choice_params,
                                             ),
   )
-  obj.decision_point.choice_params.extend(choice_params)
+  obj.decision_point.choice_params.CopyFrom(choice_params)
   sight.log_object(obj, inspect.currentframe().f_back.f_back)
 
   logging.info('decision_point() chosen_action=%s', chosen_action)
@@ -913,54 +856,13 @@ def decision_outcome(
 
 
 def propose_actions(sight, action_dict):
-  request = service_pb2.ProposeActionRequest()
-  if sight.params.silent_logger:
-    raise ValueError('Cannot use Decision API using Sight silent logger.')
-  request.client_id = str(sight.id)
-
-  actions_data = []
-  attributes_data = []
-
-  # Process actions
-  for k, v in action_dict.items():
-    action_attr = sight_pb2.DecisionParam()
-    action_attr.key = k
-    if isinstance(v, str):
-      val = sight_pb2.Value(
-          sub_type=sight_pb2.Value.ST_STRING,
-          string_value=v,
-      )
-    else:
-      val = sight_pb2.Value(
-          sub_type=sight_pb2.Value.ST_DOUBLE,
-          double_value=v,
-      )
-    action_attr.value.CopyFrom(val)
-    # Append to actions_data list
-    actions_data.append(action_attr)
-  request.action_attrs.extend(actions_data)
 
   attr_dict = sight.fetch_attributes()
-  # print('attr_dict : ', attr_dict)
 
-  # Process attributes
-  for k, v in attr_dict.items():
-    attribute = sight_pb2.DecisionParam()
-    attribute.key = k
-    if isinstance(v, str):
-      val = sight_pb2.Value(
-          sub_type=sight_pb2.Value.ST_STRING,
-          string_value=v,
-      )
-    else:
-      val = sight_pb2.Value(
-          sub_type=sight_pb2.Value.ST_DOUBLE,
-          double_value=v,
-      )
-    attribute.value.CopyFrom(val)
-    # Append to attributes_data list
-    attributes_data.append(attribute)
-    request.attributes.extend(attributes_data)
+  request = service_pb2.ProposeActionRequest()
+  request.client_id = str(sight.id)
+  request.action_attrs.CopyFrom(convert_dict_to_proto(dict=action_dict))
+  request.attributes.CopyFrom(convert_dict_to_proto(dict=attr_dict))
 
   response = service.call(
       lambda s, meta: s.ProposeAction(request, 300, metadata=meta))
@@ -970,8 +872,8 @@ def propose_actions(sight, action_dict):
   sight_obj = sight_pb2.Object()
   sight_obj.sub_type = sight_pb2.Object.SubType.ST_PROPOSE_ACTION
   sight_obj.propose_action.action_id = str(action_id)
-  sight_obj.propose_action.action_attrs.extend(actions_data)
-  sight_obj.propose_action.attributes.extend(attributes_data)
+  sight_obj.propose_action.action_attrs.CopyFrom(request.action_attrs)
+  sight_obj.propose_action.attributes.CopyFrom(request.attributes)
 
   frame = inspect.currentframe().f_back.f_back
   sight.set_object_code_loc(sight_obj, frame)
@@ -1021,8 +923,9 @@ def finalize_episode(sight):  # , optimizer_obj
         optimizer.obj = SingleActionOptimizerClient(
             sight_pb2.DecisionConfigurationStart.OptimizerType.
             OT_WORKLIST_SCHEDULER, sight)
-      req.decision_outcome.CopyFrom(
-          get_decision_outcome_proto('outcome', sight))
+      req.decision_outcome.CopyFrom(get_decision_outcome_proto(
+          'outcome', sight))
+      # print('request : ', req)
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight, req)
     elif _OPTIMIZER_TYPE.value == 'dm_acme':

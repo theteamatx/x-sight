@@ -2,6 +2,6 @@
 based_on_style = google
 indent_width = 2
 column_limit = 80
-split_before_logical_operator = False
-blank_lines_between_top_level_imports_and_variables = 1
-dedent_closing_brackets = True
+ALLOW_SPLIT_BEFORE_DICT_VALUE = False
+each_dict_entry_on_separate_line = True
+split_complex_comprehension = True

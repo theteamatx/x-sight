@@ -24,64 +24,6 @@ from sight_service.proto import service_pb2
 _file_name = "optimizer_instance.py"
 
 
-def param_dict_to_proto(
-    param_dict: Dict[str, float]) -> List[sight_pb2.DecisionParam]:
-  """converting dictionary of parameters into proto."""
-  param_proto: List[sight_pb2.DecisionParam] = []
-  for k, v in sorted(param_dict.items()):
-    if isinstance(v, str):
-      val = sight_pb2.Value(
-          sub_type=sight_pb2.Value.ST_STRING,
-          string_value=v,
-      )
-    elif isinstance(v, float):
-      val = sight_pb2.Value(
-                  sub_type=sight_pb2.Value.ST_DOUBLE,
-                  double_value=v,
-              )
-    elif isinstance(v, int):
-      val = sight_pb2.Value(
-                  sub_type=sight_pb2.Value.ST_INT64,
-                  int64_value=v,
-              )
-    elif (not utils.is_scalar(v)):
-      print('here v is : ', v, type(v))
-      val = sight_pb2.Value(
-          sub_type=sight_pb2.Value.ST_JSON,
-          json_value=v,
-      )
-    else:
-      raise ValueError(f'action attribute type of key "{k}", value "{v}" must be either string or float')
-
-    param_proto.append(sight_pb2.DecisionParam(key=k, value=val))
-  return param_proto
-
-
-def param_proto_to_dict(
-    param_proto: Sequence[sight_pb2.DecisionParam],) -> Dict[str, float]:
-  """converting proto back into dictionary of parameters."""
-  param_dict = {}
-  for param in param_proto:
-    # if ((param.value.sub_type != sight_pb2.Value.ST_DOUBLE) and (param.value.sub_type != sight_pb2.Value.ST_STRING)):
-    #   raise ValueError("Unsupported action type %s" % param.value.sub_type)
-    # param_dict[param.key] = param.value.double_value
-    if (param.value.sub_type == sight_pb2.Value.ST_DOUBLE):
-      param_dict[param.key] = param.value.double_value
-    elif (param.value.sub_type == sight_pb2.Value.ST_STRING):
-      param_dict[param.key] = param.value.string_value
-    elif (param.value.sub_type == sight_pb2.Value.ST_BOOL):
-      param_dict[param.key] = param.value.bool_value
-    elif (param.value.sub_type == sight_pb2.Value.ST_BYTES):
-      param_dict[param.key] = param.value.bytes_value
-    elif (param.value.sub_type == sight_pb2.Value.ST_INT64):
-      param_dict[param.key] = param.value.int64_value
-    elif (param.value.sub_type == sight_pb2.Value.ST_JSON):
-      param_dict[param.key] = param.value.json_value
-    else:
-      raise ValueError("Unsupported action type %s" % param.value.sub_type)
-  return param_dict
-
-
 class OptimizerInstance:
   """An OptimizerInstance class that is generic for all optimizers.
 
