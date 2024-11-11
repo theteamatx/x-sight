@@ -20,8 +20,8 @@ from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
 from sight.proto import sight_pb2
-from sight.utils.common import convert_dict_to_proto
-from sight.utils.common import convert_proto_to_dict
+from sight.utils.proto_conversion import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_proto_to_dict
 # from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
 from sight_service.single_action_optimizer import MessageDetails
@@ -130,7 +130,7 @@ class WorklistScheduler(SingleActionOptimizer):
       self, request: service_pb2.DecisionPointRequest
   ) -> service_pb2.DecisionPointResponse:
     method_name = "decision_point"
-    logging.info(">>>>  In %s of %s", method_name, _file_name)
+    logging.debug(">>>>  In %s of %s", method_name, _file_name)
     logging.info('self.queue ==> %s', self.queue)
 
     all_active_messages = self.queue.get_active()

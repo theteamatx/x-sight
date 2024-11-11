@@ -26,7 +26,7 @@ import nevergrad as ng
 from overrides import overrides
 import requests
 from sight.proto import sight_pb2
-from sight.utils.common import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_dict_to_proto
 from sight_service.normalizer import Normalizer
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2

@@ -30,7 +30,7 @@ import pandas as pd
 from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.utility import poll_network_batch_outcome
-from sight.utils.common import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_dict_to_proto
 # from sight.widgets.decision.cartpole_driver import driver_fn
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
@@ -923,10 +923,8 @@ def finalize_episode(sight):  # , optimizer_obj
         optimizer.obj = SingleActionOptimizerClient(
             sight_pb2.DecisionConfigurationStart.OptimizerType.
             OT_WORKLIST_SCHEDULER, sight)
-      req.decision_outcome.CopyFrom(
-          #     get_fvs_outcome_proto('outcome', sight))
-          # whole output of key "fvs_outcome" is stringified, not individual key-value
-          get_decision_outcome_proto('outcome', sight))
+      req.decision_outcome.CopyFrom(get_decision_outcome_proto(
+          'outcome', sight))
       # print('request : ', req)
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight, req)

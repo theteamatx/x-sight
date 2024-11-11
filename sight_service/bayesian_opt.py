@@ -20,8 +20,8 @@ from bayes_opt import UtilityFunction
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from sight.proto import sight_pb2
-from sight.utils.common import convert_dict_to_proto
-from sight.utils.common import convert_proto_to_dict
+from sight.utils.proto_conversion import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_proto_to_dict
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
 

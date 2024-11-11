@@ -26,7 +26,7 @@ from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 import requests
 from sight.proto import sight_pb2
-from sight.utils.common import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_dict_to_proto
 from sight_service.bayesian_opt import BayesianOpt
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
@@ -620,10 +620,6 @@ class LLM(OptimizerInstance):
     logging.info('self._history[-1]=%s', self._history[-1])
     request.decision_point.choice_params.CopyFrom(
         convert_dict_to_proto(dict=self._history[-1]['action']))
-    # for key, value in self._history[-1]['action'].items():
-    #   a = request.decision_point.choice_params.add()
-    #   a.key = key
-    #   a.value.double_value = float(value)
     self._bayesian_opt.finalize_episode(request)
 
     if (self._llm_config.goal ==

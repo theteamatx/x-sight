@@ -40,7 +40,7 @@ from sight.attribute import Attribute
 from sight.block import Block
 from sight.proto import sight_pb2
 from sight.sight import Sight
-from sight.utils.common import convert_proto_to_dict
+from sight.utils.proto_conversion import convert_proto_to_dict
 from sight.widgets.decision import decision
 from sight.widgets.decision import trials
 from sight.widgets.decision.single_action_optimizer_client import (

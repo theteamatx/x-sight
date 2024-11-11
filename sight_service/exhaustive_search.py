@@ -18,7 +18,7 @@ from typing import Any, Dict, List, Tuple
 
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
-from sight.utils.common import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_dict_to_proto
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
 

@@ -24,7 +24,7 @@ import numpy as np
 from overrides import overrides
 from scipy.stats import uniform
 from sight.proto import sight_pb2
-from sight.utils.common import convert_proto_to_dict
+from sight.utils.proto_conversion import convert_proto_to_dict
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
 from smcpy import AdaptiveSampler as Sampler

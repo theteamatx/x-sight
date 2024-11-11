@@ -24,8 +24,8 @@ from sight_service.proto import service_pb2
 
 _file_name = 'sensitivity_analysis.py'
 
-from sight.utils.common import convert_dict_to_proto
-from sight.utils.common import convert_proto_to_dict
+from sight.utils.proto_conversion import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_proto_to_dict
 
 
 class SensitivityAnalysis(OptimizerInstance):

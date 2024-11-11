@@ -200,63 +200,6 @@ from sight.proto import sight_pb2
 from sight_service.proto import service_pb2
 
 
-def get_proto_value_from_value(v) -> sight_pb2.Value:
-  val = sight_pb2.Value()
-  if isinstance(v, str):
-    try:
-      # Try to parse as JSON if possible
-      json.loads(v)
-      val.sub_type = sight_pb2.Value.ST_JSON
-      val.json_value = v
-    except (ValueError, TypeError):
-      val.sub_type = sight_pb2.Value.ST_STRING
-      val.string_value = v
-  elif isinstance(v, int):
-    val.sub_type = sight_pb2.Value.ST_INT64
-    val.int64_value = v
-  elif isinstance(v, float):
-    val.sub_type = sight_pb2.Value.ST_DOUBLE
-    val.double_value = v
-  elif isinstance(v, bool):
-    val.sub_type = sight_pb2.Value.ST_BOOL
-    val.bool_value = v
-  elif isinstance(v, bytes):
-    val.sub_type = sight_pb2.Value.ST_BYTES
-    val.bytes_value = v
-  elif v is None:
-    val.sub_type = sight_pb2.Value.ST_NONE
-    val.none_value = True
-  else:
-    raise ValueError(f"Unsupported type: {type(v)}")
-  return val
-
-
-def convert_dict_to_proto(dict: Dict[str, Any]) -> sight_pb2.DecisionParam:
-  proto_map = sight_pb2.DecisionParam()
-  for k, v in dict.items():
-    print(f" k=> {k} , v => {v}")
-    proto_map.params[k].CopyFrom(get_proto_value_from_value(v))
-  return proto_map
-
-
-next_action = {
-    'fire-SIMFIRE_2-6_stand_area_burned': 100,
-    'fire-SIMFIRE_1-6_stand_area_burned': 71,
-    'project_id': '133a6365-01cf-4b5e-8197-d4779e5ce25c',
-    'fire-SIMFIRE_2-1_cycle': 2015,
-    'base-FERTILIZ-extra_offset': 0.0,
-    'fire-SIMFIRE_81-6_stand_area_burned': 45,
-    'fire-SIMFIRE_63-1_cycle': 2076,
-    'fire-SIMFIRE_17-1_cycle': 2030,
-    'fire-SIMFIRE_28-6_stand_area_burned': 100,
-    'fire-SIMFIRE_84-6_stand_area_burned': 100,
-    'base-FERTILIZ-extra_step': 0.0,
-    'region': 'NC',
-    'fire-SIMFIRE_19-6_stand_area_burned': 45,
-    'fire-SIMFIRE_76-1_cycle': 2089
-}
-
-
 class SightService(service_pb2_grpc.SightServiceServicer):
   """Service class to handle the grpc request send via sight client.
   """
@@ -272,7 +215,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
     obj = service_pb2.TestResponse()
     obj.val = str(222)
-    obj.action.CopyFrom(convert_dict_to_proto(dict=next_action))
     logging.info("<<<<<< Out %s method of %s file.", method_name, _file_name)
     return obj
 

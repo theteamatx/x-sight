@@ -17,7 +17,7 @@ from typing import Any, Dict, Optional, Sequence, Tuple
 
 from sight import service_utils as service
 from sight.proto import sight_pb2
-from sight.utils.common import convert_proto_to_dict
+from sight.utils.proto_conversion import convert_proto_to_dict
 from sight_service.proto import service_pb2
 
 
@@ -44,7 +44,6 @@ class OptimizerClient:
   def _get_dp_action(
       self, dp_response: service_pb2.DecisionPointResponse) -> Dict[str, Any]:
     """Returns the dict representation of the action encoded in dp_response."""
-    print('my dp action ')
     return convert_proto_to_dict(dp_response.action)
 
   def finalize_episode(self, sight,
