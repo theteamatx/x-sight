@@ -16,7 +16,7 @@
 import inspect
 import os
 import sys
-import dm_env
+# import dm_env
 import json
 import numpy as np
 import pandas as pd
@@ -35,7 +35,7 @@ from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
 from sight.widgets.decision.single_action_optimizer_client import SingleActionOptimizerClient
-from sight.widgets.decision.acme.acme_optimizer_client import AcmeOptimizerClient
+# from sight.widgets.decision.acme.acme_optimizer_client import AcmeOptimizerClient
 from sight.widgets.decision.env_driver import driver_fn
 from sight.widgets.decision import decision_helper
 # from sight.widgets.decision.cartpole_driver import driver_fn
@@ -190,13 +190,6 @@ def init_sight_polling_thread(sight_id):
     status_update_thread.start()
 
 
-def attr_dict_to_proto(
-    attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
-    attrs_proto: Any,
-):
-    """Converts a dict of attribute constraints to its proto representation."""
-    for attr_name, attr_details in attrs.items():
-        attrs_proto[attr_name].CopyFrom(attr_details)
 
 
 class Optimizer:
@@ -211,113 +204,113 @@ class Optimizer:
 optimizer = Optimizer()
 
 
-def attr_to_dict(attr, array):
-    """Converts a spec type array to a dict of attribute constraints.
+# def attr_to_dict(attr, array):
+#     """Converts a spec type array to a dict of attribute constraints.
 
-  Args:
-    array: The spec array to be converted.
-    attr: The name of the attribute.
+#   Args:
+#     array: The spec array to be converted.
+#     attr: The name of the attribute.
 
-  Returns:
-    A dict of attribute constraints.
-  """
-    result = {}
-    method_name = 'attr_to_dict'
-    logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
-    # print('Array : ', array)
-    # if(array.dtype == np.float32):
-    #   dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
-    # elif(array.dtype == np.int64):
-    #   dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_INT64
+#   Returns:
+#     A dict of attribute constraints.
+#   """
+#     result = {}
+#     method_name = 'attr_to_dict'
+#     logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
+#     # print('Array : ', array)
+#     # if(array.dtype == np.float32):
+#     #   dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
+#     # elif(array.dtype == np.int64):
+#     #   dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_INT64
 
-    # default
-    # dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
+#     # default
+#     # dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
 
-    if isinstance(array, dm_env.specs.DiscreteArray):
-        valid_values = []
-        for i in range(array.num_values):
-            valid_values.append(i)
-        if array.shape == ():
-            key = f'{attr}_{1}'
-            result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
-                valid_int_values=valid_values)
+#     if isinstance(array, dm_env.specs.DiscreteArray):
+#         valid_values = []
+#         for i in range(array.num_values):
+#             valid_values.append(i)
+#         if array.shape == ():
+#             key = f'{attr}_{1}'
+#             result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
+#                 valid_int_values=valid_values)
 
-    elif isinstance(array, dm_env.specs.BoundedArray):
-        if array.shape == () or array.shape == (1, ):
-            # minimum = float(array.minimum if array.minimum.size == 1 else array.minimum[0])
-            # maximum = float(array.maximum if array.maximum.size == 1 else array.maximum[0])
-            minimum = float(array.minimum[0])
-            maximum = float(array.maximum[0])
-            key = f'{attr}_{1}'
-            result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
-                min_value=minimum,
-                max_value=maximum,
-                # datatype=dtype
-            )
-        else:
-            minimum = np.repeat(
-                array.minimum,
-                array.shape[0]) if array.minimum.size == 1 else array.minimum
-            maximum = np.repeat(
-                array.maximum,
-                array.shape[0]) if array.maximum.size == 1 else array.maximum
+#     elif isinstance(array, dm_env.specs.BoundedArray):
+#         if array.shape == () or array.shape == (1, ):
+#             # minimum = float(array.minimum if array.minimum.size == 1 else array.minimum[0])
+#             # maximum = float(array.maximum if array.maximum.size == 1 else array.maximum[0])
+#             minimum = float(array.minimum[0])
+#             maximum = float(array.maximum[0])
+#             key = f'{attr}_{1}'
+#             result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
+#                 min_value=minimum,
+#                 max_value=maximum,
+#                 # datatype=dtype
+#             )
+#         else:
+#             minimum = np.repeat(
+#                 array.minimum,
+#                 array.shape[0]) if array.minimum.size == 1 else array.minimum
+#             maximum = np.repeat(
+#                 array.maximum,
+#                 array.shape[0]) if array.maximum.size == 1 else array.maximum
 
-            for i in range(array.shape[0]):
-                key = f'{attr}_{i + 1}'
-                result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
-                    min_value=float(minimum[i]),
-                    max_value=float(maximum[i]),
-                    # datatype=dtype
-                )
-    # todo : need to handle this case when specs are in different form
-    else:
-        for i in range(array.shape[0]):
-            key = f'{attr}_{i + 1}'
-            result[key] = sight_pb2.DecisionConfigurationStart.AttrProps()
+#             for i in range(array.shape[0]):
+#                 key = f'{attr}_{i + 1}'
+#                 result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
+#                     min_value=float(minimum[i]),
+#                     max_value=float(maximum[i]),
+#                     # datatype=dtype
+#                 )
+#     # todo : need to handle this case when specs are in different form
+#     else:
+#         for i in range(array.shape[0]):
+#             key = f'{attr}_{i + 1}'
+#             result[key] = sight_pb2.DecisionConfigurationStart.AttrProps()
 
-    logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return result
+#     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+#     return result
 
 def get_optimizer(optimizer_type: str, sight: Any):
-    if _OPTIMIZER_TYPE.value == 'dm_acme':
+    if optimizer_type == 'dm_acme':
         optimizer.obj = AcmeOptimizerClient(sight)
-    elif _OPTIMIZER_TYPE.value == 'vizier':
+    elif optimizer_type == 'vizier':
         optimizer.obj = SingleActionOptimizerClient(
             sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER,
             sight)
-    elif _OPTIMIZER_TYPE.value == 'genetic_algorithm':
+    elif optimizer_type == 'genetic_algorithm':
         optimizer.obj = GeneticAlgorithmOptimizerClient(
             max_population_size=_NUM_TRAIN_WORKERS.value, sight=sight)
-    elif _OPTIMIZER_TYPE.value == 'exhaustive_search':
+    elif optimizer_type == 'exhaustive_search':
         optimizer.obj = SingleActionOptimizerClient(
             sight_pb2.DecisionConfigurationStart.OptimizerType.
             OT_EXHAUSTIVE_SEARCH, sight)
-    elif _OPTIMIZER_TYPE.value.startswith('llm_'):
+    elif optimizer_type.startswith('llm_'):
         optimizer.obj = LLMOptimizerClient(
-            _OPTIMIZER_TYPE.value.partition('llm_')[2], description, sight)
-    elif _OPTIMIZER_TYPE.value == 'bayesian_opt':
+            optimizer_type.partition('llm_')[2], description, sight)
+    elif optimizer_type == 'bayesian_opt':
         optimizer.obj = SingleActionOptimizerClient(
             sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT,
             sight)
-    elif _OPTIMIZER_TYPE.value == 'sensitivity_analysis':
+    elif optimizer_type == 'sensitivity_analysis':
         optimizer.obj = SingleActionOptimizerClient(
             sight_pb2.DecisionConfigurationStart.OptimizerType.
             OT_SENSITIVITY_ANALYSIS, sight)
-    elif _OPTIMIZER_TYPE.value.startswith('ng_'):
+    elif optimizer_type.startswith('ng_'):
         optimizer.obj = SingleActionOptimizerClient(
             sight_pb2.DecisionConfigurationStart.OptimizerType.OT_NEVER_GRAD,
             sight,
-            _OPTIMIZER_TYPE.value.partition('ng_')[2])
-    elif _OPTIMIZER_TYPE.value == 'smcpy':
+            optimizer_type.partition('ng_')[2])
+    elif optimizer_type == 'smcpy':
         optimizer.obj = SingleActionOptimizerClient(
             sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY,
             sight)
-    elif _OPTIMIZER_TYPE.value == 'worklist_scheduler':
+    elif optimizer_type == 'worklist_scheduler':
         optimizer.obj = SingleActionOptimizerClient(
             sight_pb2.DecisionConfigurationStart.OptimizerType.
             OT_WORKLIST_SCHEDULER, sight)
     else:
-        raise ValueError(f'Unknown optimizer type {_OPTIMIZER_TYPE.value}')
+        raise ValueError(f'Unknown optimizer type {optimizer_type}')
 
     return optimizer.obj
 
@@ -384,7 +377,7 @@ def run(
 
             decision_configuration = sight_pb2.DecisionConfigurationStart()
             decision_configuration.optimizer_type = opt_obj.optimizer_type()
-            decision_configuration.question_id = config["question_id"]
+            # decision_configuration.question_id = config["question_id"]
             decision_configuration.question_label = config["question_label"]
 
             if (_NUM_TRIALS.value):
@@ -395,9 +388,9 @@ def run(
             #     decision_configuration.num_trials = _NUM_TRIALS.value
             decision_configuration.choice_config[sight.params.label].CopyFrom(
                 opt_obj.create_config())
-            attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
-            attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
-            attr_dict_to_proto(outcome_attrs, decision_configuration.outcome_attrs)
+            decision_helper.attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
+            decision_helper.attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
+            decision_helper.attr_dict_to_proto(outcome_attrs, decision_configuration.outcome_attrs)
 
             sight.enter_block(
                 'Decision Configuration',
@@ -413,9 +406,9 @@ def run(
             sight.exit_block('Decision Configuration', sight_pb2.Object())
             sight.widget_decision_state['num_decision_points'] = 0
 
-            sight.widget_decision_state['decision_episode_fn'] = (
-                decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
-                                                      action_attrs))
+            # sight.widget_decision_state['decision_episode_fn'] = (
+            #     decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+            #                                           action_attrs))
             sight.widget_decision_state['proposed_actions'] = []
 
             if _DECISON_MODE.value == 'run':
@@ -597,8 +590,8 @@ def run(
                                 client_id=client_id,
                                 worker_id=f'client_{client_id}_worker_{worker_location}'
                             )
-                            if(config["question_id"]):
-                                req.question_id = config["question_id"]
+                            # if(config["question_id"]):
+                            #     req.question_id = config["question_id"]
                             if(config["question_label"]):
                                 req.question_label = config["question_label"]
                             response = service.call(
@@ -656,11 +649,13 @@ def run(
                 logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     #! need to discard this condition when yaml flow is setup
     else:
-        if env is not None:
-            if state_attrs == {}:
-                state_attrs = attr_to_dict(env.observation_spec(), 'state')
-            if action_attrs == {}:
-                action_attrs = attr_to_dict(env.action_spec(), 'action')
+        # if env is not None:
+        #     if state_attrs == {}:
+        #         state_attrs = attr_to_dict(env.observation_spec(), 'state')
+        #     if action_attrs == {}:
+        #         action_attrs = attr_to_dict(env.action_spec(), 'action')
+
+        opt_obj = get_optimizer(_OPTIMIZER_TYPE.value, sight)
 
         sight.widget_decision_state['decision_episode_fn'] = (
             decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
@@ -682,9 +677,9 @@ def run(
         #     decision_configuration.num_trials = _NUM_TRIALS.value
         decision_configuration.choice_config[sight.params.label].CopyFrom(
             opt_obj.create_config())
-        attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
-        attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
-        attr_dict_to_proto(outcome_attrs, decision_configuration.outcome_attrs)
+        decision_helper.attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
+        decision_helper.attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
+        decision_helper.attr_dict_to_proto(outcome_attrs, decision_configuration.outcome_attrs)
 
         sight.enter_block(
             'Decision Configuration',

@@ -84,7 +84,7 @@ def launch(
     # action_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
     optimizer: OptimizerClient,
     decision_configuration: sight_pb2.DecisionConfigurationStart,
-    num_train_workers: int,
+    # num_train_workers: int,
     sight: Any,
 ):
   """Launches the experiment with the service.
@@ -94,7 +94,7 @@ def launch(
     state_attrs: maps the name of each state variable to its possible values.
     action_attrs: maps the name of each variable that describes possible
       decisions to its possible values.
-    num_train_workers: numbers of workers to be spawned
+    # num_train_workers: numbers of workers to be spawned
     sight: The Sight object to be used for logging.
   """
   method_name = 'launch'
@@ -111,7 +111,7 @@ def launch(
 
   req.label = sight.params.label
   req.client_id = str(sight.id)
-  req.question_id = decision_configuration.question_id
+  # req.question_id = decision_configuration.question_id
   req.question_label = decision_configuration.question_label
 
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
@@ -336,7 +336,8 @@ def start_jobs(
   ]
 
   logging.info('CLI=%s', ' '.join(args))
-  subprocess.run(args, check=True)
+  #! commented for temp purpose
+  # subprocess.run(args, check=True)
 
   sight.exit_block('Worker Spawning', sight_pb2.Object())
   logging.info('worker logs available at : %s',

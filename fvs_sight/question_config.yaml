@@ -1,0 +1,23 @@
+Q_label1:
+  action:
+    '1' :
+      'min_value' : 1
+      'max_value' : 2
+  state: {}
+  outcome: {}
+
+# Q_label2:
+#   action:
+#     '1' :
+#       'min_value' : 1
+#       'max_value' : 2
+#   state: {}
+#   outcome: {}
+
+# Q_label3:
+#   action:
+#     '1' :
+#       'min_value' : 1
+#       'max_value' : 2
+#   state: {}
+#   outcome: {}

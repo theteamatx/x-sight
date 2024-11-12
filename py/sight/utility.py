@@ -109,6 +109,24 @@ def poll_network_batch_outcome(sight_id):
       raise e
 
 
+def calculate_exp_time(start_time: float, end_time: float):
+  '''
+  calculate the time taken for the experiment to run
+  '''
+  elapsed_time = end_time - start_time
+  print(f"Elapsed time: {elapsed_time} seconds")
+  hours, remainder = divmod(elapsed_time, 3600)
+  minutes, seconds = divmod(remainder, 60)
+
+  if hours > 0:
+    print(
+        f"Elapsed time: {int(hours)} hour(s), {int(minutes)} minute(s), {seconds:.2f} second(s)"
+    )
+  elif minutes > 0:
+    print(f"Elapsed time: {int(minutes)} minute(s), {seconds:.2f} second(s)")
+  else:
+    print(f"Elapsed time: {seconds:.2f} second(s)")
+
 def MessageToJson(
     message,
     including_default_value_fields=False,

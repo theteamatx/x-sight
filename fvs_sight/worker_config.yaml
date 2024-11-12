@@ -1,0 +1,12 @@
+fvs_worker :
+  docker : "gcr.io/fvs-worker:latest"
+  binary : "fvs_sight/fvs_sight_worker.py"
+  mode : "dsub_cloud_worker" #(dsub_local, )
+
+# pyManga_worker :
+#   docker : "gcr.io/pyManga-worker:latest",
+#   binary : "py/fvs/pyManga_worker.py",
+#   mode : "dsub_remote" #(dsub_local)
+
+# # SLAM_worker : {...}
+

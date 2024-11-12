@@ -1,0 +1,11 @@
+Q_label1 :
+  optimizer: "ng_bo"
+  num_questions: 3
+  workers:
+    fvs_worker : 1
+
+# Q_label2 :
+#   optimizer: "worklist_scheduler"
+#   num_questions: 3
+#   workers:
+#     fvs_worker : 1
