@@ -48,7 +48,7 @@ class WorklistScheduler(SingleActionOptimizer):
 
   def add_outcome_to_outcome_response(
       self, msg_details: MessageDetails, sample_id,
-      outcome: service_pb2.GetOutcomeResponse.outcome):
+      outcome: service_pb2.GetOutcomeResponse.Outcome):
     outcome.action_id = sample_id
     outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
     outcome.reward = msg_details.reward
@@ -156,21 +156,15 @@ class WorklistScheduler(SingleActionOptimizer):
 
     logging.info("self.queue => %s", self.queue)
 
-    all_active_messages = self.queue.get_active()
-
-    active_messages: Dict[str, MessageDetails] = all_active_messages[
-        request.worker_id]
-
-    for action_id, message in list(active_messages.items()):
-      self.queue.complete_message(
-          message_id=action_id,
-          worker_id=request.worker_id,
-          update_fn=lambda msg: msg.update(
-              reward=request.decision_outcome.reward,
-              outcome=convert_proto_to_dict(proto=request.decision_outcome.
-                                            outcome_params),
-              action=convert_proto_to_dict(proto=request.decision_point.
-                                           choice_params)))
+    self.queue.complete_message(
+        message_id=request.action_id,
+        worker_id=request.worker_id,
+        update_fn=lambda msg: msg.update(
+            reward=request.decision_outcome.reward,
+            outcome=convert_proto_to_dict(proto=request.decision_outcome.
+                                          outcome_params),
+            action=convert_proto_to_dict(proto=request.decision_point.
+                                         choice_params)))
     logging.info("self.queue => %s", self.queue)
 
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
@@ -210,8 +204,9 @@ class WorklistScheduler(SingleActionOptimizer):
   ) -> service_pb2.WorkerAliveResponse:
     method_name = "WorkerAlive"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
-
     logging.info("self.queue => %s", self.queue)
+
+    response = service_pb2.WorkerAliveResponse()
 
     if (self.exp_completed):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
@@ -219,10 +214,14 @@ class WorklistScheduler(SingleActionOptimizer):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+      batched_msgs = self.queue.create_active_batch(worker_id=request.worker_id)
+      for action_id, msg in batched_msgs.items():
+        decision_message = response.decision_messages.add()
+        decision_message.action_id = action_id
+        decision_message.action.CopyFrom(convert_dict_to_proto(dict=msg.action))
 
-      self.queue.create_active_batch(worker_id=request.worker_id)
-
+    response.status_type = worker_alive_status
     logging.info("self.queue => %s", self.queue)
     logging.info("worker_alive_status is %s", worker_alive_status)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)
+    return response

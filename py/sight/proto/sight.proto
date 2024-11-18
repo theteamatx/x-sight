@@ -746,6 +746,13 @@ message DecisionParam {
   map <string,Value> params = 1;
 }
 
+message DecisionMessage {
+  int64 action_id = 1;
+  DecisionParam action = 2;
+  DecisionPoint decision_point = 3;
+  DecisionOutcome decision_outcome = 4;
+}
+
 message DecisionPoint {
   // Identifies the choice being made.
   string choice_label = 1;

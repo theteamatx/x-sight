@@ -31,6 +31,7 @@ from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.utility import poll_network_batch_outcome
 from sight.utils.proto_conversion import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_proto_to_dict
 # from sight.widgets.decision.cartpole_driver import driver_fn
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
@@ -278,6 +279,14 @@ def attr_to_dict(attr, array):
 
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
   return result
+
+
+def get_decision_messages_from_proto(
+    decision_messages_proto: List[sight_pb2.DecisionMessage]) -> Dict[str, Any]:
+  messages = {}
+  for msg in decision_messages_proto:
+    messages[msg.action_id] = convert_proto_to_dict(proto=msg.action)
+  return messages
 
 
 def run(
@@ -595,19 +604,27 @@ def run(
             time.sleep(5)
           elif (response.status_type ==
                 service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-            sight.enter_block('Decision Sample', sight_pb2.Object())
-            if 'constant_action' in sight.widget_decision_state:
-              del sight.widget_decision_state['constant_action']
-            sight.widget_decision_state['discount'] = 0
-            sight.widget_decision_state['last_reward'] = None
+            decision_messages = get_decision_messages_from_proto(
+                decision_messages_proto=response.decision_messages)
+            for action_id, action_params in decision_messages.items():
+              sight.enter_block('Decision Sample', sight_pb2.Object())
+              if 'constant_action' in sight.widget_decision_state:
+                del sight.widget_decision_state['constant_action']
+              sight.widget_decision_state['discount'] = 0
+              sight.widget_decision_state['last_reward'] = None
 
-            if env:
-              driver_fn(env, sight)
-            else:
-              driver_fn(sight)
+              sight.widget_decision_state['action_message'] = {
+                  "action_id": action_id,
+                  "action_params": action_params
+              }
 
-            finalize_episode(sight)
-            sight.exit_block('Decision Sample', sight_pb2.Object())
+              if env:
+                driver_fn(env, sight)
+              else:
+                driver_fn(sight)
+
+              finalize_episode(sight)
+              sight.exit_block('Decision Sample', sight_pb2.Object())
           else:
             raise ValueError("invalid response from server")
         logging.info('exiting from the loop.....')
@@ -925,6 +942,8 @@ def finalize_episode(sight):  # , optimizer_obj
             OT_WORKLIST_SCHEDULER, sight)
       req.decision_outcome.CopyFrom(get_decision_outcome_proto(
           'outcome', sight))
+      req.action_id = sight.widget_decision_state('action_message',
+                                                  {}).get('action_id', None)
       # print('request : ', req)
       optimizer_obj = optimizer.get_instance()
       optimizer_obj.finalize_episode(sight, req)
