@@ -339,12 +339,12 @@ message GetOutcomeResponse {
 message FinalizeEpisodeRequest {
   string client_id = 1;
   string worker_id = 2;
-  sight.x.proto.DecisionPoint decision_point = 3;
-  sight.x.proto.DecisionOutcome decision_outcome = 4;
+  // sight.x.proto.DecisionPoint decision_point = 3;
+  // sight.x.proto.DecisionOutcome decision_outcome = 4;
   sight.x.proto.DecisionConfigurationStart.OptimizerType optimizer_type = 5;
   Acme_Request acme_config = 6;
-  int64 action_id = 7;
-  sight.x.proto.DecisionMessage decision_message = 8;   // not using for now..
+  // int64 action_id = 7;
+  repeated sight.x.proto.DecisionMessage decision_messages = 8;
 }
 
 message FinalizeEpisodeResponse {

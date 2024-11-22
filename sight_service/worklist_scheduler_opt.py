@@ -156,15 +156,16 @@ class WorklistScheduler(SingleActionOptimizer):
 
     logging.info("self.queue => %s", self.queue)
 
-    self.queue.complete_message(
-        message_id=request.action_id,
-        worker_id=request.worker_id,
-        update_fn=lambda msg: msg.update(
-            reward=request.decision_outcome.reward,
-            outcome=convert_proto_to_dict(proto=request.decision_outcome.
-                                          outcome_params),
-            action=convert_proto_to_dict(proto=request.decision_point.
-                                         choice_params)))
+    for i in range(len(request.decision_messages)):
+      self.queue.complete_message(
+          worker_id=request.worker_id,
+          message_id=request.decision_messages[i].action_id,
+          update_fn=lambda msg: msg.update(
+              reward=request.decision_messages[i].decision_outcome.reward,
+              outcome=convert_proto_to_dict(proto=request.decision_messages[i].
+                                            decision_outcome.outcome_params),
+              action=convert_proto_to_dict(proto=request.decision_messages[i].
+                                           decision_point.choice_params)))
     logging.info("self.queue => %s", self.queue)
 
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
@@ -214,7 +215,8 @@ class WorklistScheduler(SingleActionOptimizer):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
-      batched_msgs = self.queue.create_active_batch(worker_id=request.worker_id)
+      batched_msgs = self.queue.create_active_batch(worker_id=request.worker_id,
+                                                    new_batch_size=10)
       for action_id, msg in batched_msgs.items():
         decision_message = response.decision_messages.add()
         decision_message.action_id = action_id

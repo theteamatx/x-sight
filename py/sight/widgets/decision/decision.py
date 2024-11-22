@@ -41,6 +41,8 @@ from sight.widgets.decision import utils
 # )
 from sight.widgets.decision.env_driver import driver_fn
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
+from sight.widgets.decision.shared_batch_messages import CachedBatchMessages
+from sight.widgets.decision.shared_batch_messages import DecisionMessage
 from sight.widgets.decision.single_action_optimizer_client import (
     SingleActionOptimizerClient
 )
@@ -606,25 +608,33 @@ def run(
                 service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
             decision_messages = get_decision_messages_from_proto(
                 decision_messages_proto=response.decision_messages)
+            shared_batch_messages = CachedBatchMessages()
+            sight.widget_decision_state[
+                'cached_messages'] = shared_batch_messages
             for action_id, action_params in decision_messages.items():
               sight.enter_block('Decision Sample', sight_pb2.Object())
               if 'constant_action' in sight.widget_decision_state:
                 del sight.widget_decision_state['constant_action']
+              cached_messages: CachedBatchMessages = sight.widget_decision_state[
+                  'cached_messages']
               sight.widget_decision_state['discount'] = 0
               sight.widget_decision_state['last_reward'] = None
+              sight.widget_decision_state['action_id'] = action_id
 
-              sight.widget_decision_state['action_message'] = {
-                  "action_id": action_id,
-                  "action_params": action_params
-              }
+              cached_messages.set(
+                  action_id,
+                  DecisionMessage(
+                      action_id=action_id,
+                      action_params=action_params,
+                  ))
 
               if env:
                 driver_fn(env, sight)
               else:
                 driver_fn(sight)
 
-              finalize_episode(sight)
               sight.exit_block('Decision Sample', sight_pb2.Object())
+            finalize_episode(sight)
           else:
             raise ValueError("invalid response from server")
         logging.info('exiting from the loop.....')
@@ -695,6 +705,108 @@ def get_decision_outcome_proto(outcome_label: str,
   return decision_outcome
 
 
+def get_decision_outcome_proto_from_cached(outcome_label: str,
+                                           decision_message: DecisionMessage):
+
+  logging.info('decision message =>%s', decision_message)
+
+  decision_outcome = sight_pb2.DecisionOutcome(outcome_label=outcome_label)
+  decision_outcome.reward = decision_message.reward
+  decision_outcome.outcome_params.CopyFrom(
+      convert_dict_to_proto(dict=decision_message.outcome_params))
+  decision_outcome.discount = decision_message.discount
+  return decision_outcome
+
+
+def _configure_client_and_worker(sight):
+  """Configures the client and worker identifiers."""
+  if FLAGS.deployment_mode in ["local"] or _TRAINED_MODEL_LOG_ID.value:
+    global _sight_id
+    _sight_id = str(sight.id)
+    client_id = str(sight.id)
+    worker_location = "0"
+  elif FLAGS.deployment_mode == "worker_mode":
+    client_id = os.environ["PARENT_LOG_ID"]
+    worker_location = os.environ["worker_location"]
+  else:
+    client_id = "unknown"
+    worker_location = "unknown"
+  return client_id, worker_location
+
+
+def _process_acme_action(selected_action, widget_state):
+  """Processes the action for 'dm_acme' optimizer."""
+  #? when action space is scalar (DQN agent - cartpole)
+  if selected_action.shape == ():
+    return {
+        widget_state["decision_episode_fn"].action_attrs[0]: selected_action[()]
+    }
+  #? when action space is 1d array (D4pg agent - pendulum)
+  return {
+      widget_state["decision_episode_fn"].action_attrs[i]: selected_action[i]
+      for i in range(len(widget_state["decision_episode_fn"].action_attrs))
+  }
+
+
+def _process_worklist_scheduler(sight, req):
+  """Processes the action for 'worklist_scheduler' optimizer."""
+  widget_state = sight.widget_decision_state
+  if not optimizer.obj:
+    optimizer.obj = SingleActionOptimizerClient(
+        sight_pb2.DecisionConfigurationStart.OptimizerType.
+        OT_WORKLIST_SCHEDULER, sight)
+  if widget_state["action_id"]:
+    return widget_state["cached_messages"].get(
+        widget_state["action_id"]).action_params
+  return optimizer.get_instance().decision_point(sight, req)
+
+
+def _process_llm_action(sight, req, optimizer_obj):
+  """Processes the action for 'llm_' optimizers."""
+  widget_state = sight.widget_decision_state
+  if "reward" in widget_state:
+    req.decision_outcome.reward = widget_state["reward"]
+  if "outcome_value" in widget_state:
+    req.decision.outcome.outcome_params.CopyFrom(
+        convert_dict_to_proto(dict=widget_state["outcome_value"]))
+  req.decision_outcome.discount = widget_state["discount"]
+  return optimizer_obj.decision_point(sight, req)
+
+
+def _make_decision(sight, req):
+  """Handles decision-making based on the optimizer type."""
+  optimizer_obj = optimizer.get_instance()
+  optimizer_type = _OPTIMIZER_TYPE.value
+  widget_state = sight.widget_decision_state
+  if optimizer_type == 'dm_acme':
+    selected_action = optimizer_obj.decision_point(sight, req)
+    chosen_action = _process_acme_action(selected_action, widget_state)
+  elif optimizer_type in [
+      "vizier", "genetic_algorithm", "exhaustive_search", "bayesian_opt",
+      "sensitivity_analysis", "smcpy"
+  ] or optimizer_type.startswith("ng_"):
+    chosen_action = optimizer_obj.decision_point(sight, req)
+  elif optimizer_type == "worklist_scheduler":
+    chosen_action = _process_worklist_scheduler(sight, req)
+  elif optimizer_type.startswith("llm_"):
+    chosen_action = _process_llm_action(sight, req, optimizer_obj)
+  else:
+    raise ValueError(f"Unsupported optimizer type: {optimizer_type}")
+  return chosen_action
+
+
+def _log_decision(choice_label, chosen_action, sight):
+  """Logs the decision to the Sight logger."""
+  choice_params = sight_pb2.DecisionParam()
+  choice_params.CopyFrom(convert_dict_to_proto(dict=chosen_action))
+  obj = sight_pb2.Object(
+      sub_type=sight_pb2.Object.ST_DECISION_POINT,
+      decision_point=sight_pb2.DecisionPoint(choice_label=choice_label),
+  )
+  obj.decision_point.choice_params.CopyFrom(choice_params)
+  sight.log_object(obj, inspect.currentframe().f_back.f_back)
+
+
 def decision_point(
     choice_label: str,
     sight: Any,
@@ -717,95 +829,51 @@ def decision_point(
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
   # logging.info('>>>>>>>>>  In %s of %s, sight.widget_decision_state=%s', method_name, _file_name, sight.widget_decision_state)
 
+  # Increment decision point count
   sight.widget_decision_state['num_decision_points'] += 1
-  chosen_action = None
 
+  # Return cached action if available
   if 'constant_action' in sight.widget_decision_state:
     return sight.widget_decision_state['constant_action']
 
+  # Prepare the request
   req = service_pb2.DecisionPointRequest()
-
-  if FLAGS.deployment_mode == 'local' or _TRAINED_MODEL_LOG_ID.value:
-    global _sight_id
-    _sight_id = str(sight.id)
-    client_id = str(sight.id)
-    worker_location = '0'
-  elif (FLAGS.deployment_mode == 'worker_mode'
-        # or FLAGS.deployment_mode == 'docker_mode'
-       ):
-    client_id = os.environ['PARENT_LOG_ID']
-    worker_location = os.environ['worker_location']
-
+  client_id, worker_location = _configure_client_and_worker(sight)
   req.client_id = client_id
   req.worker_id = f'client_{client_id}_worker_{worker_location}'
 
-  if _OPTIMIZER_TYPE.value == 'dm_acme':
-    optimizer_obj = optimizer.get_instance()
-    selected_action = optimizer_obj.decision_point(sight, req)
-    # print("selected_action : ", selected_action, type(selected_action), selected_action.shape, )
-    # raise SystemError
+  # perform the decision-making process
+  chosen_action = _make_decision(sight, req)
 
-    chosen_action = {}
-    #? when action space is scalar (DQN agent - cartpole)
-    if (selected_action.shape == ()):
-      chosen_action[sight.widget_decision_state['decision_episode_fn'].
-                    action_attrs[0]] = selected_action[()]
-    #? when action space is 1d array (D4pg agent - pendulum)
-    else:
-      for i in range(
-          len(sight.widget_decision_state['decision_episode_fn'].action_attrs)):
-        chosen_action[sight.widget_decision_state['decision_episode_fn'].
-                      action_attrs[i]] = selected_action[i]
-    # print("chosen_action : ", chosen_action)
+  # setting the constant_action in sight widget
+  sight.widget_decision_state['constant_action'] = chosen_action
 
-  # selected_action will be same for all calls of decision point in these
-  # optimizers. As such, it is cached as the constant action.
-  elif _OPTIMIZER_TYPE.value in [
-      'vizier', 'genetic_algorithm', 'exhaustive_search', 'bayesian_opt',
-      'sensitivity_analysis', 'smcpy'
-  ] or _OPTIMIZER_TYPE.value.startswith('ng_'):
-    optimizer_obj = optimizer.get_instance()
-    chosen_action = optimizer_obj.decision_point(sight, req)
-    sight.widget_decision_state['constant_action'] = chosen_action
-  elif _OPTIMIZER_TYPE.value == 'worklist_scheduler':
-    if (not optimizer.obj):
-      optimizer.obj = SingleActionOptimizerClient(
-          sight_pb2.DecisionConfigurationStart.OptimizerType.
-          OT_WORKLIST_SCHEDULER, sight)
-    optimizer_obj = optimizer.get_instance()
-    chosen_action = optimizer_obj.decision_point(sight, req)
-    # if(chosen_action == None):
-    #     print("received None in chosen action")
-    #     return None
-    sight.widget_decision_state['constant_action'] = chosen_action
-
-  elif _OPTIMIZER_TYPE.value.startswith('llm_'):
-    optimizer_obj = optimizer.get_instance()
-    if 'reward' in sight.widget_decision_state:
-      req.decision_outcome.reward = sight.widget_decision_state['reward']
-    if 'outcome_value' in sight.widget_decision_state:
-      req.decision.outcome.outcome_params.CopyFrom(
-          convert_dict_to_proto(
-              dict=sight.widget_decision_state["outcome_value"]))
-    req.decision_outcome.discount = sight.widget_decision_state['discount']
-    chosen_action = optimizer_obj.decision_point(sight, req)
-
-  choice_params = sight_pb2.DecisionParam()
-  choice_params.CopyFrom(convert_dict_to_proto(dict=chosen_action))
-
-  # pytype: disable=attribute-error
-  obj = sight_pb2.Object(
-      sub_type=sight_pb2.Object.ST_DECISION_POINT,
-      decision_point=sight_pb2.DecisionPoint(choice_label=choice_label,
-                                             # choice_params=choice_params,
-                                            ),
-  )
-  obj.decision_point.choice_params.CopyFrom(choice_params)
-  sight.log_object(obj, inspect.currentframe().f_back.f_back)
+  # log the decision
+  _log_decision(choice_label, chosen_action, sight)
 
   logging.info('decision_point() chosen_action=%s', chosen_action)
   logging.debug('<<<< Out %s of %s', method_name, _file_name)
   return chosen_action
+
+
+def _update_cached_batch(sight: Any):
+  """
+  Updates the cached batch with the latest decision state.
+
+  Args:
+      sight: Instance of a Sight logger.
+  """
+  action_id = sight.widget_decision_state.get("action_id", None)
+  cached_messages = sight.widget_decision_state.get("cached_messages", None)
+  if cached_messages and action_id:
+    logging.info(f"Caching batch for action_id: {action_id}")
+    cached_messages.update(
+        key=action_id,
+        action_params=cached_messages.get(action_id).action_params,
+        discount=sight.widget_decision_state["discount"],
+        reward=sight.widget_decision_state.get("sum_reward", 0),
+        outcome_params=sight.widget_decision_state.get("sum_outcome", {}),
+    )
 
 
 def decision_outcome(
@@ -869,6 +937,8 @@ def decision_outcome(
       inspect.currentframe().f_back.f_back,
   )
 
+  _update_cached_batch(sight)
+
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
@@ -899,6 +969,57 @@ def propose_actions(sight, action_dict):
   return action_id
 
 
+def _handle_optimizer_finalize(sight: Any, req: Any) -> None:
+  """
+  Handles optimizer-specific finalization logic.
+
+  Args:
+      sight: Instance of a Sight logger.
+      req: FinalizeEpisodeRequest object.
+  """
+  optimizer_obj = optimizer.get_instance()
+  decision_message = sight_pb2.DecisionMessage()
+
+  # Get the list of action messages (supports multiple action IDs)
+  cached_messages_obj = sight.widget_decision_state.get("cached_messages", {})
+  all_messages: dict = cached_messages_obj.all_messages()
+  logging.info('action_messages => %s', all_messages)
+
+  for action_id, msg in all_messages.items():
+    decision_message = sight_pb2.DecisionMessage()
+    decision_message.decision_outcome.CopyFrom(
+        get_decision_outcome_proto_from_cached(outcome_label="outcome",
+                                               decision_message=msg))
+    decision_message.action_id = action_id
+    req.decision_messages.append(decision_message)
+
+  # clearing the cached
+  cached_messages_obj.clear()
+
+  if _OPTIMIZER_TYPE.value in {
+      "genetic_algorithm",
+      "exhaustive_search",
+      "vizier",
+      "bayesian_opt",
+      "sensitivity_analysis",
+      "smcpy",
+  } or _OPTIMIZER_TYPE.value.startswith(("llm_", "ng_")):
+    optimizer_obj.finalize_episode(sight, req)
+
+  elif _OPTIMIZER_TYPE.value == "worklist_scheduler":
+    if not optimizer.obj:
+      optimizer.obj = SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.
+          OT_WORKLIST_SCHEDULER, sight)
+    optimizer_obj.finalize_episode(sight, req)
+
+  elif _OPTIMIZER_TYPE.value == "dm_acme":
+    optimizer_obj.finalize_episode(sight)
+
+  if "outcome_value" in sight.widget_decision_state:
+    del sight.widget_decision_state["outcome_value"]
+
+
 def finalize_episode(sight):  # , optimizer_obj
   """Finalize the run.
 
@@ -909,50 +1030,15 @@ def finalize_episode(sight):  # , optimizer_obj
   method_name = 'finalize_episode'
   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-  if (FLAGS.deployment_mode == 'local'
-      # or FLAGS.deployment_mode == 'docker_mode'
-      or FLAGS.deployment_mode == 'worker_mode'):
-    if FLAGS.deployment_mode == 'local':
-      client_id = str(sight.id)
-      worker_location = '0'
-    elif (FLAGS.deployment_mode == 'worker_mode'
-          # or FLAGS.deployment_mode == 'docker_mode'
-         ):
-      client_id = os.environ['PARENT_LOG_ID']
-      worker_location = os.environ['worker_location']
+  if FLAGS.deployment_mode in {"local", "worker_mode"}:
+    client_id, worker_location = _configure_client_and_worker(sight)
 
+    # create the req
     req = service_pb2.FinalizeEpisodeRequest(
         client_id=client_id,
-        worker_id=f'client_{client_id}_worker_{worker_location}',
-    )
+        worker_id=f"client_{client_id}_worker_{worker_location}")
 
-    if _OPTIMIZER_TYPE.value in [
-        'genetic_algorithm', 'exhaustive_search', 'vizier', 'bayesian_opt',
-        'sensitivity_analysis', 'smcpy'
-    ] or _OPTIMIZER_TYPE.value.startswith(
-        'llm_') or _OPTIMIZER_TYPE.value.startswith('ng_'):
-      req.decision_outcome.CopyFrom(get_decision_outcome_proto(
-          'outcome', sight))
-      optimizer_obj = optimizer.get_instance()
-      optimizer_obj.finalize_episode(sight, req)
-    elif _OPTIMIZER_TYPE.value == 'worklist_scheduler':
-      if (not optimizer.obj):
-        optimizer.obj = SingleActionOptimizerClient(
-            sight_pb2.DecisionConfigurationStart.OptimizerType.
-            OT_WORKLIST_SCHEDULER, sight)
-      req.decision_outcome.CopyFrom(get_decision_outcome_proto(
-          'outcome', sight))
-      req.action_id = sight.widget_decision_state('action_message',
-                                                  {}).get('action_id', None)
-      # print('request : ', req)
-      optimizer_obj = optimizer.get_instance()
-      optimizer_obj.finalize_episode(sight, req)
-    elif _OPTIMIZER_TYPE.value == 'dm_acme':
-      optimizer_obj = optimizer.get_instance()
-      optimizer_obj.finalize_episode(sight)
-
-    if 'outcome_value' in sight.widget_decision_state:
-      del sight.widget_decision_state['outcome_value']
+    _handle_optimizer_finalize(sight, req)
 
   else:
     logging.info('Not in local/worker mode, so skipping it')
@@ -974,6 +1060,7 @@ def finalize_episode(sight):  # , optimizer_obj
             lambda s, meta: s.ProposeAction(proposal_req, 300, metadata=meta))
       sight.widget_decision_state['proposed_actions'] = []
 
+  # TODO _rewards for all ids
   if 'sum_reward' in sight.widget_decision_state:
     _rewards.append(sight.widget_decision_state['sum_reward'])
   sight.widget_decision_state.pop('sum_reward', None)

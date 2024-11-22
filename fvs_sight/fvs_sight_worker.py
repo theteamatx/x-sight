@@ -27,10 +27,7 @@ def simulate_fvs(sight, params_dict):
 
 def driver_fn(sight):
 
-  if sight.widget_decision_state['action_message']:
-    params_dict = sight.widget_decision_state['action_message']["action_params"]
-  else:
-    params_dict = decision.decision_point("label", sight)
+  params_dict = decision.decision_point("label", sight)
   # params_dict = {'fvs_type':'managed','region':'BM','project_id':'ACR173','desc': 'fire_projectACR173', 'fire-SIMFIRE_27-1_cycle': 2028, 'fire-SIMFIRE_27-6_stand_area_burned': 10.0, 'fire-SIMFIRE_30-1_cycle': 2031, 'fire-SIMFIRE_30-6_stand_area_burned': 10.0, 'fire-SIMFIRE_31-1_cycle': 2032, 'fire-SIMFIRE_31-6_stand_area_burned': 10.0}
   print('params_dict : ', params_dict)
   # if(params_dict == None):
