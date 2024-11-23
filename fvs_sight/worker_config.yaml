@@ -1,7 +1,14 @@
-fvs_worker :
-  docker : "gcr.io/fvs-worker:latest"
-  binary : "fvs_sight/fvs_sight_worker.py"
-  mode : "dsub_cloud_worker" #(dsub_local, )
+generic_worker :
+  docker : "gcr.io/cameltrain/generic-worker:latest"
+  binary : "py/sight/demo/fn_sphere.py"
+
+
+
+
+# fvs_worker :
+#   docker : "gcr.io/fvs-worker:latest"
+#   binary : "fvs_sight/fvs_sight_worker.py"
+#   # mode : "dsub_cloud_worker" #(dsub_local, )
 
 # pyManga_worker :
 #   docker : "gcr.io/pyManga-worker:latest",

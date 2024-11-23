@@ -1,8 +1,10 @@
 Q_label1 :
-  optimizer: "ng_bo"
+  optimizer: 'ng_bo'
   num_questions: 3
+  mode : 'dsub_local_worker' #"dsub_cloud_worker" #(dsub_local, )
   workers:
-    fvs_worker : 1
+    # fvs_worker : 1
+    generic_worker : 1
 
 # Q_label2 :
 #   optimizer: "worklist_scheduler"

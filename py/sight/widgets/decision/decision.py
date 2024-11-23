@@ -372,7 +372,9 @@ def run(
                 config, 'outcome_attrs')
 
             sight.widget_decision_state['decision_episode_fn'] = (
-            decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+            # decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+            #                                       action_attrs))
+            decision_episode_fn.DecisionEpisodeFn(state_attrs,
                                                   action_attrs))
 
             decision_configuration = sight_pb2.DecisionConfigurationStart()
@@ -658,7 +660,9 @@ def run(
         opt_obj = get_optimizer(_OPTIMIZER_TYPE.value, sight)
 
         sight.widget_decision_state['decision_episode_fn'] = (
-            decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+            # decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+            #                                       action_attrs))
+            decision_episode_fn.DecisionEpisodeFn(state_attrs,
                                                   action_attrs))
 
         if outcome_attrs == {}:
@@ -696,7 +700,9 @@ def run(
         sight.widget_decision_state['num_decision_points'] = 0
 
         sight.widget_decision_state['decision_episode_fn'] = (
-            decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+            # decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
+            #                                       action_attrs))
+            decision_episode_fn.DecisionEpisodeFn(state_attrs,
                                                   action_attrs))
         sight.widget_decision_state['proposed_actions'] = []
 
@@ -873,10 +879,15 @@ def run(
                 # for _ in range(num_samples_to_run):
                 # if(FLAGS.optimizer_type == "worklist_scheduler"):
                 # if (FLAGS.deployment_mode == 'worker_mode'):
+                # import os
+                optimizer_configs = utils.load_yaml_config('/x-sight/fvs_sight/optimizer_config.yaml')
+
+                for key in optimizer_configs.keys():
                     while (True):
                         # #? new rpc just to check move forward or not?
                         req = service_pb2.WorkerAliveRequest(
                             client_id=client_id,
+                            question_label=key,
                             worker_id=f'client_{client_id}_worker_{worker_location}'
                         )
                         response = service.call(
@@ -903,9 +914,9 @@ def run(
                             if env:
                                 driver_fn(env, sight)
                             else:
-                                driver_fn(sight)
+                                driver_fn(key, sight)
 
-                            finalize_episode(sight)
+                            finalize_episode(key, sight)
                             sight.exit_block('Decision Sample', sight_pb2.Object())
                         else:
                             raise ValueError("invalid response from server")
@@ -1045,6 +1056,7 @@ def decision_point(
 
     req.client_id = client_id
     req.worker_id = f'client_{client_id}_worker_{worker_location}'
+    req.question_label = choice_label
 
     if _OPTIMIZER_TYPE.value == 'dm_acme':
         optimizer_obj = optimizer.get_instance()
@@ -1276,7 +1288,7 @@ def propose_actions(sight, action_dict):
     return action_id
 
 
-def finalize_episode(sight):  # , optimizer_obj
+def finalize_episode(question_label, sight):  # , optimizer_obj
     """Finalize the run.
 
   Args:
@@ -1301,6 +1313,7 @@ def finalize_episode(sight):  # , optimizer_obj
         req = service_pb2.FinalizeEpisodeRequest(
             client_id=client_id,
             worker_id=f'client_{client_id}_worker_{worker_location}',
+            question_label=question_label
         )
 
         if _OPTIMIZER_TYPE.value in [

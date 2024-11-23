@@ -2,7 +2,19 @@ Q_label1:
   action:
     '1' :
       'min_value' : 1
-      'max_value' : 2
+      'max_value' : 5
+    '2' :
+      'min_value' : 1
+      'max_value' : 5
+    '3' :
+      'min_value' : 1
+      'max_value' : 5
+    '4' :
+      'min_value' : 1
+      'max_value' : 5
+    '5' :
+      'min_value' : 1
+      'max_value' : 5
   state: {}
   outcome: {}
 

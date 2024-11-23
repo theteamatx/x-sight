@@ -336,8 +336,7 @@ def start_jobs(
   ]
 
   logging.info('CLI=%s', ' '.join(args))
-  #! commented for temp purpose
-  # subprocess.run(args, check=True)
+  subprocess.run(args, check=True)
 
   sight.exit_block('Worker Spawning', sight_pb2.Object())
   logging.info('worker logs available at : %s',
@@ -347,7 +346,7 @@ def start_jobs(
 
 def start_job_in_dsub_local(
     num_train_workers: int,
-    num_trials: int,
+    # num_trials: int,
     binary_path: Optional[str],
     optimizer_type: str,
     docker_image,
@@ -374,16 +373,18 @@ def start_job_in_dsub_local(
 
   sight.enter_block('Worker Spawning locally', sight_pb2.Object())
   with open('/tmp/optimization_tasks.tsv', 'w') as outf:
-    outf.write('--env worker_id\t--env num_samples\t--env worker_location\n')
-    num_tasks_per_worker = math.floor(num_trials / num_train_workers)
+    # outf.write('--env worker_id\t--env num_samples\t--env worker_location\n')
+    outf.write('--env worker_id\t--env worker_location\n')
+    # num_tasks_per_worker = math.floor(num_trials / num_train_workers)
     for worker_id in range(num_train_workers):
-      tasks_for_cur_worker = num_tasks_per_worker
-      # If _NUM_TRIALS is not evenly divisible by num_train_workers, add
-      # the extra extra tasks to the first few workers.
-      if worker_id < num_trials % num_train_workers:
-        tasks_for_cur_worker += 1
-      outf.write(
-          f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location.get()}\n')
+      # tasks_for_cur_worker = num_tasks_per_worker
+      # # If _NUM_TRIALS is not evenly divisible by num_train_workers, add
+      # # the extra extra tasks to the first few workers.
+      # if worker_id < num_trials % num_train_workers:
+      #   tasks_for_cur_worker += 1
+      # outf.write(
+      #     f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location.get()}\n')
+      outf.write(f'{worker_id}\t{sight.location.get()}\n')
       sight.location.get().next()
 
   # remote_script = (f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/{str(sight.id)}/' +

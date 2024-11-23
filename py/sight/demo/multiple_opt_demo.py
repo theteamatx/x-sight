@@ -41,6 +41,7 @@ from sight import utility
 from sight.widgets.decision import decision_helper
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
+from sight.widgets.decision import utils
 
 FLAGS = flags.FLAGS
 
@@ -89,9 +90,9 @@ def get_sight_instance():
 #   return attr_dict
 
 
-def load_yaml_config(file_path):
-  with open(file_path, 'r') as f:
-    return yaml.safe_load(f)
+# def load_yaml_config(file_path):
+#   with open(file_path, 'r') as f:
+#     return yaml.safe_load(f)
 
 
 def configure_decision(sight, question_label, question_config, optimizer_config,
@@ -141,19 +142,28 @@ def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
   #   worker_details = worker_configs[worker_name]
   for worker, worker_count in optimizer_config['workers'].items():
     worker_details = worker_configs[worker]
-    trials.start_jobs(worker_count,
-                      worker_details['binary'], optimizer_type,
-                      worker_details['docker'], 'train', 'worker_mode',
-                      worker_details['mode'], sight)
+    if(optimizer_config['mode'] == 'dsub_cloud_worker'):
+      trials.start_jobs(worker_count,
+                        worker_details['binary'], optimizer_type,
+                        worker_details['docker'], 'train', 'worker_mode',
+                        optimizer_config['mode'], sight)
+    elif(optimizer_config['mode'] == 'dsub_local_worker'):
+      trials.start_job_in_dsub_local(worker_count,
+                                     worker_details['binary'], optimizer_type,
+                                     worker_details['docker'], 'train', 'worker_mode',
+                                     optimizer_config['mode'], sight)
+
+    else:
+      raise ValueError(f"{optimizer_config['mode']} mode from optimizer_config not supported")
 
 
 def main_wrapper(argv):
-  start_time = time.perf_counter()
+  # start_time = time.perf_counter()
   with get_sight_instance() as sight:
 
-    question_configs = load_yaml_config('fvs_sight/question_config.yaml')
-    optimizer_configs = load_yaml_config('fvs_sight/optimizer_config.yaml')
-    worker_configs = load_yaml_config('fvs_sight/worker_config.yaml')
+    question_configs = utils.load_yaml_config('fvs_sight/question_config.yaml')
+    optimizer_configs = utils.load_yaml_config('fvs_sight/optimizer_config.yaml')
+    worker_configs = utils.load_yaml_config('fvs_sight/worker_config.yaml')
 
     for question_label, question_config in question_configs.items():
       optimizer_type = optimizer_configs[question_label]['optimizer']
@@ -168,8 +178,8 @@ def main_wrapper(argv):
       # Start worker jobs
       start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type)
 
-  end_time = time.perf_counter()
-  utility.calculate_exp_time(start_time, end_time)
+  # end_time = time.perf_counter()
+  # utility.calculate_exp_time(start_time, end_time)
 
 
 if __name__ == "__main__":

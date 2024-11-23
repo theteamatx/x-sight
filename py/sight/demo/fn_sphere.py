@@ -43,7 +43,7 @@ def black_box_function(args):
   return sum(xi**2 for xi in args)
 
 
-def driver(sight: Sight) -> None:
+def driver(question_label,sight: Sight) -> None:
   """Executes the logic of searching for a value.
 
   Args:
@@ -51,7 +51,7 @@ def driver(sight: Sight) -> None:
   """
 
   for _ in range(1):
-    next_point = decision.decision_point("label", sight)
+    next_point = decision.decision_point(question_label, sight)
     print('next_point : ', next_point)
     reward = black_box_function(list(next_point.values()))
     print('reward : ', reward)

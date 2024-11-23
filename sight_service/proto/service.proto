@@ -215,6 +215,7 @@ message Acme_Response {
 message DecisionPointRequest {
   string client_id = 1;
   string worker_id = 2;
+  string question_label = 6;
   sight.x.proto.DecisionPoint decision_point = 3; // need or not?
   sight.x.proto.DecisionOutcome decision_outcome = 4;
   // attributes
@@ -341,6 +342,7 @@ message GetOutcomeResponse {
 message FinalizeEpisodeRequest {
   string client_id = 1;
   string worker_id = 2;
+  string question_label = 7;
   sight.x.proto.DecisionPoint decision_point = 3;
   sight.x.proto.DecisionOutcome decision_outcome = 4;
   sight.x.proto.DecisionConfigurationStart.OptimizerType optimizer_type = 5;
