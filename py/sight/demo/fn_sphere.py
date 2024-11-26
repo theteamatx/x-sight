@@ -37,13 +37,15 @@ from sight.widgets.decision import decision
 
 FLAGS = flags.FLAGS
 
+def get_question_label():
+  return 'Q_label1'
 
 # Define the black box function to optimize.
 def black_box_function(args):
   return sum(xi**2 for xi in args)
 
 
-def driver(question_label,sight: Sight) -> None:
+def driver(sight: Sight) -> None:
   """Executes the logic of searching for a value.
 
   Args:
@@ -51,7 +53,7 @@ def driver(question_label,sight: Sight) -> None:
   """
 
   for _ in range(1):
-    next_point = decision.decision_point(question_label, sight)
+    next_point = decision.decision_point(get_question_label(), sight)
     print('next_point : ', next_point)
     reward = black_box_function(list(next_point.values()))
     print('reward : ', reward)
@@ -96,6 +98,7 @@ def main(argv: Sequence[str]) -> None:
         driver_fn=driver,
         action_attrs=action_attrs,
         sight=sight,
+        question_label=get_question_label,
     )
 
 
