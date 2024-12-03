@@ -216,7 +216,7 @@ class WorklistScheduler(SingleActionOptimizer):
     else:
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
       batched_msgs = self.queue.create_active_batch(worker_id=request.worker_id,
-                                                    new_batch_size=10)
+                                                    new_batch_size=2)
       for action_id, msg in batched_msgs.items():
         decision_message = response.decision_messages.add()
         decision_message.action_id = action_id
