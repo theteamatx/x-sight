@@ -24,6 +24,7 @@ from sight_service.message_queue import IncrementalUUID
 from sight_service.message_queue import MessageQueue
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
+from sight_service.shared_batch_messages import CachedBatchMessages
 
 _file_name = "single_action_optimizer.py"
 
@@ -50,22 +51,23 @@ class MessageDetails:
 
   def update(self, reward=None, outcome=None, action=None, attributes=None):
     if reward is not None:
-        self.reward = reward
+      self.reward = reward
     if outcome is not None:
-        self.outcome = outcome
+      self.outcome = outcome
     if action is not None:
-        self.action = action
+      self.action = action
     if attributes is not None:
-        self.attributes = attributes
+      self.attributes = attributes
     return self
 
   def __str__(self):
-      return (f"[X]")
-              # (f"MessageDetails(\n"
-              # f"action: {self.action},\n"
-              # f"attributes: {self.attributes},\n"
-              # f"reward: {self.reward},\n"
-              # f"outcome: {self.outcome}\n)")
+    return (f"[X]")
+    # (f"MessageDetails(\n"
+    # f"action: {self.action},\n"
+    # f"attributes: {self.attributes},\n"
+    # f"reward: {self.reward},\n"
+    # f"outcome: {self.outcome}\n)")
+
 
 class SingleActionOptimizer(OptimizerInstance):
   """An SingleActionOptimizer class that is generic for all optimizers.
@@ -76,4 +78,6 @@ class SingleActionOptimizer(OptimizerInstance):
 
   def __init__(self):
     super().__init__()
-    self.queue: IMessageQueue = MessageQueue[MessageDetails](id_generator=IncrementalUUID())
+    self.queue: IMessageQueue = MessageQueue[MessageDetails](
+        id_generator=IncrementalUUID())
+    self.cache: CachedBatchMessages = CachedBatchMessages()

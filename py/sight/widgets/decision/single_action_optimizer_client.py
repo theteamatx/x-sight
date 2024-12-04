@@ -104,13 +104,7 @@ class SingleActionOptimizerClient(OptimizerClient):
   @override
   def finalize_episode(self, sight,
                        request: service_pb2.FinalizeEpisodeRequest):
-    # logging.info('SingleActionOptimizerClient() finalize_episode')
-    if self._last_action:
-      logging.info('finalize episode => %s',
-                   request.decision_point.choice_params)
-      update_proto_map(
-          existing_proto_map=request.decision_point.choice_params,
-          new_proto_map=convert_proto_to_dict(proto=self._last_action))
+    logging.info('SingleActionOptimizerClient() finalize_episode')
     response = service.call(
         lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta))
     return response
