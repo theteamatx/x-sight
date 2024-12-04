@@ -39,14 +39,14 @@ from sight.widgets.decision import utils
 # from sight.widgets.decision.acme.acme_optimizer_client import (
 #     AcmeOptimizerClient
 # )
-from sight.widgets.decision.env_driver import driver_fn as env_driver
+from sight.widgets.decision.env_driver import driver_fn
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
-from sight.widgets.decision.shared_batch_messages import CachedBatchMessages
-from sight.widgets.decision.shared_batch_messages import DecisionMessage
 from sight.widgets.decision.single_action_optimizer_client import (
     SingleActionOptimizerClient
 )
 from sight_service.proto import service_pb2
+from sight_service.shared_batch_messages import CachedBatchMessages
+from sight_service.shared_batch_messages import DecisionMessage
 
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -638,7 +638,7 @@ def get_decision_messages_from_proto(
 def run(
     sight: Any,
     env: Any = None,
-    driver_fn: Callable[[Any], Any] = env_driver,
+    driver_fn: Callable[[Any], Any] = None,
     state_attrs: Dict[str,
                       sight_pb2.DecisionConfigurationStart.AttrProps] = None,
     action_attrs: Dict[str,
@@ -909,8 +909,8 @@ def process_worker_action(response, sight, driver_fn, env):
   """
   decision_messages = get_decision_messages_from_proto(
       decision_messages_proto=response.decision_messages)
-  shared_batch_messages = CachedBatchMessages.get_instance(sight_id=sight.id)
-  sight.widget_decision_state['cached_messages'] = shared_batch_messages
+  # shared_batch_messages = CachedBatchMessages()
+  sight.widget_decision_state['cached_messages'] = optimizer.obj.cache
 
   for action_id, action_params in decision_messages.items():
     sight.enter_block('Decision Sample', sight_pb2.Object())
@@ -1103,6 +1103,7 @@ def state_updated(
     sight.widget_decision_state['state'][name] = obj_to_log
 
 
+# Works in case of decision outcome
 def get_decision_outcome_proto(outcome_label: str,
                                sight: Any) -> sight_pb2.DecisionOutcome:
   """Returns the decision outcome proto for the given outcome label."""
