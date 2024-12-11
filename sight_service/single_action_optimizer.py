@@ -24,7 +24,6 @@ from sight_service.message_queue import IncrementalUUID
 from sight_service.message_queue import MessageQueue
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
-from sight_service.shared_batch_messages import CachedBatchMessages
 
 _file_name = "single_action_optimizer.py"
 
@@ -80,4 +79,3 @@ class SingleActionOptimizer(OptimizerInstance):
     super().__init__()
     self.queue: IMessageQueue = MessageQueue[MessageDetails](
         id_generator=IncrementalUUID())
-    self.cache: CachedBatchMessages = CachedBatchMessages()

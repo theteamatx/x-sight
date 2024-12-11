@@ -92,9 +92,9 @@ class IMessageQueue(Protocol, Generic[T]):
     """
     ...
 
-  def create_active_batch(
-      self, worker_id: str, new_batch_size: Optional[int] = None
-    ) -> Dict[ID, T]:
+  def create_active_batch(self,
+                          worker_id: str,
+                          new_batch_size: Optional[int] = None) -> Dict[ID, T]:
     """Move a batch of messages for a given worker into active list.
 
     Args:
@@ -107,9 +107,10 @@ class IMessageQueue(Protocol, Generic[T]):
     """
     ...
 
-  def complete_message(
-      self, message_id: ID, worker_id: str, update_fn: Callable[[T], T] = None
-    ) -> None:
+  def complete_message(self,
+                       message_id: ID,
+                       worker_id: str,
+                       update_fn: Callable[[T], T] = None) -> None:
     """Completes a message of the given message ID of the given worker it moves it to the completed queue.
 
     Args:
@@ -129,32 +130,33 @@ class IMessageQueue(Protocol, Generic[T]):
     ...
 
   def get_pending(self) -> Dict[ID, T]:
-      """Returns all pending messages in the queue."""
-      ...
+    """Returns all pending messages in the queue."""
+    ...
 
   def get_active(self) -> Dict[str, Dict[ID, T]]:
-      """Returns all active messages in the queue."""
-      ...
+    """Returns all active messages in the queue."""
+    ...
 
   def get_completed(self) -> Dict[ID, T]:
-      """Returns all completed messages in the queue."""
-      ...
+    """Returns all completed messages in the queue."""
+    ...
 
   def find_message_location(self, message_id: ID) -> MessageState:
     """Returns the location of the message in the message queue."""
     ...
 
   def is_message_in_pending(self, message_id: ID) -> bool:
-      """Checks if the message is in the pending state."""
-      ...
+    """Checks if the message is in the pending state."""
+    ...
 
   def is_message_in_active(self, message_id: ID) -> bool:
-      """Checks if the message is in the active state."""
-      ...
+    """Checks if the message is in the active state."""
+    ...
 
   def is_message_in_completed(self, message_id: ID) -> bool:
-      """Checks if the message is in the completed state."""
-      ...
+    """Checks if the message is in the completed state."""
+    ...
+
 
 class MessageQueue(IMessageQueue[T]):
   """A message queue is a data structure that stores messages.
@@ -211,20 +213,25 @@ class MessageQueue(IMessageQueue[T]):
     self.completed_lock = lock_factory()
 
   def __str__(self) -> str:
-    all_messages = self.get_all_messages()
-
+    # all_messages = self.get_all_messages()
+    messages_status = self.get_status()
     result = ['MessageQueue:']
     result.append('  Pending Messages:')
-    for msg_id, message in all_messages['pending'].items():
-      result.append(f'    ID: {msg_id}, Message: {message}')
+    result.append(f'    Messages 📩 : {messages_status["pending"]}')
+    # for msg_id, message in all_messages['pending'].items():
+    # result.append(f'    ID: {msg_id}, Message: {message}')
 
     result.append('  Active Messages:')
-    for msg_id, message in all_messages['active'].items():
-      result.append(f'    ID: {msg_id}, Message: {message}')
+    result.append(f'    Messages 📨 : {messages_status["active"]}')
+
+    for worker_id, messages in self.get_active().items():
+      result.append(f'    ID: {worker_id}, Messages 📨: {len(messages)}')
 
     result.append('  Completed Messages:')
-    for msg_id, message in all_messages['completed'].items():
-      result.append(f'    ID: {msg_id}, Message: {message}')
+    result.append(f'    Messages ✉️ : {messages_status["completed"]}')
+
+    # for msg_id, message in all_messages['completed'].items():
+    #   result.append(f'    ID: {msg_id}, Message: {message}')
 
     return '\n'.join(result)
 
@@ -244,9 +251,9 @@ class MessageQueue(IMessageQueue[T]):
     return unique_id
 
   @overrides
-  def create_active_batch(
-      self, worker_id: str, new_batch_size: Optional[int] = None
-    ) -> Dict[ID, T]:
+  def create_active_batch(self,
+                          worker_id: str,
+                          new_batch_size: Optional[int] = None) -> Dict[ID, T]:
     """Move a batch of messages for a given worker into active list.
 
     Args:
@@ -257,9 +264,8 @@ class MessageQueue(IMessageQueue[T]):
     Returns:
       A dictionary of messages that were processed, keyed by message ID.
     """
-    batch_size = (
-        new_batch_size if new_batch_size is not None else self.batch_size
-    )
+    batch_size = (new_batch_size
+                  if new_batch_size is not None else self.batch_size)
     batch: Dict[ID, T] = {}
 
     with self.pending_lock.gen_wlock():
@@ -276,9 +282,10 @@ class MessageQueue(IMessageQueue[T]):
     return batch
 
   @overrides
-  def complete_message(
-      self, message_id: ID, worker_id: str, update_fn: Callable[[T], T] = None
-    ) -> None:
+  def complete_message(self,
+                       message_id: ID,
+                       worker_id: str,
+                       update_fn: Callable[[T], T] = None) -> None:
     """Completes a message of the given message ID of the given worker it moves it to the completed queue.
 
     Args:
@@ -292,9 +299,9 @@ class MessageQueue(IMessageQueue[T]):
         del self.active[worker_id][message_id]
 
         if update_fn is not None:
-            logging.info('Before update_fn msg: %s', message)
-            message = update_fn(message)  # Apply the lambda to update the message
-            logging.info('After update_fn msg: %s', message)
+          logging.info('Before update_fn msg: %s', message)
+          message = update_fn(message)  # Apply the lambda to update the message
+          logging.info('After update_fn msg: %s', message)
 
         with self.completed_lock.gen_wlock():
           self.completed[message_id] = message
@@ -337,38 +344,37 @@ class MessageQueue(IMessageQueue[T]):
 
   @overrides
   def get_pending(self) -> Dict[ID, T]:
-      """Returns all pending messages in the queue."""
-      with self.pending_lock.gen_rlock():
-          return copy.copy(self.pending)
+    """Returns all pending messages in the queue."""
+    with self.pending_lock.gen_rlock():
+      return copy.copy(self.pending)
 
   @overrides
   def get_active(self) -> Dict[str, Dict[ID, T]]:
-      """Returns all active messages in the queue."""
-      with self.active_lock.gen_rlock():
-          return copy.copy(self.active)
+    """Returns all active messages in the queue."""
+    with self.active_lock.gen_rlock():
+      return copy.copy(self.active)
 
   @overrides
   def get_completed(self) -> Dict[ID, T]:
-      """Returns all completed messages in the queue."""
-      with self.completed_lock.gen_rlock():
-          return copy.copy(self.completed)
-
+    """Returns all completed messages in the queue."""
+    with self.completed_lock.gen_rlock():
+      return copy.copy(self.completed)
 
   @overrides
-  def is_message_in_pending(self,message_id: ID) -> bool:
+  def is_message_in_pending(self, message_id: ID) -> bool:
     """Returns the true if the message in the pending queue."""
     with self.pending_lock.gen_rlock():
       return message_id in self.pending
 
   @overrides
-  def is_message_in_active(self,message_id: ID) -> bool:
+  def is_message_in_active(self, message_id: ID) -> bool:
     """Returns the true if the message in the active queue."""
     with self.active_lock.gen_rlock():
       for _, messages in self.active.items():
         return message_id in messages
 
   @overrides
-  def is_message_in_completed(self,message_id: ID) -> bool:
+  def is_message_in_completed(self, message_id: ID) -> bool:
     """Returns the true if the message in the completed queue."""
     with self.completed_lock.gen_rlock():
       return message_id in self.completed
@@ -378,7 +384,7 @@ class MessageQueue(IMessageQueue[T]):
     """Returns the location of the message in the message queue."""
     with self.pending_lock.gen_rlock():
       if message_id in self.pending:
-        return  MessageState.PENDING
+        return MessageState.PENDING
 
     with self.active_lock.gen_rlock():
       for _, messages in self.active.items():

@@ -23,6 +23,7 @@ from sight.utils.proto_conversion import convert_proto_to_dict
 from sight.utils.proto_conversion import update_proto_map
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from sight_service.proto import service_pb2
+from sight_service.shared_batch_messages import CachedBatchMessages
 
 
 class SingleActionOptimizerClient(OptimizerClient):
@@ -34,6 +35,7 @@ class SingleActionOptimizerClient(OptimizerClient):
       sight,
       algorithm=None):
     super().__init__(optimizer_type)
+    self.cache: CachedBatchMessages = CachedBatchMessages()
     self._sight = sight
     self._last_action = None
     self.exp_completed = False

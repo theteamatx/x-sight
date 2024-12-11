@@ -39,7 +39,7 @@ from sight.widgets.decision import utils
 # from sight.widgets.decision.acme.acme_optimizer_client import (
 #     AcmeOptimizerClient
 # )
-from sight.widgets.decision.env_driver import driver_fn
+# from sight.widgets.decision.env_driver import driver_fn
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
 from sight.widgets.decision.single_action_optimizer_client import (
     SingleActionOptimizerClient
@@ -844,7 +844,7 @@ def execute_local_training(sight, decision_configuration, driver_fn, env):
         sight,
     )
     # not used anymore - for worklist scheduler
-    # num_samples_to_run = _NUM_TRIALS.value
+    num_samples_to_run = _NUM_TRIALS.value
 
   if FLAGS.deployment_mode == 'docker_local':
     trials.start_job_in_docker(
