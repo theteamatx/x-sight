@@ -111,7 +111,7 @@ _OPTIMIZER_TYPE = flags.DEFINE_enum(
 )
 _NUM_TRAIN_WORKERS = flags.DEFINE_integer(
     'num_train_workers', 1, 'Number of workers to use in a training run.')
-_NUM_TRIALS = flags.DEFINE_integer('num_trials', None,
+_NUM_TRIALS = flags.DEFINE_integer('num_trials', 1,
                                    'Number of trials to perform.')
 _DECISION_TRAIN_OUT_CONFIG_FILE = flags.DEFINE_string(
     'decision_train_out_config_file',

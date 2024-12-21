@@ -292,7 +292,8 @@ def start_jobs(
 
   env_vars = [
       '--env', f'PARENT_LOG_ID={sight.id}', '--env',
-      f'PORT={service.get_port_number()}'
+      f'PORT={service.get_port_number()}',
+      f'PROJECT_ID={os.environ["PROJECT_ID"]}',
   ]
 
   print("FLAGS.deployment_mode : ", FLAGS.deployment_mode)
