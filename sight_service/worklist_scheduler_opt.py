@@ -196,6 +196,10 @@ class WorklistScheduler(SingleActionOptimizer):
     logging.info(
         "sight experiment completed...., changed exp_completed to True")
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+
+    logging.info("<<<<Completed length %s Timeseries Logs ... \n %s \n",
+                 self.queue.get_status()["completed"],
+                 self.queue.logger.save_to_gcs())
     return service_pb2.CloseResponse(response_str="success")
 
   @overrides
@@ -214,8 +218,7 @@ class WorklistScheduler(SingleActionOptimizer):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
-      batched_msgs = self.queue.create_active_batch(worker_id=request.worker_id,
-                                                    new_batch_size=10)
+      batched_msgs = self.queue.create_active_batch(worker_id=request.worker_id)
       for action_id, msg in batched_msgs.items():
         decision_message = response.decision_messages.add()
         decision_message.action_id = action_id
