@@ -127,14 +127,25 @@ class BayesianOpt(OptimizerInstance):
   ) -> service_pb2.WorkerAliveResponse:
     method_name = "WorkerAlive"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    response = service_pb2.WorkerAliveResponse()
     if (self._completed_count == self._total_count):
-      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+      response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
     # elif(not self.pending_samples):
-    #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
+    #    response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
       # Increasing count here so that multiple workers can't enter the dp call for same sample at last
       self._completed_count += 1
-      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
-    logging.info("worker_alive_status is %s", worker_alive_status)
+
+      self._lock.acquire()
+      selected_actions = self._optimizer.suggest(self._utility)
+      self._lock.release()
+
+      decision_message = response.decision_messages.add()
+      decision_message.action_id = self._completed_count
+      decision_message.action.CopyFrom(convert_dict_to_proto(dict=selected_actions))
+
+      response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+
+    logging.info("worker_alive_status is %s", response.status_type)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)
+    return response

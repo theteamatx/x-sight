@@ -887,7 +887,7 @@ def execute_local_training(sight, decision_configuration, driver_fn, env):
       )
       response = service.call(
           lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
-      logging.info('Response from WorkerAlive RPC: %s', response.status_type)
+      logging.info('Response from WorkerAlive RPC: %s', response)
       if (response.status_type ==
           service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
         break
@@ -917,8 +917,10 @@ def process_worker_action(response, sight, driver_fn, env):
       decision_messages_proto=response.decision_messages)
   # shared_batch_messages = CachedBatchMessages()
   sight.widget_decision_state['cached_messages'] = optimizer.obj.cache
+  logging.info('cached_messages=%s', sight.widget_decision_state['cached_messages'])
 
   for action_id, action_params in decision_messages.items():
+    logging.info('action_id=%s, action_params=%s', action_id, action_params)
     sight.enter_block('Decision Sample', sight_pb2.Object())
 
     if 'constant_action' in sight.widget_decision_state:
@@ -1132,7 +1134,7 @@ def get_decision_outcome_from_decision_message(
     outcome_label: str, decision_message: DecisionMessage):
   """Returns the decision outcome from the decision message."""
 
-  # logging.debug('decision message =>%s', decision_message)
+  logging.info('decision message =>%s', decision_message)
 
   decision_outcome_proto = sight_pb2.DecisionOutcome(
       outcome_label=outcome_label)
@@ -1140,6 +1142,7 @@ def get_decision_outcome_from_decision_message(
   decision_outcome_proto.outcome_params.CopyFrom(
       convert_dict_to_proto(dict=decision_message.outcome_params))
   decision_outcome_proto.discount = decision_message.discount
+  logging.info('decision decision_outcome_proto =>%s', decision_outcome_proto)
   return decision_outcome_proto
 
 
@@ -1174,6 +1177,7 @@ def _process_acme_action(selected_action, widget_state):
 def _process_worklist_scheduler(sight, req):
   """Processes the action for 'worklist_scheduler' optimizer."""
   widget_state = sight.widget_decision_state
+  logging.info('optimizer.obj=%s, action_id=%s', optimizer.obj, widget_state['action_id'])
   if not optimizer.obj:
     optimizer.obj = SingleActionOptimizerClient(
         sight_pb2.DecisionConfigurationStart.OptimizerType.
@@ -1211,11 +1215,10 @@ def _make_decision(sight, req):
       'genetic_algorithm',
       'exhaustive_search',
       'bayesian_opt',
-      'sensitivity_analysis',
       'smcpy',
   ] or optimizer_type.startswith('ng_'):
     chosen_action = optimizer_obj.decision_point(sight, req)
-  elif optimizer_type == 'worklist_scheduler':
+  elif optimizer_type in ['worklist_scheduler', 'sensitivity_analysis']:
     chosen_action = _process_worklist_scheduler(sight, req)
   elif optimizer_type.startswith('llm_'):
     chosen_action = _process_llm_action(sight, req, optimizer_obj)
@@ -1297,9 +1300,11 @@ def _update_cached_batch(sight: Any):
       sight: Instance of a Sight logger.
   """
   action_id = sight.widget_decision_state.get('action_id', None)
+  logging.info('_update_cached_batch() action_id=%s', action_id)
   cached_messages = sight.widget_decision_state.get('cached_messages', None)
+  logging.info('_update_cached_batch() cached_messages=%s', cached_messages)
   if cached_messages and action_id:
-    logging.info(f'Caching batch for action_id: {action_id}')
+    logging.info(f'_update_cached_batch() Caching batch for action_id: {action_id}')
     cached_messages.update(
         key=action_id,
         action_params=cached_messages.get(action_id).action_params,
@@ -1416,16 +1421,21 @@ def _handle_optimizer_finalize(sight: Any, req: Any) -> None:
 
   # Get the list of action messages (supports multiple action IDs)
   cached_messages_obj = sight.widget_decision_state.get('cached_messages', {})
+  logging.info('cached_messages_obj=%s', cached_messages_obj)
   all_messages: dict[str, DecisionMessage] = cached_messages_obj.all_messages()
-  logging.info('action_messages => %s', all_messages)
+  logging.info('all_messages => %s', all_messages)
 
   for action_id, msg in all_messages.items():
+    logging.info('action_id=%s, msg=%s', action_id, msg)
     decision_message = sight_pb2.DecisionMessage()
     decision_message.decision_outcome.CopyFrom(
         get_decision_outcome_from_decision_message(outcome_label='outcome',
                                                    decision_message=msg))
     decision_message.action_id = action_id
+    logging.info('decision_message=%s', decision_message)
     req.decision_messages.append(decision_message)
+  logging.info('req=%s', req)
+  logging.info('optimizer_obj=%s', optimizer_obj)
 
   # clearing the cached
   cached_messages_obj.clear()
