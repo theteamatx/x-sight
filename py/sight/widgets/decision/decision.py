@@ -1177,7 +1177,7 @@ def _process_acme_action(selected_action, widget_state):
 def _process_worklist_scheduler(sight, req):
   """Processes the action for 'worklist_scheduler' optimizer."""
   widget_state = sight.widget_decision_state
-  logging.info('optimizer.obj=%s, action_id=%s', optimizer.obj, widget_state['action_id'])
+  logging.info('_process_worklist_scheduler: optimizer.obj=%s, action_id=%s', optimizer.obj, widget_state['action_id'])
   if not optimizer.obj:
     optimizer.obj = SingleActionOptimizerClient(
         sight_pb2.DecisionConfigurationStart.OptimizerType.
@@ -1214,11 +1214,10 @@ def _make_decision(sight, req):
       'vizier',
       'genetic_algorithm',
       'exhaustive_search',
-      'bayesian_opt',
       'smcpy',
   ] or optimizer_type.startswith('ng_'):
     chosen_action = optimizer_obj.decision_point(sight, req)
-  elif optimizer_type in ['worklist_scheduler', 'sensitivity_analysis']:
+  elif optimizer_type in ['worklist_scheduler', 'sensitivity_analysis', 'bayesian_opt']:
     chosen_action = _process_worklist_scheduler(sight, req)
   elif optimizer_type.startswith('llm_'):
     chosen_action = _process_llm_action(sight, req, optimizer_obj)
@@ -1427,11 +1426,17 @@ def _handle_optimizer_finalize(sight: Any, req: Any) -> None:
 
   for action_id, msg in all_messages.items():
     logging.info('action_id=%s, msg=%s', action_id, msg)
+    logging.info('msg.action_params=%s', msg.action_params)
     decision_message = sight_pb2.DecisionMessage()
     decision_message.decision_outcome.CopyFrom(
         get_decision_outcome_from_decision_message(outcome_label='outcome',
                                                    decision_message=msg))
     decision_message.action_id = action_id
+
+    choice_params = sight_pb2.DecisionParam()
+    choice_params.CopyFrom(convert_dict_to_proto(dict=msg.action_params))
+    decision_message.decision_point.choice_params.CopyFrom(choice_params)
+
     logging.info('decision_message=%s', decision_message)
     req.decision_messages.append(decision_message)
   logging.info('req=%s', req)

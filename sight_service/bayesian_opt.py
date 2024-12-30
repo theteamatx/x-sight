@@ -88,16 +88,16 @@ class BayesianOpt(OptimizerInstance):
   ) -> service_pb2.FinalizeEpisodeResponse:
     logging.info('FinalizeEpisode request=%s', request)
 
-    d = convert_proto_to_dict(proto=request.decision_point.choice_params)
-    # d = {}
-    # for a in request.decision_point.choice_params:
-    #   d[a.key] = a.value.double_value
-
     self._lock.acquire()
-    logging.info('FinalizeEpisode outcome=%s / %s',
-                 request.decision_outcome.reward, d)
-    self._optimizer.register(params=d, target=request.decision_outcome.reward)
-    # self._completed_count += 1
+    for i in range(len(request.decision_messages)):
+      d = convert_proto_to_dict(proto=request.decision_messages[i].decision_point.choice_params)
+      logging.info('FinalizeEpisode outcome=%s / %s',
+                  request.decision_messages[i].decision_outcome.reward, d)
+      # d = {}
+      # for a in request.decision_point.choice_params:
+      #   d[a.key] = a.value.double_value
+      self._optimizer.register(params=d, target=request.decision_messages[i].decision_outcome.reward)
+      # self._completed_count += 1
     self._lock.release()
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
 
