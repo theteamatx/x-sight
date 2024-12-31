@@ -80,7 +80,9 @@ async def propose_actions(sight, action_dict, custom_part="sight_cache"):
     print('Getting response from cache !!')
     return outcome
 
-  unique_action_id = decision.propose_actions(sight, action_dict)
+  # unique_action_id = decision.propose_actions(sight, action_dict)
+  unique_action_id = await asyncio.to_thread(decision.propose_actions, sight,
+                                             action_dict)
   await push_message(sight.id, unique_action_id)
   response = await fetch_outcome(sight.id, unique_action_id)
   outcome = response.get('outcome', None)

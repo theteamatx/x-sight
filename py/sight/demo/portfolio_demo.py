@@ -167,30 +167,25 @@ def get_sight_instance():
 
 async def propose_actions(sight: Sight, base_project_config: dict[str, Any],
                           treatments: dict[str, Any]) -> pd.Series:
+
+  x_start_time = time.perf_counter()
+  print(f"Proposing Start m-um ")
+
   treatment_project_config = treatments
   tasks = []
   with Attribute("Managed", "0", sight):
-    # base_sim = decision.propose_actions(sight,
-    #                                       action_dict=base_project_config)
-    # await proposal.push_message(sight.id, base_sim)
-    # unmanaged_task = sight.create_task(
-    #     proposal.fetch_outcome(sight.id, base_sim))
-    # tasks.append(unmanaged_task)
     unmanaged_task = sight.create_task(
         proposal.propose_actions(sight, action_dict=base_project_config))
     tasks.append(unmanaged_task)
   with Attribute("Managed", "1", sight):
-    # treatment_sim = decision.propose_actions(
-    #     sight, action_dict=treatment_project_config)
-    # await proposal.push_message(sight.id, treatment_sim)
-    # managed_task = sight.create_task(
-    #     proposal.fetch_outcome(sight.id, treatment_sim))
-    # tasks.append(managed_task)
     managed_task = sight.create_task(
         proposal.propose_actions(sight, action_dict=treatment_project_config))
     tasks.append(managed_task)
 
   [unmanaged_response, managed_response] = await asyncio.gather(*tasks)
+
+  x_end_time = time.perf_counter()
+  print(f"Propose actions m-um took {x_end_time - x_start_time:.4f} seconds.")
   return unmanaged_response, managed_response
 
 
@@ -205,6 +200,10 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
     with Attribute("project_id", "APR107", sight):
       tasks = []
       print("len(sample_list) : ", len(sample_list))
+
+      x_start_time = time.perf_counter()
+      print(f"Proposing Start ")
+
       for id in range(len(sample_list)):
         with Attribute("sample_id", id, sight):
           tasks.append(
@@ -212,8 +211,12 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
                   # both base and treatment are considerred to be same dict here
                   propose_actions(sight, sample_list[id], sample_list[id])))
 
-      print("waiting for all get outcome to finish.....")
+      x_end_time = time.perf_counter()
+      print(f"Propose actions took {x_end_time - x_start_time:.4f} seconds.")
+
       diff_time_series = await asyncio.gather(*tasks)
+
+      print("waiting for all get outcome to finish.....")
       print("all get outcome are finished.....")
       print(f'Combine Series : {diff_time_series}')
 
