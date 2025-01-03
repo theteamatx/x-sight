@@ -38,8 +38,9 @@ class WorklistScheduler(SingleActionOptimizer):
       of this attribute.
   """
 
-  def __init__(self):
-    super().__init__()
+  def __init__(self, meta_data: dict[str, any]):
+    mq_batch_size = meta_data["mq_batch_size"]
+    super().__init__(batch_size=mq_batch_size)
     self.next_sample_to_issue = []
     self.last_sample = False
     self.exp_completed = False

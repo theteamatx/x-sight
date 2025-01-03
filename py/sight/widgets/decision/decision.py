@@ -164,6 +164,12 @@ _ENV_NAME = flags.DEFINE_enum(
 _TRAINED_MODEL_LOG_ID = flags.DEFINE_string(
     'sight_log_id', None, 'Sight log Id of trained run to be used')
 
+_SERVER_QUEUE_BATCH_SIZE = flags.DEFINE_integer(
+    'server_queue_batch_size',
+    1,
+    'batch size of the server queue for message queue',
+)
+
 _file_name = 'decision_actor.py'
 _sight_id = None
 _rewards = []
@@ -981,7 +987,7 @@ def configure_decision(sight, state_attrs, action_attrs, outcome_attrs):
 
   decision_configuration = sight_pb2.DecisionConfigurationStart()
   decision_configuration.optimizer_type = optimizer.obj.optimizer_type()
-
+  decision_configuration.server_queue_batch_size = _SERVER_QUEUE_BATCH_SIZE.value or 1
   if _NUM_TRIALS.value:
     decision_configuration.num_trials = _NUM_TRIALS.value
 

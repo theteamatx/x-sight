@@ -25,7 +25,7 @@ def simulate_fvs(sight, params_dict):
   sim_stream = pd.Series(mitigation_list)
   simulation_time = 10
   time.sleep(simulation_time)
-  print(f'sleeping for some time he he 😪 , {simulation_timer}')
+  print(f'sleeping for some time he he 😪 , {simulation_time}')
   # print(sim_stream)
   return sim_stream
 
