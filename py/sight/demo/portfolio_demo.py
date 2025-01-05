@@ -227,7 +227,7 @@ def main_wrapper(argv):
                  outcome_attrs=fvs_api.get_outcome_attrs(),
                  sight=sight)
     start_time = time.perf_counter()
-    sleep_time_in_min = 0
+    sleep_time_in_min = 15
     print(f"Waiting for {sleep_time_in_min} min for workers to start ...")
     time.sleep(sleep_time_in_min * 60)
     asyncio.run(main(sight, argv))

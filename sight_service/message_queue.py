@@ -168,11 +168,11 @@ class MessageFlowLogger:
     self.logs = []  # List to store time-series logs
 
   def log_message_state(self,
-                        timestamp,
                         state,
                         message_id,
                         worker_id=None,
                         message_details=None):
+    timestamp = datetime.utcnow().isoformat()
     self.logs.append({
         "timestamp": timestamp,
         "state": state,
@@ -296,9 +296,7 @@ class MessageQueue(IMessageQueue[T]):
       self.pending[unique_id] = message
 
     # log the message to logger
-    self.logger.log_message_state(timestamp=datetime.utcnow().isoformat(),
-                                  state='pending',
-                                  message_id=unique_id)
+    self.logger.log_message_state(state='pending', message_id=unique_id)
     return unique_id
 
   @overrides
@@ -331,10 +329,8 @@ class MessageQueue(IMessageQueue[T]):
       self.active[worker_id].update(batch)
 
     ## log the messages to logger
-    timestamp = datetime.utcnow().isoformat()
     for message_id in batch.keys():
-      self.logger.log_message_state(timestamp=timestamp,
-                                    state='active',
+      self.logger.log_message_state(state='active',
                                     message_id=message_id,
                                     worker_id=worker_id)
 
@@ -366,8 +362,7 @@ class MessageQueue(IMessageQueue[T]):
           self.completed[message_id] = message
 
         ## log the message to logger
-        self.logger.log_message_state(timestamp=datetime.utcnow().isoformat(),
-                                      state='completed',
+        self.logger.log_message_state(state='completed',
                                       message_id=message_id,
                                       worker_id=worker_id)
 

@@ -193,14 +193,15 @@ class WorklistScheduler(SingleActionOptimizer):
             request: service_pb2.CloseRequest) -> service_pb2.CloseResponse:
     method_name = "close"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    if not self.exp_completed:
+      logging.info("<<<<Completed length %s Timeseries Logs ... \n %s \n",
+                   self.queue.get_status()["completed"],
+                   self.queue.logger.save_to_gcs())
     self.exp_completed = True
     logging.info(
         "sight experiment completed...., changed exp_completed to True")
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
-    logging.info("<<<<Completed length %s Timeseries Logs ... \n %s \n",
-                 self.queue.get_status()["completed"],
-                 self.queue.logger.save_to_gcs())
     return service_pb2.CloseResponse(response_str="success")
 
   @overrides
