@@ -182,10 +182,10 @@ def configure(
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
-def init_sight_polling_thread(sight_id):
+def init_sight_polling_thread(sight_id, question_label):
     # print
     status_update_thread = threading.Thread(target=poll_network_batch_outcome,
-                                            args=(sight_id, ))
+                                            args=(sight_id, question_label))
     print('*************** starting thread ************')
     status_update_thread.start()
 
@@ -1223,9 +1223,10 @@ def decision_outcome(
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
-def propose_actions(sight, action_dict):
+def propose_actions(sight, question_label, action_dict):
     request = service_pb2.ProposeActionRequest()
     request.client_id = str(sight.id)
+    request.question_label = question_label
 
     actions_data = []
     attributes_data = []

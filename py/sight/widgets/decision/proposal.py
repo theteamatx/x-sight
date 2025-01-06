@@ -65,7 +65,7 @@ async def fetch_outcome(sight_id, actions_id):
       raise e
 
 
-async def propose_actions(sight, action_dict, custom_part="sight_cache"):
+async def propose_actions(sight, question_label, action_dict, custom_part="sight_cache"):
 
   key_maker = CacheKeyMaker()
   cache_key = key_maker.make_custom_key(custom_part, action_dict)
@@ -80,7 +80,7 @@ async def propose_actions(sight, action_dict, custom_part="sight_cache"):
     print('Getting response from cache !!')
     return outcome
 
-  unique_action_id = decision.propose_actions(sight, action_dict)
+  unique_action_id = decision.propose_actions(sight, question_label, action_dict)
   await push_message(sight.id, unique_action_id)
   response = await fetch_outcome(sight.id, unique_action_id)
   outcome = response.get('outcome', None)

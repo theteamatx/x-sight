@@ -35,11 +35,12 @@ POLL_TIME_INTERVAL = 6  # seconds
 global_outcome_mapping = RWLockDictWrapper()
 
 
-def get_all_outcomes(sight_id, action_ids):
+def get_all_outcomes(sight_id, question_label, action_ids):
 
   # print(f'get all outcome for actions ids {action_ids}')
   request = service_pb2.GetOutcomeRequest()
   request.client_id = str(sight_id)
+  request.question_label = question_label
   request.unique_ids.extend(action_ids)
 
   # async_dict = global_outcome_mapping.get()
@@ -74,7 +75,7 @@ def get_all_outcomes(sight_id, action_ids):
     raise e
 
 
-def poll_network_batch_outcome(sight_id):
+def poll_network_batch_outcome(sight_id, question_label):
   counter = POLL_LIMIT
   while True:
     try:
@@ -87,7 +88,7 @@ def poll_network_batch_outcome(sight_id):
       if len(pending_action_ids):
         counter = POLL_LIMIT
         print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
-        outcome_of_action_ids = get_all_outcomes(sight_id, pending_action_ids)
+        outcome_of_action_ids = get_all_outcomes(sight_id, question_label,pending_action_ids)
 
         # print(f'Outcome from get_all_outcome => {outcome_of_action_ids}')
 

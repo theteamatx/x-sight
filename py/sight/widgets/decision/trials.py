@@ -82,7 +82,7 @@ def launch(
     # optimizer_config: Any,
     # state_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
     # action_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
-    optimizer: OptimizerClient,
+    # optimizer: OptimizerClient,
     decision_configuration: sight_pb2.DecisionConfigurationStart,
     # num_train_workers: int,
     sight: Any,
@@ -119,7 +119,7 @@ def launch(
   if (decision_configuration.optimizer_type == sight_pb2.
       DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER and
       response.display_string == "Worklist Scheduler SUCCESS!"):
-    decision.init_sight_polling_thread(sight.id)
+    decision.init_sight_polling_thread(sight.id, decision_configuration.question_label)
   logging.info('##### Launch response=%s #####', response)
 
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)

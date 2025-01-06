@@ -309,6 +309,8 @@ message ProposeActionRequest {
   // repeated sight.x.proto.DecisionParam state_attrs = 3;
   // repeated sight.x.proto.Attribute attributes = 3;
   repeated sight.x.proto.DecisionParam attributes = 3;
+
+  string question_label = 4;
 }
 message ProposeActionResponse {
   int64 action_id = 1;
@@ -317,6 +319,7 @@ message ProposeActionResponse {
 message GetOutcomeRequest {
   string client_id = 1;
   repeated int64 unique_ids = 2;
+  string question_label = 3;
 }
 message GetOutcomeResponse {
   message Outcome{

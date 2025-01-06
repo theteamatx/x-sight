@@ -166,8 +166,9 @@ class NeverGradOpt(OptimizerInstance):
 
     response.display_string = 'NeverGrad Start'
     print('response=%s' % response)
-    # raise SystemExit
+    print('here nevergrad object : ', self.__dict__)
     return response
+
 
   def _params_to_dict(self, dp: sight_pb2) -> Dict[str, float]:
     """Returns the dict representation of a DecisionParams proto"""

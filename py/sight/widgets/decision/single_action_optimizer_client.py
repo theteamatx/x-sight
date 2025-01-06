@@ -86,7 +86,7 @@ class SingleActionOptimizerClient(OptimizerClient):
     # while True:
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta))
-    logging.info('response: %s', response)
+    # logging.info('response: %s', response)
     if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
       self._last_action = response.action
       return self._get_dp_action(response)

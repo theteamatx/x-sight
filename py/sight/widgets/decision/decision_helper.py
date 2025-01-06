@@ -16,8 +16,11 @@ def config_to_attr(config: Dict, key: str) -> Dict:
   attr_dict = {}
   if key in config:
     for key, params in config[key].items():
-      attr_dict[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
+      if params:
+        attr_dict[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
           min_value=params['min_value'], max_value=params['max_value'])
+      else:
+        attr_dict[key] = sight_pb2.DecisionConfigurationStart.AttrProps()
   return attr_dict
 
 
