@@ -1437,10 +1437,9 @@ def _handle_optimizer_finalize(sight: Any, req: Any) -> None:
     choice_params.CopyFrom(convert_dict_to_proto(dict=msg.action_params))
     decision_message.decision_point.choice_params.CopyFrom(choice_params)
 
-    logging.info('decision_message=%s', decision_message)
+    # logging.info('decision_message=%s', decision_message)
     req.decision_messages.append(decision_message)
-  logging.info('req=%s', req)
-  logging.info('optimizer_obj=%s', optimizer_obj)
+  logging.info('Finalize req=%s', req)
 
   # clearing the cached
   cached_messages_obj.clear()

@@ -15,6 +15,7 @@
 
 from concurrent import futures
 import json
+import os
 import random
 import threading
 from typing import Any, Dict, List, Optional, Tuple
@@ -27,6 +28,7 @@ from overrides import overrides
 import requests
 from sight.proto import sight_pb2
 from sight.utils.proto_conversion import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_proto_to_dict
 from sight_service.bayesian_opt import BayesianOpt
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
@@ -191,11 +193,11 @@ class LLM(OptimizerInstance):
     # if include_example_action and len(ordered_history) == 0:
     #   ordered_history.append(self._random_event())
 
-    logging.info(
-        'ordered_history[#%d]=%s',
-        len(ordered_history),
-        ordered_history,
-    )
+    # logging.info(
+    #     'ordered_history[#%d]=%s',
+    #     len(ordered_history),
+    #     ordered_history,
+    # )
     # if worker_id is None:
     if len(self._history) == 0:
       return ordered_history
@@ -236,18 +238,18 @@ class LLM(OptimizerInstance):
     t = ''
     last_outcome = None
     hist = self._filtered_history(include_example_action)
-    logging.info(
-        '_history_to_text() include_example_action=%s hist=%s',
-        include_example_action,
-        hist,
-    )
+    # logging.info(
+    #     '_history_to_text() include_example_action=%s hist=%s',
+    #     include_example_action,
+    #     hist,
+    # )
     # if include_example_action and (
     #     len(hist) == 0 or (len(hist) == 1 and hist[0]['outcome'] is None)
     # ):
     #   logging.info('_history_to_text() Adding random_event')
     # t += self._hist_event_to_text(self._random_event(), None, False)
     for i, event in enumerate(hist):
-      logging.info('_history_to_text event=%s', event)
+      # logging.info('_history_to_text event=%s', event)
       event_text, last_outcome = self._hist_event_to_text(
           event, last_outcome, i == len(hist) - 1)
       t += event_text
@@ -292,12 +294,14 @@ class LLM(OptimizerInstance):
                   '  This is a similar outcome to the last time.\n')
     return chat
 
-  def _params_to_dict(self, dp: sight_pb2) -> Dict[str, float]:
-    """Returns the dict representation of a DecisionParams proto"""
-    d = {}
-    for a in dp:
-      d[a.key] = a.value.double_value
-    return d
+  # def _params_to_dict(self, dp: sight_pb2.DecisionParam) -> Dict[str, float]:
+  #   """Returns the dict representation of a DecisionParams proto"""
+  #   d = {}
+  #   logging.info('params_to_dict() dp.params=%s', dp.params)
+  #   for a in dp.params:
+  #     logging.info('params_to_dict()     a=%s', a)
+  #     d[a.key] = a.value.double_value
+  #   return d
 
   def _get_creds(self) -> Any:
     creds, project = google.auth.default()
@@ -451,12 +455,12 @@ class LLM(OptimizerInstance):
           }),
           headers=self._get_req_headers(),
       ).json()
-      logging.info('response=%s', response)
+      # logging.info('response=%s', response)
       if len(response) == 0:
         continue
       text = ''
       for r in response:
-        if 'parts' in r['candidates'][0]['content']:
+        if 'content' in r['candidates'][0] and 'parts' in r['candidates'][0]['content']:
           text += r['candidates'][0]['content']['parts'][0]['text']
       text = text.strip()
       if text == '':
@@ -541,7 +545,7 @@ class LLM(OptimizerInstance):
 
     if len(self._history) > 0 and 'outcome' not in self._history[0]:
       if len(request.decision_outcome.outcome_params) > 0:
-        self._history[-1]['outcome'] = self._params_to_dict(
+        self._history[-1]['outcome'] = convert_proto_to_dict(
             request.decision_point.outcome_params)
       else:
         self._history[-1]['outcome'] = request.decision_outcome.reward
@@ -553,7 +557,7 @@ class LLM(OptimizerInstance):
     #     ]) + '}\n'
     # self.script += 'Decision Action (json format):\n'
     self._history.append({
-        'state': self._params_to_dict(request.decision_point.state_params),
+        'state': convert_proto_to_dict(request.decision_point.state_params),
         'action': None,
         'outcome': None,
     })
@@ -592,9 +596,11 @@ class LLM(OptimizerInstance):
     #     ]) + '}\n'
 
     for key, value in self._history[-1]['action'].items():
-      a = dp_response.action.add()
-      a.key = key
-      a.value.double_value = float(value)
+      # a = dp_response.action.add()
+      # a.key = key
+      # a.value.double_value = float(value)
+      dp_response.action.params[key].CopyFrom(sight_pb2.Value(double_value=float(value),
+                                                              sub_type = sight_pb2.Value.ST_DOUBLE))
 
     self._num_decision_points += 1
 
@@ -602,6 +608,21 @@ class LLM(OptimizerInstance):
     dp_response.action_type = (
         service_pb2.DecisionPointResponse.ActionType.AT_ACT)
     return dp_response
+  
+
+  @overrides
+  def WorkerAlive(
+      self, request: service_pb2.WorkerAliveRequest
+  ) -> service_pb2.WorkerAliveResponse:
+    method_name = "WorkerAlive"
+    logging.debug(">>>>  In %s of %s", method_name, __file__)
+    response = service_pb2.WorkerAliveResponse()
+    response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+    decision_message = response.decision_messages.add()
+    decision_message.action_id = 1
+    logging.info("worker_alive_status is %s", response.status_type)
+    logging.debug("<<<<  Out %s of %s", method_name, __file__)
+    return response
 
   @overrides
   def finalize_episode(
@@ -610,28 +631,29 @@ class LLM(OptimizerInstance):
     self._lock.acquire()
 
     logging.info('FinalizeEpisode request=%s', request)
-    if len(request.decision_outcome.outcome_params) > 0:
-      self._history[-1]['outcome'] = self._params_to_dict(
-          request.decision_outcome.outcome_params)
-    else:
-      self._history[-1]['outcome'] = request.decision_outcome.reward
-    # self.last_outcome = self._history[-1]['outcome']
+    for i in range(len(request.decision_messages)):
+      if len(request.decision_messages[i].decision_outcome.outcome_params.params) > 0:
+        self._history[-1]['outcome'] = convert_proto_to_dict(
+            request.decision_messages[i].decision_outcome.outcome_params)
+      else:
+        self._history[-1]['outcome'] = request.decision_messages[i].decision_outcome.reward
+      # self.last_outcome = self._history[-1]['outcome']
 
-    logging.info('self._history[-1]=%s', self._history[-1])
-    request.decision_point.choice_params.CopyFrom(
-        convert_dict_to_proto(dict=self._history[-1]['action']))
-    self._bayesian_opt.finalize_episode(request)
+      logging.info('self._history[-1]=%s', self._history[-1])
+      request.decision_messages[i].decision_point.choice_params.CopyFrom(
+          convert_dict_to_proto(dict=self._history[-1]['action']))
+      self._bayesian_opt.finalize_episode(request)
 
-    if (self._llm_config.goal ==
-        sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE):
-      # If there are no outstanding acitions, ask the LLM whether the user's
-      # question can be answered via the already-completed model runs.
-      if len(self._actions_to_do) == 0:
-        can_respond_to_question, response = self._is_done(request.worker_id)
-        self._response_ready = can_respond_to_question
-        if self._response_ready:
-          self._waiting_on_tell = True
-          self._response_for_listen = response
+      if (self._llm_config.goal ==
+          sight_pb2.DecisionConfigurationStart.LLMConfig.LLMGoal.LM_INTERACTIVE):
+        # If there are no outstanding acitions, ask the LLM whether the user's
+        # question can be answered via the already-completed model runs.
+        if len(self._actions_to_do) == 0:
+          can_respond_to_question, response = self._is_done(request.worker_id)
+          self._response_ready = can_respond_to_question
+          if self._response_ready:
+            self._waiting_on_tell = True
+            self._response_for_listen = response
     self._lock.release()
 
     logging.info(
