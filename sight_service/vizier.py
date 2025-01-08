@@ -22,8 +22,9 @@ from dotenv import load_dotenv
 from google.cloud import aiplatform
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
+from sight.utils.proto_conversion import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_proto_to_dict
 from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.proto import service_pb2
 
 load_dotenv()
@@ -121,8 +122,8 @@ class Vizier(OptimizerInstance):
     self.current_trial[request.worker_id] = response[0].name
 
     dp_response = service_pb2.DecisionPointResponse()
-    dp_response.action.extend(
-        param_dict_to_proto({
+    dp_response.action.CopyFrom(
+        convert_dict_to_proto(dict={
             param.parameter_id: param.value for param in response[0].parameters
         }))
     dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT

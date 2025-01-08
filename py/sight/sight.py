@@ -207,6 +207,10 @@ class Sight(object):
     self.num_transitive_contents.set(Location())
     self.active_block_labels = contextvars.ContextVar('active_block_labels')
     self.active_block_labels.set([])
+    self.active_block_start_time = contextvars.ContextVar('active_block_start_time')
+    self.active_block_start_time.set([])
+    self.active_block_deeper_elapsed_time = contextvars.ContextVar('active_block_deeper_elapsed_time')
+    self.active_block_deeper_elapsed_time.set([0])
 
     self.attributes = {}
     self.open = True
@@ -602,6 +606,9 @@ class Sight(object):
       return self.location.get()
 
     self.active_block_labels.get().append(label)
+    self.active_block_start_time.get().append(time.time_ns())
+    self.active_block_deeper_elapsed_time.get().append(0)
+
     # self.emit_text_to_file(
     #     self.line_prefix + label + '<<<' + self.line_suffix + '\n'
     # )
@@ -671,7 +678,19 @@ class Sight(object):
       ).pos()
       obj.block_end.location_of_block_start = self.open_block_start_locations.get(
       )[-1]
+      
+
+      elapsed_time_ns = time.time_ns() - self.active_block_start_time.get()[-1]
+      obj.block_end.metrics.elapsed_time_ns = elapsed_time_ns
+      obj.block_end.metrics.exclusive_elapsed_time_ns = elapsed_time_ns - self.active_block_deeper_elapsed_time.get()[-1]
+
+      self.active_block_deeper_elapsed_time.get().pop()
+      self.active_block_deeper_elapsed_time.get()[-1] += elapsed_time_ns
+      obj.block_end.metrics.elapsed_time_ns = elapsed_time_ns
+
+
       self.open_block_start_locations.get().pop()
+      self.active_block_start_time.get().pop()
 
       if frame is None:
         # pytype: disable=attribute-error

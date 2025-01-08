@@ -114,8 +114,8 @@ message Object {
 }
 
 message ProposeAction {
-  repeated DecisionParam action_attrs = 1;
-  repeated DecisionParam attributes = 2;
+  DecisionParam action_attrs = 1;
+  DecisionParam attributes = 2;
   string action_id = 3;
 }
 
@@ -402,6 +402,7 @@ message BlockEnd {
   // at or near the time of the logged event.
   message Metrics {
     int64 elapsed_time_ns = 1;
+    int64 exclusive_elapsed_time_ns = 2;
   }
   Metrics metrics = 12;
 }
@@ -744,8 +745,14 @@ message DecisionConfigurationStart {
 }
 
 message DecisionParam {
-  string key = 1;
-  Value value = 2;
+  map <string,Value> params = 1;
+}
+
+message DecisionMessage {
+  int64 action_id = 1;
+  DecisionParam action = 2;
+  DecisionPoint decision_point = 3;
+  DecisionOutcome decision_outcome = 4;
 }
 
 message DecisionPoint {
@@ -756,8 +763,8 @@ message DecisionPoint {
   string chosen_option = 2; // need or not?
 
   // The parameters that characterize the chosen option.
-  repeated DecisionParam choice_params = 3;
-  repeated DecisionParam state_params = 4;
+  DecisionParam choice_params = 3;
+  DecisionParam state_params = 4;
 }
 
 message DecisionOutcome {
@@ -765,5 +772,5 @@ message DecisionOutcome {
   // The numeric value of this outcome, with higher values being more desirable.
   float reward = 2;
   float discount = 3;
-  repeated DecisionParam outcome_params = 4;
+  DecisionParam outcome_params = 4;
 }

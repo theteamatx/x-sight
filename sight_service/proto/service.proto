@@ -222,7 +222,7 @@ message DecisionPointRequest {
   Acme_Request acme_config = 5;
 }
 message DecisionPointResponse {
-  repeated sight.x.proto.DecisionParam action = 1;
+  sight.x.proto.DecisionParam action = 1;
   Acme_Response acme_response = 2;
   int64 response_idx = 3;
 
@@ -301,14 +301,14 @@ message LaunchResponse {
 
 message ProposeActionRequest {
   // message Action {
-  //   repeated sight.x.proto.DecisionParam action_attrs = 1;
+  //   sight.x.proto.DecisionParam action_attrs = 1;
   // }
   string client_id = 1;
   // repeated Action actions = 2;
-  repeated sight.x.proto.DecisionParam action_attrs = 2;
-  // repeated sight.x.proto.DecisionParam state_attrs = 3;
+  sight.x.proto.DecisionParam action_attrs = 2;
+  // sight.x.proto.DecisionParam state_attrs = 3;
   // repeated sight.x.proto.Attribute attributes = 3;
-  repeated sight.x.proto.DecisionParam attributes = 3;
+  sight.x.proto.DecisionParam attributes = 3;
 
   string question_label = 4;
 }
@@ -330,11 +330,11 @@ message GetOutcomeResponse {
       COMPLETED = 3;
       NOT_EXIST = 4;
     }
-    repeated sight.x.proto.DecisionParam state_attrs = 1;
-    repeated sight.x.proto.DecisionParam action_attrs = 2;
+    sight.x.proto.DecisionParam state_attrs = 1;
+    sight.x.proto.DecisionParam action_attrs = 2;
     float reward = 3;
-    repeated sight.x.proto.DecisionParam outcome_attrs = 4;
-    repeated sight.x.proto.DecisionParam attributes = 5;
+    sight.x.proto.DecisionParam outcome_attrs = 4;
+    sight.x.proto.DecisionParam attributes = 5;
     Status status = 6;
     string response_str = 7;
     int64 action_id = 8;
@@ -346,10 +346,12 @@ message FinalizeEpisodeRequest {
   string client_id = 1;
   string worker_id = 2;
   string question_label = 7;
-  sight.x.proto.DecisionPoint decision_point = 3;
-  sight.x.proto.DecisionOutcome decision_outcome = 4;
+  // sight.x.proto.DecisionPoint decision_point = 3;
+  // sight.x.proto.DecisionOutcome decision_outcome = 4;
   sight.x.proto.DecisionConfigurationStart.OptimizerType optimizer_type = 5;
-  Acme_Request acme_config  = 6;
+  Acme_Request acme_config = 6;
+  // int64 action_id = 7;
+  repeated sight.x.proto.DecisionMessage decision_messages = 8;
 }
 
 message FinalizeEpisodeResponse {
@@ -421,4 +423,5 @@ message WorkerAliveResponse {
     ST_RETRY = 3;
   }
   StatusType status_type = 4;
+  repeated sight.x.proto.DecisionMessage decision_messages = 5;
 }

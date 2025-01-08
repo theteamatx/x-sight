@@ -2,3 +2,6 @@
 based_on_style = google
 indent_width = 2
 column_limit = 80
+ALLOW_SPLIT_BEFORE_DICT_VALUE = False
+each_dict_entry_on_separate_line = True
+split_complex_comprehension = True
