@@ -132,6 +132,7 @@ class Optimizers:
     """Creates more specific optimizer and use them while responding to clients accordingly.
     """
     optimizer_type = request.decision_config_params.optimizer_type
+    mq_batch_size = request.decision_config_params.server_queue_batch_size
     logging.debug(">>>>>>>  In %s method of %s file. optimizer_type=%s",
                   sys._getframe().f_code.co_name, os.path.basename(__file__),
                   optimizer_type)
@@ -171,7 +172,8 @@ class Optimizers:
         obj = self.instances[request.client_id].launch(request)
         return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER:
-        self.instances[request.client_id] = WorklistScheduler()
+        self.instances[request.client_id] = WorklistScheduler(
+            meta_data={"mq_batch_size": mq_batch_size})
         obj = self.instances[request.client_id].launch(request)
         return obj
       else:

@@ -740,6 +740,7 @@ message DecisionConfigurationStart {
   map<string, AttrProps> outcome_attrs = 5;
 
   int64 num_trials = 6;
+  int64 server_queue_batch_size = 7;
 }
 
 message DecisionParam {

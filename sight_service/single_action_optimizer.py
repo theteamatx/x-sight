@@ -75,7 +75,7 @@ class SingleActionOptimizer(OptimizerInstance):
   override while communicating with client.
   """
 
-  def __init__(self):
+  def __init__(self, batch_size: int = 5):
     super().__init__()
     self.queue: IMessageQueue = MessageQueue[MessageDetails](
-        id_generator=IncrementalUUID())
+        id_generator=IncrementalUUID(), batch_size=batch_size)

@@ -2,10 +2,13 @@
 
 import abc
 import copy
+from datetime import datetime
 import enum
+import json
 from typing import Any, Callable, Dict, Generic, Optional, Protocol, TypeVar
 import uuid
 
+from google.cloud import storage
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
@@ -158,6 +161,45 @@ class IMessageQueue(Protocol, Generic[T]):
     ...
 
 
+class MessageFlowLogger:
+  """Class to log message state transitions."""
+
+  def __init__(self):
+    self.logs = []  # List to store time-series logs
+
+  def log_message_state(self,
+                        state,
+                        message_id,
+                        worker_id=None,
+                        message_details=None):
+    timestamp = datetime.utcnow().isoformat()
+    self.logs.append({
+        "timestamp": timestamp,
+        "state": state,
+        "message_id": message_id,
+        "worker_id": worker_id,
+        "message_details": message_details,
+    })
+
+  def save_to_gcs(self):
+    logs_json = json.dumps(self.logs, indent=2)
+
+    bucket_name = 'cameltrain-sight'
+    json_file_name = f"doing_mq_analysis/{datetime.utcnow().isoformat()}.json"
+
+    # Initialize GCS client
+    client = storage.Client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(json_file_name)
+
+    blob.upload_from_string(logs_json, content_type="application/json")
+
+    return f"gs://{bucket_name}/{json_file_name}"
+
+  def get_logs(self):
+    return self.logs
+
+
 class MessageQueue(IMessageQueue[T]):
   """A message queue is a data structure that stores messages.
 
@@ -212,6 +254,10 @@ class MessageQueue(IMessageQueue[T]):
     self.active_lock = lock_factory()
     self.completed_lock = lock_factory()
 
+    # logger
+
+    self.logger = MessageFlowLogger()
+
   def __str__(self) -> str:
     # all_messages = self.get_all_messages()
     messages_status = self.get_status()
@@ -248,6 +294,9 @@ class MessageQueue(IMessageQueue[T]):
     unique_id = self.id_generator.generate_id()
     with self.pending_lock.gen_wlock():
       self.pending[unique_id] = message
+
+    # log the message to logger
+    self.logger.log_message_state(state='pending', message_id=unique_id)
     return unique_id
 
   @overrides
@@ -279,6 +328,12 @@ class MessageQueue(IMessageQueue[T]):
         self.active[worker_id] = {}
       self.active[worker_id].update(batch)
 
+    ## log the messages to logger
+    for message_id in batch.keys():
+      self.logger.log_message_state(state='active',
+                                    message_id=message_id,
+                                    worker_id=worker_id)
+
     return batch
 
   @overrides
@@ -305,6 +360,12 @@ class MessageQueue(IMessageQueue[T]):
 
         with self.completed_lock.gen_wlock():
           self.completed[message_id] = message
+
+        ## log the message to logger
+        self.logger.log_message_state(state='completed',
+                                      message_id=message_id,
+                                      worker_id=worker_id)
+
       else:
         raise ValueError(
             f'Failed while completing the msg ,as Message ID {message_id} not found for worker {worker_id}'
