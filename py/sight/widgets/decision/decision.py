@@ -657,7 +657,7 @@ def run(
 
         logging.debug('>>>>>>>>> Entering run method')
 
-        initialize_env(env, state_attrs, action_attrs)
+        # initialize_env(env, state_attrs, action_attrs)
 
         sight.widget_decision_state['decision_episode_fn'] = (
             # decision_episode_fn.DecisionEpisodeFn(driver_fn, state_attrs,
@@ -977,9 +977,9 @@ def configure_decision(sight, state_attrs, action_attrs, outcome_attrs):
 
   decision_configuration.choice_config[sight.params.label].CopyFrom(
       optimizer.obj.create_config())
-  attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
-  attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
-  attr_dict_to_proto(outcome_attrs, decision_configuration.outcome_attrs)
+  decision_helper.attr_dict_to_proto(state_attrs, decision_configuration.state_attrs)
+  decision_helper.attr_dict_to_proto(action_attrs, decision_configuration.action_attrs)
+  decision_helper.attr_dict_to_proto(outcome_attrs, decision_configuration.outcome_attrs)
 
   sight.enter_block(
       'Decision Configuration',
@@ -1011,11 +1011,11 @@ def setup_optimizer(sight, description):
       If the optimizer type is unknown.
   """
   optimizer_map = {
-      'dm_acme': lambda: AcmeOptimizerClient(sight),
+      # 'dm_acme': lambda: AcmeOptimizerClient(sight),
       'vizier': lambda: SingleActionOptimizerClient(
           sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER, sight),
-      'genetic_algorithm': lambda: GeneticAlgorithmOptimizerClient(
-          max_population_size=_NUM_TRAIN_WORKERS.value, sight=sight),
+      # 'genetic_algorithm': lambda: GeneticAlgorithmOptimizerClient(
+      #     max_population_size=_NUM_TRAIN_WORKERS.value, sight=sight),
       'exhaustive_search': lambda: SingleActionOptimizerClient(
           sight_pb2.DecisionConfigurationStart.OptimizerType.
           OT_EXHAUSTIVE_SEARCH,
@@ -1057,12 +1057,12 @@ def setup_optimizer(sight, description):
   return optimizer_map[_OPTIMIZER_TYPE.value]()
 
 
-def initialize_env(env, state_attrs, action_attrs):
-  if env is not None:
-    if not state_attrs:
-      state_attrs.update(attr_to_dict(env.observation_spec(), 'state'))
-    if not action_attrs:
-      action_attrs.update(attr_to_dict(env.action_spec(), 'action'))
+# def initialize_env(env, state_attrs, action_attrs):
+#   if env is not None:
+#     if not state_attrs:
+#       state_attrs.update(attr_to_dict(env.observation_spec(), 'state'))
+#     if not action_attrs:
+#       action_attrs.update(attr_to_dict(env.action_spec(), 'action'))
 
 
 def get_state_attrs(sight: Any) -> list[str]:
