@@ -1,14 +1,14 @@
 generic_worker1 :
-  docker : "gcr.io/cameltrain/generic-worker:latest"
+  docker : "gcr.io/cameltrain/test-generic-worker:latest"
   binary : "py/sight/demo/fn_sphere1.py"
 
 
 generic_worker2 :
-  docker : "gcr.io/cameltrain/generic-worker:latest"
+  docker : "gcr.io/cameltrain/test-generic-worker:latest"
   binary : "py/sight/demo/fn_sphere2.py"
 
 fvs_worker :
-  docker : "gcr.io/cameltrain/generic-worker:latest"
+  docker : "gcr.io/cameltrain/test-generic-worker:latest"
   binary : "fvs_sight/fvs_sight_worker.py"
   # mode : "dsub_cloud_worker" #(dsub_local, )
 

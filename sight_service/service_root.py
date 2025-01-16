@@ -190,7 +190,8 @@ class Optimizers:
         return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER:
         self.instances[request.client_id][
-            request.question_label] = WorklistScheduler()
+            request.question_label] = WorklistScheduler(
+                meta_data={"mq_batch_size": mq_batch_size})
         obj = self.instances[request.client_id][request.question_label].launch(
             request)
         return obj
@@ -254,61 +255,43 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
   @rpc_call
   def DecisionPoint(self, request, context):
-    method_name = "DecisionPoint"
-    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
-    start_time = time.time()
-    obj = self.optimizers.get_instance(
+    return self.optimizers.get_instance(
         request.client_id, request.question_label).decision_point(request)
-    # calculate_resolve_time(start_time)
-    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
-    return obj
 
   @rpc_call
   def Tell(self, request, context):
-    return self.optimizers.get_instance(request.client_id).tell(request)
+    return self.optimizers.get_instance(request.client_id,
+                                        request.question_label).tell(request)
 
   @rpc_call
   def Listen(self, request, context):
-    return self.optimizers.get_instance(request.client_id).listen(request)
+    return self.optimizers.get_instance(request.client_id,
+                                        request.question_label).listen(request)
 
   @rpc_call
   def CurrentStatus(self, request, context):
     return self.optimizers.get_instance(
-        request.client_id).current_status(request)
+        request.client_id, request.question_label).current_status(request)
 
   @rpc_call
   def FetchOptimalAction(self, request, context):
     return self.optimizers.get_instance(
-        request.client_id).fetch_optimal_action(request)
+        request.client_id, request.question_label).fetch_optimal_action(request)
 
   @rpc_call
   def ProposeAction(self, request, context):
-    method_name = "ProposeAction"
-    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
-
-    obj = self.optimizers.get_instance(
+    return self.optimizers.get_instance(
         request.client_id, request.question_label).propose_action(request)
-    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
-    return obj
 
   @rpc_call
   def GetOutcome(self, request, context):
-    return self.optimizers.get_instance(request.client_id).GetOutcome(request)
-
-    obj = self.optimizers.get_instance(
+    return self.optimizers.get_instance(
         request.client_id, request.question_label).GetOutcome(request)
-    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
-    return obj
 
   @rpc_call
   def FinalizeEpisode(self, request, context):
-    method_name = "FinalizeEpisode"
-    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
-
-    obj = self.optimizers.get_instance(
+    return self.optimizers.get_instance(
         request.client_id, request.question_label).finalize_episode(request)
-    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
-    return obj
 
   @rpc_call
   def Launch(self, request, context):
@@ -321,8 +304,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
   @rpc_call
   def Close(self, request, context):
-    method_name = "Close"
-    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
 
     with self.optimizers.instances_lock.gen_rlock():
       instances = self.optimizers.get_instance(request.client_id)
@@ -340,13 +321,8 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
   @rpc_call
   def WorkerAlive(self, request, context):
-    method_name = "WorkerAlive"
-    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
-
-    obj = self.optimizers.get_instance(
+    return self.optimizers.get_instance(
         request.client_id, request.question_label).WorkerAlive(request)
-    logging.info("<<<<<<<  Out %s method of %s file.", method_name, _file_name)
-    return obj
 
 
 def serve():

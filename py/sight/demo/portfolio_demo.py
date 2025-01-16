@@ -106,32 +106,32 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
 
     sample_list = [sample for i in range(FLAGS.num_trials)]
 
-  # print('SIGHT ID => ',sight.id)
-  with Block("Propose actions", sight):
-    with Attribute("project_id", "APR107", sight):
-      tasks = []
-      logging.info("len(sample_list) : %s", len(sample_list))
+    # print('SIGHT ID => ',sight.id)
+    with Block("Propose actions", sight):
+      with Attribute("project_id", "APR107", sight):
+        tasks = []
+        logging.info("len(sample_list) : %s", len(sample_list))
 
-      x_start_time = time.perf_counter()
-      logging.info(f"Proposing Start ")
+        x_start_time = time.perf_counter()
+        logging.info(f"Proposing Start ")
 
-      for id in range(len(sample_list)):
-        with Attribute("sample_id", id, sight):
-          tasks.append(
-              sight.create_task(
-                  # both base and treatment are considerred to be same dict here
-                  propose_actions(sight, sample_list[id], sample_list[id])))
+        for id in range(len(sample_list)):
+          with Attribute("sample_id", id, sight):
+            tasks.append(
+                sight.create_task(
+                    # both base and treatment are considerred to be same dict here
+                    propose_actions(sight, sample_list[id], sample_list[id])))
 
-      x_end_time = time.perf_counter()
-      logging.info(
-          f"Propose actions took {x_end_time - x_start_time:.4f} seconds.")
+        x_end_time = time.perf_counter()
+        logging.info(
+            f"Propose actions took {x_end_time - x_start_time:.4f} seconds.")
 
 
-      logging.info("waiting for all get outcome to finish.....")
-      diff_time_series = await asyncio.gather(*tasks)
+        logging.info("waiting for all get outcome to finish.....")
+        diff_time_series = await asyncio.gather(*tasks)
 
-      logging.info("all get outcome are finished.....")
-      logging.info(f'Combine Series : {diff_time_series}')
+        logging.info("all get outcome are finished.....")
+        logging.info(f'Combine Series : {diff_time_series}')
 
 def main_wrapper(argv):
   with get_sight_instance() as sight:
