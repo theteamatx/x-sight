@@ -136,6 +136,7 @@ class Optimizers:
     """Creates more specific optimizer and use them while responding to clients accordingly.
     """
     optimizer_type = request.decision_config_params.optimizer_type
+    mq_batch_size = request.decision_config_params.server_queue_batch_size
     logging.debug(">>>>>>>  In %s method of %s file. optimizer_type=%s",
                   sys._getframe().f_code.co_name, os.path.basename(__file__),
                   optimizer_type)

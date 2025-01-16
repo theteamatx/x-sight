@@ -38,8 +38,9 @@ class WorklistScheduler(SingleActionOptimizer):
       of this attribute.
   """
 
-  def __init__(self):
-    super().__init__()
+  def __init__(self, meta_data: dict[str, any]):
+    mq_batch_size = meta_data["mq_batch_size"]
+    super().__init__(batch_size=mq_batch_size)
     self.next_sample_to_issue = []
     self.last_sample = False
     self.exp_completed = False
@@ -192,10 +193,15 @@ class WorklistScheduler(SingleActionOptimizer):
             request: service_pb2.CloseRequest) -> service_pb2.CloseResponse:
     method_name = "close"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    if not self.exp_completed:
+      logging.info("<<<<Completed length %s Timeseries Logs ... \n %s \n",
+                   self.queue.get_status()["completed"],
+                   self.queue.logger.save_to_gcs())
     self.exp_completed = True
     logging.info(
         "sight experiment completed...., changed exp_completed to True")
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+
     return service_pb2.CloseResponse(response_str="success")
 
   @overrides
@@ -214,8 +220,7 @@ class WorklistScheduler(SingleActionOptimizer):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
-      batched_msgs = self.queue.create_active_batch(worker_id=request.worker_id,
-                                                    new_batch_size=10)
+      batched_msgs = self.queue.create_active_batch(worker_id=request.worker_id)
       for action_id, msg in batched_msgs.items():
         decision_message = response.decision_messages.add()
         decision_message.action_id = action_id

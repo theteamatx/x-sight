@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import json
 
 from absl import flags
@@ -64,6 +65,36 @@ async def fetch_outcome(sight_id, actions_id):
     except Exception as e:
       raise e
 
+async def asyncio_wrapper(blocking_func, *args, max_threads=-1):
+  """Wrapper to execute a blocking function using asyncio.to_thread.
+
+  Parameters:
+      blocking_func (callable): The blocking function to execute.
+      *args: Positional arguments to pass to the blocking function.
+      max_threads (int): Number of threads for the custom ThreadPoolExecutor.
+                         If -1, use the default executor.
+
+  Returns:
+      The result of the blocking function.
+  """
+  if max_threads != -1:
+    # Create a custom ThreadPoolExecutor
+    custom_executor = ThreadPoolExecutor(max_workers=max_threads,
+                                         thread_name_prefix="CustomThread")
+    try:
+      # Temporarily set the custom executor
+      loop = asyncio.get_running_loop()
+      loop.set_default_executor(custom_executor)
+      print(f"Using custom thread pool with max threads: {max_threads}")
+      return await asyncio.to_thread(blocking_func, *args)
+    finally:
+      # Shutdown the custom executor after usage
+      custom_executor.shutdown(wait=True)
+  else:
+    print("Using default thread pool")
+    # Use the default executor
+    return await asyncio.to_thread(blocking_func, *args)
+
 
 async def propose_actions(sight, question_label, action_dict, custom_part="sight_cache"):
 
@@ -80,7 +111,11 @@ async def propose_actions(sight, question_label, action_dict, custom_part="sight
     print('Getting response from cache !!')
     return outcome
 
-  unique_action_id = decision.propose_actions(sight, question_label, action_dict)
+  # unique_action_id = decision.propose_actions(sight, question_label, action_dict)
+  # unique_action_id = await asyncio.to_thread(decision.propose_actions, sight,
+  #                                            action_dict)
+  unique_action_id = await asyncio_wrapper(decision.propose_actions, sight,
+                                            question_label, action_dict)
   await push_message(sight.id, unique_action_id)
   response = await fetch_outcome(sight.id, unique_action_id)
   outcome = response.get('outcome', None)
