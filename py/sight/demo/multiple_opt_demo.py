@@ -163,7 +163,8 @@ def get_sight_instance():
   return sight_obj
 
 
-async def propose_actions(sight: Sight, question_label:str, base_project_config: dict[str, Any],
+async def propose_actions(sight: Sight, question_label: str,
+                          base_project_config: dict[str, Any],
                           treatments: dict[str, Any]) -> pd.Series:
   treatment_project_config = treatments
   tasks = []
@@ -175,7 +176,9 @@ async def propose_actions(sight: Sight, question_label:str, base_project_config:
     #     proposal.fetch_outcome(sight.id, base_sim))
     # tasks.append(unmanaged_task)
     unmanaged_task = sight.create_task(
-        proposal.propose_actions(sight, question_label, action_dict=base_project_config))
+        proposal.propose_actions(sight,
+                                 question_label,
+                                 action_dict=base_project_config))
     tasks.append(unmanaged_task)
   with Attribute("Managed", "1", sight):
     # treatment_sim = decision.propose_actions(
@@ -185,14 +188,17 @@ async def propose_actions(sight: Sight, question_label:str, base_project_config:
     #     proposal.fetch_outcome(sight.id, treatment_sim))
     # tasks.append(managed_task)
     managed_task = sight.create_task(
-        proposal.propose_actions(sight, question_label, action_dict=treatment_project_config))
+        proposal.propose_actions(sight,
+                                 question_label,
+                                 action_dict=treatment_project_config))
     tasks.append(managed_task)
 
   [unmanaged_response, managed_response] = await asyncio.gather(*tasks)
   return unmanaged_response, managed_response
 
 
-async def propose_actions_wrapper(sight: Sight, question_label: str, num_trials: int) -> None:
+async def propose_actions_wrapper(sight: Sight, question_label: str,
+                                  num_trials: int) -> None:
 
   sample_list = [sample for i in range(num_trials)]
 
@@ -206,7 +212,8 @@ async def propose_actions_wrapper(sight: Sight, question_label: str, num_trials:
           tasks.append(
               sight.create_task(
                   # both base and treatment are considerred to be same dict here
-                  propose_actions(sight, question_label, sample_list[id], sample_list[id])))
+                  propose_actions(sight, question_label, sample_list[id],
+                                  sample_list[id])))
 
       print("waiting for all get outcome to finish.....")
       diff_time_series = await asyncio.gather(*tasks)
@@ -235,6 +242,8 @@ def configure_decision(sight, question_label, question_config, optimizer_config,
       question_label=question_label)
   decision_configuration.choice_config[sight.params.label].CopyFrom(
       opt_obj.create_config())
+
+  decision_configuration.server_queue_batch_size = FLAGS.server_queue_batch_size or 1
   decision_helper.attr_dict_to_proto(state_attrs,
                                      decision_configuration.state_attrs)
   decision_helper.attr_dict_to_proto(action_attrs,
@@ -304,7 +313,9 @@ def main_wrapper(argv):
       start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type)
 
       # propose_action()
-      asyncio.run(propose_actions_wrapper(sight, question_label, optimizer_config['num_questions']))
+      asyncio.run(
+          propose_actions_wrapper(sight, question_label,
+                                  optimizer_config['num_questions']))
 
   # end_time = time.perf_counter()
   # utility.calculate_exp_time(start_time, end_time)
