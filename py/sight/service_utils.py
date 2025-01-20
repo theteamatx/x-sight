@@ -127,6 +127,7 @@ def _service_addr() -> str:
   else:
     # print('fetching unique string.....')
     try:
+      print('get_service_id()=', get_service_id())
       service_url = subprocess.getoutput(
           'gcloud run services describe'
           f" {_SERVICE_PREFIX}{get_service_id()} --region us-central1 --format='value(status.url)'"

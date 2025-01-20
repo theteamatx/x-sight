@@ -22,6 +22,7 @@ from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from sight_service.proto import service_pb2
+from sight_service.shared_batch_messages import CachedBatchMessages
 
 
 class LLMOptimizerClient(OptimizerClient):
@@ -49,8 +50,10 @@ class LLMOptimizerClient(OptimizerClient):
 
     self._description = description
 
+    self.cache: CachedBatchMessages = CachedBatchMessages()
     self._sight = sight
     self._worker_id = None
+    
 
   @override
   def create_config(self) -> sight_pb2.DecisionConfigurationStart.ChoiceConfig:

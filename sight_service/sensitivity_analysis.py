@@ -142,15 +142,17 @@ class SensitivityAnalysis(OptimizerInstance):
     # logging.info('Running for exhaustive search....')
 
     self._lock.acquire()
-    # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
-    logging.info('FinalizeEpisode: %s: %s', request.worker_id, request.worker_id
-                 in self.active_samples)
-    self.complete_samples[self.active_samples[
-        request.worker_id]['sample_num']] = {
-            'outcome': convert_proto_to_dict(
-                proto=request.decision_outcome.outcome_params),
-            'action': self.active_samples[request.worker_id]['action'],
-        }
+    for i in range(len(request.decision_messages)):
+      # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
+      logging.info('FinalizeEpisode: %s: %s', request.worker_id, request.worker_id
+                  in self.active_samples)
+      logging.info('FinalizeEpisode: request=%s', request)
+      self.complete_samples[self.active_samples[
+          request.worker_id]['sample_num']] = {
+              'outcome': convert_proto_to_dict(
+                  proto=request.decision_messages[i].decision_outcome.outcome_params),
+              'action': self.active_samples[request.worker_id]['action'],
+          }
     del self.active_samples[request.worker_id]
     self._lock.release()
 
@@ -205,10 +207,12 @@ class SensitivityAnalysis(OptimizerInstance):
     method_name = "WorkerAlive"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
+    response = service_pb2.WorkerAliveResponse()
     if self.num_samples_issued < self.num_trials:
-      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+      response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
 
       next_action = self._generate_action()
+      self.num_samples_issued += 1
 
       self._lock.acquire()
       logging.info('WorkerAlive: %s: %s', request.worker_id, next_action)
@@ -216,11 +220,16 @@ class SensitivityAnalysis(OptimizerInstance):
           'action': next_action,
           'sample_num': self.num_samples_issued,
       }
-      self.num_samples_issued += 1
+      
+      decision_message = response.decision_messages.add()
+      decision_message.action_id = self.num_samples_issued
+      decision_message.action.CopyFrom(convert_dict_to_proto(dict=next_action))
+
       self._lock.release()
 
     else:
-      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
-    logging.info("worker_alive_status is %s", worker_alive_status)
+      response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+
+    logging.info("response is %s", response)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)
+    return response
