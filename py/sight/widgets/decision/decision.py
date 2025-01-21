@@ -949,7 +949,8 @@ def process_worker_action(response, sight, driver_fn, env, question_label):
       decision_messages_proto=response.decision_messages)
   # shared_batch_messages = CachedBatchMessages()
   sight.widget_decision_state['cached_messages'] = optimizer.obj.cache
-  logging.info('cached_messages=%s', sight.widget_decision_state['cached_messages'])
+  logging.info('cached_messages=%s',
+               sight.widget_decision_state['cached_messages'])
 
   for action_id, action_params in decision_messages.items():
     logging.info('action_id=%s, action_params=%s', action_id, action_params)
@@ -1218,16 +1219,17 @@ def _process_acme_action(selected_action, widget_state):
   }
 
 
-def _process_worklist_scheduler(sight, req):
-  """Processes the action for 'worklist_scheduler' optimizer."""
+def _process_cached_messages_scheduler(sight, req):
+  """Processes the action for optimizer where we have messages cached while doing
+     working-alive call
+  """
   widget_state = sight.widget_decision_state
-  logging.info('_process_worklist_scheduler: optimizer.obj=%s, action_id=%s', optimizer.obj, widget_state['action_id'])
-  if not optimizer.obj:
-    optimizer.obj = SingleActionOptimizerClient(
-        sight_pb2.DecisionConfigurationStart.OptimizerType.
-        OT_WORKLIST_SCHEDULER,
-        sight,
-    )
+  logging.info(
+      '_process_cached_messages_scheduler: optimizer.obj=%s, action_id=%s',
+      optimizer.obj, widget_state['action_id'])
+
+  # we have action_id means we already cached them from the workeralive call
+  # and not performing the actual server decision call
   if widget_state['action_id']:
     return (widget_state['cached_messages'].get(
         widget_state['action_id']).action_params)
@@ -1259,10 +1261,13 @@ def _make_decision(sight, req):
       'genetic_algorithm',
       'exhaustive_search',
       'smcpy',
-  ] or optimizer_type.startswith('ng_'):
+  ]:
+    # or optimizer_type.startswith('ng_'):
     chosen_action = optimizer_obj.decision_point(sight, req)
-  elif optimizer_type in ['worklist_scheduler', 'sensitivity_analysis', 'bayesian_opt']:
-    chosen_action = _process_worklist_scheduler(sight, req)
+  elif optimizer_type in [
+      'worklist_scheduler', 'sensitivity_analysis', 'bayesian_opt'
+  ] or optimizer_type.startswith('ng_'):
+    chosen_action = _process_cached_messages_scheduler(sight, req)
   elif optimizer_type.startswith('llm_'):
     chosen_action = _process_llm_action(sight, req, optimizer_obj)
   else:
@@ -1348,7 +1353,8 @@ def _update_cached_batch(sight: Any):
   cached_messages = sight.widget_decision_state.get('cached_messages', None)
   logging.info('_update_cached_batch() cached_messages=%s', cached_messages)
   if cached_messages and action_id:
-    logging.info(f'_update_cached_batch() Caching batch for action_id: {action_id}')
+    logging.info(
+        f'_update_cached_batch() Caching batch for action_id: {action_id}')
     cached_messages.update(
         key=action_id,
         action_params=cached_messages.get(action_id).action_params,
