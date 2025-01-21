@@ -312,10 +312,10 @@ def main_wrapper(argv):
       # Start worker jobs
       start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type)
 
-      # propose_action()
-      asyncio.run(
-          propose_actions_wrapper(sight, question_label,
-                                  optimizer_config['num_questions']))
+      # # propose_action()
+      # asyncio.run(
+      #     propose_actions_wrapper(sight, question_label,
+      #                             optimizer_config['num_questions']))
 
   # end_time = time.perf_counter()
   # utility.calculate_exp_time(start_time, end_time)
