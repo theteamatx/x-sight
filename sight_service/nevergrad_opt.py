@@ -27,6 +27,7 @@ from overrides import overrides
 import requests
 from sight.proto import sight_pb2
 from sight.utils.proto_conversion import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_proto_to_dict
 from sight_service.normalizer import Normalizer
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
@@ -49,6 +50,8 @@ class NeverGradOpt(OptimizerInstance):
     self._lock = threading.RLock()
     self._total_count = 0
     self._completed_count = 0
+    #! here we need new dataclass to work with multiple workers, this only works for single worker
+    self._selected_actions = {}
     self.normalizer = Normalizer()
 
   @overrides
@@ -167,7 +170,6 @@ class NeverGradOpt(OptimizerInstance):
     print('here nevergrad object : ', self.__dict__)
     return response
 
-
   def _params_to_dict(self, dp: sight_pb2) -> Dict[str, float]:
     """Returns the dict representation of a DecisionParams proto"""
     d = {}
@@ -201,9 +203,11 @@ class NeverGradOpt(OptimizerInstance):
 
     self._lock.acquire()
 
-    for i in range(request.decision_messages):
-      last_action_done_by_woker = convert_dict_to_proto(
-          proto=request.decision_messages[i].decision_point.choice_params)
+    for i in range(len(request.decision_messages)):
+      # last_action_done_by_woker = convert_proto_to_dict(
+      #     proto=request.decision_messages[i].decision_point.choice_params)
+      last_action_done_by_woker = self._selected_actions
+
       logging.info('FinalizeEpisode outcome=%s / %s',
                    request.decision_messages[i].decision_outcome.reward,
                    last_action_done_by_woker)
@@ -262,7 +266,7 @@ class NeverGradOpt(OptimizerInstance):
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     response = service_pb2.WorkerAliveResponse()
     if (self._completed_count == self._total_count):
-      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+      response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
     # elif(not self.pending_samples):
     #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
@@ -271,13 +275,18 @@ class NeverGradOpt(OptimizerInstance):
 
       self._lock.acquire()
       selected_actions = self._optimizer.ask()
+      self._selected_actions = selected_actions
       self.num_samples_issued += 1
       self._lock.release()
 
+      # logging.info('selected_actions : %s, %s', type(selected_actions),
+      #              selected_actions)
+      # logging.info('selected_actions.args[0] : %s, %s',
+      #              type(selected_actions.args[0]), selected_actions.args[0])
       decision_message = response.decision_messages.add()
       decision_message.action_id = self._completed_count
       decision_message.action.CopyFrom(
-          convert_dict_to_proto(dict=selected_actions))
+          convert_dict_to_proto(dict=selected_actions.args[0]))
 
       response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
 
