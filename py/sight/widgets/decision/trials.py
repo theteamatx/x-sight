@@ -424,6 +424,8 @@ def start_job_in_dsub_local(
       # '--env',
       # 'PYTHONPATH=/project',
       '--env',
+      f'IP_ADDR={service.get_docker0_ip()}',
+      '--env',
       f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
       '--input',
       f'SCRIPT={remote_script}',
