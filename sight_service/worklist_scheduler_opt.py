@@ -20,10 +20,11 @@ from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
 from sight.proto import sight_pb2
+from sight.utils.proto_conversion import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_proto_to_dict
 # from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.optimizer_instance import param_dict_to_proto
-from sight_service.optimizer_instance import param_proto_to_dict
 from sight_service.proto import service_pb2
+from sight_service.single_action_optimizer import MessageDetails
 from sight_service.single_action_optimizer import SingleActionOptimizer
 
 _file_name = "exhaustive_search.py"
@@ -37,16 +38,27 @@ class WorklistScheduler(SingleActionOptimizer):
       of this attribute.
   """
 
-  def __init__(self):
-    super().__init__()
+  def __init__(self, meta_data: dict[str, any]):
+    mq_batch_size = meta_data["mq_batch_size"]
+    super().__init__(batch_size=mq_batch_size)
     self.next_sample_to_issue = []
     self.last_sample = False
     self.exp_completed = False
     self.possible_values = {}
     self.max_reward_sample = {}
-    self.pending_lock = rwlock.RWLockFair()
-    self.active_lock = rwlock.RWLockFair()
-    self.completed_lock = rwlock.RWLockFair()
+
+  def add_outcome_to_outcome_response(
+      self, msg_details: MessageDetails, sample_id,
+      outcome: service_pb2.GetOutcomeResponse.Outcome):
+    outcome.action_id = sample_id
+    outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
+    outcome.reward = msg_details.reward
+    outcome.action_attrs.CopyFrom(
+        convert_dict_to_proto(dict=msg_details.action))
+    outcome.outcome_attrs.CopyFrom(
+        convert_dict_to_proto(dict=msg_details.outcome))
+    outcome.attributes.CopyFrom(
+        convert_dict_to_proto(dict=msg_details.attributes))
 
   @overrides
   def launch(self,
@@ -64,93 +76,52 @@ class WorklistScheduler(SingleActionOptimizer):
   ) -> service_pb2.ProposeActionResponse:
     # print('request in propose actions: ', request)
 
-    attributes = param_proto_to_dict(request.attributes)
-    action_attrs = param_proto_to_dict(request.action_attrs)
+    attributes = convert_proto_to_dict(proto=request.attributes)
+    action_attrs = convert_proto_to_dict(proto=request.action_attrs)
 
-    with self.pending_lock.gen_wlock():
-      self.pending_samples[self.unique_id] = [action_attrs, attributes]
+    message = MessageDetails.create(action=action_attrs, attributes=attributes)
 
-    # print('self.pending_samples : ',
-    #       self.pending_samples)
-    # print('self.active_samples : ',
-    #       self.active_samples)
-    # print('self.completed_samples : ',
-    #       self.completed_samples)
-    print('self.unique_id : ', self.unique_id)
+    unique_id = self.queue.push_message(message)
 
-    # Create response
-    response = service_pb2.ProposeActionResponse(action_id=self.unique_id)
-    self.unique_id += 1
+    response = service_pb2.ProposeActionResponse(action_id=unique_id)
+    logging.info("self.queue => %s", self.queue)
     return response
 
   @overrides
   def GetOutcome(
       self,
       request: service_pb2.GetOutcomeRequest) -> service_pb2.GetOutcomeResponse:
-    # print('self.pending_samples : ',
-    #       self.pending_samples)
-    # print('self.active_samples : ',
-    #       self.active_samples)
-    # print('self.completed_samples : ',
-    #       self.completed_samples)
-    with self.completed_lock.gen_rlock():
-      completed_samples = self.completed_samples
-    with self.pending_lock.gen_rlock():
-      pending_samples = self.pending_samples
-    with self.active_lock.gen_rlock():
-      active_samples = self.active_samples
+
+    all_completed_messages = self.queue.get_completed()
 
     response = service_pb2.GetOutcomeResponse()
-    if (request.unique_ids):
+    if not request.unique_ids:
+      for sample_id in all_completed_messages:
+        outcome = response.outcome.add()
+        given_msg_details = all_completed_messages[sample_id]
+        self.add_outcome_to_outcome_response(msg_details=given_msg_details,
+                                             sample_id=sample_id,
+                                             outcome=response)
+    else:
       required_samples = list(request.unique_ids)
       for sample_id in required_samples:
         outcome = response.outcome.add()
         outcome.action_id = sample_id
-        if (sample_id in completed_samples):
-          sample_details = self.completed_samples[sample_id]
-          outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
-          outcome.reward = sample_details['reward']
-          outcome.action_attrs.extend(
-              param_dict_to_proto(sample_details['action']))
-          outcome.outcome_attrs.extend(
-              param_dict_to_proto(sample_details['outcome']))
-          outcome.attributes.extend(
-              param_dict_to_proto(sample_details['attribute']))
-        elif (sample_id in pending_samples):
+        if sample_id in all_completed_messages:
+          given_msg_details = all_completed_messages[sample_id]
+          self.add_outcome_to_outcome_response(msg_details=given_msg_details,
+                                               sample_id=sample_id,
+                                               outcome=outcome)
+        elif self.queue.is_message_in_pending(sample_id):
           outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.PENDING
           outcome.response_str = '!! requested sample not yet assigned to any worker !!'
-        elif any(value['id'] == sample_id for value in active_samples.values()):
+        elif self.queue.is_message_in_active(sample_id):
           outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.ACTIVE
           outcome.response_str = '!! requested sample not completed yet !!'
         else:
           outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.NOT_EXIST
           outcome.response_str = f'!! requested sample Id {sample_id} does not exist !!'
-
-          print("!! NOT EXIST !!")
-          with self.active_lock.gen_rlock():
-            print(self.active_samples)
-          with self.pending_lock.gen_rlock():
-            print(self.pending_samples)
-          with self.completed_lock.gen_rlock():
-            print(self.completed_samples)
-    else:
-      for sample_id in completed_samples.keys():
-        sample_details = completed_samples[sample_id]
-        outcome = response.outcome.add()
-        outcome.action_id = sample_id
-        outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
-        outcome.reward = sample_details['reward']
-
-        outcome.action_attrs.extend(
-            param_dict_to_proto(sample_details['action']))
-
-        outcome.outcome_attrs.extend(
-            param_dict_to_proto(sample_details['outcome']))
-
-        outcome.attributes.extend(
-            param_dict_to_proto(sample_details['attribute']))
-
-    # print('response here: ', response)
+    logging.info('self.queue => %s', self.queue)
     return response
 
   @overrides
@@ -160,51 +131,20 @@ class WorklistScheduler(SingleActionOptimizer):
     method_name = "decision_point"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-    # print('self.pending_samples : ',
-    #       self.pending_samples)
-    # print('self.active_samples : ',
-    #       self.active_samples)
-    # print('self.completed_samples : ',
-    #       self.completed_samples)
-    # print('self.unique_id : ', self.unique_id)
+    all_active_messages = self.queue.get_active()
 
-    dp_response = service_pb2.DecisionPointResponse()
-    # if(self.exp_completed):
-    #   logging.info("sight experiment completed, killing the worker")
-    #   dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_DONE
-    # else:
-    # if self.pending_samples:
-
-    # todo : meetashah : add logic to fetch action stored from propose actions and send it as repsonse
-    # key, sample = self.pending_samples.popitem()
-    # fetching the key in FIFO manner
-
-    #? this part now handled by worker alive rpc
-    # with self.pending_lock.gen_wlock():
-    #   key = next(iter(self.pending_samples))
-    #   sample = self.pending_samples.pop(key)
-
-    # with self.active_lock.gen_wlock():
-    #   self.active_samples[request.worker_id] = {'id': key, 'sample': sample}
-
-    with self.active_lock.gen_rlock():
-      if (request.worker_id in self.active_samples):
-        sample = self.active_samples[request.worker_id]['sample']
-      else:
-        raise ValueError("key not foung in active_samples")
-    next_action = sample[0]
+    response = service_pb2.DecisionPointResponse()
+    if request.worker_id in all_active_messages:
+      samples = all_active_messages[request.worker_id]
+    else:
+      raise ValueError("Key not found in active_samples")
+    next_action = list(samples.values())[0].action
     logging.info('next_action=%s', next_action)
-    # raise SystemExit
-    dp_response.action.extend(param_dict_to_proto(next_action))
-    # print('self.active_samples : ', self.active_samples)
-    # print('self.pending_samples : ', self.pending_samples)
-    # print('self.completed_samples : ', self.completed_samples)
-    dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
-    # else:
-    #   dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_RETRY
-
+    response.action.CopyFrom(convert_dict_to_proto(dict=next_action))
+    response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return dp_response
+    logging.info('self.queue ==> %s', self.queue)
+    return response
 
   @overrides
   def finalize_episode(
@@ -213,30 +153,21 @@ class WorklistScheduler(SingleActionOptimizer):
     method_name = "finalize_episode"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-    # logging.info("req in finalize episode of dummy.py : %s", request)
+    # logging.info("self.queue => %s", self.queue)
 
-    with self.active_lock.gen_rlock():
-      sample_dict = self.active_samples[request.worker_id]
+    for i in range(len(request.decision_messages)):
+      self.queue.complete_message(
+          worker_id=request.worker_id,
+          message_id=request.decision_messages[i].action_id,
+          update_fn=lambda msg: msg.update(
+              reward=request.decision_messages[i].decision_outcome.reward,
+              outcome=convert_proto_to_dict(proto=request.decision_messages[i].
+                                            decision_outcome.outcome_params),
+              action=convert_proto_to_dict(proto=request.decision_messages[i].
+                                           decision_point.choice_params)))
 
-    with self.completed_lock.gen_wlock():
-      self.completed_samples[sample_dict['id']] = {
-          # 'action': self.pending_samples[unique_action_id],
-          'action':
-              param_proto_to_dict(request.decision_point.choice_params),
-          'attribute':
-              sample_dict['sample'][1],
-          'reward':
-              request.decision_outcome.reward,
-          'outcome':
-              param_proto_to_dict(request.decision_outcome.outcome_params)
-      }
+    logging.info("self.queue => %s", self.queue)
 
-    with self.active_lock.gen_wlock():
-      del self.active_samples[request.worker_id]
-
-    # print('self.active_samples : ', self.active_samples)
-    # print('self.pending_samples : ', self.pending_samples)
-    # print('self.completed_samples : ', self.completed_samples)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
 
@@ -262,10 +193,15 @@ class WorklistScheduler(SingleActionOptimizer):
             request: service_pb2.CloseRequest) -> service_pb2.CloseResponse:
     method_name = "close"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    if not self.exp_completed:
+      logging.info("<<<<Completed length %s Timeseries Logs ... \n %s \n",
+                   self.queue.get_status()["completed"],
+                   self.queue.logger.save_to_gcs())
     self.exp_completed = True
     logging.info(
         "sight experiment completed...., changed exp_completed to True")
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+
     return service_pb2.CloseResponse(response_str="success")
 
   @overrides
@@ -274,21 +210,24 @@ class WorklistScheduler(SingleActionOptimizer):
   ) -> service_pb2.WorkerAliveResponse:
     method_name = "WorkerAlive"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    # logging.info("self.queue => %s", self.queue)
+
+    response = service_pb2.WorkerAliveResponse()
+
     if (self.exp_completed):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
-    elif (not self.pending_samples):
+    elif (not self.queue.get_status()["pending"]):
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
       worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
-      # put sample in active sample list??
-      with self.pending_lock.gen_wlock():
-        key = next(iter(self.pending_samples))
-        sample = self.pending_samples.pop(key)
+      batched_msgs = self.queue.create_active_batch(worker_id=request.worker_id)
+      for action_id, msg in batched_msgs.items():
+        decision_message = response.decision_messages.add()
+        decision_message.action_id = action_id
+        decision_message.action.CopyFrom(convert_dict_to_proto(dict=msg.action))
 
-      with self.active_lock.gen_wlock():
-        self.active_samples[request.worker_id] = {'id': key, 'sample': sample}
-      print("self.active_samples : ", self.active_samples)
-
+    response.status_type = worker_alive_status
+    logging.info("self.queue => %s", self.queue)
     logging.info("worker_alive_status is %s", worker_alive_status)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)
+    return response

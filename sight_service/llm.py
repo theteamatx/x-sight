@@ -26,9 +26,9 @@ from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 import requests
 from sight.proto import sight_pb2
+from sight.utils.proto_conversion import convert_dict_to_proto
 from sight_service.bayesian_opt import BayesianOpt
 from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.optimizer_instance import param_dict_to_proto
 from sight_service.proto import service_pb2
 
 # _GENAI_API_KEY = os.environ['GENAI_API_KEY']
@@ -263,8 +263,7 @@ class LLM(OptimizerInstance):
     for h in self._filtered_history(include_example_action):
       if len(h['state']) > 0:
         chat.append({
-            'author':
-                'USER',
+            'author': 'USER',
             'content':
                 (last_outcome_message + 'Decision State:\n' + '    {' +
                  ', '.join([f'"{k}": {v}' for k, v in h['state'].items()]) +
@@ -272,8 +271,7 @@ class LLM(OptimizerInstance):
         })
       if h['action'] is not None:
         chat.append({
-            'author':
-                'AI',
+            'author': 'AI',
             'content': (+ 'Decision Action:\n' + '    {{' + ', '.join(
                 [f'"{key}": {value}' for key, value in h['action'].items()]) +
                         '}'),
@@ -620,10 +618,8 @@ class LLM(OptimizerInstance):
     # self.last_outcome = self._history[-1]['outcome']
 
     logging.info('self._history[-1]=%s', self._history[-1])
-    for key, value in self._history[-1]['action'].items():
-      a = request.decision_point.choice_params.add()
-      a.key = key
-      a.value.double_value = float(value)
+    request.decision_point.choice_params.CopyFrom(
+        convert_dict_to_proto(dict=self._history[-1]['action']))
     self._bayesian_opt.finalize_episode(request)
 
     if (self._llm_config.goal ==

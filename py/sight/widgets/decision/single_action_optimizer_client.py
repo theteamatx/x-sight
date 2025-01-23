@@ -19,8 +19,11 @@ from helpers.logs.logs_handler import logger as logging
 from overrides import override
 from sight import service_utils as service
 from sight.proto import sight_pb2
+from sight.utils.proto_conversion import convert_proto_to_dict
+from sight.utils.proto_conversion import update_proto_map
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from sight_service.proto import service_pb2
+from sight_service.shared_batch_messages import CachedBatchMessages
 
 
 class SingleActionOptimizerClient(OptimizerClient):
@@ -32,6 +35,7 @@ class SingleActionOptimizerClient(OptimizerClient):
       sight,
       algorithm=None):
     super().__init__(optimizer_type)
+    self.cache: CachedBatchMessages = CachedBatchMessages()
     self._sight = sight
     self._last_action = None
     self.exp_completed = False
@@ -86,7 +90,6 @@ class SingleActionOptimizerClient(OptimizerClient):
     # while True:
     response = service.call(
         lambda s, meta: s.DecisionPoint(request, 300, metadata=meta))
-    logging.info('response: %s', response)
     if response.action_type == service_pb2.DecisionPointResponse.ActionType.AT_ACT:
       self._last_action = response.action
       return self._get_dp_action(response)
@@ -103,10 +106,7 @@ class SingleActionOptimizerClient(OptimizerClient):
   @override
   def finalize_episode(self, sight,
                        request: service_pb2.FinalizeEpisodeRequest):
-    # logging.info('SingleActionOptimizerClient() finalize_episode')
-    if self._last_action:
-      for a in self._last_action:
-        request.decision_point.choice_params.append(a)
+    logging.info('SingleActionOptimizerClient() finalize_episode')
     response = service.call(
         lambda s, meta: s.FinalizeEpisode(request, 300, metadata=meta))
     return response

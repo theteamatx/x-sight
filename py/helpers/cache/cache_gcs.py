@@ -17,8 +17,8 @@ class GCSCache(CacheInterface):
     self.redis_client = with_redis_client
     self.gcs_base_dir = config.get("gcs_base_dir", "sight_cache")
 
-  def _gcs_cache_path(self, key: str):
-    return f"{self.gcs_base_dir}/{Path(key).with_suffix('.json')}"
+  def _gcs_cache_path(self, key: str, suffix: str = ".json"):
+    return f"{self.gcs_base_dir}/{Path(key).with_suffix(suffix=suffix)}"
 
   def json_get(self, key):
     if self.redis_client:

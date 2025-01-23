@@ -56,7 +56,7 @@ def get_action_attrs():
   """Returns the action attributes for the FVS action.
   """
   action_config = {'region': None, 'project_id': None}
-  action_config.update(expand_params_for_cycles(fvs_params=FVS_PARAMS))
+  # action_config.update(expand_params_for_cycles(fvs_params=FVS_PARAMS))
   return create_attr_props(action_config)
 
 
