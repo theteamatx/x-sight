@@ -12,6 +12,7 @@ from google.cloud import exceptions
 from google.cloud import storage
 from helpers.cache.cache_factory import CacheFactory
 from helpers.logs.logs_handler import logger as logging
+from overrides import overrides
 
 NotFound = exceptions.NotFound
 abstractmethod = abc.abstractmethod
@@ -23,11 +24,24 @@ datetime = datetime.datetime
 class LogStorageCollectStrategyABC(ABC):
 
   @abstractmethod
-  def save_logs(self, file_content):
+  def save_logs(self, logs):
     pass
 
   @abstractmethod
   def collect_logs(self) -> list:
+    pass
+
+
+class LogStorageCollectStrategyEmpty(LogStorageCollectStrategyABC):
+
+  @overrides
+  def save_logs(self, logs):
+    logging.info('NOT SAVING LOGS FOR MQ')
+    pass
+
+  @overrides
+  def collect_logs(self) -> list:
+    logging.info('NOT COLLECTING LOGS FOR MQ')
     pass
 
 
