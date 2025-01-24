@@ -14,7 +14,7 @@ class LocalCache(CacheInterface):
   def __init__(self,
                config: dict = {},
                with_redis_client: RedisCache | None = None):
-    self.base_dir = config.get("local_base_dir", "./.cache_local_data")
+    self.base_dir = config.get("local_base_dir", "/tmp/testing_dir")
     self.redis_client = with_redis_client
 
   def _local_cache_path(self, key: str, suffix: str = ".json"):
