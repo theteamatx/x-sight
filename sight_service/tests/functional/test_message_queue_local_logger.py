@@ -13,16 +13,18 @@ class TestMessageQueue(unittest.TestCase):
   """Tests for MessageQueue class.
 
   Attributes:
+    local_base_dir: str
     incremental_id_generator: IncrementalUUID()
     queue: MessageQueue[int]
+    log_storage_collect_strategy: LogStorageCollectStrategy
   """
 
   def setUp(self):
     """Set up the MessageQueue and IncrementalUUID for testing."""
     super().setUp()
     config = {
-        "local_base_dir": f"/tmp/test_logs",
-        "dir_prefix": "test_log_chunks/",
+        'local_base_dir': '/tmp/test_logs',
+        'dir_prefix': 'test_log_chunks/',
     }
     self.local_base_dir = config['local_base_dir']
     # Use IncrementalUUID for most tests to have predictable IDs
@@ -33,10 +35,12 @@ class TestMessageQueue(unittest.TestCase):
     self.queue = mq.MessageQueue[int](
         id_generator=self.incremental_id_generator,
         batch_size=2,
-        logger_storage_strategy=self.log_storage_collect_strategy)
+        logger_storage_strategy=self.log_storage_collect_strategy,
+    )
 
   def tearDown(self):
-    """tear down the Message Queue Logger"""
+    """Tear down the Message Queue Logger."""
+    super().tearDown()
     self.queue.logger.stop()
     # Cleanup after tests
     if os.path.exists(self.local_base_dir):
@@ -196,7 +200,8 @@ class TestMessageQueue(unittest.TestCase):
     queue_with_uuid = mq.MessageQueue[str](
         id_generator=uuid_id_generator,
         batch_size=2,
-        logger_storage_strategy=self.log_storage_collect_strategy)
+        logger_storage_strategy=self.log_storage_collect_strategy,
+    )
 
     message_id1 = queue_with_uuid.push_message('Task A')
     message_id2 = queue_with_uuid.push_message('Task B')

@@ -1,4 +1,4 @@
-"""A module for refactoring Kokua code."""
+"""A shared batch messages module"""
 
 import dataclasses
 import threading

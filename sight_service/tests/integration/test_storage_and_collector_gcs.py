@@ -1,7 +1,7 @@
+"""Tests for the LogStorageCollectStrategy."""
+
 import datetime
 import json
-import os
-import shutil
 import unittest
 
 from google.cloud import storage
@@ -11,13 +11,16 @@ from sight_service.tests import colorful_tests
 datetime = datetime.datetime
 
 
-class TestCacheBasedLogStorageAndCollectorGCP(unittest.TestCase):
+class TestCacheBasedLogStorageAndCollectorGCS(unittest.TestCase):
+  """Tests for the LogStorageCollectStrategy using a GCS cache."""
 
   def _delete_gcs_folder(self, bucket_name: str, folder_name: str):
+    """Deletes all objects in a folder in a Google Cloud Storage bucket."""
     client = storage.Client()
     bucket = client.bucket(bucket_name)
 
-    # Add a trailing slash if missing to ensure only matching "folder" objects are deleted
+    # Add a trailing slash if missing to ensure only matching "folder" objects
+    # are deleted
     if not folder_name.endswith("/"):
       folder_name += "/"
 
@@ -33,6 +36,7 @@ class TestCacheBasedLogStorageAndCollectorGCP(unittest.TestCase):
           f" '{bucket_name}'.")
 
   def setUp(self):
+    super().setUp()
     # Setup for local cache
     config = {
         "gcs_base_dir": "test_sight_cache_0/testing_logs",
@@ -42,12 +46,14 @@ class TestCacheBasedLogStorageAndCollectorGCP(unittest.TestCase):
     self.config = config
     # Create instances of the LogStorageStrategy and LogCollector
     self.log_storage_collect_strategy = LogStorageCollectStrategy(
-        cache_type='gcs', config=config)
+        cache_type="gcs", config=config)
 
   def tearDown(self):
     super().tearDown()
-    self._delete_gcs_folder(bucket_name=self.config['gcs_bucket'],
-                            folder_name=self.config['gcs_base_dir'])
+    self._delete_gcs_folder(
+        bucket_name=self.config["gcs_bucket"],
+        folder_name=self.config["gcs_base_dir"],
+    )
 
   def test_save_and_collect_single_log(self):
     """Test saving a single log and collecting it."""
@@ -102,8 +108,8 @@ class TestCacheBasedLogStorageAndCollectorGCP(unittest.TestCase):
     self.log_storage_collect_strategy.save_logs(log_data)
 
     # Manually create an additional file that isn't valid JSON
-    self.log_storage_collect_strategy.cache.json_set('logs_chunks:invalid.json',
-                                                     ['INVALID JSON'])
+    self.log_storage_collect_strategy.cache.json_set("logs_chunks:invalid.json",
+                                                     ["INVALID JSON"])
 
     # Collect logs
     collected_logs = self.log_storage_collect_strategy.collect_logs()
@@ -136,8 +142,10 @@ class TestCacheBasedLogStorageAndCollectorGCP(unittest.TestCase):
         num_logs,
         "Collected logs should match the number of saved logs.",
     )
-    self.assertEqual(sorted(collected_logs, key=lambda x: json.dumps(x)),
-                     sorted(logs, key=lambda x: json.dumps(x)))
+    self.assertEqual(
+        sorted(collected_logs, key=json.dumps),
+        sorted(logs, key=json.dumps),
+    )
 
     # Assert
     self.assertEqual(
@@ -145,9 +153,11 @@ class TestCacheBasedLogStorageAndCollectorGCP(unittest.TestCase):
         num_logs,
         "Collected logs should match the number of saved logs.",
     )
-    self.assertEqual(sorted(collected_logs, key=lambda x: json.dumps(x)),
-                     sorted(logs, key=lambda x: json.dumps(x)))
+    self.assertEqual(
+        sorted(collected_logs, key=json.dumps),
+        sorted(logs, key=json.dumps),
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   unittest.main(testRunner=colorful_tests.ColorfulTestRunner())

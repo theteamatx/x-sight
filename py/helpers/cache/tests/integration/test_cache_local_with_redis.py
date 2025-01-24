@@ -1,6 +1,6 @@
+"""Tests for Local Cache with Redis."""
+
 import json
-from pathlib import Path
-import shutil
 import subprocess
 import time
 import unittest
@@ -12,7 +12,8 @@ import redis
 from tests.colorful_tests import ColorfulTestRunner
 
 
-class CacheLocalTest(unittest.TestCase):
+class CacheLocalWithRedisTest(unittest.TestCase):
+  """Tests for Local Cache with Redis."""
 
   def wait_for_redis(self, host, port, timeout=30):
     start_time = time.time()
@@ -24,20 +25,21 @@ class CacheLocalTest(unittest.TestCase):
         return
       except redis.ConnectionError:
         time.sleep(1)
-    raise Exception(f"Redis not ready after {timeout} seconds")
+    raise TimeoutError(f"Redis not ready after {timeout} seconds")
 
   def _end_container(self):
+    """Stops the Docker containers."""
     if self.cache and self.cache.get_raw_redis_client():
       client = self.cache.get_raw_redis_client()
       keys_to_delete = client.keys("testing:*")
       if keys_to_delete:
         client.delete(*keys_to_delete)  # Delete all matching keys
     try:
-      print('Stopping Docker containers ...')
+      print("Stopping Docker containers ...")
       subprocess.run(["docker-compose", "down"], check=True)
-      print('Docker containers stopped successfully...')
+      print("Docker containers stopped successfully...")
     except subprocess.CalledProcessError as e:
-      print(f'Failed to stop Docker containers : {e}')
+      print(f"Failed to stop Docker containers : {e}")
       raise e
 
   def tearDown(self):
@@ -49,16 +51,17 @@ class CacheLocalTest(unittest.TestCase):
     self.cache = None
     self._end_container()
     try:
-      print('Starting Docker containers ...')
+      print("Starting Docker containers ...")
       subprocess.run(["docker-compose", "up", "-d"], check=True)
       # Wait for Redis to be ready
       self.wait_for_redis("localhost", 1234)
-      print('Docker containers started successfully...')
+      print("Docker containers started successfully...")
     except subprocess.CalledProcessError as e:
-      print(f'Failed to start Docker containers : {e}')
+      print(f"Failed to start Docker containers : {e}")
       raise e
 
   def test_local_cache(self):
+    """Tests the Local Cache."""
     self.key_maker = CacheKeyMaker()
     self.cache = LocalCache(
         config={
@@ -67,7 +70,7 @@ class CacheLocalTest(unittest.TestCase):
         with_redis_client=RedisCache(config={
             "redis_host": "localhost",
             "redis_port": 1234,
-            "redis_db": 0
+            "redis_db": 0,
         }),
     )
     key = self.key_maker.make_custom_key(
@@ -94,19 +97,21 @@ class CacheLocalTest(unittest.TestCase):
            ), f"Expected {expected_result}, but got {result}"
 
   def test_json_list_keys(self):
+    """Tests the json_list_keys method."""
     self.cache = LocalCache(
         config={
-            "local_base_dir": "tmp/testing_dir",
+            "local_base_dir": "/tmp/testing_dir",
         },
         with_redis_client=RedisCache(config={
             "redis_host": "localhost",
             "redis_port": 1234,
-            "redis_db": 0
+            "redis_db": 0,
         }),
     )
     self.test_keys = [
-        "testing:logs:experiment1:chunk1", "testing:logs:experiment1:chunk2",
-        "testing:logs:experiment2:chunk1"
+        "testing:logs:experiment1:chunk1",
+        "testing:logs:experiment1:chunk2",
+        "testing:logs:experiment2:chunk1",
     ]
     self.test_values = ["data1", "data2", "data3"]
 
@@ -118,11 +123,15 @@ class CacheLocalTest(unittest.TestCase):
     keys = self.cache.json_list_keys("testing:logs:experiment1")
 
     self.assertEqual(
-        sorted(keys, key=lambda x: json.dumps(x)),
-        sorted([
-            "testing:logs:experiment1:chunk1", "testing:logs:experiment1:chunk2"
-        ],
-               key=lambda x: json.dumps(x)))
+        sorted(keys, key=json.dumps),
+        sorted(
+            [
+                "testing:logs:experiment1:chunk1",
+                "testing:logs:experiment1:chunk2",
+            ],
+            key=json.dumps,
+        ),
+    )
 
     # Test listing keys with prefix "logs"
     keys = self.cache.json_list_keys("testing:logs")

@@ -1,14 +1,18 @@
-from pathlib import Path
+"""Tests for the Local Cache."""
+
+import pathlib
 import shutil
 import unittest
 
 from helpers.cache.cache_factory import LocalCache
-from helpers.cache.cache_factory import RedisCache
 from helpers.cache.cache_helper import CacheKeyMaker
 from tests.colorful_tests import ColorfulTestRunner
 
+Path = pathlib.Path
+
 
 class CacheLocalTest(unittest.TestCase):
+  """Tests for the Local Cache."""
 
   def tearDown(self):
     super().tearDown()
@@ -19,11 +23,12 @@ class CacheLocalTest(unittest.TestCase):
     super().setUp()
     # Initialize the cache
     self.cache = LocalCache(config={
-        "local_base_dir": "tmp/testing_dir",
+        "local_base_dir": "/tmp/testing_dir",
     },)
     self.key_maker = CacheKeyMaker()
 
   def test_local_cache(self):
+    """Tests the Local Cache."""
     key = self.key_maker.make_custom_key(
         custom_part=":".join(["ACR203", "FVS", "fire"]),
         managed_sample={
@@ -48,10 +53,12 @@ class CacheLocalTest(unittest.TestCase):
            ), f"Expected {expected_result}, but got {result}"
 
   def test_json_list_keys(self):
+    """Tests the json_list_keys method."""
 
     self.test_keys = [
-        "logs:experiment1:chunk1", "logs:experiment1:chunk2",
-        "logs:experiment2:chunk1"
+        "logs:experiment1:chunk1",
+        "logs:experiment1:chunk2",
+        "logs:experiment2:chunk1",
     ]
     self.test_values = ["data1", "data2", "data3"]
 

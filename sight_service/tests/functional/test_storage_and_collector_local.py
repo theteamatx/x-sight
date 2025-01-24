@@ -1,3 +1,5 @@
+"""Tests for the LogStorageCollectStrategy."""
+
 import datetime
 import json
 import os
@@ -11,20 +13,23 @@ datetime = datetime.datetime
 
 
 class TestCacheBasedLogStorageAndCollectorLocal(unittest.TestCase):
+  """Tests for the LogStorageCollectStrategy with a local cache."""
 
   def setUp(self):
+    super().setUp()
     # Setup for local cache
     config = {
-        "local_base_dir": f"/tmp/test_logs",
+        "local_base_dir": "/tmp/test_logs",
         "dir_prefix": "test_log_chunks/",
     }
     # Create instances of the LogStorageStrategy and LogCollector
     self.log_storage_collect_strategy = LogStorageCollectStrategy(
-        cache_type='local', config=config)
+        cache_type="local", config=config)
 
     self.local_base_dir = os.path.abspath(config["local_base_dir"])
 
   def tearDown(self):
+    super().tearDown()
     # Cleanup after tests
     if os.path.exists(self.local_base_dir):
       shutil.rmtree(self.local_base_dir)
@@ -82,8 +87,8 @@ class TestCacheBasedLogStorageAndCollectorLocal(unittest.TestCase):
     self.log_storage_collect_strategy.save_logs(log_data)
 
     # Manually create an additional file that isn't valid JSON
-    self.log_storage_collect_strategy.cache.json_set('logs_chunks:invalid.json',
-                                                     ['INVALID JSON'])
+    self.log_storage_collect_strategy.cache.json_set("logs_chunks:invalid.json",
+                                                     ["INVALID JSON"])
 
     # Collect logs
     collected_logs = self.log_storage_collect_strategy.collect_logs()
@@ -100,7 +105,7 @@ class TestCacheBasedLogStorageAndCollectorLocal(unittest.TestCase):
     num_logs = 1000
     logs = [{
         "state": "processed",
-        "message_id": f"{i}"
+        "message_id": str(i)
     } for i in range(num_logs)]
 
     # Save logs in chunks
@@ -116,9 +121,11 @@ class TestCacheBasedLogStorageAndCollectorLocal(unittest.TestCase):
         num_logs,
         "Collected logs should match the number of saved logs.",
     )
-    self.assertEqual(sorted(collected_logs, key=lambda x: json.dumps(x)),
-                     sorted(logs, key=lambda x: json.dumps(x)))
+    self.assertEqual(
+        sorted(collected_logs, key=json.dumps),
+        sorted(logs, key=json.dumps),
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
   unittest.main(testRunner=colorful_tests.ColorfulTestRunner())

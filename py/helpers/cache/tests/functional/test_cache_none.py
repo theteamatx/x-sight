@@ -1,3 +1,5 @@
+"""Tests for the None cache."""
+
 import unittest
 
 from helpers.cache.cache_factory import CacheFactory
@@ -6,10 +8,11 @@ from tests.colorful_tests import ColorfulTestRunner
 
 
 class CacheNoneTest(unittest.TestCase):
+  """Tests for the None cache."""
 
   def setUp(self):
     super().setUp()
-    self.cache = CacheFactory.get_cache(cache_type='none')
+    self.cache = CacheFactory.get_cache(cache_type="none")
     self.key_maker = CacheKeyMaker()
 
   def test_json_list_keys(self):
@@ -23,6 +26,7 @@ class CacheNoneTest(unittest.TestCase):
     # The result should always be an empty list
 
   def test_none_cache(self):
+    """Tests the None cache."""
 
     key = self.key_maker.make_custom_key(
         custom_part=":".join(["ACR203", "FVS", "fire"]),

@@ -1,21 +1,24 @@
+"""Tests for the GCS Cache."""
+
 import unittest
 
 from helpers.cache.cache_factory import GCSCache
-from helpers.cache.cache_factory import RedisCache
 from tests.colorful_tests import ColorfulTestRunner
 
 
 class CacheGCSTest(unittest.TestCase):
+  """Tests for the GCS Cache."""
 
   def setUp(self):
     super().setUp()
     # Initialize the cache
     self.cache = GCSCache(config={
         "gcs_base_dir": "test_sight_cache",
-        "gcs_bucket": "cameltrain-sight"
+        "gcs_bucket": "cameltrain-sight",
     },)
 
   def test_gcs_cache(self):
+    """Tests the GCS Cache."""
     # Set data in the cache
     self.cache.json_set(
         "ACR203:2013:FVS:MANAGED:FIRE_0001011100",

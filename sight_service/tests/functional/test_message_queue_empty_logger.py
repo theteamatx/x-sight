@@ -1,7 +1,4 @@
 """Tests for the MessageQueue class."""
-
-import os
-import shutil
 import unittest
 
 from sight_service.message_logger import LogStorageCollectStrategyEmpty
@@ -15,6 +12,7 @@ class TestMessageQueue(unittest.TestCase):
   Attributes:
     incremental_id_generator: IncrementalUUID()
     queue: MessageQueue[int]
+    log_storage_collect_strategy: LogStorageCollectStrategyEmpty()
   """
 
   def setUp(self):
@@ -27,10 +25,12 @@ class TestMessageQueue(unittest.TestCase):
     self.queue = mq.MessageQueue[int](
         id_generator=self.incremental_id_generator,
         batch_size=2,
-        logger_storage_strategy=self.log_storage_collect_strategy)
+        logger_storage_strategy=self.log_storage_collect_strategy,
+    )
 
   def tearDown(self):
-    """tear down the Message Queue Logger"""
+    """Tear down the Message Queue Logger."""
+    super().tearDown()
     self.queue.logger.stop()
 
   def test_add_message_with_incremental_id(self):
@@ -187,7 +187,8 @@ class TestMessageQueue(unittest.TestCase):
     queue_with_uuid = mq.MessageQueue[str](
         id_generator=uuid_id_generator,
         batch_size=2,
-        logger_storage_strategy=self.log_storage_collect_strategy)
+        logger_storage_strategy=self.log_storage_collect_strategy,
+    )
 
     message_id1 = queue_with_uuid.push_message('Task A')
     message_id2 = queue_with_uuid.push_message('Task B')
