@@ -18,7 +18,7 @@ import warnings
 
 
 def warn(*args, **kwargs):
-    pass
+  pass
 
 
 warnings.warn = warn
@@ -26,8 +26,7 @@ warnings.warn = warn
 import asyncio
 import os
 import time
-import yaml
-from typing import Sequence, Any
+from typing import Any, Sequence
 import warnings
 
 from absl import app
@@ -43,6 +42,7 @@ from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
+import yaml
 
 
 def warn(*args, **kwargs):
@@ -57,13 +57,15 @@ sample = {
 
 FLAGS = flags.FLAGS
 
+
 def get_sight_instance():
-    params = sight_pb2.Params(
-        label="kokua_experiment",
-        bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-    )
-    sight_obj = Sight(params)
-    return sight_obj
+  params = sight_pb2.Params(
+      label="kokua_experiment",
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+  )
+  sight_obj = Sight(params)
+  return sight_obj
+
 
 async def propose_actions(sight: Sight, base_project_config: dict[str, Any],
                           treatments: dict[str, Any]) -> pd.Series:
@@ -101,47 +103,62 @@ async def propose_actions(sight: Sight, base_project_config: dict[str, Any],
 
 
 async def main(sight: Sight, argv: Sequence[str]) -> None:
-    if len(argv) > 1:
-        raise app.UsageError("Too many command-line arguments.")
+  if len(argv) > 1:
+    raise app.UsageError("Too many command-line arguments.")
 
-    sample_list = [sample for i in range(FLAGS.num_trials)]
+  sample_list = [sample for i in range(FLAGS.num_trials)]
 
-    # print('SIGHT ID => ',sight.id)
-    with Block("Propose actions", sight):
-      with Attribute("project_id", "APR107", sight):
-        tasks = []
-        logging.info("len(sample_list) : %s", len(sample_list))
+  # print('SIGHT ID => ',sight.id)
+  with Block("Propose actions", sight):
+    with Attribute("project_id", "APR107", sight):
+      tasks = []
+      logging.info("len(sample_list) : %s", len(sample_list))
 
-        x_start_time = time.perf_counter()
-        logging.info(f"Proposing Start ")
+      x_start_time = time.perf_counter()
+      logging.info(f"Proposing Start ")
 
-        for id in range(len(sample_list)):
-          with Attribute("sample_id", id, sight):
-            tasks.append(
-                sight.create_task(
-                    # both base and treatment are considerred to be same dict here
-                    propose_actions(sight, sample_list[id], sample_list[id])))
+      for id in range(len(sample_list)):
+        with Attribute("sample_id", id, sight):
+          tasks.append(
+              sight.create_task(
+                  # both base and treatment are considerred to be same dict here
+                  propose_actions(sight, sample_list[id], sample_list[id])))
 
-        x_end_time = time.perf_counter()
-        logging.info(
-            f"Propose actions took {x_end_time - x_start_time:.4f} seconds.")
+      x_end_time = time.perf_counter()
+      logging.info(
+          f"Propose actions took {x_end_time - x_start_time:.4f} seconds.")
 
+      logging.info("waiting for all get outcome to finish.....")
+      diff_time_series = await asyncio.gather(*tasks)
 
-        logging.info("waiting for all get outcome to finish.....")
-        diff_time_series = await asyncio.gather(*tasks)
+      logging.info("all get outcome are finished.....")
+      logging.info(f'Combine Series : {diff_time_series}')
 
-        logging.info("all get outcome are finished.....")
-        logging.info(f'Combine Series : {diff_time_series}')
 
 def main_wrapper(argv):
   with get_sight_instance() as sight:
     # decision.run(action_attrs=fvs_api.get_action_attrs(),
     #              outcome_attrs=fvs_api.get_outcome_attrs(),
     #              sight=sight)
-    with open(f'fvs_sight/config.yaml','r') as f:
-        configs = yaml.safe_load_all(f)
-        decision.run(configs=configs,
-                     sight=sight)
+    questions_config = utils.load_yaml_config('fvs_sight/question_config.yaml')
+    optimizers_config = utils.load_yaml_config(
+        'fvs_sight/optimizer_config.yaml')
+    workers_config = utils.load_yaml_config('fvs_sight/worker_config.yaml')
+
+    for question_label, question_config in question_configs.items():
+      optimizer_type = optimizer_configs[question_label]['optimizer']
+      optimizer_config = optimizer_configs[question_label]
+      print('optimizer_config : ', optimizer_config)
+
+      # Configure decision and launch trials
+      opt_obj, decision_configuration = configure_decision(
+          sight, question_label, question_config, optimizer_config,
+          optimizer_type)
+      trials.launch(decision_configuration, sight)
+
+      # Start worker jobs
+      start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type)
+
     start_time = time.perf_counter()
     sleep_time_in_min = 0
     logging.info(
@@ -166,4 +183,4 @@ def main_wrapper(argv):
 
 
 if __name__ == "__main__":
-    app.run(main_wrapper)
+  app.run(main_wrapper)

@@ -25,23 +25,23 @@ warnings.warn = warn
 
 import asyncio
 import os
-import yaml
-from typing import Sequence, Any
+from typing import Any, Sequence
 
 from absl import app
 from absl import flags
 import pandas as pd
+from sight import utility
 from sight.attribute import Attribute
 from sight.block import Block
 from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
-from sight.widgets.decision import proposal
-from sight import utility
-from sight.widgets.decision import decision_helper
 from sight.widgets.decision import decision_episode_fn
+from sight.widgets.decision import decision_helper
+from sight.widgets.decision import proposal
 from sight.widgets.decision import trials
 from sight.widgets.decision import utils
+import yaml
 
 FLAGS = flags.FLAGS
 
@@ -221,15 +221,14 @@ async def propose_actions_wrapper(sight: Sight, question_label: str,
       print(f'Combine Series : {diff_time_series}')
 
 
-def configure_decision(sight, question_label, question_config, optimizer_config,
-                       optimizer_type):
+def get_decision_configuration_for_opt(sight, question_label, opt_obj,
+                                       question_config, optimizer_config):
+
   # Extract attributes
   action_attrs = decision_helper.config_to_attr(question_config, 'action')
   state_attrs = decision_helper.config_to_attr(question_config, 'state')
   outcome_attrs = decision_helper.config_to_attr(question_config, 'outcome')
 
-  # Create optimizer and configure decision state
-  opt_obj = decision.get_optimizer(optimizer_type, sight)
   sight.widget_decision_state[
       'decision_episode_fn'] = decision_episode_fn.DecisionEpisodeFn(
           state_attrs, action_attrs)
@@ -261,7 +260,15 @@ def configure_decision(sight, question_label, question_config, optimizer_config,
               decision_configuration=decision_configuration,
           ))))
   sight.exit_block('Decision Configuration', sight_pb2.Object())
+  return decision_configuration
 
+
+def configure_decision(sight, question_label, question_config, optimizer_config,
+                       optimizer_type):
+  # Create optimizer and configure decision state
+  opt_obj = decision.setup_optimizer(sight, optimizer_type)
+  decision_configuration = get_decision_configuration_for_opt(
+      sight, question_label, opt_obj, question_config, optimizer_config)
   return opt_obj, decision_configuration
 
 
