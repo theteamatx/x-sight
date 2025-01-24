@@ -37,8 +37,10 @@ from sight.widgets.decision import decision
 
 FLAGS = flags.FLAGS
 
+
 def get_question_label():
   return 'Q_label1'
+
 
 # Define the black box function to optimize.
 def black_box_function(args):
@@ -94,12 +96,9 @@ def main(argv: Sequence[str]) -> None:
       sight.set_object_code_loc(sight_obj, frame)
       sight.log_object(sight_obj, True)
 
-    decision.run(
-        driver_fn=driver,
-        action_attrs=action_attrs,
-        sight=sight,
-        question_label=get_question_label,
-    )
+    decision.run(sight=sight,
+                 question_label=get_question_label(),
+                 driver_fn=driver)
 
 
 if __name__ == "__main__":

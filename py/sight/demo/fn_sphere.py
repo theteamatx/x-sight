@@ -34,11 +34,14 @@ from sight import data_structures
 from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
+from sight.widgets.decision import utils
 
 FLAGS = flags.FLAGS
 
+
 def get_question_label():
   return 'Q_label1'
+
 
 # Define the black box function to optimize.
 def black_box_function(args):
@@ -85,21 +88,20 @@ def main(argv: Sequence[str]) -> None:
 
   with get_sight_instance() as sight:
 
-    if (FLAGS.parent_id):
-      sight_obj = sight_pb2.Object()
-      sight_obj.sub_type = sight_pb2.Object.SubType.ST_LINK
-      sight_obj.link.linked_sight_id = FLAGS.parent_id
-      sight_obj.link.link_type = sight_pb2.Link.LinkType.LT_CHILD_TO_PARENT
-      frame = inspect.currentframe().f_back.f_back.f_back
-      sight.set_object_code_loc(sight_obj, frame)
-      sight.log_object(sight_obj, True)
+    questions_config = utils.load_yaml_config('fvs_sight/question_config.yaml')
+    optimizers_config = utils.load_yaml_config(
+        'fvs_sight/optimizer_config.yaml')
+    workers_config = utils.load_yaml_config('fvs_sight/worker_config.yaml')
 
-    decision.run(
-        driver_fn=driver,
-        action_attrs=action_attrs,
-        sight=sight,
-        question_label=get_question_label,
-    )
+    for question_label, question_config in questions_config.items():
+      optimizer_config = optimizers_config[question_label]
+      global_config = {
+          'question_config': question_config,
+          'optimizer_config': optimizer_config,
+          'workers_config': workers_config
+      }
+
+      decision.run(sight, configs=global_config, question_label=question_label)
 
 
 if __name__ == "__main__":
