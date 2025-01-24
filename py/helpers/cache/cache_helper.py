@@ -19,7 +19,7 @@ class CacheConfig:
   def get_redis_instance(cache_type='none'):
     if 'with_redis' in cache_type:
       cache_redis = CacheFactory.get_cache(cache_type='redis', config={})
-      if cache_redis.get_client() is None:
+      if cache_redis.get_raw_redis_client() is None:
         raise Exception(
             'Redis config maybe wrong or you havn\'t started the redis instance '
         )

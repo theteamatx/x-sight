@@ -12,6 +12,7 @@ class ColorfulTestResult(unittest.TextTestResult):
 
   def addSuccess(self, test):
     super().addSuccess(test)
+    print(test)
     self.stream.write('\n' + Fore.GREEN + 'PASS' + Style.RESET_ALL + '\n')
 
   def addFailure(self, test, err):

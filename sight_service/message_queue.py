@@ -12,6 +12,9 @@ from google.cloud import storage
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
+from sight_service.message_logger import LogStorageCollectStrategy
+from sight_service.message_logger import LogStorageCollectStrategyABC
+from sight_service.message_logger import MessageFlowLogger
 
 # Alias for message ID type
 ID = int
@@ -161,43 +164,43 @@ class IMessageQueue(Protocol, Generic[T]):
     ...
 
 
-class MessageFlowLogger:
-  """Class to log message state transitions."""
+# class MessageFlowLogger:
+#   """Class to log message state transitions."""
 
-  def __init__(self):
-    self.logs = []  # List to store time-series logs
+#   def __init__(self):
+#     self.logs = []  # List to store time-series logs
 
-  def log_message_state(self,
-                        state,
-                        message_id,
-                        worker_id=None,
-                        message_details=None):
-    timestamp = datetime.utcnow().isoformat()
-    self.logs.append({
-        "timestamp": timestamp,
-        "state": state,
-        "message_id": message_id,
-        "worker_id": worker_id,
-        "message_details": message_details,
-    })
+#   def log_message_state(self,
+#                         state,
+#                         message_id,
+#                         worker_id=None,
+#                         message_details=None):
+#     timestamp = datetime.utcnow().isoformat()
+#     self.logs.append({
+#         "timestamp": timestamp,
+#         "state": state,
+#         "message_id": message_id,
+#         "worker_id": worker_id,
+#         "message_details": message_details,
+#     })
 
-  def save_to_gcs(self):
-    logs_json = json.dumps(self.logs, indent=2)
+#   def save_to_gcs(self):
+#     logs_json = json.dumps(self.logs, indent=2)
 
-    bucket_name = 'cameltrain-sight'
-    json_file_name = f"doing_mq_analysis/{datetime.utcnow().isoformat()}.json"
+#     bucket_name = 'cameltrain-sight'
+#     json_file_name = f"doing_mq_analysis/{datetime.utcnow().isoformat()}.json"
 
-    # Initialize GCS client
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(json_file_name)
+#     # Initialize GCS client
+#     client = storage.Client()
+#     bucket = client.bucket(bucket_name)
+#     blob = bucket.blob(json_file_name)
 
-    blob.upload_from_string(logs_json, content_type="application/json")
+#     blob.upload_from_string(logs_json, content_type="application/json")
 
-    return f"gs://{bucket_name}/{json_file_name}"
+#     return f"gs://{bucket_name}/{json_file_name}"
 
-  def get_logs(self):
-    return self.logs
+#   def get_logs(self):
+#     return self.logs
 
 
 class MessageQueue(IMessageQueue[T]):
@@ -238,12 +241,13 @@ class MessageQueue(IMessageQueue[T]):
   #   operations on each state are thread-safe and do not interfere with each
   #   other.
 
-  def __init__(
-      self,
-      id_generator: UUIDStrategy,
-      batch_size: int = 1,
-      lock_factory: Callable[[], rwlock.RWLockFairD] = rwlock.RWLockFairD,
-  ):
+  def __init__(self,
+               id_generator: UUIDStrategy,
+               batch_size: int = 1,
+               lock_factory: Callable[[],
+                                      rwlock.RWLockFairD] = rwlock.RWLockFairD,
+               logger_storage_strategy:
+               LogStorageCollectStrategyABC = LogStorageCollectStrategy):
     self.id_generator = id_generator
     self.pending: Dict[ID, T] = {}
     self.active: Dict[str, Dict[ID, T]] = {}
@@ -255,8 +259,7 @@ class MessageQueue(IMessageQueue[T]):
     self.completed_lock = lock_factory()
 
     # logger
-
-    self.logger = MessageFlowLogger()
+    self.logger = MessageFlowLogger(storage_strategy=logger_storage_strategy)
 
   def __str__(self) -> str:
     # all_messages = self.get_all_messages()

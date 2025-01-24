@@ -23,9 +23,10 @@ def simulate_fvs(sight, params_dict):
       227.6, 273.4, 273.3, 248.6, 165.3, 130.6, 106.4, 92.1, 81.7, 62.8
   ]
   sim_stream = pd.Series(mitigation_list)
-  simulation_time = 10
+  # any time in between 6-10
+  simulation_time = random.uniform(6, 10)
   time.sleep(simulation_time)
-  print(f'sleeping for some time he he 😪 , {simulation_time}')
+  print(f'Sleeping for some time  😪 , {simulation_time}')
   # print(sim_stream)
   return sim_stream
 

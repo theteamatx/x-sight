@@ -194,9 +194,8 @@ class WorklistScheduler(SingleActionOptimizer):
     method_name = "close"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
     if not self.exp_completed:
-      logging.info("<<<<Completed length %s Timeseries Logs ... \n %s \n",
-                   self.queue.get_status()["completed"],
-                   self.queue.logger.save_to_gcs())
+      logging.info('Closing the message queue logger')
+      self.queue.logger.stop()
     self.exp_completed = True
     logging.info(
         "sight experiment completed...., changed exp_completed to True")

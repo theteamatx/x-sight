@@ -30,7 +30,7 @@ from sight.utils.proto_conversion import convert_proto_to_dict
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight_service.proto import service_pb2
 
-POLL_LIMIT = 300  # POLL_TIME_INTERVAL th part of second
+POLL_LIMIT = 600  # POLL_TIME_INTERVAL th part of second
 POLL_TIME_INTERVAL = 6  # seconds
 global_outcome_mapping = RWLockDictWrapper()
 
@@ -89,7 +89,8 @@ def poll_network_batch_outcome(sight_id):
       # print("pending action ids : ", pending_action_ids)
       if len(pending_action_ids):
         counter = POLL_LIMIT
-        print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
+        print(f'BATCH POLLING THE IDS FOR => {len(pending_action_ids)}')
+        # print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
         outcome_of_action_ids = get_all_outcomes(sight_id, pending_action_ids)
 
         # print(f'Outcome from get_all_outcome => {outcome_of_action_ids}')
