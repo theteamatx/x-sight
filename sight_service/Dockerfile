@@ -33,9 +33,12 @@ COPY sight_service/requirements.txt sight_service/requirements.txt
 # COPY py/sight/requirements.txt sight_service/requirements.txt
 RUN pip3 install --upgrade pip
 RUN pip3 install -r sight_service/requirements.txt
+# RUN pip3 install --upgrade pip --break-system-packages
+# RUN pip3 install -r sight_service/requirements.txt --break-system-packages
 
 # copy sight code
 COPY py/helpers/logs/ py/helpers/logs/
+COPY py/helpers/cache/ py/helpers/cache/
 COPY py/sight/proto/ py/sight/proto/
 COPY py/sight/utils py/sight/utils/
 # COPY py/sight/widgets/decision py/sight/widgets/decision

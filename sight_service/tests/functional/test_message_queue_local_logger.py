@@ -1,7 +1,10 @@
 """Tests for the MessageQueue class."""
 
+import os
+import shutil
 import unittest
 
+from sight_service.message_logger import LogStorageCollectStrategy
 import sight_service.message_queue as mq
 from sight_service.tests import colorful_tests
 
@@ -10,18 +13,38 @@ class TestMessageQueue(unittest.TestCase):
   """Tests for MessageQueue class.
 
   Attributes:
+    local_base_dir: str
     incremental_id_generator: IncrementalUUID()
     queue: MessageQueue[int]
+    log_storage_collect_strategy: LogStorageCollectStrategy
   """
 
   def setUp(self):
     """Set up the MessageQueue and IncrementalUUID for testing."""
     super().setUp()
+    config = {
+        'local_base_dir': '/tmp/test_logs',
+        'dir_prefix': 'test_log_chunks/',
+    }
+    self.local_base_dir = config['local_base_dir']
     # Use IncrementalUUID for most tests to have predictable IDs
     self.incremental_id_generator = mq.IncrementalUUID()
+    # Create instances of the LogStorageCollectStrategy
+    self.log_storage_collect_strategy = LogStorageCollectStrategy(
+        cache_type='local', config=config)
     self.queue = mq.MessageQueue[int](
-        id_generator=self.incremental_id_generator, batch_size=2
+        id_generator=self.incremental_id_generator,
+        batch_size=2,
+        logger_storage_strategy=self.log_storage_collect_strategy,
     )
+
+  def tearDown(self):
+    """Tear down the Message Queue Logger."""
+    super().tearDown()
+    self.queue.logger.stop()
+    # Cleanup after tests
+    if os.path.exists(self.local_base_dir):
+      shutil.rmtree(self.local_base_dir)
 
   def test_add_message_with_incremental_id(self):
     message_id = self.queue.push_message(100)
@@ -102,9 +125,8 @@ class TestMessageQueue(unittest.TestCase):
     self.queue.push_message(200)
     self.queue.push_message(300)
 
-    batch = self.queue.create_active_batch(
-        worker_id='worker1', new_batch_size=1
-    )
+    batch = self.queue.create_active_batch(worker_id='worker1',
+                                           new_batch_size=1)
     self.assertEqual(len(batch), 1)
     self.assertIn(1, batch)
 
@@ -146,9 +168,8 @@ class TestMessageQueue(unittest.TestCase):
 
     all_messages = self.queue.get_all_messages()
     self.assertEqual(len(all_messages['pending']), 2)
-    self.assertEqual(
-        len(all_messages['active']), 0
-    )  # No messages should be in active yet
+    self.assertEqual(len(all_messages['active']),
+                     0)  # No messages should be in active yet
     self.assertEqual(len(all_messages['completed']), 0)
 
     # Process the messages, which should move them
@@ -177,11 +198,14 @@ class TestMessageQueue(unittest.TestCase):
     """Test add_message() with a UUID ID generator."""
     uuid_id_generator = mq.RandomUUID()
     queue_with_uuid = mq.MessageQueue[str](
-        id_generator=uuid_id_generator, batch_size=2
+        id_generator=uuid_id_generator,
+        batch_size=2,
+        logger_storage_strategy=self.log_storage_collect_strategy,
     )
 
     message_id1 = queue_with_uuid.push_message('Task A')
     message_id2 = queue_with_uuid.push_message('Task B')
+    queue_with_uuid.logger.stop()
 
     # Check that the UUIDs are unique and have been assigned correctly
     self.assertNotEqual(message_id1, message_id2)
