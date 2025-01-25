@@ -27,25 +27,25 @@ class RedisCache(CacheInterface):
     if config is None:
       config = {}
     try:
-      self.raw_redis_client = redis.StrictRedis(
+      self.redis_client = redis.StrictRedis(
           host=config.get("redis_host", "localhost"),
           port=config.get("redis_port", 1234),
           password=config.get("password", ""),
           db=config.get("redis_db", 0),
       )
-      self.raw_redis_client.ping()
+      self.redis_client.ping()
     except (redis.ConnectionError, redis.TimeoutError) as e:
       logging.warning(f"RediConnection failed: {e}")
       self.redis_client = None
       raise e
 
-  def get_raw_redis_client(self):
+  def get_redis_client(self):
     """Returns the raw Redis client object."""
-    return self.raw_redis_client or None
+    return self.redis_client or None
 
   def _is_redis_client_exist(self):
     """Raises an error if the Redis client is not connected."""
-    if self.raw_redis_client is None:
+    if self.redis_client is None:
       logging.error("redis client not found..!!")
       raise ConnectionError("redis client not found , check connection !!")
 
@@ -59,7 +59,7 @@ class RedisCache(CacheInterface):
       The value associated with the key, or None if the key is not found.
     """
     self._is_redis_client_exist()
-    value = self.raw_redis_client.json().get(key)
+    value = self.redis_client.json().get(key)
     return value if value else None
 
   def json_set(self, key, value):
@@ -70,7 +70,7 @@ class RedisCache(CacheInterface):
       value: The value to store.
     """
     self._is_redis_client_exist()
-    self.raw_redis_client.json().set(key, Path.root_path(), value)
+    self.redis_client.json().set(key, Path.root_path(), value)
 
   def json_list_keys(self, prefix: str) -> list[str]:
     """Lists all keys in the cache that match a given prefix.
@@ -85,8 +85,8 @@ class RedisCache(CacheInterface):
     cursor = 0
     keys = []
     while True:
-      cursor, batch_keys = self.raw_redis_client.scan(cursor=cursor,
-                                                      match=f"{prefix}*")
+      cursor, batch_keys = self.redis_client.scan(cursor=cursor,
+                                                  match=f"{prefix}*")
       keys.extend(batch_keys)
       if cursor == 0:
         break

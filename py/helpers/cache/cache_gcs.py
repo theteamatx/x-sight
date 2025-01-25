@@ -24,18 +24,18 @@ Path = pathlib.Path
 class GCSCache(CacheInterface):
   """GCS Cache implementation."""
 
-  def __init__(self, config=None, with_redis_client: RedisCache | None = None):
+  def __init__(self, config=None, with_redis_cache: RedisCache | None = None):
     """Initializes the GCS Cache.
 
     Args:
       config: A dictionary of configuration options.
-      with_redis_client: A RedisCache client to use for caching.
+      with_redis_cache: A RedisCache client to use for caching.
     """
     config = config or {}
     gcs_client = storage.Client()
     bucket_name = config.get('gcs_bucket', 'cameltrain-sight')
     self.bucket = gcs_client.bucket(bucket_name=bucket_name)
-    self.redis_client = with_redis_client
+    self.redis_cache = with_redis_cache
     self.gcs_base_dir = config.get('gcs_base_dir', 'sight_cache')
 
   def _gcs_cache_path(self, key: str, suffix: str = '.json'):
@@ -50,14 +50,13 @@ class GCSCache(CacheInterface):
     """
     return f'{self.gcs_base_dir}/{Path(key).with_suffix(suffix=suffix)}'
 
-  def get_raw_redis_client(self):
+  def get_redis_client(self):
     """Returns the raw Redis client.
 
     Returns:
       The raw Redis client, or None if Redis is not enabled.
     """
-    return (self.redis_client and
-            self.redis_client.get_raw_redis_client()) or None
+    return (self.redis_cache and self.redis_cache.get_redis_client()) or None
 
   def json_get(self, key):
     """Gets a value from the cache.
@@ -68,9 +67,9 @@ class GCSCache(CacheInterface):
     Returns:
       The value from the cache, or None if not found.
     """
-    if self.redis_client and self.get_raw_redis_client():
+    if self.redis_cache and self.get_redis_client():
       try:
-        value = self.redis_client.json_get(key=key)
+        value = self.redis_cache.json_get(key=key)
         if value:
           return value
       except Exception as e:  # pylint: disable=broad-exception-caught
@@ -79,8 +78,8 @@ class GCSCache(CacheInterface):
     blob = self.bucket.blob(self._gcs_cache_path(key=key.replace(':', '/')))
     if blob.exists():
       value = json.loads(blob.download_as_text())
-      if self.redis_client:
-        self.redis_client.json_set(key=key, value=value)
+      if self.redis_cache:
+        self.redis_cache.json_set(key=key, value=value)
       return value
     return None
 
@@ -91,9 +90,9 @@ class GCSCache(CacheInterface):
       key: The key to set the value for.
       value: The value to set.
     """
-    if self.redis_client and self.get_raw_redis_client():
+    if self.redis_cache and self.get_redis_client():
       try:
-        self.redis_client.json_set(key=key, value=value)
+        self.redis_cache.json_set(key=key, value=value)
       except Exception as e:  # pylint: disable=broad-exception-caught
         logging.warning('GOT THE ISSUE IN REDIS', e)
     blob = self.bucket.blob(self._gcs_cache_path(key=key.replace(':', '/')))
@@ -108,9 +107,9 @@ class GCSCache(CacheInterface):
     Returns:
       A list of the keys in the cache.
     """
-    if self.redis_client and self.get_raw_redis_client():
+    if self.redis_cache and self.get_redis_client():
       try:
-        return self.redis_client.json_list_keys(prefix=prefix)
+        return self.redis_cache.json_list_keys(prefix=prefix)
       except Exception as e:  # pylint: disable=broad-exception-caught
         logging.warning('GOT THE ISSUE IN REDIS', e)
     prefix = prefix.replace(':', '/')

@@ -13,21 +13,20 @@ class LocalCache(CacheInterface):
 
   def __init__(self,
                config: dict = {},
-               with_redis_client: RedisCache | None = None):
-    self.base_dir = config.get("local_base_dir", "/tmp/testing_dir")
-    self.redis_client = with_redis_client
+               with_redis_cache: RedisCache | None = None):
+    self.base_dir = config.get("local_base_dir", "/tmp/.local_cache")
+    self.redis_cache = with_redis_cache
 
   def _local_cache_path(self, key: str, suffix: str = ".json"):
     return Path(self.base_dir) / Path(key).with_suffix(suffix=suffix)
 
-  def get_raw_redis_client(self):
-    return (self.redis_client and
-            self.redis_client.get_raw_redis_client()) or None
+  def get_redis_client(self):
+    return (self.redis_cache and self.redis_cache.get_redis_client()) or None
 
   def json_get(self, key: str):
-    if self.redis_client and self.get_raw_redis_client():
+    if self.redis_cache and self.get_redis_client():
       try:
-        value = self.redis_client.json_get(key=key)
+        value = self.redis_cache.json_get(key=key)
         if value:
           return value
       except Exception as e:
@@ -37,15 +36,15 @@ class LocalCache(CacheInterface):
     if path.exists():
       with open(path, "r") as file:
         value = json.load(file)
-        if self.redis_client and self.get_raw_redis_client():
-          self.redis_client.json_set(key, value)
+        if self.redis_cache and self.get_redis_client():
+          self.redis_cache.json_set(key, value)
         return value
     return None
 
   def json_set(self, key, value):
-    if self.redis_client and self.get_raw_redis_client():
+    if self.redis_cache and self.get_redis_client():
       try:
-        self.redis_client.json_set(key=key, value=value)
+        self.redis_cache.json_set(key=key, value=value)
       except Exception as e:
         logging.warning("GOT THE ISSUE IN REDIS", e)
     path = self._local_cache_path(key.replace(":", "/"))
@@ -54,9 +53,9 @@ class LocalCache(CacheInterface):
       json.dump(value, file)
 
   def json_list_keys(self, prefix: str) -> list[str]:
-    if self.redis_client and self.get_raw_redis_client():
+    if self.redis_cache and self.get_redis_client():
       try:
-        return self.redis_client.json_list_keys(prefix=prefix)
+        return self.redis_cache.json_list_keys(prefix=prefix)
       except Exception as e:
         logging.warning("GOT THE ISSUE IN REDIS", e)
     prefix = prefix.replace(':', '/')

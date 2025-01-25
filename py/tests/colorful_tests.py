@@ -29,7 +29,7 @@ class ColorfulTestResult(unittest.TextTestResult):
 
   def addError(self, test, err):
     super().addError(test, err)
-    logging.info('%s test-cases error occurredd , err %s', test, err)
+    logging.info('%s test-cases error occurred , err %s', test, err)
     self.stream.write('\n' + Fore.YELLOW + 'ERROR' + Style.RESET_ALL + '\n')
 
 

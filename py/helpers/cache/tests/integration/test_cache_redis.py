@@ -6,6 +6,7 @@ import unittest
 
 from helpers.cache.cache_factory import CacheFactory
 from helpers.cache.cache_redis import RedisCache
+from helpers.logs.logs_handler import logger as logging
 import redis
 from tests.colorful_tests import ColorfulTestRunner
 
@@ -19,7 +20,7 @@ class CacheRedisTest(unittest.TestCase):
       try:
         client = redis.StrictRedis(host=host, port=port)
         client.ping()
-        print('Redis is ready!')
+        logging.info('Redis is ready!')
         return
       except redis.ConnectionError:
         time.sleep(1)
@@ -27,17 +28,17 @@ class CacheRedisTest(unittest.TestCase):
 
   def _end_container(self):
     """Stops the Docker containers."""
-    if self.cache and self.cache.get_raw_redis_client():
-      client = self.cache.get_raw_redis_client()
+    if self.cache and self.cache.get_redis_client():
+      client = self.cache.get_redis_client()
       keys_to_delete = client.keys('testing:*')
       if keys_to_delete:
         client.delete(*keys_to_delete)  # Delete all matching keys
     try:
-      print('Stopping Docker containers ...')
+      logging.info('Stopping Docker containers ...')
       subprocess.run(['docker-compose', 'down'], check=True)
-      print('Docker containers stopped successfully...')
+      logging.info('Docker containers stopped successfully...')
     except subprocess.CalledProcessError as e:
-      print(f'Failed to stop Docker containers : {e}')
+      logging.info(f'Failed to stop Docker containers : {e}')
       raise e
 
   def tearDown(self):
@@ -49,13 +50,13 @@ class CacheRedisTest(unittest.TestCase):
     self.cache = None
     self._end_container()
     try:
-      print('Starting Docker containers ...')
+      logging.info('Starting Docker containers ...')
       subprocess.run(['docker-compose', 'up', '-d'], check=True)
       # Wait for Redis to be ready
       self.wait_for_redis('localhost', 1234)
-      print('Docker containers started successfully...')
+      logging.info('Docker containers started successfully...')
     except subprocess.CalledProcessError as e:
-      print(f'Failed to start Docker containers : {e}')
+      logging.info(f'Failed to start Docker containers : {e}')
       raise e
 
   def test_redis_cache(self):
@@ -67,7 +68,7 @@ class CacheRedisTest(unittest.TestCase):
     self.cache = RedisCache(config=config)
 
     self.assertIsNotNone(
-        self.cache.get_raw_redis_client(),
+        self.cache.get_redis_client(),
         'Cache client is not found , check your redis connection !!',
     )
 

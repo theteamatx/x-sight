@@ -29,8 +29,8 @@ class CacheLocalWithRedisTest(unittest.TestCase):
 
   def _end_container(self):
     """Stops the Docker containers."""
-    if self.cache and self.cache.get_raw_redis_client():
-      client = self.cache.get_raw_redis_client()
+    if self.cache and self.cache.get_redis_client():
+      client = self.cache.get_redis_client()
       keys_to_delete = client.keys("testing:*")
       if keys_to_delete:
         client.delete(*keys_to_delete)  # Delete all matching keys
@@ -67,7 +67,7 @@ class CacheLocalWithRedisTest(unittest.TestCase):
         config={
             "local_base_dir": "/tmp/testing_dir",
         },
-        with_redis_client=RedisCache(config={
+        with_redis_cache=RedisCache(config={
             "redis_host": "localhost",
             "redis_port": 1234,
             "redis_db": 0,
@@ -102,7 +102,7 @@ class CacheLocalWithRedisTest(unittest.TestCase):
         config={
             "local_base_dir": "/tmp/testing_dir",
         },
-        with_redis_client=RedisCache(config={
+        with_redis_cache=RedisCache(config={
             "redis_host": "localhost",
             "redis_port": 1234,
             "redis_db": 0,
