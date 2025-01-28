@@ -12,8 +12,8 @@ class NoneCache(CacheInterface):
 
   def __init__(
       self,
-      config: dict[str, Any] | None = None,
-      with_redis_cache: Any | None = None,
+      config: dict[str, Any] = None,
+      with_redis_cache: Any = None,
   ):
     logging.warning('CACHE-TYPE-NONE -init # cache-ignore')
 

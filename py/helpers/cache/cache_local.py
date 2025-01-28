@@ -11,9 +11,7 @@ from .cache_redis import RedisCache
 
 class LocalCache(CacheInterface):
 
-  def __init__(self,
-               config: dict = {},
-               with_redis_cache: RedisCache | None = None):
+  def __init__(self, config: dict = {}, with_redis_cache: RedisCache = None):
     self.base_dir = config.get("local_base_dir", "/tmp/.local_cache")
     self.redis_cache = with_redis_cache
 

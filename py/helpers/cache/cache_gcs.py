@@ -24,7 +24,7 @@ Path = pathlib.Path
 class GCSCache(CacheInterface):
   """GCS Cache implementation."""
 
-  def __init__(self, config=None, with_redis_cache: RedisCache | None = None):
+  def __init__(self, config=None, with_redis_cache: RedisCache = None):
     """Initializes the GCS Cache.
 
     Args:

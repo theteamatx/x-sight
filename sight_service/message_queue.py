@@ -210,6 +210,10 @@ class MessageQueue(IMessageQueue[T]):
                                       rwlock.RWLockFairD] = rwlock.RWLockFairD,
                logger_storage_strategy:
                LogStorageCollectStrategyABC = LogStorageCollectStrategyEmpty):
+
+    if logger_storage_strategy is None:
+      logger_storage_strategy = LogStorageCollectStrategyEmpty
+
     self.id_generator = id_generator
     self.pending: Dict[ID, T] = {}
     self.active: Dict[str, Dict[ID, T]] = {}

@@ -15,10 +15,13 @@
 
 from concurrent import futures
 import dataclasses
+from datetime import datetime
 from typing import Any, Dict, List, Sequence, Tuple
 
 from helpers.logs.logs_handler import logger as logging
 from sight.proto import sight_pb2
+from sight_service.message_logger import LogStorageCollectStrategy
+from sight_service.message_logger import LogStorageCollectStrategyEmpty
 from sight_service.message_queue import IMessageQueue
 from sight_service.message_queue import IncrementalUUID
 from sight_service.message_queue import MessageQueue
@@ -77,5 +80,14 @@ class SingleActionOptimizer(OptimizerInstance):
 
   def __init__(self, batch_size: int = 5):
     super().__init__()
-    self.queue: IMessageQueue = MessageQueue[MessageDetails](
-        id_generator=IncrementalUUID(), batch_size=batch_size)
+    logger_storage_strategy = LogStorageCollectStrategyEmpty()
+    # can use following logger for analyis , how messages flow
+    # logger_storage_strategy = LogStorageCollectStrategy(cache_type='gcs', config={
+    #     "gcs_base_dir": "sight_mq_logs_for_analysis",
+    #     "gcs_bucket": "cameltrain-sight",
+    #     "dir_prefix": f'log_chunks_{datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")}/'
+    # })
+    self.queue: MessageQueue = MessageQueue[MessageDetails](
+        id_generator=IncrementalUUID(),
+        batch_size=batch_size,
+        logger_storage_strategy=logger_storage_strategy)

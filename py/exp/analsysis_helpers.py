@@ -65,7 +65,7 @@ def calculate_throughput(logs, time_interval='10S'):
   throughput = (
       completed_logs.set_index('timestamp').resample(time_interval).size())
 
-  print(f'throughput => {throughput}')
+  # print(f'throughput => {throughput}')
 
   # Reset index and rename the throughput column
   return throughput.reset_index(name='throughput')

@@ -13,7 +13,7 @@ class CacheFactory:
   @staticmethod
   def get_cache(cache_type='local',
                 config=None,
-                with_redis=None) -> CacheInterface | None:
+                with_redis=None) -> CacheInterface:
     """Get a cache instance based on the given type.
 
     Args:
