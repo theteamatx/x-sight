@@ -1329,15 +1329,15 @@ def propose_actions(sight, question_label, action_dict):
   action_id = response.action_id
 
   # log_object call
-  sight_obj = sight_pb2.Object()
-  sight_obj.sub_type = sight_pb2.Object.SubType.ST_PROPOSE_ACTION
-  sight_obj.propose_action.action_id = str(action_id)
-  sight_obj.propose_action.action_attrs.CopyFrom(request.action_attrs)
-  sight_obj.propose_action.attributes.CopyFrom(request.attributes)
+  # sight_obj = sight_pb2.Object()
+  # sight_obj.sub_type = sight_pb2.Object.SubType.ST_PROPOSE_ACTION
+  # sight_obj.propose_action.action_id = str(action_id)
+  # sight_obj.propose_action.action_attrs.CopyFrom(request.action_attrs)
+  # sight_obj.propose_action.attributes.CopyFrom(request.attributes)
 
-  frame = inspect.currentframe().f_back.f_back
-  sight.set_object_code_loc(sight_obj, frame)
-  sight.log_object(sight_obj, True)
+  # frame = inspect.currentframe().f_back.f_back
+  # sight.set_object_code_loc(sight_obj, frame)
+  # sight.log_object(sight_obj, True)
 
   return action_id
 

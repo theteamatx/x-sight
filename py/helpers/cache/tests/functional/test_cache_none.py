@@ -1,3 +1,5 @@
+"""Tests for the None cache."""
+
 import unittest
 
 from helpers.cache.cache_factory import CacheFactory
@@ -6,15 +8,27 @@ from tests.colorful_tests import ColorfulTestRunner
 
 
 class CacheNoneTest(unittest.TestCase):
+  """Tests for the None cache."""
 
-  @staticmethod
-  def test_none_cache():
-    # Initialize the cache
-    cache = CacheFactory.get_cache(cache_type='none')
+  def setUp(self):
+    super().setUp()
+    self.cache = CacheFactory.get_cache(cache_type="none")
+    self.key_maker = CacheKeyMaker()
 
-    key_maker = CacheKeyMaker()
+  def test_json_list_keys(self):
+    keys = self.cache.json_list_keys("any_prefix")
+    self.assertEqual(keys, [])
+    # Ensure no exceptions or errors occur
 
-    key = key_maker.make_custom_key(
+  def test_json_list_keys_empty_prefix(self):
+    keys = self.cache.json_list_keys("")
+    self.assertEqual(keys, [])
+    # The result should always be an empty list
+
+  def test_none_cache(self):
+    """Tests the None cache."""
+
+    key = self.key_maker.make_custom_key(
         custom_part=":".join(["ACR203", "FVS", "fire"]),
         managed_sample={
             "fire": "20%",
@@ -23,13 +37,13 @@ class CacheNoneTest(unittest.TestCase):
     )
 
     # Set data in the cache
-    cache.json_set(
+    self.cache.json_set(
         key,
         {"Fire": [2023, 2034, 3004]},
     )
 
     # Retrieve data from the cache
-    result = cache.json_get(key)
+    result = self.cache.json_get(key)
 
     # Assert the retrieved data is correct
     expected_result = None

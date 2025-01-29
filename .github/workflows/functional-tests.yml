@@ -31,6 +31,7 @@ jobs:
           pip install -r sight_service/requirements.txt
           pip install absl-py==1.4.0
           pip install colorama==0.4.6
+          pip install redis==5.0.5
 
       - name: Set and print python path
         run: |

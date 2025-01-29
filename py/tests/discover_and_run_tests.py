@@ -2,11 +2,15 @@
 
 import os
 import sys
+import time
 import unittest
 
 from absl import app
 from absl import flags
+import colorama
 from tests.colorful_tests import ColorfulTestRunner
+
+Fore = colorama.Fore
 
 # Define command-line flags using absl
 FLAGS = flags.FLAGS
@@ -41,12 +45,8 @@ def discover_and_run_tests(test_type=None, pattern="test_*.py"):
     # Filter out paths that contain 'pycache' or virtual environment
     # directories. Also, ensure that the path contains a 'tests/' directory and
     # optionally match the 'test_type' if specified.
-    if (
-        "pycache" not in path
-        and ".venv" not in path
-        and "tests/" in path
-        and (test_type in path if test_type else True)
-    ):
+    if ("pycache" not in path and ".venv" not in path and "tests/" in path and
+        (test_type == "full" or (test_type in path if test_type else True))):
       # Add the path to the list of discovered test directories.
       ls_paths.append(path)
 
@@ -75,8 +75,21 @@ def discover_and_run_tests(test_type=None, pattern="test_*.py"):
 
 def main(argv):
   del argv  # Unused
+
+  # Start a timer to track the execution time of the tests.
+  start_time = time.time()
+
   # Call the function with values obtained from the command-line flags.
-  discover_and_run_tests(test_type=_TEST_TYPE.value, pattern=_FILE_PATTERN.value)
+  discover_and_run_tests(test_type=_TEST_TYPE.value,
+                         pattern=_FILE_PATTERN.value)
+
+  # Stop the timer and print the execution time of the tests.
+  end_time = time.time()
+  execution_time = end_time - start_time
+
+  # FYI , printing and not using logging.info as , these are always running in developlment
+  print(f"{Fore.BLUE}Test execution time:"
+        f" {execution_time:.2f} seconds{Fore.MAGENTA}")
 
 
 if __name__ == "__main__":

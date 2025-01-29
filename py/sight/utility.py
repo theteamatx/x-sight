@@ -90,8 +90,9 @@ def poll_network_batch_outcome(sight_id, question_label):
       # print("pending action ids : ", pending_action_ids)
       if len(pending_action_ids):
         counter = POLL_LIMIT
-        print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
-        outcome_of_action_ids = get_all_outcomes(sight_id, question_label,pending_action_ids)
+        print(f'BATCH POLLING THE IDS FOR => {len(pending_action_ids)}')
+        # print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
+        outcome_of_action_ids = get_all_outcomes(sight_id, pending_action_ids)
 
         # print(f'Outcome from get_all_outcome => {outcome_of_action_ids}')
 

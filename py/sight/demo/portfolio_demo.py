@@ -160,7 +160,7 @@ def main_wrapper(argv):
       start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type)
 
     start_time = time.perf_counter()
-    sleep_time_in_min = 0
+    sleep_time_in_min = 5
     logging.info(
         f"Waiting for {sleep_time_in_min} min for workers to start ...")
     time.sleep(sleep_time_in_min * 60)
