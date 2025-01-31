@@ -534,8 +534,8 @@ def call(invoke_func: Callable[[Any, Any], Any]) -> Any:
   sight_service, metadata = generate_metadata()
   num_retries = 0
   backoff_interval = 0.5
-  # while True:
-  for i in range(1):
+  while True:
+    # for i in range(1):
     try:
       response = invoke_func(sight_service, metadata)
       return response

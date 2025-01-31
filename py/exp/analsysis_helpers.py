@@ -1,15 +1,10 @@
 """Analysis helpers script for mq."""
 
 import datetime
-import json
-from urllib.parse import urlparse
 
-from google.cloud import storage
-import matplotlib.pyplot as plt
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-import seaborn as sns
 
 datetime = datetime.datetime
 
@@ -165,7 +160,7 @@ def analyze_message_flow(logs, desc=''):
       x='timestamp',
       y='message_id',
       color='state',  # Color by the state to differentiate states visually
-      title=desc + 'Plot for Message Transitions Over Time',
+      title=f'{desc} Plot for Message Transitions Over Time',
       labels={
           'timestamp': 'Time',
           'message id': 'Message_ID'
@@ -199,3 +194,73 @@ def analyze_throughtput(logs, desc):
   throughput_df = calculate_throughput(logs)
   # print(throughput_df)
   plot_throughput_trends(throughput_df, desc)
+
+
+def analyze_full_queue_sizes(logs, desc=''):
+  """Analyzes the sizes of the pending, active, and completed queues over time.
+
+  Args:
+      logs (list): List of dictionaries containing log data. Each log should
+        include 'timestamp', 'state', and 'message_id'.
+      desc (str): Description or title prefix for the plot.
+  """
+
+  # Create a DataFrame from the logs
+  df = pd.DataFrame(logs)
+
+  # Convert the 'timestamp' column to datetime type
+  df['timestamp'] = pd.to_datetime(df['timestamp'])
+
+  # Sort logs by timestamp to ensure proper order
+  df = df.sort_values('timestamp')
+
+  # Initialize columns for queue changes
+  df['pending_change'] = df['state'].apply(lambda x: 1 if x == 'pending' else -1
+                                           if x == 'active' else 0)
+  df['active_change'] = df['state'].apply(lambda x: 1 if x == 'active' else -1
+                                          if x == 'completed' else 0)
+  df['completed_change'] = df['state'].apply(lambda x: 1
+                                             if x == 'completed' else 0)
+
+  # Calculate cumulative sizes for each queue
+  df['pending_size'] = df['pending_change'].cumsum()
+  df['active_size'] = df['active_change'].cumsum()
+  df['completed_size'] = df['completed_change'].cumsum()
+
+  # Create a melted DataFrame to plot all sizes in one graph
+  queue_sizes = df.melt(
+      id_vars=['timestamp'],
+      value_vars=['pending_size', 'active_size', 'completed_size'],
+      var_name='Queue',
+      value_name='Size',
+  )
+
+  # Create a line plot for queue sizes over time
+  fig = px.line(
+      queue_sizes,
+      x='timestamp',
+      y='Size',
+      color='Queue',  # Different colors for each queue
+      title=f'{desc} Queue Sizes Over Time',
+      labels={
+          'timestamp': 'Time',
+          'Size': 'Queue Size'
+      },
+      template='plotly_dark',  # Optional: dark theme
+  )
+
+  # Customize layout for better readability
+  fig.update_layout(
+      hovermode='closest',
+      xaxis=dict(showgrid=True, title='Timestamp'),
+      yaxis=dict(showgrid=True, title='Queue Size'),
+      margin=dict(t=40, b=40, l=40, r=40),  # Adjust margins
+      legend=dict(title='Queue',
+                  orientation='h',
+                  x=0.5,
+                  xanchor='center',
+                  y=-0.2),
+  )
+
+  # Show the plot
+  fig.show()

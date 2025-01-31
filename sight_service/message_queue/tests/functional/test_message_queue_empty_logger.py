@@ -1,11 +1,19 @@
 """Tests for the MessageQueue class."""
 
-import os
-import shutil
 import unittest
 
-from sight_service.message_logger import LogStorageCollectStrategy
-import sight_service.message_queue as mq
+from sight_service.message_queue.interface import IMessageQueue
+from sight_service.message_queue.interface import IUUIDStrategy
+from sight_service.message_queue.interface import MessageState
+from sight_service.message_queue.list_lock_queue import IncrementalUUID
+from sight_service.message_queue.list_lock_queue import ListLockMessageQueue
+from sight_service.message_queue.list_lock_queue import RandomUUID
+from sight_service.message_queue.message_logger.interface import (
+    ILogStorageCollectStrategy
+)
+from sight_service.message_queue.message_logger.log_storage_collect import (
+    NoneLogStorageCollectStrategy
+)
 from sight_service.tests import colorful_tests
 
 
@@ -13,26 +21,20 @@ class TestMessageQueue(unittest.TestCase):
   """Tests for MessageQueue class.
 
   Attributes:
-    local_base_dir: str
     incremental_id_generator: IncrementalUUID()
     queue: MessageQueue[int]
-    log_storage_collect_strategy: LogStorageCollectStrategy
+    log_storage_collect_strategy: LogStorageCollectStrategyEmpty()
   """
 
   def setUp(self):
     """Set up the MessageQueue and IncrementalUUID for testing."""
     super().setUp()
-    config = {
-        'local_base_dir': '/tmp/test_logs',
-        'dir_prefix': 'test_log_chunks/',
-    }
-    self.local_base_dir = config['local_base_dir']
     # Use IncrementalUUID for most tests to have predictable IDs
-    self.incremental_id_generator = mq.IncrementalUUID()
-    # Create instances of the LogStorageCollectStrategy
-    self.log_storage_collect_strategy = LogStorageCollectStrategy(
-        cache_type='local', config=config)
-    self.queue = mq.MessageQueue[int](
+    self.incremental_id_generator: IUUIDStrategy = IncrementalUUID()
+    # Create instances of the NoneLogStorageCollectStrategy
+    self.log_storage_collect_strategy: ILogStorageCollectStrategy = (
+        NoneLogStorageCollectStrategy())
+    self.queue: IMessageQueue = ListLockMessageQueue[int](
         id_generator=self.incremental_id_generator,
         batch_size=2,
         logger_storage_strategy=self.log_storage_collect_strategy,
@@ -42,9 +44,6 @@ class TestMessageQueue(unittest.TestCase):
     """Tear down the Message Queue Logger."""
     super().tearDown()
     self.queue.logger.stop()
-    # Cleanup after tests
-    if os.path.exists(self.local_base_dir):
-      shutil.rmtree(self.local_base_dir)
 
   def test_add_message_with_incremental_id(self):
     message_id = self.queue.push_message(100)
@@ -158,7 +157,7 @@ class TestMessageQueue(unittest.TestCase):
     self.queue.push_message(200)
     self.queue.create_active_batch(worker_id='worker1')
     location = self.queue.find_message_location(1)
-    self.assertEqual(location, mq.MessageState.ACTIVE)
+    self.assertEqual(location, MessageState.ACTIVE)
 
   def test_get_all_messages(self):
     """Test get_all_messages() with 2 pending messages and 1 completed message."""
@@ -196,8 +195,8 @@ class TestMessageQueue(unittest.TestCase):
 
   def test_add_message_with_uuid(self):
     """Test add_message() with a UUID ID generator."""
-    uuid_id_generator = mq.RandomUUID()
-    queue_with_uuid = mq.MessageQueue[str](
+    uuid_id_generator = RandomUUID()
+    queue_with_uuid = ListLockMessageQueue[str](
         id_generator=uuid_id_generator,
         batch_size=2,
         logger_storage_strategy=self.log_storage_collect_strategy,

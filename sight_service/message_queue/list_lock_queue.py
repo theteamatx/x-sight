@@ -1,52 +1,28 @@
 """A message queue implementation using reader-writer locks."""
 
-import abc
 import copy
-from datetime import datetime
-import enum
-import json
-from typing import Any, Callable, Dict, Generic, Optional, Protocol, TypeVar
+from typing import Any, Callable, Dict, Optional, TypeVar
 import uuid
 
-from google.cloud import storage
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
-from sight_service.message_logger import LogStorageCollectStrategy
-from sight_service.message_logger import LogStorageCollectStrategyABC
-from sight_service.message_logger import LogStorageCollectStrategyEmpty
-from sight_service.message_logger import MessageFlowLogger
-
-# Alias for message ID type
-ID = int
-
-
-class MessageState(enum.Enum):
-  """The state of a message in the message queue.
-  """
-  PENDING = 'pending'
-  ACTIVE = 'active'
-  COMPLETED = 'completed'
-  NOT_FOUND = 'not found'
-
-  def __str__(self):
-    return str(self.value)
+from sight_service.message_queue.interface import ID
+from sight_service.message_queue.interface import IMessageQueue
+from sight_service.message_queue.interface import IUUIDStrategy
+from sight_service.message_queue.interface import MessageState
+from sight_service.message_queue.message_logger.interface import (
+    ILogStorageCollectStrategy
+)
+from sight_service.message_queue.message_logger.log_storage_collect import (
+    NoneLogStorageCollectStrategy
+)
+from sight_service.message_queue.message_logger.message_logger import (
+    MessageFlowLogger
+)
 
 
-class UUIDStrategy(abc.ABC):
-  """An abstract base class for generating unique IDs.
-
-  This defines a strategy interface for generating unique IDs. Subclasses
-  should implement the `generate_id` method to provide different ways of
-  creating unique identifiers.
-  """
-
-  @abc.abstractmethod
-  def generate_id(self) -> ID:
-    pass
-
-
-class IncrementalUUID(UUIDStrategy):
+class IncrementalUUID(IUUIDStrategy):
   """A strategy for generating unique IDs incrementally.
 
   This strategy generates sequential unique IDs starting from 1 and
@@ -63,7 +39,7 @@ class IncrementalUUID(UUIDStrategy):
     return unique_id
 
 
-class RandomUUID(UUIDStrategy):
+class RandomUUID(IUUIDStrategy):
   """A strategy for generating unique IDs using UUIDs.
 
   This strategy generates unique IDs using a random UUID converted to its
@@ -80,92 +56,7 @@ class RandomUUID(UUIDStrategy):
 T = TypeVar('T')
 
 
-class IMessageQueue(Protocol, Generic[T]):
-  """A message queue is a data structure that stores messages.
-
-  #### State machine for each message:
-  ##### 1. NotInQueue -> The message does not exist in the queue.
-  ##### 2. Pending -> The message is added to the queue but not yet processed.
-  ##### 3. Active -> The message is assigned to a worker for processing.
-  ##### 4. Completed -> The message is processed and moved to the completed
-  state.
-  """
-
-  def push_message(self, message: T) -> ID:
-    """Pushes a message to the queue.
-
-    Args:
-      message: The message to push.
-    """
-    ...
-
-  def create_active_batch(self,
-                          worker_id: str,
-                          new_batch_size: Optional[int] = None) -> Dict[ID, T]:
-    """Move a batch of messages for a given worker into active list.
-
-    Args:
-      worker_id: The ID of the worker that will process the messages.
-      new_batch_size: The size of the batch to process. If not provided, the
-        default batch size will be used.
-
-    Returns:
-      A dictionary of messages that were processed, keyed by message ID.
-    """
-    ...
-
-  def complete_message(self,
-                       message_id: ID,
-                       worker_id: str,
-                       update_fn: Callable[[T], T] = None) -> None:
-    """Completes a message of the given message ID of the given worker it moves it to the completed queue.
-
-    Args:
-      message_id: The ID of the message to complete.
-      worker_id: The ID of the worker that completed the message.
-      update_fn: A function that takes the current message and returns the updated message.
-
-    """
-    ...
-
-  def get_status(self) -> Dict[str, int]:
-    """Returns the status of the message queue."""
-    ...
-
-  def get_all_messages(self) -> Dict[str, Dict[ID, T]]:
-    """Returns all messages in the message queue."""
-    ...
-
-  def get_pending(self) -> Dict[ID, T]:
-    """Returns all pending messages in the queue."""
-    ...
-
-  def get_active(self) -> Dict[str, Dict[ID, T]]:
-    """Returns all active messages in the queue."""
-    ...
-
-  def get_completed(self) -> Dict[ID, T]:
-    """Returns all completed messages in the queue."""
-    ...
-
-  def find_message_location(self, message_id: ID) -> MessageState:
-    """Returns the location of the message in the message queue."""
-    ...
-
-  def is_message_in_pending(self, message_id: ID) -> bool:
-    """Checks if the message is in the pending state."""
-    ...
-
-  def is_message_in_active(self, message_id: ID) -> bool:
-    """Checks if the message is in the active state."""
-    ...
-
-  def is_message_in_completed(self, message_id: ID) -> bool:
-    """Checks if the message is in the completed state."""
-    ...
-
-
-class MessageQueue(IMessageQueue[T]):
+class ListLockMessageQueue(IMessageQueue[T]):
   """A message queue is a data structure that stores messages.
 
     ##### State machine for each message:
@@ -203,16 +94,17 @@ class MessageQueue(IMessageQueue[T]):
   #   operations on each state are thread-safe and do not interfere with each
   #   other.
 
-  def __init__(self,
-               id_generator: UUIDStrategy,
-               batch_size: int = 1,
-               lock_factory: Callable[[],
-                                      rwlock.RWLockFairD] = rwlock.RWLockFairD,
-               logger_storage_strategy:
-               LogStorageCollectStrategyABC = LogStorageCollectStrategyEmpty):
+  def __init__(
+      self,
+      id_generator: IUUIDStrategy,
+      batch_size: int = 1,
+      lock_factory: Callable[[], rwlock.RWLockFairD] = rwlock.RWLockFairD,
+      logger_storage_strategy:
+      ILogStorageCollectStrategy = NoneLogStorageCollectStrategy,
+  ):
 
     if logger_storage_strategy is None:
-      logger_storage_strategy = LogStorageCollectStrategyEmpty
+      logger_storage_strategy = NoneLogStorageCollectStrategy
 
     self.id_generator = id_generator
     self.pending: Dict[ID, T] = {}
@@ -298,7 +190,7 @@ class MessageQueue(IMessageQueue[T]):
       self.active[worker_id].update(batch)
 
     ## log the messages to logger
-    for message_id in batch.keys():
+    for message_id in batch:
       self.logger.log_message_state(state='active',
                                     message_id=message_id,
                                     worker_id=worker_id)
@@ -315,7 +207,8 @@ class MessageQueue(IMessageQueue[T]):
     Args:
       message_id: The ID of the message to complete.
       worker_id: The ID of the worker that completed the message.
-      update_fn: A function that takes the current message and returns the updated message.
+      update_fn: A function that takes the current message and returns the
+        updated message.
     """
     with self.active_lock.gen_wlock():
       if message_id in self.active.get(worker_id, {}):
@@ -337,8 +230,8 @@ class MessageQueue(IMessageQueue[T]):
 
       else:
         raise ValueError(
-            f'Failed while completing the msg ,as Message ID {message_id} not found for worker {worker_id}'
-        )
+            f'Failed while completing the msg ,as Message ID {message_id} not'
+            f' found for worker {worker_id}')
 
   @overrides
   def get_status(self) -> Dict[str, int]:

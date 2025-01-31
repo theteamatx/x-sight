@@ -878,7 +878,8 @@ def execute_local_training(sight, decision_configuration, driver_fn, env):
     )
   else:
     client_id, worker_location = _configure_client_and_worker(sight=sight)
-
+    num_retries = 0
+    backoff_interval = 0.5
     while True:
       # #? new rpc just to check move forward or not?
       req = service_pb2.WorkerAliveRequest(
@@ -893,8 +894,13 @@ def execute_local_training(sight, decision_configuration, driver_fn, env):
         break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-        logging.info('Retrying in 5 seconds......')
-        time.sleep(5)
+        # logging.info('Retrying in 5 seconds......')
+        # time.sleep(5)
+        import random
+        backoff_interval *= 2
+        time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        logging.info('backed off for %s seconds...', backoff_interval)
+        num_retries += 1
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
         process_worker_action(response, sight, driver_fn, env)

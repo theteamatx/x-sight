@@ -6,7 +6,10 @@ import os
 import shutil
 import unittest
 
-from sight_service.message_logger import LogStorageCollectStrategy
+from helpers.logs.logs_handler import logger as logging
+from sight_service.message_queue.message_logger.log_storage_collect import (
+    CachedBasedLogStorageCollectStrategy
+)
 from sight_service.tests import colorful_tests
 
 datetime = datetime.datetime
@@ -23,7 +26,7 @@ class TestCacheBasedLogStorageAndCollectorLocal(unittest.TestCase):
         "dir_prefix": "test_log_chunks/",
     }
     # Create instances of the LogStorageStrategy and LogCollector
-    self.log_storage_collect_strategy = LogStorageCollectStrategy(
+    self.log_storage_collect_strategy = CachedBasedLogStorageCollectStrategy(
         cache_type="local", config=config)
 
     self.local_base_dir = os.path.abspath(config["local_base_dir"])
