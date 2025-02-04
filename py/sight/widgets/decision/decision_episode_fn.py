@@ -79,11 +79,11 @@ class DecisionEpisodeFn:
 
   def __init__(
       self,
-      driver_fn: Callable[[Any], Any],
+      # driver_fn: Callable[[Any], Any],
       state_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
       action_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
   ):
-    self.driver_fn = driver_fn
+    # self.driver_fn = driver_fn
 
     self.state_attrs = list(state_attrs.keys())
     self.state_attr_to_idx = {}

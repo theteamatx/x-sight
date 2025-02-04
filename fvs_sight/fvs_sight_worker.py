@@ -17,8 +17,11 @@ from sight.widgets.decision import decision_episode_fn
 import yaml
 
 
+def get_question_label():
+  return 'Q_label3'
+
 def simulate_fvs(sight, params_dict):
-  print('here params_dict is :', params_dict)
+  # print('here params_dict is :', params_dict)
   mitigation_list = [
       227.6, 273.4, 273.3, 248.6, 165.3, 130.6, 106.4, 92.1, 81.7, 62.8
   ]
@@ -33,7 +36,7 @@ def simulate_fvs(sight, params_dict):
 
 def driver_fn(sight):
 
-  params_dict = decision.decision_point("label", sight)
+  params_dict = decision.decision_point(get_question_label(), sight)
   # params_dict = {'fvs_type':'managed','region':'BM','project_id':'ACR173','desc': 'fire_projectACR173', 'fire-SIMFIRE_27-1_cycle': 2028, 'fire-SIMFIRE_27-6_stand_area_burned': 10.0, 'fire-SIMFIRE_30-1_cycle': 2031, 'fire-SIMFIRE_30-6_stand_area_burned': 10.0, 'fire-SIMFIRE_31-1_cycle': 2032, 'fire-SIMFIRE_31-6_stand_area_burned': 10.0}
   print('params_dict : ', params_dict)
   # if(params_dict == None):
@@ -66,8 +69,9 @@ def main(argv: Sequence[str]) -> None:
   with get_sight_instance() as sight:
     decision.run(driver_fn=driver_fn,
                  sight=sight,
-                 action_attrs=fvs_api.get_action_attrs(),
-                 outcome_attrs=fvs_api.get_outcome_attrs())
+                #  action_attrs=fvs_api.get_action_attrs(),
+                #  outcome_attrs=fvs_api.get_outcome_attrs(),
+                 question_label=get_question_label())
 
 
 if __name__ == "__main__":
