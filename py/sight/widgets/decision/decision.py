@@ -45,8 +45,7 @@ from sight.widgets.decision.env_driver import driver_fn
 # from sight.widgets.decision.env_driver import driver_fn
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
 from sight.widgets.decision.single_action_optimizer_client import (
-    SingleActionOptimizerClient
-)
+    SingleActionOptimizerClient)
 from sight_service.proto import service_pb2
 from sight_service.shared_batch_messages import CachedBatchMessages
 from sight_service.shared_batch_messages import DecisionMessage
@@ -644,7 +643,8 @@ def run(
     sight.widget_decision_state['proposed_actions'] = []
 
     decision_mode_actions = {
-        'run': execute_run_mode,
+        'run':
+            execute_run_mode,
         'configured_run': (lambda sight=sight, driver_fn=driver_fn:
                            execute_configured_run_mode(sight, driver_fn)),
         'train':
@@ -666,6 +666,7 @@ def run(
     client_id, worker_location = _configure_client_and_worker(sight=sight)
     while True:
       # #? new rpc just to check move forward or not?
+
       req = service_pb2.WorkerAliveRequest(
           client_id=client_id,
           worker_id=f'client_{client_id}_worker_{worker_location}',
@@ -886,8 +887,21 @@ def create_opt_and_start_workers(sight, decision_configuration,
                            optimizer_type)
 
 
-def get_decision_configuration_for_opt(sight, question_label, opt_obj,
-                                       question_config, optimizer_config):
+def get_decision_configuration_for_opt(
+    sight, question_label, opt_obj, question_config,
+    optimizer_config) -> sight_pb2.DecisionConfigurationStart:
+  """Preparing decision_configuration for optimizer to be used in server
+
+  Args:
+      sight : The Sight object to be used for logging.
+      question_label : The label associated with the current question.
+        opt_obj : The optimizer object that creates a choice configuration.
+      question_config : The configuration dictionary for the current question.
+      optimizer_config : The configuration dictionary for the optimizer.
+
+  Returns:
+      decision_configuration: The decision configuration protobuf object with optimizer configuration.
+  """
 
   # Extract attributes
   action_attrs = decision_helper.config_to_attr(question_config, 'action')
@@ -953,31 +967,40 @@ def setup_optimizer(sight, optimizer_type, description=''):
   """
   optimizer_map = {
       # 'dm_acme': lambda: AcmeOptimizerClient(sight),
-      'vizier': lambda: SingleActionOptimizerClient(
-          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER, sight),
+      'vizier':
+          lambda: SingleActionOptimizerClient(
+              sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER,
+              sight),
       # 'genetic_algorithm': lambda: GeneticAlgorithmOptimizerClient(
       #     max_population_size=_NUM_TRAIN_WORKERS.value, sight=sight),
-      'exhaustive_search': lambda: SingleActionOptimizerClient(
-          sight_pb2.DecisionConfigurationStart.OptimizerType.
-          OT_EXHAUSTIVE_SEARCH,
-          sight,
-      ),
-      'bayesian_opt': lambda: SingleActionOptimizerClient(
-          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT,
-          sight,
-      ),
-      'sensitivity_analysis': lambda: SingleActionOptimizerClient(
-          sight_pb2.DecisionConfigurationStart.OptimizerType.
-          OT_SENSITIVITY_ANALYSIS,
-          sight,
-      ),
-      'smcpy': lambda: SingleActionOptimizerClient(
-          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY, sight),
-      'worklist_scheduler': lambda: SingleActionOptimizerClient(
-          sight_pb2.DecisionConfigurationStart.OptimizerType.
-          OT_WORKLIST_SCHEDULER,
-          sight,
-      ),
+      'exhaustive_search':
+          lambda: SingleActionOptimizerClient(
+              sight_pb2.DecisionConfigurationStart.OptimizerType.
+              OT_EXHAUSTIVE_SEARCH,
+              sight,
+          ),
+      'bayesian_opt':
+          lambda: SingleActionOptimizerClient(
+              sight_pb2.DecisionConfigurationStart.OptimizerType.
+              OT_BAYESIAN_OPT,
+              sight,
+          ),
+      'sensitivity_analysis':
+          lambda: SingleActionOptimizerClient(
+              sight_pb2.DecisionConfigurationStart.OptimizerType.
+              OT_SENSITIVITY_ANALYSIS,
+              sight,
+          ),
+      'smcpy':
+          lambda: SingleActionOptimizerClient(
+              sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY,
+              sight),
+      'worklist_scheduler':
+          lambda: SingleActionOptimizerClient(
+              sight_pb2.DecisionConfigurationStart.OptimizerType.
+              OT_WORKLIST_SCHEDULER,
+              sight,
+          ),
   }
 
   # Add support for dynamic optimizers

@@ -43,6 +43,24 @@ from sight.widgets.decision import trials
 from sight.widgets.decision import utils
 import yaml
 
+_QUESTION_CONFIG = flags.DEFINE_string(
+    'question_config_path',
+    'fvs_sight/question_config.yaml',
+    'Path of config.yaml containing question related info.',
+)
+
+_OPTIMIZER_CONFIG = flags.DEFINE_string(
+    'optimizer_config_path',
+    'fvs_sight/optimizer_config.yaml',
+    'Path of config.yaml containing optimizer related info.',
+)
+
+_WORKER_CONFIG = flags.DEFINE_string(
+    'worker_config_path',
+    'fvs_sight/worker_config.yaml',
+    'Path of config.yaml containing worker related info.',
+)
+
 FLAGS = flags.FLAGS
 
 sample = {
@@ -300,10 +318,9 @@ def main_wrapper(argv):
   # start_time = time.perf_counter()
   with get_sight_instance() as sight:
 
-    question_configs = utils.load_yaml_config('fvs_sight/question_config.yaml')
-    optimizer_configs = utils.load_yaml_config(
-        'fvs_sight/optimizer_config.yaml')
-    worker_configs = utils.load_yaml_config('fvs_sight/worker_config.yaml')
+    question_configs = utils.load_yaml_config(FLAGS.question_config_path)
+    optimizer_configs = utils.load_yaml_config(FLAGS.optimizer_config_path)
+    worker_configs = utils.load_yaml_config(FLAGS.worker_config_path)
 
     for question_label, question_config in question_configs.items():
       optimizer_type = optimizer_configs[question_label]['optimizer']
@@ -320,9 +337,9 @@ def main_wrapper(argv):
       start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type)
 
       # # propose_action()
-      # asyncio.run(
-      #     propose_actions_wrapper(sight, question_label,
-      #                             optimizer_config['num_questions']))
+      asyncio.run(
+          propose_actions_wrapper(sight, question_label,
+                                  optimizer_config['num_questions']))
 
   # end_time = time.perf_counter()
   # utility.calculate_exp_time(start_time, end_time)

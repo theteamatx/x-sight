@@ -69,9 +69,9 @@ def main(argv: Sequence[str]) -> None:
   with get_sight_instance() as sight:
     decision.run(driver_fn=driver_fn,
                  sight=sight,
-                 action_attrs=fvs_api.get_action_attrs(),
-                 outcome_attrs=fvs_api.get_outcome_attrs(),
-                 question_label=get_question_label)
+                #  action_attrs=fvs_api.get_action_attrs(),
+                #  outcome_attrs=fvs_api.get_outcome_attrs(),
+                 question_label=get_question_label())
 
 
 if __name__ == "__main__":
