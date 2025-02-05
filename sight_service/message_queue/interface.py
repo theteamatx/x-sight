@@ -3,6 +3,9 @@
 import abc
 import enum
 from typing import Callable, Dict, Generic, Optional, Protocol, TypeVar
+import uuid
+
+from overrides import overrides
 
 # Alias for message ID type
 ID = int
@@ -36,6 +39,36 @@ class IUUIDStrategy(ABC):
   @abstractmethod
   def generate_id(self) -> ID:
     pass
+
+
+class IncrementalUUID(IUUIDStrategy):
+  """A strategy for generating unique IDs incrementally.
+
+  This strategy generates sequential unique IDs starting from 1 and
+  incrementing by 1 for each new ID.
+  """
+
+  def __init__(self):
+    self.current_id = 1
+
+  @overrides
+  def generate_id(self) -> int:
+    unique_id = self.current_id
+    self.current_id += 1
+    return unique_id
+
+
+class RandomUUID(IUUIDStrategy):
+  """A strategy for generating unique IDs using UUIDs.
+
+  This strategy generates unique IDs using a random UUID converted to its
+  integer representation. It provides more randomness compared to the
+  incremental strategy.
+  """
+
+  @overrides
+  def generate_id(self) -> int:
+    return uuid.uuid4().int  # Using the integer representation of UUID
 
 
 class IMessageQueue(Protocol, Generic[T]):
@@ -88,10 +121,6 @@ class IMessageQueue(Protocol, Generic[T]):
 
   def get_status(self) -> Dict[str, int]:
     """Returns the status of the message queue."""
-    ...
-
-  def get_all_messages(self) -> Dict[str, Dict[ID, T]]:
-    """Returns all messages in the message queue."""
     ...
 
   def get_pending(self) -> Dict[ID, T]:

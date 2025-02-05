@@ -1,14 +1,15 @@
-"""A message queue implementation using reader-writer locks."""
+"""A list lock message queue implementation using reader-writer locks."""
 
 import copy
+import time
 from typing import Any, Callable, Dict, Optional, TypeVar
-import uuid
 
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
 from sight_service.message_queue.interface import ID
 from sight_service.message_queue.interface import IMessageQueue
+from sight_service.message_queue.interface import IncrementalUUID
 from sight_service.message_queue.interface import IUUIDStrategy
 from sight_service.message_queue.interface import MessageState
 from sight_service.message_queue.message_logger.interface import (
@@ -20,37 +21,6 @@ from sight_service.message_queue.message_logger.log_storage_collect import (
 from sight_service.message_queue.message_logger.message_logger import (
     MessageFlowLogger
 )
-
-
-class IncrementalUUID(IUUIDStrategy):
-  """A strategy for generating unique IDs incrementally.
-
-  This strategy generates sequential unique IDs starting from 1 and
-  incrementing by 1 for each new ID.
-  """
-
-  def __init__(self):
-    self.current_id = 1
-
-  @overrides
-  def generate_id(self) -> int:
-    unique_id = self.current_id
-    self.current_id += 1
-    return unique_id
-
-
-class RandomUUID(IUUIDStrategy):
-  """A strategy for generating unique IDs using UUIDs.
-
-  This strategy generates unique IDs using a random UUID converted to its
-  integer representation. It provides more randomness compared to the
-  incremental strategy.
-  """
-
-  @overrides
-  def generate_id(self) -> int:
-    return uuid.uuid4().int  # Using the integer representation of UUID
-
 
 # Define a generic type variable for messages
 T = TypeVar('T')
@@ -96,7 +66,7 @@ class ListLockMessageQueue(IMessageQueue[T]):
 
   def __init__(
       self,
-      id_generator: IUUIDStrategy,
+      id_generator: IUUIDStrategy = IncrementalUUID(),
       batch_size: int = 1,
       lock_factory: Callable[[], rwlock.RWLockFairD] = rwlock.RWLockFairD,
       logger_storage_strategy:
@@ -120,7 +90,6 @@ class ListLockMessageQueue(IMessageQueue[T]):
     self.logger = MessageFlowLogger(storage_strategy=logger_storage_strategy)
 
   def __str__(self) -> str:
-    # all_messages = self.get_all_messages()
     messages_status = self.get_status()
     result = ['MessageQueue:']
     result.append('  Pending Messages:')
@@ -152,12 +121,17 @@ class ListLockMessageQueue(IMessageQueue[T]):
     Returns:
       The unique ID of the pushed message.
     """
+    start_time = time.time()
+
     unique_id = self.id_generator.generate_id()
     with self.pending_lock.gen_wlock():
       self.pending[unique_id] = message
 
+    time_taken_in_second = time.time() - start_time
     # log the message to logger
-    self.logger.log_message_state(state='pending', message_id=unique_id)
+    self.logger.log_message_state(state='pending',
+                                  message_id=unique_id,
+                                  time_taken=time_taken_in_second)
     return unique_id
 
   @overrides
@@ -178,6 +152,8 @@ class ListLockMessageQueue(IMessageQueue[T]):
                   if new_batch_size is not None else self.batch_size)
     batch: Dict[ID, T] = {}
 
+    start_time = time.time()
+
     with self.pending_lock.gen_wlock():
       for _ in range(min(batch_size, len(self.pending))):
         message_id = next(iter(self.pending))
@@ -189,11 +165,13 @@ class ListLockMessageQueue(IMessageQueue[T]):
         self.active[worker_id] = {}
       self.active[worker_id].update(batch)
 
+    time_taken_in_second = time.time() - start_time
     ## log the messages to logger
     for message_id in batch:
       self.logger.log_message_state(state='active',
                                     message_id=message_id,
-                                    worker_id=worker_id)
+                                    worker_id=worker_id,
+                                    time_taken=time_taken_in_second)
 
     return batch
 
@@ -210,28 +188,32 @@ class ListLockMessageQueue(IMessageQueue[T]):
       update_fn: A function that takes the current message and returns the
         updated message.
     """
+
+    start_time = time.time()
+
     with self.active_lock.gen_wlock():
-      if message_id in self.active.get(worker_id, {}):
-        message = self.active[worker_id][message_id]
-        del self.active[worker_id][message_id]
-
-        if update_fn is not None:
-          logging.info('Before update_fn msg: %s', message)
-          message = update_fn(message)  # Apply the lambda to update the message
-          logging.info('After update_fn msg: %s', message)
-
-        with self.completed_lock.gen_wlock():
-          self.completed[message_id] = message
-
-        ## log the message to logger
-        self.logger.log_message_state(state='completed',
-                                      message_id=message_id,
-                                      worker_id=worker_id)
-
-      else:
+      if message_id not in self.active.get(worker_id, {}):
         raise ValueError(
             f'Failed while completing the msg ,as Message ID {message_id} not'
             f' found for worker {worker_id}')
+
+      message = self.active[worker_id][message_id]
+      del self.active[worker_id][message_id]
+
+      if update_fn is not None:
+        logging.info('Before update_fn msg: %s', message)
+        message = update_fn(message)  # Apply the lambda to update the message
+        logging.info('After update_fn msg: %s', message)
+
+      with self.completed_lock.gen_wlock():
+        self.completed[message_id] = message
+
+    time_taken_in_second = time.time() - start_time
+    ## log the message to logger
+    self.logger.log_message_state(state='completed',
+                                  message_id=message_id,
+                                  worker_id=worker_id,
+                                  time_taken=time_taken_in_second)
 
   @overrides
   def get_status(self) -> Dict[str, int]:
@@ -247,22 +229,6 @@ class ListLockMessageQueue(IMessageQueue[T]):
         'pending': pending_len,
         'active': active_len,
         'completed': completed_len,
-    }
-
-  @overrides
-  def get_all_messages(self) -> Dict[str, Any]:
-    """Returns all messages in the message queue."""
-    with self.pending_lock.gen_rlock():
-      pending_copy = copy.copy(self.pending)
-    with self.active_lock.gen_rlock():
-      active_copy = copy.copy(self.active)
-    with self.completed_lock.gen_rlock():
-      completed_copy = copy.copy(self.completed)
-
-    return {
-        'pending': pending_copy,
-        'active': active_copy,
-        'completed': completed_copy,
     }
 
   @overrides

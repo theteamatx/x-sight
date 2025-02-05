@@ -3,11 +3,11 @@
 import unittest
 
 from sight_service.message_queue.interface import IMessageQueue
+from sight_service.message_queue.interface import IncrementalUUID
 from sight_service.message_queue.interface import IUUIDStrategy
 from sight_service.message_queue.interface import MessageState
-from sight_service.message_queue.list_lock_queue import IncrementalUUID
+from sight_service.message_queue.interface import RandomUUID
 from sight_service.message_queue.list_lock_queue import ListLockMessageQueue
-from sight_service.message_queue.list_lock_queue import RandomUUID
 from sight_service.message_queue.message_logger.interface import (
     ILogStorageCollectStrategy
 )
@@ -158,40 +158,6 @@ class TestMessageQueue(unittest.TestCase):
     self.queue.create_active_batch(worker_id='worker1')
     location = self.queue.find_message_location(1)
     self.assertEqual(location, MessageState.ACTIVE)
-
-  def test_get_all_messages(self):
-    """Test get_all_messages() with 2 pending messages and 1 completed message."""
-
-    self.queue.push_message(100)
-    self.queue.push_message(200)
-
-    all_messages = self.queue.get_all_messages()
-    self.assertEqual(len(all_messages['pending']), 2)
-    self.assertEqual(len(all_messages['active']),
-                     0)  # No messages should be in active yet
-    self.assertEqual(len(all_messages['completed']), 0)
-
-    # Process the messages, which should move them
-    # to 'active' under a specific worker_id
-    self.queue.create_active_batch(worker_id='worker1')
-    all_messages = self.queue.get_all_messages()
-
-    # After processing, 'pending' should be empty, 'active'
-    # should have 2 messages under 'worker1'
-    self.assertEqual(len(all_messages['pending']), 0)
-    self.assertIn('worker1', all_messages['active'])
-    self.assertEqual(len(all_messages['active']['worker1']), 2)
-    self.assertEqual(len(all_messages['completed']), 0)
-
-    self.queue.complete_message(1, 'worker1')
-    all_messages = self.queue.get_all_messages()
-
-    # 'pending' should still be empty, 'active' should have
-    # 1 message under 'worker1', and 'completed' should have 1 message
-    self.assertEqual(len(all_messages['pending']), 0)
-    self.assertIn('worker1', all_messages['active'])
-    self.assertEqual(len(all_messages['active']['worker1']), 1)
-    self.assertEqual(len(all_messages['completed']), 1)
 
   def test_add_message_with_uuid(self):
     """Test add_message() with a UUID ID generator."""

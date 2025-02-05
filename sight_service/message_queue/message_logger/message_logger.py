@@ -42,7 +42,8 @@ class MessageFlowLogger:
                         state,
                         message_id,
                         worker_id=None,
-                        message_details=None):
+                        message_details=None,
+                        **kwargs):
     """Logs the state of a message to the log buffer.
 
     Args:
@@ -50,6 +51,7 @@ class MessageFlowLogger:
       message_id: The ID of the message.
       worker_id: The ID of the worker processing the message.
       message_details: Additional details about the message.
+      **kwargs : keyword arguments
     """
     log_entry = {
         "state": state,
@@ -57,6 +59,7 @@ class MessageFlowLogger:
         "worker_id": worker_id,
         "message_details": message_details,
         "timestamp": datetime.utcnow().isoformat(),
+        **kwargs
     }
     self.log_buffer.put(log_entry)  # Add to buffer
     if self.log_buffer.qsize() >= self.chunk_size:

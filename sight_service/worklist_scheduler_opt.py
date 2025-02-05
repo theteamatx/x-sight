@@ -131,6 +131,7 @@ class WorklistScheduler(SingleActionOptimizer):
     method_name = "decision_point"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
+    # very heavy operation ( but its not hapeening as we are short-ciruting decision-point with worker-alive)
     all_active_messages = self.queue.get_active()
 
     response = service_pb2.DecisionPointResponse()
