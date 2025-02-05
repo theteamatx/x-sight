@@ -26,7 +26,7 @@ class MessageFlowLogger:
   def __init__(
       self,
       storage_strategy: ILogStorageCollectStrategy,
-      chunk_size=100,
+      chunk_size=500,
       flush_interval=5,
   ):
     self.log_buffer = Queue()  # Thread-safe buffer
