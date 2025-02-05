@@ -13,6 +13,16 @@
 # limitations under the License.
 """Demo of using the Sight Decision API to run forest simulator."""
 
+import time
+import warnings
+
+
+def warn(*args, **kwargs):
+  pass
+
+
+warnings.warn = warn
+
 import asyncio
 import os
 import time
@@ -32,6 +42,7 @@ from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
+import yaml
 
 
 def warn(*args, **kwargs):
@@ -117,18 +128,37 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
       logging.info(
           f"Propose actions took {x_end_time - x_start_time:.4f} seconds.")
 
+      logging.info("waiting for all get outcome to finish.....")
       diff_time_series = await asyncio.gather(*tasks)
 
-      logging.info("waiting for all get outcome to finish.....")
       logging.info("all get outcome are finished.....")
       logging.info(f'Combine Series : {diff_time_series}')
 
 
 def main_wrapper(argv):
   with get_sight_instance() as sight:
-    decision.run(action_attrs=fvs_api.get_action_attrs(),
-                 outcome_attrs=fvs_api.get_outcome_attrs(),
-                 sight=sight)
+    # decision.run(action_attrs=fvs_api.get_action_attrs(),
+    #              outcome_attrs=fvs_api.get_outcome_attrs(),
+    #              sight=sight)
+    questions_config = utils.load_yaml_config('fvs_sight/question_config.yaml')
+    optimizers_config = utils.load_yaml_config(
+        'fvs_sight/optimizer_config.yaml')
+    workers_config = utils.load_yaml_config('fvs_sight/worker_config.yaml')
+
+    for question_label, question_config in question_configs.items():
+      optimizer_type = optimizer_configs[question_label]['optimizer']
+      optimizer_config = optimizer_configs[question_label]
+      print('optimizer_config : ', optimizer_config)
+
+      # Configure decision and launch trials
+      opt_obj, decision_configuration = configure_decision(
+          sight, question_label, question_config, optimizer_config,
+          optimizer_type)
+      trials.launch(decision_configuration, sight)
+
+      # Start worker jobs
+      start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type)
+
     start_time = time.perf_counter()
     sleep_time_in_min = 5
     logging.info(

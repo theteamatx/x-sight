@@ -34,7 +34,6 @@ from sight import data_structures
 from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
-from sight.widgets.decision import utils
 
 FLAGS = flags.FLAGS
 
@@ -88,20 +87,18 @@ def main(argv: Sequence[str]) -> None:
 
   with get_sight_instance() as sight:
 
-    questions_config = utils.load_yaml_config('fvs_sight/question_config.yaml')
-    optimizers_config = utils.load_yaml_config(
-        'fvs_sight/optimizer_config.yaml')
-    workers_config = utils.load_yaml_config('fvs_sight/worker_config.yaml')
+    if (FLAGS.parent_id):
+      sight_obj = sight_pb2.Object()
+      sight_obj.sub_type = sight_pb2.Object.SubType.ST_LINK
+      sight_obj.link.linked_sight_id = FLAGS.parent_id
+      sight_obj.link.link_type = sight_pb2.Link.LinkType.LT_CHILD_TO_PARENT
+      frame = inspect.currentframe().f_back.f_back.f_back
+      sight.set_object_code_loc(sight_obj, frame)
+      sight.log_object(sight_obj, True)
 
-    for question_label, question_config in questions_config.items():
-      optimizer_config = optimizers_config[question_label]
-      global_config = {
-          'question_config': question_config,
-          'optimizer_config': optimizer_config,
-          'workers_config': workers_config
-      }
-
-      decision.run(sight, configs=global_config, question_label=question_label)
+    decision.run(sight=sight,
+                 question_label=get_question_label(),
+                 driver_fn=driver)
 
 
 if __name__ == "__main__":

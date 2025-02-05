@@ -13,7 +13,12 @@
 # limitations under the License.
 """utility functions to be used in other functionalities."""
 
+import yaml
 
 def is_scalar(value):
   scalar_types = (int, float, str, bool, type(None), bytes)
   return isinstance(value, scalar_types)
+
+def load_yaml_config(file_path):
+  with open(file_path, 'r') as f:
+    return yaml.safe_load(f)

@@ -108,7 +108,8 @@ def get_port_number() -> str:
   if 'PORT' in os.environ:
     return os.environ['PORT']
   # need to use secure channel for cloud run server
-  elif (FLAGS.deployment_mode in ['local', 'vm']):
+  elif (FLAGS.deployment_mode in ['dsub_local', 'local', 'vm'] or
+        ('worker_mode' in FLAGS and FLAGS.worker_mode == 'dsub_local_worker')):
     return '8080'
   else:
     return FLAGS.port
@@ -127,6 +128,7 @@ def _service_addr() -> str:
   else:
     # print('fetching unique string.....')
     try:
+      print('get_service_id()=', get_service_id())
       service_url = subprocess.getoutput(
           'gcloud run services describe'
           f" {_SERVICE_PREFIX}{get_service_id()} --region us-central1 --format='value(status.url)'"
@@ -426,6 +428,21 @@ def generate_id_token():
   return id_token
 
 
+def get_docker0_ip():
+  try:
+    # Run the 'ip addr' command
+    output = subprocess.check_output(['ip', 'addr'], encoding='utf-8')
+
+    # Regex to find the IP address for the docker0 interface
+    match = re.search(r'docker0.*?inet (\d+\.\d+\.\d+\.\d+)', output, re.DOTALL)
+    if match:
+      return match.group(1)
+    else:
+      raise RuntimeError("docker0 interface not found")
+  except Exception as e:
+    return f"Error: {e}"
+
+
 def obtain_secure_channel(options=None):
   """create secure channel to communicate with server.
 
@@ -463,10 +480,12 @@ def obtain_insecure_channel(options):
   """
   if 'IP_ADDR' in os.environ:
     host = os.environ["IP_ADDR"]
+  # elif FLAGS.worker_mode=='dsub_local_worker':
+  #   host = get_docker0_ip()
   else:
     host = 'localhost'
   target = '{}:{}'.format(host, get_port_number())
-  # print("service_url here : ", targpending action ids :et)
+  # print("service_url here : ", target)
 
   channel = grpc.insecure_channel(
       target,
@@ -483,8 +502,10 @@ def generate_metadata():
       ('grpc.max_receive_message_length', 512 * 1024 * 1024),
   ]
 
-  if 'IP_ADDR' in os.environ or ('deployment_mode' in FLAGS and
-                                 FLAGS.deployment_mode in ['local', 'vm']):
+  if 'IP_ADDR' in os.environ or (
+      'deployment_mode' in FLAGS and
+      FLAGS.deployment_mode in ['dsub_local', 'local', 'vm']) or (
+          'worker_mode' in FLAGS and FLAGS.worker_mode == 'dsub_local_worker'):
 
     channel = obtain_insecure_channel(channel_opts)
     sight_service = service_pb2_grpc.SightServiceStub(channel)

@@ -30,8 +30,9 @@ import math
 
 from absl import app
 from absl import flags
-from dotenv import load_dotenv
+
 import grpc
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -41,10 +42,12 @@ import time
 from typing import Any, Dict, List, Tuple
 import uuid
 
-# from overrides import overrides
-from readerwriterlock import rwlock
-from sight.proto import sight_pb2
+from typing import Any, Dict, List, Tuple, Optional, Union
+from collections import defaultdict
+import time
+
 # from sight_service import service_utils
+from sight.proto import sight_pb2
 # from sight_service.acme_optimizer import Acme
 from sight_service.bayesian_opt import BayesianOpt
 from sight_service.exhaustive_search import ExhaustiveSearch
@@ -58,6 +61,7 @@ from sight_service.sensitivity_analysis import SensitivityAnalysis
 from sight_service.smc_py import SMCPy
 from sight_service.vizier import Vizier
 from sight_service.worklist_scheduler_opt import WorklistScheduler
+from readerwriterlock import rwlock
 
 _PORT = flags.DEFINE_integer('port', 8080, 'The port to listen on')
 _resolve_times = []
@@ -124,7 +128,7 @@ class Optimizers:
   """
 
   def __init__(self):
-    self.instances: Dict[str, OptimizerInstance] = {}
+    self.instances: Dict[str, Dict[str, OptimizerInstance]] = defaultdict(dict)
     self.instances_lock = rwlock.RWLockFair()
 
   def launch(self,
@@ -138,43 +142,58 @@ class Optimizers:
                   optimizer_type)
     with self.instances_lock.gen_wlock():
       if optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER:
-        self.instances[request.client_id] = Vizier()
-        return self.instances[request.client_id].launch(request)
+        self.instances[request.client_id][request.question_label] = Vizier()
+        return self.instances[request.client_id][request.question_label].launch(
+            request)
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_GENETIC_ALGORITHM:
-        self.instances[request.client_id] = GeneticAlgorithm()
-        return self.instances[request.client_id].launch(request)
+        self.instances[request.client_id][
+            request.question_label] = GeneticAlgorithm()
+        return self.instances[request.client_id][request.question_label].launch(
+            request)
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_EXHAUSTIVE_SEARCH:
-        self.instances[request.client_id] = ExhaustiveSearch()
-        return self.instances[request.client_id].launch(request)
+        self.instances[request.client_id][
+            request.question_label] = ExhaustiveSearch()
+        return self.instances[request.client_id][request.question_label].launch(
+            request)
       # elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_ACME:
-      #   self.instances[request.client_id] = Acme()
-      #   obj = self.instances[request.client_id].launch(request)
-      #   # logging.debug("self of optimizers class:  %s", str(self.__dict__))
+      #   self.instances[request.client_id][request.question_label] = Acme()
+      #   obj = self.instances[request.client_id][request.question_label].launch(request)
+      #   # logging.info("self of optimizers class:  %s", str(self.__dict__))
       #   return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_LLM:
-        self.instances[request.client_id] = LLM()
-        obj = self.instances[request.client_id].launch(request)
+        self.instances[request.client_id][request.question_label] = LLM()
+        obj = self.instances[request.client_id][request.question_label].launch(
+            request)
         return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT:
-        self.instances[request.client_id] = BayesianOpt()
-        obj = self.instances[request.client_id].launch(request)
+        self.instances[request.client_id][
+            request.question_label] = BayesianOpt()
+        obj = self.instances[request.client_id][request.question_label].launch(
+            request)
         return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SENSITIVITY_ANALYSIS:
-        self.instances[request.client_id] = SensitivityAnalysis()
-        obj = self.instances[request.client_id].launch(request)
+        self.instances[request.client_id][
+            request.question_label] = SensitivityAnalysis()
+        obj = self.instances[request.client_id][request.question_label].launch(
+            request)
         return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_NEVER_GRAD:
-        self.instances[request.client_id] = NeverGradOpt()
-        obj = self.instances[request.client_id].launch(request)
+        self.instances[request.client_id][
+            request.question_label] = NeverGradOpt()
+        obj = self.instances[request.client_id][request.question_label].launch(
+            request)
         return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY:
-        self.instances[request.client_id] = SMCPy()
-        obj = self.instances[request.client_id].launch(request)
+        self.instances[request.client_id][request.question_label] = SMCPy()
+        obj = self.instances[request.client_id][request.question_label].launch(
+            request)
         return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER:
-        self.instances[request.client_id] = WorklistScheduler(
-            meta_data={"mq_batch_size": mq_batch_size})
-        obj = self.instances[request.client_id].launch(request)
+        self.instances[request.client_id][
+            request.question_label] = WorklistScheduler(
+                meta_data={"mq_batch_size": mq_batch_size})
+        obj = self.instances[request.client_id][request.question_label].launch(
+            request)
         return obj
       else:
         return service_pb2.LaunchResponse(
@@ -183,23 +202,29 @@ class Optimizers:
     logging.debug("<<<<<< Out %s method of %s file.",
                   sys._getframe().f_code.co_name, os.path.basename(__file__))
 
-  def get_instance(self, client_id: str) -> OptimizerInstance:
-    # logging.debug(">>>>>>>  In %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
+  # def get_instance(self, client_id: str, question: str) -> OptimizerInstance:
+  #   # method_name = "get_instance"
+  #   # logging.debug(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+  #   with self.instances_lock.gen_rlock():
+  #     if (client_id in self.instances):
+  #       instance_obj = self.instances[client_id][question]
+  #       return instance_obj
+  #     else:
+  #       #add better mechanism, this require in close rpc for now
+  #       return None
+  #   # logging.debug("<<<<<< Out %s method of %s file.", method_name, _file_name)
+
+  def get_instance(
+      self,
+      client_id: str,
+      question: Optional[str] = None) -> Union[OptimizerInstance, None]:
     with self.instances_lock.gen_rlock():
-      if (client_id in self.instances):
-        instance_obj = self.instances[client_id]
-        return instance_obj
-      else:
-        #add better mechanism, this require in close rpc for now
-        return None
-    # logging.debug("<<<<<< Out %s method of %s file.", sys._getframe().f_code.co_name, os.path.basename(__file__))
-
-
-import json
-from typing import Any, Callable, Dict, List, Optional
-
-from sight.proto import sight_pb2
-from sight_service.proto import service_pb2
+      if client_id in self.instances:
+        if question is None:
+          # Return all instances for this client_id
+          return self.instances[client_id]
+        return self.instances[client_id].get(question)
+      return None
 
 
 class SightService(service_pb2_grpc.SightServiceServicer):
@@ -231,39 +256,42 @@ class SightService(service_pb2_grpc.SightServiceServicer):
   @rpc_call
   def DecisionPoint(self, request, context):
     return self.optimizers.get_instance(
-        request.client_id).decision_point(request)
+        request.client_id, request.question_label).decision_point(request)
 
   @rpc_call
   def Tell(self, request, context):
-    return self.optimizers.get_instance(request.client_id).tell(request)
+    return self.optimizers.get_instance(request.client_id,
+                                        request.question_label).tell(request)
 
   @rpc_call
   def Listen(self, request, context):
-    return self.optimizers.get_instance(request.client_id).listen(request)
+    return self.optimizers.get_instance(request.client_id,
+                                        request.question_label).listen(request)
 
   @rpc_call
   def CurrentStatus(self, request, context):
     return self.optimizers.get_instance(
-        request.client_id).current_status(request)
+        request.client_id, request.question_label).current_status(request)
 
   @rpc_call
   def FetchOptimalAction(self, request, context):
     return self.optimizers.get_instance(
-        request.client_id).fetch_optimal_action(request)
+        request.client_id, request.question_label).fetch_optimal_action(request)
 
   @rpc_call
   def ProposeAction(self, request, context):
     return self.optimizers.get_instance(
-        request.client_id).propose_action(request)
+        request.client_id, request.question_label).propose_action(request)
 
   @rpc_call
   def GetOutcome(self, request, context):
-    return self.optimizers.get_instance(request.client_id).GetOutcome(request)
+    return self.optimizers.get_instance(
+        request.client_id, request.question_label).GetOutcome(request)
 
   @rpc_call
   def FinalizeEpisode(self, request, context):
     return self.optimizers.get_instance(
-        request.client_id).finalize_episode(request)
+        request.client_id, request.question_label).finalize_episode(request)
 
   @rpc_call
   def Launch(self, request, context):
@@ -276,17 +304,25 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
   @rpc_call
   def Close(self, request, context):
-    # only call if it's launch called, otherwise no entry of opt for that client
-    if (self.optimizers.get_instance(request.client_id)):
-      obj = self.optimizers.get_instance(request.client_id).close(request)
-    else:
-      obj = service_pb2.CloseResponse()
+
+    with self.optimizers.instances_lock.gen_rlock():
+      instances = self.optimizers.get_instance(request.client_id)
+      if instances:
+        for question, obj in instances.items():
+          obj = obj.close(request)
+      else:
+        logging.info(
+            "client id not present in server, no launch ever called for this client??"
+        )
+        obj = service_pb2.CloseResponse()
+
     #? do we need to remove entry from optimizer dict, if available??
     return obj
 
   @rpc_call
   def WorkerAlive(self, request, context):
-    return self.optimizers.get_instance(request.client_id).WorkerAlive(request)
+    return self.optimizers.get_instance(
+        request.client_id, request.question_label).WorkerAlive(request)
 
 
 def serve():

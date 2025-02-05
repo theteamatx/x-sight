@@ -65,7 +65,6 @@ async def fetch_outcome(sight_id, actions_id):
     except Exception as e:
       raise e
 
-
 async def asyncio_wrapper(blocking_func, *args, max_threads=-1):
   """Wrapper to execute a blocking function using asyncio.to_thread.
 
@@ -97,7 +96,7 @@ async def asyncio_wrapper(blocking_func, *args, max_threads=-1):
     return await asyncio.to_thread(blocking_func, *args)
 
 
-async def propose_actions(sight, action_dict, custom_part="sight_cache"):
+async def propose_actions(sight, question_label, action_dict, custom_part="sight_cache"):
 
   key_maker = CacheKeyMaker()
   cache_key = key_maker.make_custom_key(custom_part, action_dict)
@@ -112,11 +111,11 @@ async def propose_actions(sight, action_dict, custom_part="sight_cache"):
     print('Getting response from cache !!')
     return outcome
 
-  # unique_action_id = decision.propose_actions(sight, action_dict)
+  # unique_action_id = decision.propose_actions(sight, question_label, action_dict)
   # unique_action_id = await asyncio.to_thread(decision.propose_actions, sight,
   #                                            action_dict)
   unique_action_id = await asyncio_wrapper(decision.propose_actions, sight,
-                                           action_dict)
+                                            question_label, action_dict)
   await push_message(sight.id, unique_action_id)
   response = await fetch_outcome(sight.id, unique_action_id)
   outcome = response.get('outcome', None)
