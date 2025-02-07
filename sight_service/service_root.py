@@ -305,14 +305,25 @@ class SightService(service_pb2_grpc.SightServiceServicer):
   @rpc_call
   def Close(self, request, context):
 
+    logging.info('request in close is : %s', request)
     with self.optimizers.instances_lock.gen_rlock():
-      instances = self.optimizers.get_instance(request.client_id)
-      if instances:
-        for question, obj in instances.items():
-          obj = obj.close(request)
+      # there is an issue with this : even one of the worker calls the close,
+      # this will call the close on the optimizer - need to fix this
+      if request.HasField("question_label"):
+        instance = self.optimizers.get_instance(request.client_id,
+                                                 request.question_label)
+        # print('*********lenght of instances : ', len(instances))
+        if instance:
+        #   for question, obj in instances.items():
+          obj = instance.close(request)
+        else:
+          logging.info(
+              "client id not present in server, no launch ever called for this client??"
+          )
+          obj = service_pb2.CloseResponse()
       else:
         logging.info(
-            "client id not present in server, no launch ever called for this client??"
+            "root process close called"
         )
         obj = service_pb2.CloseResponse()
 
@@ -321,6 +332,7 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
   @rpc_call
   def WorkerAlive(self, request, context):
+    logging.info('called worker_alive for lable %s', request.question_label)
     return self.optimizers.get_instance(
         request.client_id, request.question_label).WorkerAlive(request)
 

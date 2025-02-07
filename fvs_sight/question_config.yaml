@@ -1,16 +1,16 @@
-# Q_label1:
-#   action:
-#     "1":
-#       "min_value": 100
-#       "max_value": 150
-#     "2":
-#       "min_value": 100
-#       "max_value": 150
-#     "3":
-#       "min_value": 100
-#       "max_value": 150
-#   state: {}
-#   outcome: {}
+Q_label1:
+  action:
+    "1":
+      "min_value": 100
+      "max_value": 150
+    "2":
+      "min_value": 100
+      "max_value": 150
+    "3":
+      "min_value": 100
+      "max_value": 150
+  state: {}
+  outcome: {}
 # Q_label2:
 #   action:
 #     '1' :

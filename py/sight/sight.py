@@ -403,6 +403,8 @@ class Sight(object):
     # last rpc call to server for this sight id
     req = service_pb2.CloseRequest()
     req.client_id = str(self.id)
+    if 'PARENT_LOG_ID' in os.environ:
+      req.question_label = self.params.label
     response = service.call(lambda s, meta: s.Close(req, 300, metadata=meta))
     # print("close rpc status :", response.response_str)
     self.close()
@@ -678,7 +680,7 @@ class Sight(object):
       ).pos()
       obj.block_end.location_of_block_start = self.open_block_start_locations.get(
       )[-1]
-      
+
 
       elapsed_time_ns = time.time_ns() - self.active_block_start_time.get()[-1]
       obj.block_end.metrics.elapsed_time_ns = elapsed_time_ns

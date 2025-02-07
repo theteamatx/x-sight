@@ -664,6 +664,7 @@ def run(
   else:
     optimizer.obj = setup_optimizer(sight, _OPTIMIZER_TYPE.value)
     client_id, worker_location = _configure_client_and_worker(sight=sight)
+    count=0
     while True:
       # #? new rpc just to check move forward or not?
 
@@ -679,6 +680,9 @@ def run(
         break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+        count+=1
+        if(count>2):
+          break
         logging.info('Retrying in 5 seconds......')
         time.sleep(5)
       elif (response.status_type ==

@@ -84,7 +84,7 @@ class WorklistScheduler(SingleActionOptimizer):
     unique_id = self.queue.push_message(message)
 
     response = service_pb2.ProposeActionResponse(action_id=unique_id)
-    logging.info("self.queue => %s", self.queue)
+    # logging.info("self.queue => %s", self.queue)
     return response
 
   @overrides
@@ -166,7 +166,7 @@ class WorklistScheduler(SingleActionOptimizer):
               action=convert_proto_to_dict(proto=request.decision_messages[i].
                                            decision_point.choice_params)))
 
-    logging.info("self.queue => %s", self.queue)
+    # logging.info("self.queue => %s", self.queue)
 
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
@@ -226,7 +226,7 @@ class WorklistScheduler(SingleActionOptimizer):
         decision_message.action.CopyFrom(convert_dict_to_proto(dict=msg.action))
 
     response.status_type = worker_alive_status
-    logging.info("self.queue => %s", self.queue)
+    # logging.info("self.queue => %s", self.queue)
     logging.info("worker_alive_status is %s", worker_alive_status)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return response

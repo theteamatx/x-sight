@@ -1,10 +1,10 @@
 generic_worker1:
   docker: "gcr.io/cameltrain/test-generic-worker-local:latest"
-  binary: "py/sight/demo/fn_sphere1.py"
+  binary: "py/sight/demo/w1.py"
 
 generic_worker2:
   docker: "gcr.io/cameltrain/test-generic-worker-local:latest"
-  binary: "py/sight/demo/fn_sphere2.py"
+  binary: "py/sight/demo/w2.py"
 
 fvs_worker:
   docker: "gcr.io/cameltrain/test-generic-worker-local:latest"

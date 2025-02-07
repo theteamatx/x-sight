@@ -322,6 +322,7 @@ def main_wrapper(argv):
     optimizer_configs = utils.load_yaml_config(FLAGS.optimizer_config_path)
     worker_configs = utils.load_yaml_config(FLAGS.worker_config_path)
 
+    # put this in function
     for question_label, question_config in question_configs.items():
       optimizer_type = optimizer_configs[question_label]['optimizer']
       optimizer_config = optimizer_configs[question_label]
@@ -336,10 +337,10 @@ def main_wrapper(argv):
       # Start worker jobs
       start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type)
 
-      # # propose_action()
-      asyncio.run(
-          propose_actions_wrapper(sight, question_label,
-                                  optimizer_config['num_questions']))
+      # # # propose_action()
+      # asyncio.run(
+      #     propose_actions_wrapper(sight, question_label,
+      #                             optimizer_config['num_questions']))
 
   # end_time = time.perf_counter()
   # utility.calculate_exp_time(start_time, end_time)

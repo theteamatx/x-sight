@@ -323,9 +323,9 @@ class MessageQueue(IMessageQueue[T]):
         del self.active[worker_id][message_id]
 
         if update_fn is not None:
-          logging.info('Before update_fn msg: %s', message)
+          # logging.info('Before update_fn msg: %s', message)
           message = update_fn(message)  # Apply the lambda to update the message
-          logging.info('After update_fn msg: %s', message)
+          # logging.info('After update_fn msg: %s', message)
 
         with self.completed_lock.gen_wlock():
           self.completed[message_id] = message
