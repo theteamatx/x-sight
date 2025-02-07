@@ -4,11 +4,6 @@ import os
 import shutil
 import unittest
 
-from sight_service.message_queue.interface import IMessageQueue
-from sight_service.message_queue.interface import IncrementalUUID
-from sight_service.message_queue.interface import IUUIDStrategy
-from sight_service.message_queue.interface import MessageState
-from sight_service.message_queue.interface import RandomUUID
 from sight_service.message_queue.list_lock_queue import ListLockMessageQueue
 from sight_service.message_queue.message_logger.interface import (
     ILogStorageCollectStrategy
@@ -16,6 +11,11 @@ from sight_service.message_queue.message_logger.interface import (
 from sight_service.message_queue.message_logger.log_storage_collect import (
     CachedBasedLogStorageCollectStrategy
 )
+from sight_service.message_queue.mq_interface import IMessageQueue
+from sight_service.message_queue.mq_interface import IncrementalUUID
+from sight_service.message_queue.mq_interface import IUUIDStrategy
+from sight_service.message_queue.mq_interface import MessageState
+from sight_service.message_queue.mq_interface import RandomUUID
 from sight_service.tests import colorful_tests
 
 

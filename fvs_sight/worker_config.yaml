@@ -1,3 +1,7 @@
+generic_worker0:
+  docker: "gcr.io/cameltrain/kokua-workers:f92d941"
+  binary: "fvs_sight/fvs_sight_worker.py"
+
 generic_worker1:
   docker: "gcr.io/cameltrain/test-generic-worker-local:latest"
   binary: "py/sight/demo/fn_sphere1.py"

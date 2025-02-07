@@ -7,11 +7,6 @@ from typing import Any, Callable, Dict, Optional, TypeVar
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
-from sight_service.message_queue.interface import ID
-from sight_service.message_queue.interface import IMessageQueue
-from sight_service.message_queue.interface import IncrementalUUID
-from sight_service.message_queue.interface import IUUIDStrategy
-from sight_service.message_queue.interface import MessageState
 from sight_service.message_queue.message_logger.interface import (
     ILogStorageCollectStrategy
 )
@@ -21,6 +16,11 @@ from sight_service.message_queue.message_logger.log_storage_collect import (
 from sight_service.message_queue.message_logger.message_logger import (
     MessageFlowLogger
 )
+from sight_service.message_queue.mq_interface import ID
+from sight_service.message_queue.mq_interface import IMessageQueue
+from sight_service.message_queue.mq_interface import IncrementalUUID
+from sight_service.message_queue.mq_interface import IUUIDStrategy
+from sight_service.message_queue.mq_interface import MessageState
 
 # Define a generic type variable for messages
 T = TypeVar('T')
@@ -205,8 +205,8 @@ class ListLockMessageQueue(IMessageQueue[T]):
         message = update_fn(message)  # Apply the lambda to update the message
         logging.info('After update_fn msg: %s', message)
 
-      with self.completed_lock.gen_wlock():
-        self.completed[message_id] = message
+    with self.completed_lock.gen_wlock():
+      self.completed[message_id] = message
 
     time_taken_in_second = time.time() - start_time
     ## log the message to logger

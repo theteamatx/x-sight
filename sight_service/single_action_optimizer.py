@@ -18,8 +18,6 @@ import datetime
 from typing import Dict
 
 from helpers.logs.logs_handler import logger as logging
-from sight_service.message_queue.interface import IMessageQueue
-from sight_service.message_queue.interface import IUUIDStrategy
 from sight_service.message_queue.message_logger.interface import (
     ILogStorageCollectStrategy
 )
@@ -29,6 +27,8 @@ from sight_service.message_queue.message_logger.log_storage_collect import (
 from sight_service.message_queue.message_logger.log_storage_collect import (
     NoneLogStorageCollectStrategy
 )
+from sight_service.message_queue.mq_interface import IMessageQueue
+from sight_service.message_queue.mq_interface import IUUIDStrategy
 from sight_service.message_queue.queue_factory import queue_factory
 from sight_service.optimizer_instance import OptimizerInstance
 
