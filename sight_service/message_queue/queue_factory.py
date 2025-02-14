@@ -1,9 +1,15 @@
 """Factory for creating message queues."""
 
-from .interface import IUUIDStrategy
-from .list_lock_queue import IncrementalUUID
-from .list_lock_queue import ListLockMessageQueue
-from .message_logger.interface import ILogStorageCollectStrategy
+from sight_service.message_queue.list_lock_queue import IncrementalUUID
+from sight_service.message_queue.list_lock_queue import ListLockMessageQueue
+from sight_service.message_queue.list_shared_lock_queue import (
+    ListSharedLockMessageQueue
+)
+from sight_service.message_queue.message_logger.interface import (
+    ILogStorageCollectStrategy
+)
+from sight_service.message_queue.mq_interface import IUUIDStrategy
+
 from .message_logger.log_storage_collect import (
     CachedBasedLogStorageCollectStrategy
 )
@@ -31,6 +37,12 @@ def queue_factory(
   """
   if queue_type == 'list':
     return ListLockMessageQueue(
+        id_generator=id_generator,
+        batch_size=batch_size,
+        logger_storage_strategy=logger_storage_strategy,
+    )
+  elif queue_type == 'shared_lock_list':
+    return ListSharedLockMessageQueue(
         id_generator=id_generator,
         batch_size=batch_size,
         logger_storage_strategy=logger_storage_strategy,

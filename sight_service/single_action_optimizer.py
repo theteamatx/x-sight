@@ -98,7 +98,7 @@ class SingleActionOptimizer(OptimizerInstance):
             },
         ))
     self.queue: IMessageQueue = queue_factory(
-        queue_type="list",
+        queue_type="shared_lock_list",
         batch_size=batch_size,
         logger_storage_strategy=logger_storage_strategy,
     )

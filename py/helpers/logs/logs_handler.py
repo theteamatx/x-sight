@@ -12,7 +12,7 @@ import logging
 from google.cloud import logging as cloud_logging
 
 # Set this to True for Cloud logging
-USE_CLOUD_LOGGING = False
+USE_CLOUD_LOGGING = True
 
 
 class CustomAdapter(logging.LoggerAdapter):
@@ -37,4 +37,4 @@ logger.addHandler(handler)
 # adapter = CustomAdapter(logger, {'user': 'meetashah'})
 
 # Example of logging
-# logger.info("This is an info message logged to GCP")
+# logger.info("This is an info message logged to GCP from VM")

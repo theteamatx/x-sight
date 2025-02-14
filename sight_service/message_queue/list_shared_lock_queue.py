@@ -26,7 +26,7 @@ from sight_service.message_queue.mq_interface import MessageState
 T = TypeVar('T')
 
 
-class ListLockMessageQueue(IMessageQueue[T]):
+class ListSharedLockMessageQueue(IMessageQueue[T]):
   """A message queue is a data structure that stores messages.
 
     ##### State machine for each message:
@@ -82,9 +82,7 @@ class ListLockMessageQueue(IMessageQueue[T]):
     self.completed: Dict[ID, T] = {}
 
     self.batch_size = batch_size
-    self.pending_lock = lock_factory()
-    self.active_lock = lock_factory()
-    self.completed_lock = lock_factory()
+    self.shared_lock = lock_factory()
 
     # logger
     self.logger = MessageFlowLogger(storage_strategy=logger_storage_strategy)
@@ -124,7 +122,7 @@ class ListLockMessageQueue(IMessageQueue[T]):
     start_time = time.time()
 
     unique_id = self.id_generator.generate_id()
-    with self.pending_lock.gen_wlock():
+    with self.shared_lock.gen_wlock():
       self.pending[unique_id] = message
 
     time_taken_in_second = time.time() - start_time
@@ -154,13 +152,12 @@ class ListLockMessageQueue(IMessageQueue[T]):
 
     start_time = time.time()
 
-    with self.pending_lock.gen_wlock():
+    with self.shared_lock.gen_wlock():
       for _ in range(min(batch_size, len(self.pending))):
         message_id = next(iter(self.pending))
         message = self.pending.pop(message_id)
         batch[message_id] = message
 
-    with self.active_lock.gen_wlock():
       if worker_id not in self.active:
         self.active[worker_id] = {}
       self.active[worker_id].update(batch)
@@ -191,7 +188,7 @@ class ListLockMessageQueue(IMessageQueue[T]):
 
     start_time = time.time()
 
-    with self.active_lock.gen_wlock():
+    with self.shared_lock.gen_wlock():
       if message_id not in self.active.get(worker_id, {}):
         raise ValueError(
             f'Failed while completing the msg ,as Message ID {message_id} not'
@@ -205,7 +202,6 @@ class ListLockMessageQueue(IMessageQueue[T]):
         message = update_fn(message)  # Apply the lambda to update the message
         logging.info('After update_fn msg: %s', message)
 
-    with self.completed_lock.gen_wlock():
       self.completed[message_id] = message
 
     logging.info('Moved to updated msg to completed with id %s: %s', message_id,
@@ -221,11 +217,9 @@ class ListLockMessageQueue(IMessageQueue[T]):
   @overrides
   def get_status(self) -> Dict[str, int]:
     """Returns the status of the message queue."""
-    with self.pending_lock.gen_rlock():
+    with self.shared_lock.gen_rlock():
       pending_len = len(self.pending)
-    with self.active_lock.gen_rlock():
       active_len = sum(len(batch) for batch in self.active.values())
-    with self.completed_lock.gen_rlock():
       completed_len = len(self.completed)
 
     return {
@@ -237,53 +231,51 @@ class ListLockMessageQueue(IMessageQueue[T]):
   @overrides
   def get_pending(self) -> Dict[ID, T]:
     """Returns all pending messages in the queue."""
-    with self.pending_lock.gen_rlock():
+    with self.shared_lock.gen_rlock():
       return copy.copy(self.pending)
 
   @overrides
   def get_active(self) -> Dict[str, Dict[ID, T]]:
     """Returns all active messages in the queue."""
-    with self.active_lock.gen_rlock():
+    with self.shared_lock.gen_rlock():
       return copy.copy(self.active)
 
   @overrides
   def get_completed(self) -> Dict[ID, T]:
     """Returns all completed messages in the queue."""
-    with self.completed_lock.gen_rlock():
+    with self.shared_lock.gen_rlock():
       return copy.copy(self.completed)
 
   @overrides
   def is_message_in_pending(self, message_id: ID) -> bool:
     """Returns the true if the message in the pending queue."""
-    with self.pending_lock.gen_rlock():
+    with self.shared_lock.gen_rlock():
       return message_id in self.pending
 
   @overrides
   def is_message_in_active(self, message_id: ID) -> bool:
     """Returns the true if the message in the active queue."""
-    with self.active_lock.gen_rlock():
+    with self.shared_lock.gen_rlock():
       for _, messages in self.active.items():
         return message_id in messages
 
   @overrides
   def is_message_in_completed(self, message_id: ID) -> bool:
     """Returns the true if the message in the completed queue."""
-    with self.completed_lock.gen_rlock():
+    with self.shared_lock.gen_rlock():
       return message_id in self.completed
 
   @overrides
   def find_message_location(self, message_id: ID) -> MessageState:
     """Returns the location of the message in the message queue."""
-    with self.pending_lock.gen_rlock():
+    with self.shared_lock.gen_rlock():
       if message_id in self.pending:
         return MessageState.PENDING
 
-    with self.active_lock.gen_rlock():
       for _, messages in self.active.items():
         if message_id in messages:
           return MessageState.ACTIVE
 
-    with self.completed_lock.gen_rlock():
       if message_id in self.completed:
         return MessageState.COMPLETED
 
