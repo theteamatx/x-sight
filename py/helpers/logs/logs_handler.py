@@ -32,7 +32,7 @@ else:
 
 # Set up Python logging
 logger = logging.getLogger("myLogger")
-logger.setLevel(logging.INFO)
+logger.setLevel(logging.DEBUG)
 logger.addHandler(handler)
 # adapter = CustomAdapter(logger, {'user': 'meetashah'})
 

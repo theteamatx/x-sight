@@ -27,7 +27,7 @@ from sight_service.proto import service_pb2
 from sight_service.single_action_optimizer import MessageDetails
 from sight_service.single_action_optimizer import SingleActionOptimizer
 
-_file_name = "exhaustive_search.py"
+_file_name = "worklist_scheduler_opt.py"
 
 
 class WorklistScheduler(SingleActionOptimizer):
@@ -84,7 +84,7 @@ class WorklistScheduler(SingleActionOptimizer):
     unique_id = self.queue.push_message(message)
 
     response = service_pb2.ProposeActionResponse(action_id=unique_id)
-    logging.info("self.queue => %s", self.queue)
+    logging.debug("self.queue => %s", self.queue)
     return response
 
   @overrides
@@ -144,7 +144,7 @@ class WorklistScheduler(SingleActionOptimizer):
     response.action.CopyFrom(convert_dict_to_proto(dict=next_action))
     response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    logging.info('self.queue ==> %s', self.queue)
+    logging.debug('self.queue => %s', self.queue)
     return response
 
   @overrides
@@ -154,9 +154,13 @@ class WorklistScheduler(SingleActionOptimizer):
     method_name = "finalize_episode"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-    # logging.info("self.queue => %s", self.queue)
+    # logging.debug("self.queue => %s", self.queue)
+
+    logging.debug('we have decision messages %s',
+                  len(request.decision_messages))
 
     for i in range(len(request.decision_messages)):
+      logging.debug('calling queue.complete_message for %s th msg', i)
       self.queue.complete_message(
           worker_id=request.worker_id,
           message_id=request.decision_messages[i].action_id,
@@ -167,7 +171,7 @@ class WorklistScheduler(SingleActionOptimizer):
               action=convert_proto_to_dict(proto=request.decision_messages[i].
                                            decision_point.choice_params)))
 
-    logging.info("self.queue => %s", self.queue)
+    logging.debug("self.queue => %s", self.queue)
 
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
@@ -210,7 +214,7 @@ class WorklistScheduler(SingleActionOptimizer):
   ) -> service_pb2.WorkerAliveResponse:
     method_name = "WorkerAlive"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
-    # logging.info("self.queue => %s", self.queue)
+    # logging.debug("self.queue => %s", self.queue)
 
     response = service_pb2.WorkerAliveResponse()
 
@@ -227,7 +231,7 @@ class WorklistScheduler(SingleActionOptimizer):
         decision_message.action.CopyFrom(convert_dict_to_proto(dict=msg.action))
 
     response.status_type = worker_alive_status
-    logging.info("self.queue => %s", self.queue)
+    logging.debug("self.queue => %s", self.queue)
     logging.info("worker_alive_status is %s", worker_alive_status)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return response

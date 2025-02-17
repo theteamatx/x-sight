@@ -187,7 +187,7 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
     """
 
     start_time = time.time()
-
+    logging.debug('Starting the completing the message: %s', message_id)
     with self.shared_lock.gen_wlock():
       if message_id not in self.active.get(worker_id, {}):
         raise ValueError(
@@ -198,14 +198,14 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
       del self.active[worker_id][message_id]
 
       if update_fn is not None:
-        logging.info('Before update_fn msg: %s', message)
+        logging.debug('Before update_fn msg: %s', message)
         message = update_fn(message)  # Apply the lambda to update the message
-        logging.info('After update_fn msg: %s', message)
+        logging.debug('After update_fn msg: %s', message)
 
       self.completed[message_id] = message
 
-    logging.info('Moved to updated msg to completed with id %s: %s', message_id,
-                 message)
+    logging.debug('Moved to updated msg to completed with id %s: %s',
+                  message_id, message)
 
     time_taken_in_second = time.time() - start_time
     ## log the message to logger
