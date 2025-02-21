@@ -229,7 +229,7 @@ def main_wrapper(argv):
       # Start worker jobs
       start_worker_jobs(sight, optimizer_config, workers_config, optimizer_type)
 
-      time_in_min = 5
+      time_in_min = 1
       print(f'waiting for {time_in_min} min')
       time.sleep(time_in_min * 60)
       # # propose_action()

@@ -12,7 +12,7 @@ import logging
 from google.cloud import logging as cloud_logging
 
 # Set this to True for Cloud logging
-USE_CLOUD_LOGGING = True
+USE_CLOUD_LOGGING = False
 
 
 class CustomAdapter(logging.LoggerAdapter):
@@ -32,7 +32,7 @@ else:
 
 # Set up Python logging
 logger = logging.getLogger("myLogger")
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 logger.addHandler(handler)
 # adapter = CustomAdapter(logger, {'user': 'meetashah'})
 

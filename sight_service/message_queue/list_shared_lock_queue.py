@@ -70,11 +70,11 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
       batch_size: int = 1,
       lock_factory: Callable[[], rwlock.RWLockFairD] = rwlock.RWLockFairD,
       logger_storage_strategy:
-      ILogStorageCollectStrategy = NoneLogStorageCollectStrategy,
+      ILogStorageCollectStrategy = NoneLogStorageCollectStrategy(),
   ):
 
     if logger_storage_strategy is None:
-      logger_storage_strategy = NoneLogStorageCollectStrategy
+      logger_storage_strategy = NoneLogStorageCollectStrategy()
 
     self.id_generator = id_generator
     self.pending: Dict[ID, T] = {}
@@ -88,7 +88,9 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
     self.logger = MessageFlowLogger(storage_strategy=logger_storage_strategy)
 
   def __str__(self) -> str:
+    # return 'NOT PRINTING QUEUE'
     messages_status = self.get_status()
+    # active_dict = self.get_active()
     result = ['MessageQueue:']
     result.append('  Pending Messages:')
     result.append(f'    Messages 📩 : {messages_status["pending"]}')
@@ -98,8 +100,8 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
     result.append('  Active Messages:')
     result.append(f'    Messages 📨 : {messages_status["active"]}')
 
-    for worker_id, messages in self.get_active().items():
-      result.append(f'    ID: {worker_id}, Messages 📨: {len(messages)}')
+    # for worker_id, messages in active_dict.items():
+    #   result.append(f'    ID: {worker_id}, Messages 📨: {len(messages)}')
 
     result.append('  Completed Messages:')
     result.append(f'    Messages ✉️ : {messages_status["completed"]}')
@@ -122,8 +124,13 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
     start_time = time.time()
 
     unique_id = self.id_generator.generate_id()
+    logging.debug(
+        'in function %s => starting push message for msg %s with unqiue id %s ',
+        self.push_message.__name__, message, unique_id)
     with self.shared_lock.gen_wlock():
       self.pending[unique_id] = message
+    logging.info('in function %s => shared_lock released for msg %s => %s ',
+                 self.push_message.__name__, message, unique_id)
 
     time_taken_in_second = time.time() - start_time
     # log the message to logger
@@ -146,6 +153,11 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
     Returns:
       A dictionary of messages that were processed, keyed by message ID.
     """
+
+    logging.debug(
+        'in function %s => Starting the create active batch for worker_id: %s ',
+        self.create_active_batch.__name__, worker_id)
+
     batch_size = (new_batch_size
                   if new_batch_size is not None else self.batch_size)
     batch: Dict[ID, T] = {}
@@ -161,6 +173,9 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
       if worker_id not in self.active:
         self.active[worker_id] = {}
       self.active[worker_id].update(batch)
+
+    logging.debug('in function %s => shared_lock released : for worker id %s',
+                  self.create_active_batch.__name__, worker_id)
 
     time_taken_in_second = time.time() - start_time
     ## log the messages to logger
@@ -187,7 +202,9 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
     """
 
     start_time = time.time()
-    logging.debug('Starting the completing the message: %s', message_id)
+    logging.debug(
+        'in function %s =>  Starting the completing the message: %s for worker_id %s ',
+        self.complete_message.__name__, message_id, worker_id)
     with self.shared_lock.gen_wlock():
       if message_id not in self.active.get(worker_id, {}):
         raise ValueError(
@@ -204,8 +221,13 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
 
       self.completed[message_id] = message
 
-    logging.debug('Moved to updated msg to completed with id %s: %s',
-                  message_id, message)
+    logging.debug(
+        'in function %s => Moved to updated msg to completed with id %s => %s for worker_id %s',
+        self.complete_message.__name__, message_id, message, worker_id)
+
+    logging.debug(
+        'in function %s => shared_lock released : %s => %s for worker_id %s',
+        self.complete_message.__name__, message_id, message, worker_id)
 
     time_taken_in_second = time.time() - start_time
     ## log the message to logger
@@ -217,10 +239,13 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
   @overrides
   def get_status(self) -> Dict[str, int]:
     """Returns the status of the message queue."""
+    logging.debug('in function %s => starting ', self.get_status.__name__)
     with self.shared_lock.gen_rlock():
       pending_len = len(self.pending)
       active_len = sum(len(batch) for batch in self.active.values())
       completed_len = len(self.completed)
+    logging.debug('in function %s => release the read lock ',
+                  self.get_status.__name__)
 
     return {
         'pending': pending_len,
@@ -230,40 +255,68 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
 
   @overrides
   def get_pending(self) -> Dict[ID, T]:
+    logging.debug('in function %s => starting ', self.get_pending.__name__)
     """Returns all pending messages in the queue."""
     with self.shared_lock.gen_rlock():
-      return copy.copy(self.pending)
+      resource = copy.copy(self.pending)
+    logging.debug('in function %s => release the read lock ',
+                  self.get_pending.__name__)
+    return resource
 
   @overrides
   def get_active(self) -> Dict[str, Dict[ID, T]]:
     """Returns all active messages in the queue."""
+    logging.debug('in function %s => starting ', self.get_active.__name__)
     with self.shared_lock.gen_rlock():
-      return copy.copy(self.active)
+      resource = copy.copy(self.active)
+    logging.debug('in function %s => release the read lock ',
+                  self.get_active.__name__)
+    return resource
 
   @overrides
   def get_completed(self) -> Dict[ID, T]:
     """Returns all completed messages in the queue."""
+    logging.debug('in function %s => starting ', self.get_completed.__name__)
     with self.shared_lock.gen_rlock():
-      return copy.copy(self.completed)
+      resource = copy.copy(self.completed)
+    logging.debug('in function %s => release the read lock ',
+                  self.get_completed.__name__)
+    return resource
 
   @overrides
   def is_message_in_pending(self, message_id: ID) -> bool:
     """Returns the true if the message in the pending queue."""
+    logging.debug('in function %s => starting for msg_id %s ',
+                  self.is_message_in_pending.__name__, message_id)
     with self.shared_lock.gen_rlock():
-      return message_id in self.pending
+      is_present = message_id in self.pending
+    logging.debug('in function %s => releasse the read lock %s',
+                  self.is_message_in_pending.__name__, message_id)
+    return is_present
 
   @overrides
   def is_message_in_active(self, message_id: ID) -> bool:
     """Returns the true if the message in the active queue."""
+    logging.debug('in function %s => starting for msg_id %s ',
+                  self.is_message_in_active.__name__, message_id)
     with self.shared_lock.gen_rlock():
       for _, messages in self.active.items():
-        return message_id in messages
+        is_present = message_id in messages
+        break
+    logging.debug('in function %s => releasse the read lock %s',
+                  self.is_message_in_active.__name__, message_id)
+    return is_present
 
   @overrides
   def is_message_in_completed(self, message_id: ID) -> bool:
     """Returns the true if the message in the completed queue."""
+    logging.debug('in function %s => starting for msg_id %s ',
+                  self.is_message_in_completed.__name__, message_id)
     with self.shared_lock.gen_rlock():
-      return message_id in self.completed
+      is_present = message_id in self.completed
+    logging.debug('in function %s => releasse the read lock %s',
+                  self.is_message_in_completed.__name__, message_id)
+    return is_present
 
   @overrides
   def find_message_location(self, message_id: ID) -> MessageState:
