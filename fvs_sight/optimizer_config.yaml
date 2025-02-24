@@ -19,7 +19,7 @@ Q_label3:
   mode: "dsub_cloud_worker" #"dsub_cloud_worker" # dsub_local_worker #(dsub_local, )
   workers:
     # fvs_worker : 1
-    generic_worker0: 100
+    generic_worker0: 200
 # Q_label3 :
 #   optimizer: 'worklist_scheduler'
 #   num_questions: 2

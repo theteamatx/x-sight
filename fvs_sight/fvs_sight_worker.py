@@ -20,6 +20,7 @@ import yaml
 def get_question_label():
   return 'Q_label3'
 
+
 def simulate_fvs(sight, params_dict):
   # print('here params_dict is :', params_dict)
   mitigation_list = [
@@ -27,7 +28,7 @@ def simulate_fvs(sight, params_dict):
   ]
   sim_stream = pd.Series(mitigation_list)
   # any time in between 6-10
-  simulation_time = random.uniform(6, 10)
+  simulation_time = random.uniform(2, 2)
   time.sleep(simulation_time)
   print(f'Sleeping for some time  😪 , {simulation_time}')
   # print(sim_stream)
@@ -67,11 +68,12 @@ def main(argv: Sequence[str]) -> None:
     raise app.UsageError("Too many command-line arguments.")
 
   with get_sight_instance() as sight:
-    decision.run(driver_fn=driver_fn,
-                 sight=sight,
-                #  action_attrs=fvs_api.get_action_attrs(),
-                #  outcome_attrs=fvs_api.get_outcome_attrs(),
-                 question_label=get_question_label())
+    decision.run(
+        driver_fn=driver_fn,
+        sight=sight,
+        #  action_attrs=fvs_api.get_action_attrs(),
+        #  outcome_attrs=fvs_api.get_outcome_attrs(),
+        question_label=get_question_label())
 
 
 if __name__ == "__main__":
