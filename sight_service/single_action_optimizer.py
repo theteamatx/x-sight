@@ -13,20 +13,26 @@
 # limitations under the License.
 """An instance of a Sight optimizer dedicated to a single experiment."""
 
-from concurrent import futures
 import dataclasses
-from datetime import datetime
-from typing import Any, Dict, List, Sequence, Tuple
+import datetime
+from typing import Dict
 
 from helpers.logs.logs_handler import logger as logging
-from sight.proto import sight_pb2
-from sight_service.message_logger import LogStorageCollectStrategy
-from sight_service.message_logger import LogStorageCollectStrategyEmpty
-from sight_service.message_queue import IMessageQueue
-from sight_service.message_queue import IncrementalUUID
-from sight_service.message_queue import MessageQueue
+from sight_service.message_queue.message_logger.interface import (
+    ILogStorageCollectStrategy
+)
+from sight_service.message_queue.message_logger.log_storage_collect import (
+    CachedBasedLogStorageCollectStrategy
+)
+from sight_service.message_queue.message_logger.log_storage_collect import (
+    NoneLogStorageCollectStrategy
+)
+from sight_service.message_queue.mq_interface import IMessageQueue
+from sight_service.message_queue.mq_interface import IUUIDStrategy
+from sight_service.message_queue.queue_factory import queue_factory
 from sight_service.optimizer_instance import OptimizerInstance
-from sight_service.proto import service_pb2
+
+datetime = datetime.datetime
 
 _file_name = "single_action_optimizer.py"
 
@@ -63,7 +69,7 @@ class MessageDetails:
     return self
 
   def __str__(self):
-    return (f"[X]")
+    return f"[X]"
     # (f"MessageDetails(\n"
     # f"action: {self.action},\n"
     # f"attributes: {self.attributes},\n"
@@ -80,14 +86,19 @@ class SingleActionOptimizer(OptimizerInstance):
 
   def __init__(self, batch_size: int = 5):
     super().__init__()
-    logger_storage_strategy = LogStorageCollectStrategyEmpty()
-    # can use following logger for analyis , how messages flow
-    # logger_storage_strategy = LogStorageCollectStrategy(cache_type='gcs', config={
-    #     "gcs_base_dir": "sight_mq_logs_for_analysis",
-    #     "gcs_bucket": "cameltrain-sight",
-    #     "dir_prefix": f'log_chunks_{datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")}/'
-    # })
-    self.queue: MessageQueue = MessageQueue[MessageDetails](
-        id_generator=IncrementalUUID(),
+    # logger_storage_strategy = NoneLogStorageCollectStrategy()
+    # can use the following logger for analyis , how messages flow
+    logger_storage_strategy: ILogStorageCollectStrategy = (
+        CachedBasedLogStorageCollectStrategy(
+            cache_type="gcs",
+            config={
+                "gcs_base_dir": "sight_mq_logs_for_analysis",
+                "gcs_bucket": "cameltrain-sight",
+                "dir_prefix": f'log_chunks_{datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")}/',
+            },
+        ))
+    self.queue: IMessageQueue = queue_factory(
+        queue_type="shared_lock_list",
         batch_size=batch_size,
-        logger_storage_strategy=logger_storage_strategy)
+        logger_storage_strategy=logger_storage_strategy,
+    )

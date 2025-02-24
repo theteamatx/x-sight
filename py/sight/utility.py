@@ -30,8 +30,8 @@ from sight.utils.proto_conversion import convert_proto_to_dict
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight_service.proto import service_pb2
 
-POLL_LIMIT = 300  # POLL_TIME_INTERVAL th part of second
-POLL_TIME_INTERVAL = 6  # seconds
+POLL_LIMIT = 360  # POLL_TIME_INTERVAL th part of second
+POLL_TIME_INTERVAL = 10  # seconds
 global_outcome_mapping = RWLockDictWrapper()
 
 
