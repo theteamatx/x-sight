@@ -13,13 +13,13 @@ Q_label1:
 #     # fvs_worker : 1
 #     generic_worker2 : 1
 
-Q_label3:
-  optimizer: "worklist_scheduler"
-  num_questions: 10000
-  mode: "dsub_cloud_worker" #"dsub_cloud_worker" # dsub_local_worker #(dsub_local, )
+Q_label3 :
+  optimizer: 'worklist_scheduler'
+  num_questions: 2
+  mode : 'dsub_local_worker' #"dsub_cloud_worker" #(dsub_local, )
   workers:
-    # fvs_worker : 1
-    generic_worker0: 200
+    fvs_worker : 1
+    # generic_worker1: 1
 # Q_label3 :
 #   optimizer: 'worklist_scheduler'
 #   num_questions: 2
