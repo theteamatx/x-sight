@@ -5,8 +5,12 @@ import os
 import shutil
 import unittest
 
-from sight_service.message_logger import LogStorageCollectStrategy
-from sight_service.message_logger import MessageFlowLogger
+from sight_service.message_queue.message_logger.log_storage_collect import (
+    CachedBasedLogStorageCollectStrategy
+)
+from sight_service.message_queue.message_logger.message_logger import (
+    MessageFlowLogger
+)
 from sight_service.tests import colorful_tests
 
 datetime = datetime.datetime
@@ -22,8 +26,8 @@ class TestMessageFlowLoggerLocal(unittest.TestCase):
         "local_base_dir": "/tmp/test_logs",
         "dir_prefix": "test_log_chunks/",
     }
-    # Create instances of the LogStorageCollectStrategy
-    self.log_storage_collect_strategy = LogStorageCollectStrategy(
+    # Create instances of the CachedBasedLogStorageCollectStrategy
+    self.log_storage_collect_strategy = CachedBasedLogStorageCollectStrategy(
         cache_type="local", config=config)
     self.logger = MessageFlowLogger(
         storage_strategy=self.log_storage_collect_strategy,

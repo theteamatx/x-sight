@@ -42,6 +42,7 @@ from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
+from sight.widgets.decision import utils
 import yaml
 
 
@@ -145,19 +146,19 @@ def main_wrapper(argv):
         'fvs_sight/optimizer_config.yaml')
     workers_config = utils.load_yaml_config('fvs_sight/worker_config.yaml')
 
-    for question_label, question_config in question_configs.items():
-      optimizer_type = optimizer_configs[question_label]['optimizer']
-      optimizer_config = optimizer_configs[question_label]
+    for question_label, question_config in questions_config.items():
+      optimizer_type = optimizers_config[question_label]['optimizer']
+      optimizer_config = optimizers_config[question_label]
       print('optimizer_config : ', optimizer_config)
 
       # Configure decision and launch trials
-      opt_obj, decision_configuration = configure_decision(
+      opt_obj, decision_configuration = decision.configure_decision(
           sight, question_label, question_config, optimizer_config,
           optimizer_type)
       trials.launch(decision_configuration, sight)
 
       # Start worker jobs
-      start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type)
+      start_worker_jobs(sight, optimizer_config, workers_config, optimizer_type)
 
     start_time = time.perf_counter()
     sleep_time_in_min = 5

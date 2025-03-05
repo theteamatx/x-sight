@@ -32,8 +32,8 @@ from sight_service.proto import service_pb2
 from helpers.logs.logs_handler import logger as logging
 
 
-POLL_LIMIT = 10  # POLL_TIME_INTERVAL th part of second
-POLL_TIME_INTERVAL = 2  # seconds
+POLL_LIMIT = 360  # POLL_TIME_INTERVAL th part of second
+POLL_TIME_INTERVAL = 10  # seconds
 global_outcome_mapping = RWLockDictWrapper()
 
 

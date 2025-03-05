@@ -5,7 +5,9 @@ import json
 import unittest
 
 from google.cloud import storage
-from sight_service.message_logger import LogStorageCollectStrategy
+from sight_service.message_queue.message_logger.log_storage_collect import (
+    CachedBasedLogStorageCollectStrategy
+)
 from sight_service.tests import colorful_tests
 
 datetime = datetime.datetime
@@ -44,8 +46,7 @@ class TestCacheBasedLogStorageAndCollectorGCS(unittest.TestCase):
         "dir_prefix": "test_log_chunks/",
     }
     self.config = config
-    # Create instances of the LogStorageStrategy and LogCollector
-    self.log_storage_collect_strategy = LogStorageCollectStrategy(
+    self.log_storage_collect_strategy = CachedBasedLogStorageCollectStrategy(
         cache_type="gcs", config=config)
 
   def tearDown(self):
