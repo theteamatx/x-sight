@@ -221,7 +221,7 @@ def init_sight_polling_thread(sight_id, question_label):
   # print
   status_update_thread = threading.Thread(target=poll_network_batch_outcome,
                                           args=(sight_id, question_label))
-  print('*************** starting thread ************')
+  logging.info('*************** starting thread ************')
   status_update_thread.start()
 
 

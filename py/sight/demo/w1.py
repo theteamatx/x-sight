@@ -39,6 +39,8 @@ from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
+from helpers.logs.logs_handler import logger as logging
+
 
 FLAGS = flags.FLAGS
 
@@ -214,10 +216,10 @@ async def propose_actions_wrapper(sight: Sight, question_label: str) -> None:
                 # both base and treatment are considerred to be same dict here
                 propose_actions(sight, question_label, sample, sample)))
 
-      print("waiting for all get outcome to finish.....")
+      logging.info("waiting for all get outcome to finish.....")
       diff_time_series = await asyncio.gather(*tasks)
-      print("all get outcome are finished.....")
-      print(f'Combine Series : {diff_time_series}')
+      logging.info("all get outcome are finished.....")
+      logging.info(f'Combine Series : {diff_time_series}')
 
 
 def driver(sight: Sight) -> None:
@@ -229,7 +231,7 @@ def driver(sight: Sight) -> None:
 
   for _ in range(1):
     next_point = decision.decision_point(get_question_label(), sight)
-    print('next_point : ', next_point)
+    logging.info('next_point : %s', next_point)
 
     # using next_points to propose actions
     asyncio.run(
@@ -273,6 +275,10 @@ def main(argv: Sequence[str]) -> None:
       frame = inspect.currentframe().f_back.f_back.f_back
       sight.set_object_code_loc(sight_obj, frame)
       sight.log_object(sight_obj, True)
+
+    # this thread checks the outcome for proposed action from server
+    decision.init_sight_polling_thread(sight.id,
+                                       get_question_label_to_propose_actions())
 
     decision.run(sight=sight,
                  question_label=get_question_label(),

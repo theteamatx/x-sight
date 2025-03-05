@@ -307,14 +307,16 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
     logging.info('request in close is : %s', request)
     with self.optimizers.instances_lock.gen_rlock():
-      # there is an issue with this : even one of the worker calls the close,
+      # fixed now - there is an issue with this : even one of the worker calls the close,
       # this will call the close on the optimizer - need to fix this
+      # logging.info("request => %s", request)
       if request.HasField("question_label"):
         instance = self.optimizers.get_instance(request.client_id,
                                                  request.question_label)
         # print('*********lenght of instances : ', len(instances))
         if instance:
         #   for question, obj in instances.items():
+          # logging.info('instance found : %s', instance)
           obj = instance.close(request)
         else:
           logging.info(

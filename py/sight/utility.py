@@ -29,9 +29,11 @@ from sight import service_utils as service
 from sight.utils.proto_conversion import convert_proto_to_dict
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight_service.proto import service_pb2
+from helpers.logs.logs_handler import logger as logging
 
-POLL_LIMIT = 300  # POLL_TIME_INTERVAL th part of second
-POLL_TIME_INTERVAL = 6  # seconds
+
+POLL_LIMIT = 10  # POLL_TIME_INTERVAL th part of second
+POLL_TIME_INTERVAL = 2  # seconds
 global_outcome_mapping = RWLockDictWrapper()
 
 
@@ -90,7 +92,7 @@ def poll_network_batch_outcome(sight_id, question_label):
       # print("pending action ids : ", pending_action_ids)
       if len(pending_action_ids):
         counter = POLL_LIMIT
-        print(f'BATCH POLLING THE IDS FOR => {len(pending_action_ids)}')
+        logging.info(f'BATCH POLLING THE IDS FOR => %s',{len(pending_action_ids)})
         # print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
         outcome_of_action_ids = get_all_outcomes(sight_id, question_label,
                                                  pending_action_ids)
@@ -103,8 +105,8 @@ def poll_network_batch_outcome(sight_id, question_label):
         global_outcome_mapping.update(new_dict)
 
       else:
-        print(
-            f'Not sending request as no pending ids ...=> {pending_action_ids} with counter => {counter}'
+        logging.info(
+            f'Not sending request as no pending ids ...=> %s with counter => %s', pending_action_ids, counter
         )
         if counter <= 0:
           return
