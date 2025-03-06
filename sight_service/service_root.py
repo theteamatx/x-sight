@@ -310,24 +310,44 @@ class SightService(service_pb2_grpc.SightServiceServicer):
       # fixed now - there is an issue with this : even one of the worker calls the close,
       # this will call the close on the optimizer - need to fix this
       # logging.info("request => %s", request)
-      if request.HasField("question_label"):
-        instance = self.optimizers.get_instance(request.client_id,
-                                                 request.question_label)
-        # print('*********lenght of instances : ', len(instances))
-        if instance:
-        #   for question, obj in instances.items():
-          # logging.info('instance found : %s', instance)
-          obj = instance.close(request)
-        else:
-          logging.info(
-              "client id not present in server, no launch ever called for this client??"
-          )
-          obj = service_pb2.CloseResponse()
-      else:
+      # if request.HasField("question_label"):
+      #   instance = self.optimizers.get_instance(request.client_id,
+      #                                            request.question_label)
+      #   # print('*********lenght of instances : ', len(instances))
+      #   if instance:
+      #   #   for question, obj in instances.items():
+      #     # logging.info('instance found : %s', instance)
+      #     obj = instance.close(request)
+      #   else:
+      #     logging.info(
+      #         "client id not present in server, no launch ever called for this client??"
+      #     )
+      #     obj = service_pb2.CloseResponse()
+      # else:
+      #   logging.info(
+      #       "root process close called"
+      #   )
+      #   obj = service_pb2.CloseResponse()
+
+      if not request.HasField("question_label"):
         logging.info(
             "root process close called"
         )
         obj = service_pb2.CloseResponse()
+        return obj
+
+      instance = self.optimizers.get_instance(request.client_id,
+                                                 request.question_label)
+      if not instance:
+        logging.info(
+          "client id not present in server, no launch ever called for this client??"
+        )
+        obj = service_pb2.CloseResponse()
+        return obj
+
+      obj = instance.close(request)
+      return obj
+
 
     #? do we need to remove entry from optimizer dict, if available??
     return obj
