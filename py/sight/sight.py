@@ -250,6 +250,15 @@ class Sight(object):
 
         try:
 
+          if (FLAGS.parent_id):
+            sight_obj = sight_pb2.Object()
+            sight_obj.sub_type = sight_pb2.Object.SubType.ST_LINK
+            sight_obj.link.linked_sight_id = FLAGS.parent_id
+            sight_obj.link.link_type = sight_pb2.Link.LinkType.LT_CHILD_TO_PARENT
+            frame = inspect.currentframe().f_back.f_back.f_back
+            self.set_object_code_loc(sight_obj, frame)
+            self.log_object(sight_obj, True)
+
           if 'PARENT_LOG_ID' in os.environ:
             logging.info('PARENT_LOG_ID found - worker process')
             worker_location = os.environ['worker_location'].replace(':', '_')
