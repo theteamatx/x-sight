@@ -174,6 +174,11 @@ _SERVER_QUEUE_BATCH_SIZE = flags.DEFINE_integer(
     'batch size of the server queue for message queue',
 )
 
+_CACHE_MODE = flags.DEFINE_enum(
+    'cache_mode', 'none',
+    ['gcs', 'local', 'redis', 'none', 'gcs_with_redis', 'local_with_redis'],
+    'Which Sight cache to use ? (default is none)')
+
 _file_name = 'decision_actor.py'
 _sight_id = None
 _rewards = []
