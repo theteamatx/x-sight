@@ -110,11 +110,6 @@ async def propose_actions(sight, question_label, action_dict, custom_part="sight
   if outcome is not None:
     print('Getting response from cache !!')
     return outcome
-  else:
-    print('no response from cache ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^6')
-  #   outcome = 'fjskgjs'
-  #   outcome = cache_client.json_set(key=cache_key, value=outcome)
-  #   return outcome
 
   # unique_action_id = decision.propose_actions(sight, question_label, action_dict)
   # unique_action_id = await asyncio.to_thread(decision.propose_actions, sight,

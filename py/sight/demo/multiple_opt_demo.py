@@ -79,13 +79,10 @@ def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
 
   num_questions = optimizer_config['num_questions']
   for worker, worker_count in optimizer_config['workers'].items():
-    # print('worker_count : ', worker_count)
+
     worker_file_path = worker_configs[worker]['file_path']
     worker_config = utils.load_yaml_config(worker_file_path)
     worker_details = worker_config[worker_configs[worker]['version']]
-
-    # print('worker_details : ', worker_details)
-    # raise SystemExit
 
     if (optimizer_config['mode'] == 'dsub_cloud_worker'):
       trials.start_jobs(worker_count, worker_details['binary'], optimizer_type,
