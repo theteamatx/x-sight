@@ -1,4 +1,3 @@
 v0.1 :
   docker: "gcr.io/cameltrain/test-generic-worker-local:latest"
   binary: "fvs_sight/fvs_sight_worker.py"
-  # params: ""

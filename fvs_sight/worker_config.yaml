@@ -1,31 +1,15 @@
 generic_worker0:
   version: 'v0.1'
   file_path: 'fvs_sight/fvs_config.yaml'
-  # docker: "gcr.io/cameltrain/kokua-workers:f92d941"
-  # binary: "fvs_sight/fvs_sight_worker.py"
 
 generic_worker1:
   version: 'v0.1'
   file_path: 'worker/generic_worker.yaml'
-  # docker: "gcr.io/cameltrain/test-generic-worker-local:latest"
-  # binary: "py/sight/demo/w1.py"
 
 generic_worker2:
   version: 'v0.1'
   file_path: 'worker/generic_worker.yaml'
-  # docker: "gcr.io/cameltrain/test-generic-worker-local:latest"
-  # binary: "py/sight/demo/w2.py"
 
 fvs_worker:
-  # docker: "gcr.io/cameltrain/test-generic-worker-local:latest"
-  # binary: "fvs_sight/fvs_sight_worker.py"
-
   version: 'v0.1'
   file_path: 'fvs_sight/fvs_config.yaml'
-  # mode : "dsub_cloud_worker" #(dsub_local, )
-# pyManga_worker :
-#   docker : "gcr.io/pyManga-worker:latest",
-#   binary : "py/fvs/pyManga_worker.py",
-#   mode : "dsub_remote" #(dsub_local)
-
-# # SLAM_worker : {...}
