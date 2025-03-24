@@ -24,6 +24,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Text
 
 from absl import flags
+from google.protobuf.text_format import Merge
 # from absl import logging
 from helpers.logs.logs_handler import logger as logging
 import numpy as np
@@ -917,11 +918,6 @@ def get_decision_configuration_for_opt(
   Returns:
       decision_configuration: The decision configuration protobuf object with optimizer configuration.
   """
-  print('Question config')
-
-  import os
-
-  from google.protobuf.text_format import Merge
   current_script_path = os.path.dirname(os.path.abspath(__file__))
   relative_path_of_text_proto = '../../utils/.text_proto_configs'
   absoulte_text_proto_path = os.path.join(current_script_path,
