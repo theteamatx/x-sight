@@ -87,14 +87,13 @@ def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
     if (optimizer_config['mode'] == 'dsub_cloud_worker'):
       trials.start_jobs(worker_count, worker_details['binary'], optimizer_type,
                         worker_details['docker'], 'train', 'worker_mode',
-                        optimizer_config['mode'],
-                        FLAGS.cache_mode, sight)
+                        optimizer_config['mode'], FLAGS.cache_mode, sight)
     elif (optimizer_config['mode'] == 'dsub_local_worker'):
       trials.start_job_in_dsub_local(worker_count, worker_details['binary'],
                                      optimizer_type, worker_details['docker'],
                                      'train', 'worker_mode',
-                                     optimizer_config['mode'],
-                                     FLAGS.cache_mode, sight)
+                                     optimizer_config['mode'], FLAGS.cache_mode,
+                                     sight)
 
     else:
       raise ValueError(
@@ -103,11 +102,21 @@ def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
 
 
 def main_wrapper(argv):
+
+  import os
+
+  current_script_path = os.path.dirname(os.path.abspath(__file__))
+  relative_path = "../../../"
+  absolute_path = os.path.join(current_script_path, relative_path)
+
   with get_sight_instance() as sight:
 
-    questions_config = utils.load_yaml_config(_QUESTIONS_CONFIG.value)
-    optimizers_config = utils.load_yaml_config(_OPTIMIZERS_CONFIG.value)
-    workers_config = utils.load_yaml_config(_WORKERS_CONFIG.value)
+    questions_config = utils.load_yaml_config(absolute_path +
+                                              _QUESTIONS_CONFIG.value)
+    optimizers_config = utils.load_yaml_config(absolute_path +
+                                               _OPTIMIZERS_CONFIG.value)
+    workers_config = utils.load_yaml_config(absolute_path +
+                                            _WORKERS_CONFIG.value)
 
     # put this in function
     for question_label, question_config in questions_config.items():
