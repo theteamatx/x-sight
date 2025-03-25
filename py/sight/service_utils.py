@@ -384,7 +384,6 @@ def get_id_token_of_service_account(user_access_token, service_account,
         headers=headers,
         data=data,
     )
-    # print('response=%s' % response.json())
     return response.json()['token']
   except Exception as e:
     logging.info('API CALL ERROR: %s', e)
@@ -417,19 +416,15 @@ def generate_id_token():
       # print("using service account's credentils..... :")
       user_access_token = creds.token
       service_account = f'{flags.FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com'
-      # print('user_access_token : ', user_access_token)
-      # print('service_account : ',service_account)
       url = f'https://{_service_addr()}'
       service_account_id_token = get_id_token_of_service_account(
           user_access_token, service_account, url)
       id_token = service_account_id_token
     # using user credentials
     else:
-      # print("using user's credentils..... creds=%s" % creds)
       user_id_token = creds.id_token
       id_token = user_id_token
 
-  # print('id_token : ', id_token)
   return id_token
 
 
