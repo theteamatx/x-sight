@@ -38,6 +38,9 @@ class CacheFactory:
     elif cache_type == 'gcs':
       return GCSCache(config)
     elif cache_type == 'redis':
+      if with_redis is not None:
+        # we already have the redis cache object
+        return with_redis
       return RedisCache(config)
     elif cache_type == 'none':
       return NoneCache(config)

@@ -56,7 +56,7 @@ def driver_fn(sight):
 #temporary created
 def get_sight_instance():
   params = sight_pb2.Params(
-      label="kokua_experiment",
+      label=get_question_label(),
       bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
   )
   sight_obj = Sight(params)

@@ -399,6 +399,7 @@ message CreateResponse {
 
 message CloseRequest {
   string client_id = 1;
+  optional string question_label = 2;
 }
 
 message CloseResponse {

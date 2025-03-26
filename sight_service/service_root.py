@@ -30,22 +30,19 @@ import math
 
 from absl import app
 from absl import flags
-
-import grpc
 from dotenv import load_dotenv
+import grpc
 
 load_dotenv()
 
+from collections import defaultdict
 import os
 import sys
 import time
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Union
 import uuid
 
-from typing import Any, Dict, List, Tuple, Optional, Union
-from collections import defaultdict
-import time
-
+from readerwriterlock import rwlock
 # from sight_service import service_utils
 from sight.proto import sight_pb2
 # from sight_service.acme_optimizer import Acme
@@ -61,7 +58,6 @@ from sight_service.sensitivity_analysis import SensitivityAnalysis
 from sight_service.smc_py import SMCPy
 from sight_service.vizier import Vizier
 from sight_service.worklist_scheduler_opt import WorklistScheduler
-from readerwriterlock import rwlock
 
 _PORT = flags.DEFINE_integer('port', 8080, 'The port to listen on')
 _resolve_times = []
@@ -239,10 +235,12 @@ class SightService(service_pb2_grpc.SightServiceServicer):
   @rpc_call
   def Test(self, request, context):
     method_name = "Test"
-    logging.info(">>>>>>>  In %s method of %s file.", method_name, _file_name)
+    logging.info(">>>>>>>  In %s method of %s file.", method_name,
+                 os.path.basename(__file__))
     obj = service_pb2.TestResponse()
     obj.val = str(222)
-    logging.info("<<<<<< Out %s method of %s file.", method_name, _file_name)
+    logging.info("<<<<<< Out %s method of %s file.", method_name,
+                 os.path.basename(__file__))
     return obj
 
   # def GetWeights(self, request, context):
@@ -305,22 +303,53 @@ class SightService(service_pb2_grpc.SightServiceServicer):
   @rpc_call
   def Close(self, request, context):
 
+    logging.info('request in close is : %s', request)
     with self.optimizers.instances_lock.gen_rlock():
-      instances = self.optimizers.get_instance(request.client_id)
-      if instances:
-        for question, obj in instances.items():
-          obj = obj.close(request)
-      else:
+      # fixed now - there is an issue with this : even one of the worker calls the close,
+      # this will call the close on the optimizer - need to fix this
+      # logging.info("request => %s", request)
+      # if request.HasField("question_label"):
+      #   instance = self.optimizers.get_instance(request.client_id,
+      #                                            request.question_label)
+      #   # print('*********lenght of instances : ', len(instances))
+      #   if instance:
+      #   #   for question, obj in instances.items():
+      #     # logging.info('instance found : %s', instance)
+      #     obj = instance.close(request)
+      #   else:
+      #     logging.info(
+      #         "client id not present in server, no launch ever called for this client??"
+      #     )
+      #     obj = service_pb2.CloseResponse()
+      # else:
+      #   logging.info(
+      #       "root process close called"
+      #   )
+      #   obj = service_pb2.CloseResponse()
+
+      if not request.HasField("question_label"):
+        logging.info("root process close called")
+        obj = service_pb2.CloseResponse()
+        return obj
+
+      instance = self.optimizers.get_instance(request.client_id,
+                                              request.question_label)
+      if not instance:
         logging.info(
             "client id not present in server, no launch ever called for this client??"
         )
         obj = service_pb2.CloseResponse()
+        return obj
+
+      obj = instance.close(request)
+      return obj
 
     #? do we need to remove entry from optimizer dict, if available??
     return obj
 
   @rpc_call
   def WorkerAlive(self, request, context):
+    logging.info('called worker_alive for lable %s', request.question_label)
     return self.optimizers.get_instance(
         request.client_id, request.question_label).WorkerAlive(request)
 

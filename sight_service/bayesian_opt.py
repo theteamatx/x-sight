@@ -86,7 +86,7 @@ class BayesianOpt(OptimizerInstance):
   def finalize_episode(
       self, request: service_pb2.FinalizeEpisodeRequest
   ) -> service_pb2.FinalizeEpisodeResponse:
-    logging.info('FinalizeEpisode request=%s', request)
+    # logging.info('FinalizeEpisode request=%s', request)
 
     self._lock.acquire()
     for i in range(len(request.decision_messages)):
@@ -149,3 +149,11 @@ class BayesianOpt(OptimizerInstance):
     logging.info("worker_alive_status is %s", response.status_type)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
     return response
+
+  @overrides
+  def close(self,
+            request: service_pb2.CloseRequest) -> service_pb2.CloseResponse:
+    logging.info(
+        "sight experiment completed in bayes_opt")
+
+    return service_pb2.CloseResponse(response_str="success")

@@ -1,45 +1,7 @@
-# Q_label1:
-#   action:
-#     "1":
-#       "min_value": 100
-#       "max_value": 150
-#     "2":
-#       "min_value": 100
-#       "max_value": 150
-#     "3":
-#       "min_value": 100
-#       "max_value": 150
-#   state: {}
-#   outcome: {}
-# Q_label2:
-#   action:
-#     '1' :
-#       'min_value' : 10
-#       'max_value' : 50
-#     '2' :
-#       'min_value' : 10
-#       'max_value' : 50
-#     '3' :
-#       'min_value' : 10
-#       'max_value' : 50
-#     '4' :
-#       'min_value' : 10
-#       'max_value' : 50
-#     '5' :
-#       'min_value' : 10
-#       'max_value' : 50
-#   state: {}
-#   outcome: {}
+Q_label1:
+  desc: "generic question label"
+  attrs_text_proto: "generic.textproto"
 
 Q_label3:
-  action:
-    'region': null
-    'project_id': null
-    'base-FERTILIZ-howManyCycle': null
-    'base-FERTILIZ-extra_step': null
-    'base-FERTILIZ-extra_offset': null
-    'fire-SIMFIRE_1-6_stand_area_burned': null
-    'fire-SIMFIRE_1-1_cycle': null
-  state: {}
-  outcome:
-    'time_series': null
+  desc: "FVS question label"
+  attrs_text_proto: "fvs.textproto"
