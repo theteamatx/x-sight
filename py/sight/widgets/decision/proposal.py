@@ -104,8 +104,8 @@ async def propose_actions(sight,
   cache_key = key_maker.make_custom_key(custom_part, action_dict)
 
   cache_client = CacheFactory.get_cache(
-      _CACHE_MODE.value,
-      with_redis=CacheConfig.get_redis_instance(_CACHE_MODE.value,
+      FLAGS.cache_mode,
+      with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode,
                                                 config={
                                                     "redis_host": "10.138.0.53",
                                                     "redis_port": 6379

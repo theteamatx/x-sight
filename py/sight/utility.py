@@ -25,12 +25,11 @@ from google.protobuf.json_format import _NAN
 from google.protobuf.json_format import _NEG_INFINITY
 from google.protobuf.json_format import _Printer as BasePrinter
 from google.protobuf.json_format import SerializeToJsonError
+from helpers.logs.logs_handler import logger as logging
 from sight import service_utils as service
 from sight.utils.proto_conversion import convert_proto_to_dict
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight_service.proto import service_pb2
-from helpers.logs.logs_handler import logger as logging
-
 
 POLL_LIMIT = 360  # POLL_TIME_INTERVAL th part of second
 POLL_TIME_INTERVAL = 10  # seconds
@@ -92,7 +91,8 @@ def poll_network_batch_outcome(sight_id, question_label):
       # print("pending action ids : ", pending_action_ids)
       if len(pending_action_ids):
         counter = POLL_LIMIT
-        logging.info(f'BATCH POLLING THE IDS FOR => %s',{len(pending_action_ids)})
+        logging.info(f'BATCH POLLING THE IDS FOR => %s',
+                     len(pending_action_ids))
         # print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
         outcome_of_action_ids = get_all_outcomes(sight_id, question_label,
                                                  pending_action_ids)
@@ -106,8 +106,8 @@ def poll_network_batch_outcome(sight_id, question_label):
 
       else:
         logging.info(
-            f'Not sending request as no pending ids ...=> %s with counter => %s', pending_action_ids, counter
-        )
+            f'Not sending request as no pending ids ...=> %s with counter => %s',
+            pending_action_ids, counter)
         if counter <= 0:
           return
         counter -= 1

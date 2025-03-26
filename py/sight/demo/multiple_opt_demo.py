@@ -63,6 +63,8 @@ _WORKERS_CONFIG = flags.DEFINE_string(
 
 FLAGS = flags.FLAGS
 
+POLL_EXAMPLE = True and False
+
 sample = {'project_id': '133a6365-01cf-4b5e-8197-d4779e5ce25c', 'region': 'NC'}
 
 
@@ -101,6 +103,65 @@ def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
       )
 
 
+async def propose_actions(sight: Sight, question_label: str,
+                          base_project_config: dict[str, Any],
+                          treatments: dict[str, Any]) -> pd.Series:
+  treatment_project_config = treatments
+  tasks = []
+  with Attribute("Managed", "0", sight):
+    # base_sim = decision.propose_actions(sight,
+    #                                       action_dict=base_project_config)
+    # await proposal.push_message(sight.id, base_sim)
+    # unmanaged_task = sight.create_task(
+    #     proposal.fetch_outcome(sight.id, base_sim))
+    # tasks.append(unmanaged_task)
+    unmanaged_task = sight.create_task(
+        proposal.propose_actions(sight,
+                                 question_label,
+                                 action_dict=base_project_config))
+    tasks.append(unmanaged_task)
+  with Attribute("Managed", "1", sight):
+    # treatment_sim = decision.propose_actions(
+    #     sight, action_dict=treatment_project_config)
+    # await proposal.push_message(sight.id, treatment_sim)
+    # managed_task = sight.create_task(
+    #     proposal.fetch_outcome(sight.id, treatment_sim))
+    # tasks.append(managed_task)
+    managed_task = sight.create_task(
+        proposal.propose_actions(sight,
+                                 question_label,
+                                 action_dict=treatment_project_config))
+    tasks.append(managed_task)
+
+  [unmanaged_response, managed_response] = await asyncio.gather(*tasks)
+  return unmanaged_response, managed_response
+
+
+async def propose_actions_wrapper(sight: Sight, question_label: str,
+                                  num_trials: int) -> None:
+
+  sample_list = [sample for i in range(num_trials)]
+
+  # print('SIGHT ID => ',sight.id)
+  with Block("Propose actions", sight):
+    with Attribute("project_id", "APR107", sight):
+      tasks = []
+      print("len(sample_list) : ", len(sample_list))
+      for id in range(len(sample_list)):
+        await asyncio.sleep(0.01)
+        with Attribute("sample_id", id, sight):
+          tasks.append(
+              sight.create_task(
+                  # both base and treatment are considerred to be same dict here
+                  propose_actions(sight, question_label, sample_list[id],
+                                  sample_list[id])))
+
+      print("waiting for all get outcome to finish.....")
+      diff_time_series = await asyncio.gather(*tasks)
+      print("all get outcome are finished.....")
+      print(f'Combine Series : {diff_time_series}')
+
+
 def main_wrapper(argv):
 
   import os
@@ -131,6 +192,14 @@ def main_wrapper(argv):
 
       # Start worker jobs
       start_worker_jobs(sight, optimizer_config, workers_config, optimizer_type)
+
+      if (POLL_EXAMPLE and decision_configuration.optimizer_type == sight_pb2.
+          DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER):
+        decision.init_sight_polling_thread(
+            sight.id, decision_configuration.question_label)
+        asyncio.run(
+            propose_actions_wrapper(sight, question_label,
+                                    optimizer_config['num_questions']))
 
 
 if __name__ == "__main__":

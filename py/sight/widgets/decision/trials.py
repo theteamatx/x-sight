@@ -116,11 +116,12 @@ def launch(
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
   # start polling thread, fetching outcome from server for proposed actions
   # as we are awaiting till we get response back for this proposal of workerlist_scheduler, removing this thread
+
   # if (decision_configuration.optimizer_type == sight_pb2.
   #     DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER and
   #     response.display_string == "Worklist Scheduler SUCCESS!"):
-    # decision.init_sight_polling_thread(sight.id,
-    #                                    decision_configuration.question_label)
+  #   decision.init_sight_polling_thread(sight.id,
+  #                                      decision_configuration.question_label)
   logging.info('##### Launch response=%s #####', response)
 
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
@@ -257,8 +258,7 @@ def start_jobs(
     deployment_mode: str,
     worker_mode: str,
     cache_mode: str,
-    sight: Any
-):
+    sight: Any):
   """Starts the dsub workers that will run the optimization.
 
   Args:
@@ -307,8 +307,7 @@ def start_jobs(
       'ls -l && echo "${SCRIPT}" && echo "${PYTHONPATH}" && python3 "${SCRIPT}"'
       + f' --decision_mode={decision_mode}' +
       f' --deployment_mode={deployment_mode}' +
-      f' --worker_mode={worker_mode}' +
-      f' --optimizer_type={optimizer_type}' +
+      f' --worker_mode={worker_mode}' + f' --optimizer_type={optimizer_type}' +
       f' --cache_mode={cache_mode}'
       # + f' --project_id={os.environ["PROJECT_ID"]}'
   )
@@ -384,7 +383,7 @@ def start_job_in_dsub_local(
     decision_mode: str,
     deployment_mode: str,
     worker_mode: str,
-    cache_mode:str,
+    cache_mode: str,
     sight: Any,
 ):
   """Starts the dsub workers that will run the optimization.

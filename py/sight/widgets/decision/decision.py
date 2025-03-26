@@ -17,6 +17,7 @@ import inspect
 # import dm_env
 import json
 import os
+from pathlib import Path
 import random
 import sys
 import threading
@@ -918,11 +919,12 @@ def get_decision_configuration_for_opt(
   Returns:
       decision_configuration: The decision configuration protobuf object with optimizer configuration.
   """
-  current_script_path = os.path.dirname(os.path.abspath(__file__))
-  relative_path_of_text_proto = '../../utils/.text_proto_configs'
-  absoulte_text_proto_path = os.path.join(current_script_path,
-                                          relative_path_of_text_proto,
-                                          question_config['attrs_text_proto'])
+
+  current_file = Path(__file__).resolve()
+  sight_repo_path = current_file.parents[4]
+
+  absoulte_text_proto_path = sight_repo_path.joinpath(
+      question_config['attrs_text_proto'])
 
   if not os.path.exists(absoulte_text_proto_path):
     raise FileNotFoundError(f'File not found {absoulte_text_proto_path}')
