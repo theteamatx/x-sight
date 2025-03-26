@@ -1,0 +1,15 @@
+action_attrs {
+  key: "project_id"
+  value {
+  }
+}
+action_attrs {
+  key: "region"
+  value {
+  }
+}
+outcome_attrs {
+  key: "time_series"
+  value {
+  }
+}

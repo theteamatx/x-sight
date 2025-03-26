@@ -24,6 +24,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Text
 
 from absl import flags
+from google.protobuf.text_format import Merge
 # from absl import logging
 from helpers.logs.logs_handler import logger as logging
 import numpy as np
@@ -694,7 +695,7 @@ def run(
         logging.info('backed off for %s seconds... and trying for %s',
                      backoff_interval, num_retries)
         num_retries += 1
-        if(num_retries >= 10):
+        if (num_retries >= 10):
           break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
@@ -917,15 +918,26 @@ def get_decision_configuration_for_opt(
   Returns:
       decision_configuration: The decision configuration protobuf object with optimizer configuration.
   """
+  current_script_path = os.path.dirname(os.path.abspath(__file__))
+  relative_path_of_text_proto = '../../utils/.text_proto_configs'
+  absoulte_text_proto_path = os.path.join(current_script_path,
+                                          relative_path_of_text_proto,
+                                          question_config['attrs_text_proto'])
 
-  # Extract attributes
-  action_attrs = decision_helper.config_to_attr(question_config, 'action')
-  state_attrs = decision_helper.config_to_attr(question_config, 'state')
-  outcome_attrs = decision_helper.config_to_attr(question_config, 'outcome')
+  if not os.path.exists(absoulte_text_proto_path):
+    raise FileNotFoundError(f'File not found {absoulte_text_proto_path}')
 
-  sight.widget_decision_state[
-      'decision_episode_fn'] = decision_episode_fn.DecisionEpisodeFn(
-          state_attrs, action_attrs)
+  with open(absoulte_text_proto_path, 'r') as f:
+    text_proto_data = f.read()
+
+  # # Extract attributes
+  # action_attrs = decision_helper.config_to_attr(question_config, 'action')
+  # state_attrs = decision_helper.config_to_attr(question_config, 'state')
+  # outcome_attrs = decision_helper.config_to_attr(question_config, 'outcome')
+
+  # sight.widget_decision_state[
+  #     'decision_episode_fn'] = decision_episode_fn.DecisionEpisodeFn(
+  #         state_attrs, action_attrs)
   sight.widget_decision_state['num_decision_points'] = 0
 
   # Set up the decision configuration
@@ -937,12 +949,15 @@ def get_decision_configuration_for_opt(
       opt_obj.create_config())
 
   decision_configuration.server_queue_batch_size = FLAGS.server_queue_batch_size or 1
-  decision_helper.attr_dict_to_proto(state_attrs,
-                                     decision_configuration.state_attrs)
-  decision_helper.attr_dict_to_proto(action_attrs,
-                                     decision_configuration.action_attrs)
-  decision_helper.attr_dict_to_proto(outcome_attrs,
-                                     decision_configuration.outcome_attrs)
+
+  Merge(text_proto_data, decision_configuration)
+
+  # decision_helper.attr_dict_to_proto(state_attrs,
+  #                                    decision_configuration.state_attrs)
+  # decision_helper.attr_dict_to_proto(action_attrs,
+  #                                    decision_configuration.action_attrs)
+  # decision_helper.attr_dict_to_proto(outcome_attrs,
+  #                                    decision_configuration.outcome_attrs)
 
   # Enter and exit decision block
   sight.enter_block(

@@ -775,3 +775,10 @@ message DecisionOutcome {
   float discount = 3;
   DecisionParam outcome_params = 4;
 }
+
+message Question {
+  // The attributes of application's state
+  map<string, DecisionConfigurationStart.AttrProps> state_attrs = 1;
+  map<string, DecisionConfigurationStart.AttrProps> action_attrs = 2;
+  map<string, DecisionConfigurationStart.AttrProps> outcome_attrs = 3;
+}
