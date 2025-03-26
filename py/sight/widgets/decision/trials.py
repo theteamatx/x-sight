@@ -256,7 +256,8 @@ def start_jobs(
     decision_mode: str,
     deployment_mode: str,
     worker_mode: str,
-    sight: Any,
+    cache_mode: str,
+    sight: Any
 ):
   """Starts the dsub workers that will run the optimization.
 
@@ -269,6 +270,7 @@ def start_jobs(
     decision_mode: add
     deployment_mode: add
     worker_mode: add
+    cache_mode: add
     sight: The Sight object to be used for logging.
   """
   method_name = 'start_jobs'
@@ -305,7 +307,9 @@ def start_jobs(
       'ls -l && echo "${SCRIPT}" && echo "${PYTHONPATH}" && python3 "${SCRIPT}"'
       + f' --decision_mode={decision_mode}' +
       f' --deployment_mode={deployment_mode}' +
-      f' --worker_mode={worker_mode}' + f' --optimizer_type={optimizer_type}'
+      f' --worker_mode={worker_mode}' +
+      f' --optimizer_type={optimizer_type}' +
+      f' --cache_mode={cache_mode}'
       # + f' --project_id={os.environ["PROJECT_ID"]}'
   )
   if FLAGS.env_name:
@@ -380,6 +384,7 @@ def start_job_in_dsub_local(
     decision_mode: str,
     deployment_mode: str,
     worker_mode: str,
+    cache_mode:str,
     sight: Any,
 ):
   """Starts the dsub workers that will run the optimization.
@@ -424,7 +429,7 @@ def start_job_in_dsub_local(
   # provider = 'google-cls-v2' if deployment_mode == 'distributed' else 'local'
 
   script_args = (
-      f'--decision_mode={decision_mode} --deployment_mode={deployment_mode} --worker_mode={worker_mode} --optimizer_type={optimizer_type} '
+      f'--decision_mode={decision_mode} --deployment_mode={deployment_mode} --worker_mode={worker_mode} --optimizer_type={optimizer_type}  --cache_mode={cache_mode} '
   )
   # if FLAGS.service_account:
   #     script_args = (script_args +
@@ -453,6 +458,10 @@ def start_job_in_dsub_local(
       f'IP_ADDR={service.get_docker0_ip()}',
       '--env',
       f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
+      '--env',
+      f'WORKERS_CONFIG_PATH={FLAGS.workers_config_path}',
+      '--env',
+      f'OPTIMIZERS_CONFIG_PATH={FLAGS.optimizers_config_path}',
       '--input',
       f'SCRIPT={remote_script}',
       '--input-recursive',
