@@ -29,6 +29,7 @@ from typing import Any, Sequence
 
 from absl import app
 from absl import flags
+from helpers.logs.logs_handler import logger as logging
 import pandas as pd
 from sight import utility
 from sight.attribute import Attribute
@@ -165,10 +166,13 @@ async def propose_actions_wrapper(sight: Sight, question_label: str,
 def main_wrapper(argv):
 
   import os
+  from pathlib import Path
 
-  current_script_path = os.path.dirname(os.path.abspath(__file__))
-  relative_path = "../../../"
-  absolute_path = os.path.join(current_script_path, relative_path)
+  current_file = Path(__file__).resolve()
+  sight_repo_path = current_file.parents[3]
+  absolute_path = str(sight_repo_path) + '/'
+
+  logging.info('my FLAGS are ==> %s ', FLAGS.parent_id)
 
   with get_sight_instance() as sight:
 
