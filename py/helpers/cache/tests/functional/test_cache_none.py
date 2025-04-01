@@ -25,7 +25,7 @@ class CacheNoneTest(unittest.TestCase):
     self.assertEqual(keys, [])
     # The result should always be an empty list
 
-  def test_none_cache(self):
+  def test_none_cache_json(self):
     """Tests the None cache."""
 
     key = self.key_maker.make_custom_key(

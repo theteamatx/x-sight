@@ -24,6 +24,13 @@ class NoneCache(CacheInterface):
   def json_set(self, key, value):
     logging.warning('CACHE-TYPE-NONE -trying to set # cache-ignore')
 
+  def bin_get(self, key: str) -> None:
+    logging.warning('CACHE-TYPE-NONE -trying to get # cache-ignore')
+    return None
+
+  def bin_set(self, key, value):
+    logging.warning('CACHE-TYPE-NONE -trying to set # cache-ignore')
+
   def json_list_keys(self, prefix: str) -> list[str]:
     logging.warning('CACHE-TYPE-NONE -list keys # cache-ignore')
     return []

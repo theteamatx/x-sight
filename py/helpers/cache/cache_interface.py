@@ -5,6 +5,14 @@ from abc import abstractmethod
 class CacheInterface(ABC):
 
   @abstractmethod
+  def bin_get(self, key: str):
+    pass
+
+  @abstractmethod
+  def bin_set(self, key, value):
+    pass
+
+  @abstractmethod
   def json_get(self, key):
     pass
 

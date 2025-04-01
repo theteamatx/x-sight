@@ -11,6 +11,7 @@ bucket. The base directory is used to separate different types of cached data.
 
 import json
 import pathlib
+import pickle
 
 from google.cloud import storage
 from helpers.logs.logs_handler import logger as logging
@@ -57,6 +58,46 @@ class GCSCache(CacheInterface):
       The raw Redis client, or None if Redis is not enabled.
     """
     return (self.redis_cache and self.redis_cache.get_redis_client()) or None
+
+  def bin_get(self, key):
+    """Gets a value from the cache.
+
+    Args:
+      key: The key to get the value for.
+
+    Returns:
+      The value from the cache, or None if not found.
+    """
+    if self.redis_cache and self.get_redis_client():
+      try:
+        value = self.redis_cache.bin_get(key=key)
+        if value:
+          return value
+      except Exception as e:  # pylint: disable=broad-exception-caught
+        logging.warning('GOT THE ISSUE IN REDIS', e)
+        return None
+    blob = self.bucket.blob(self._gcs_cache_path(key=key.replace(':', '/')))
+    if blob.exists():
+      value = pickle.loads(blob.download_as_bytes())
+      if self.redis_cache:
+        self.redis_cache.bin_set(key=key, value=value)
+      return value
+    return None
+
+  def bin_set(self, key, value):
+    """Sets a value in the cache.
+
+    Args:
+      key: The key to set the value for.
+      value: The value to set.
+    """
+    if self.redis_cache and self.get_redis_client():
+      try:
+        self.redis_cache.bin_set(key=key, value=value)
+      except Exception as e:  # pylint: disable=broad-exception-caught
+        logging.warning('GOT THE ISSUE IN REDIS', e)
+    blob = self.bucket.blob(self._gcs_cache_path(key=key.replace(':', '/')))
+    blob.upload_from_string(pickle.dumps(value))
 
   def json_get(self, key):
     """Gets a value from the cache.

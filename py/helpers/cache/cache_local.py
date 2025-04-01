@@ -1,6 +1,7 @@
 import json
 import os
 from pathlib import Path
+import pickle
 
 from helpers.logs.logs_handler import logger as logging
 from redis import StrictRedis
@@ -15,11 +16,40 @@ class LocalCache(CacheInterface):
     self.base_dir = config.get("local_base_dir", "/tmp/.local_cache")
     self.redis_cache = with_redis_cache
 
-  def _local_cache_path(self, key: str, suffix: str = ".json"):
+  def _local_cache_path(self, key: str, suffix: str = ""):
     return Path(self.base_dir) / Path(key).with_suffix(suffix=suffix)
 
   def get_redis_client(self):
     return (self.redis_cache and self.redis_cache.get_redis_client()) or None
+
+  def bin_get(self, key: str):
+    if self.redis_cache and self.get_redis_client():
+      try:
+        value = self.redis_cache.bin_get(key=key)
+        if value:
+          return value
+      except Exception as e:
+        logging.warning("GOT THE ISSUE IN REDIS", e)
+        return None
+    path = self._local_cache_path(key.replace(":", "/"))
+    if path.exists():
+      with open(path, "rb") as file:
+        value = pickle.load(file)
+        if self.redis_cache and self.get_redis_client():
+          self.redis_cache.bin_set(key, value)
+        return value
+    return None
+
+  def bin_set(self, key, value):
+    if self.redis_cache and self.get_redis_client():
+      try:
+        self.redis_cache.bin_set(key=key, value=value)
+      except Exception as e:
+        logging.warning("GOT THE ISSUE IN REDIS", e)
+    path = self._local_cache_path(key.replace(":", "/"))
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "wb") as file:
+      pickle.dump(value, file)
 
   def json_get(self, key: str):
     if self.redis_cache and self.get_redis_client():
@@ -30,7 +60,7 @@ class LocalCache(CacheInterface):
       except Exception as e:
         logging.warning("GOT THE ISSUE IN REDIS", e)
         return None
-    path = self._local_cache_path(key.replace(":", "/"))
+    path = self._local_cache_path(key.replace(":", "/"), suffix='.json')
     if path.exists():
       with open(path, "r") as file:
         value = json.load(file)
@@ -45,7 +75,7 @@ class LocalCache(CacheInterface):
         self.redis_cache.json_set(key=key, value=value)
       except Exception as e:
         logging.warning("GOT THE ISSUE IN REDIS", e)
-    path = self._local_cache_path(key.replace(":", "/"))
+    path = self._local_cache_path(key.replace(":", "/"), suffix='.json')
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as file:
       json.dump(value, file)

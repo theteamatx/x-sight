@@ -1,5 +1,7 @@
 """This module contains a Redis Cache implementation."""
 
+import pickle
+
 from helpers.logs.logs_handler import logger as logging
 import redis
 from redis.commands.json import path
@@ -48,6 +50,17 @@ class RedisCache(CacheInterface):
     if self.redis_client is None:
       logging.error("redis client not found..!!")
       raise ConnectionError("redis client not found , check connection !!")
+
+  def bin_get(self, key):
+    """Gets a value from the cache using key as binary data"""
+    self._is_redis_client_exist()
+    value = self.redis_client.get(key)
+    return pickle.loads(value) if value else None
+
+  def bin_set(self, key, value):
+    """Set the key with value as binary data"""
+    self._is_redis_client_exist()
+    self.redis_client.set(key, pickle.dumps(value))
 
   def json_get(self, key):
     """Gets a value from the cache using its JSON representation.
