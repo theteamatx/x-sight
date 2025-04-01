@@ -1,7 +1,7 @@
 Q_label1:
   desc: "generic question label"
-  attrs_text_proto: "generic.textproto"
+  attrs_text_proto: "py/sight/utils/.text_proto_configs/generic.textproto"
 
 Q_label3:
   desc: "FVS question label"
-  attrs_text_proto: "fvs.textproto"
+  attrs_text_proto: "py/sight/utils/.text_proto_configs/fvs.textproto"
