@@ -66,7 +66,7 @@ def get_proto_value_from_value(v) -> sight_pb2.Value:
     ValueError: If the value has an unsupported type.
   """
   val = sight_pb2.Value()
-  if isinstance(v, dict):
+  if isinstance(v, dict) or isinstance(v, list):
     val.sub_type = sight_pb2.Value.ST_JSON
     val.json_value = json.dumps(v)
   elif isinstance(v, pd.Series):
