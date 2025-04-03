@@ -1,8 +1,8 @@
 PROJECT_ID=cameltrain
 ZONE=us-west1-a
 
-vm=sight-vm-service
-port=8080
+vm=sight-service-test
+port=5540
 
 
 ssh:

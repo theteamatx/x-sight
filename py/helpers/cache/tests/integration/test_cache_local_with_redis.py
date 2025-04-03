@@ -60,7 +60,7 @@ class CacheLocalWithRedisTest(unittest.TestCase):
       print(f"Failed to start Docker containers : {e}")
       raise e
 
-  def test_local_cache(self):
+  def test_local_json_data(self):
     """Tests the Local Cache."""
     self.key_maker = CacheKeyMaker()
     self.cache = LocalCache(
@@ -92,6 +92,42 @@ class CacheLocalWithRedisTest(unittest.TestCase):
 
     # Retrieve data from the cache
     result = self.cache.json_get(key)
+
+    assert (result == expected_result
+           ), f"Expected {expected_result}, but got {result}"
+
+  def test_local_bin_data(self):
+    """Tests the Local Cache."""
+    self.key_maker = CacheKeyMaker()
+    self.cache = LocalCache(
+        config={
+            "local_base_dir": "/tmp/testing_dir",
+        },
+        with_redis_cache=RedisCache(config={
+            "redis_host": "localhost",
+            "redis_port": 1234,
+            "redis_db": 0,
+        }),
+    )
+    key = self.key_maker.make_custom_key(
+        custom_part=":".join(["testing", "ACR203", "FVS", "fire"]),
+        managed_sample={
+            "fire": "20%",
+            "base": None
+        },
+    )
+
+    # Assert the retrieved data is correct
+    expected_result = {"Fire": [2023, 2034, 3004]}
+
+    # Set data in the cache
+    self.cache.bin_set(
+        key,
+        expected_result,
+    )
+
+    # Retrieve data from the cache
+    result = self.cache.bin_get(key)
 
     assert (result == expected_result
            ), f"Expected {expected_result}, but got {result}"

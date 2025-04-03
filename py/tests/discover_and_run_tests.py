@@ -16,7 +16,7 @@ Fore = colorama.Fore
 FLAGS = flags.FLAGS
 _TEST_TYPE = flags.DEFINE_string(
     "type",
-    None,
+    "full",
     "Specify the type of tests to run (e.g., 'functional', 'integration',"
     " 'performance',..).",
 )

@@ -11,6 +11,7 @@ bucket. The base directory is used to separate different types of cached data.
 
 import json
 import pathlib
+import pickle
 
 from google.cloud import storage
 from helpers.logs.logs_handler import logger as logging
@@ -19,6 +20,9 @@ from .cache_interface import CacheInterface
 from .cache_redis import RedisCache
 
 Path = pathlib.Path
+from typing import Any, List
+
+from overrides import override
 
 
 class GCSCache(CacheInterface):
@@ -39,79 +43,75 @@ class GCSCache(CacheInterface):
     self.gcs_base_dir = config.get('gcs_base_dir', 'sight_cache')
 
   def _gcs_cache_path(self, key: str, suffix: str = '.json'):
-    """Returns the GCS cache path for the given key.
-
-    Args:
-      key: The key to get the cache path for.
-      suffix: The suffix to add to the cache path.
-
-    Returns:
-      The GCS cache path.
-    """
-    return f'{self.gcs_base_dir}/{Path(key).with_suffix(suffix=suffix)}'
+    """Returns the GCS cache path for the given key"""
+    return str(
+        Path(self.gcs_base_dir) /
+        Path(key.replace(':', '/')).with_suffix(suffix=suffix))
 
   def get_redis_client(self):
-    """Returns the raw Redis client.
-
-    Returns:
-      The raw Redis client, or None if Redis is not enabled.
-    """
+    """Returns the Redis client."""
     return (self.redis_cache and self.redis_cache.get_redis_client()) or None
 
-  def json_get(self, key):
-    """Gets a value from the cache.
-
-    Args:
-      key: The key to get the value for.
-
-    Returns:
-      The value from the cache, or None if not found.
-    """
-    if self.redis_cache and self.get_redis_client():
+  def _get_from_redis(self, method, key):
+    """Try to get value from redis and handle exceptions"""
+    if self.get_redis_client():
       try:
-        value = self.redis_cache.json_get(key=key)
-        if value:
-          return value
-      except Exception as e:  # pylint: disable=broad-exception-caught
-        logging.warning('GOT THE ISSUE IN REDIS', e)
-        return None
-    blob = self.bucket.blob(self._gcs_cache_path(key=key.replace(':', '/')))
+        return getattr(self.redis_cache, method)(key)
+      except Exception as e:
+        logging.warning(f'Redis error in {method}: {e}')
+    return None
+
+  def _set_to_redis(self, method, key, value):
+    """Try to set value in Redis and handle exceptions."""
+    if self.get_redis_client():
+      try:
+        getattr(self.redis_cache, method)(key, value)
+      except Exception as e:
+        logging.warning(f"Redis error in {method}: {e}")
+
+  @override
+  def bin_get(self, key: str) -> Any:
+    """Retrieve binary data from cache"""
+    if (value := self._get_from_redis('bin_get', key)) is not None:
+      return value
+    blob = self.bucket.blob(self._gcs_cache_path(key=key))
     if blob.exists():
-      value = json.loads(blob.download_as_text())
-      if self.redis_cache:
-        self.redis_cache.json_set(key=key, value=value)
+      value = pickle.loads(blob.download_as_bytes())
+      self._set_to_redis('bin_set', key, value)
       return value
     return None
 
-  def json_set(self, key, value):
-    """Sets a value in the cache.
+  @override
+  def bin_set(self, key: str, value: Any) -> None:
+    """Store binary data in cache"""
+    self._set_to_redis('bin_set', key, value)
+    blob = self.bucket.blob(self._gcs_cache_path(key=key))
+    blob.upload_from_string(pickle.dumps(value))
 
-    Args:
-      key: The key to set the value for.
-      value: The value to set.
-    """
-    if self.redis_cache and self.get_redis_client():
-      try:
-        self.redis_cache.json_set(key=key, value=value)
-      except Exception as e:  # pylint: disable=broad-exception-caught
-        logging.warning('GOT THE ISSUE IN REDIS', e)
-    blob = self.bucket.blob(self._gcs_cache_path(key=key.replace(':', '/')))
+  @override
+  def json_get(self, key: str) -> Any:
+    """Retrieve JSON data from cache"""
+    if (value := self._get_from_redis('json_get', key)) is not None:
+      return value
+    blob = self.bucket.blob(self._gcs_cache_path(key=key))
+    if blob.exists():
+      value = json.loads(blob.download_as_text())
+      self._set_to_redis('json_set', key, value)
+      return value
+    return None
+
+  @override
+  def json_set(self, key: str, value: Any) -> None:
+    """Store JSON data in cache"""
+    self._set_to_redis('json_set', key, value)
+    blob = self.bucket.blob(self._gcs_cache_path(key=key))
     blob.upload_from_string(json.dumps(value))
 
-  def json_list_keys(self, prefix: str) -> list[str]:
-    """Lists the keys in the cache.
-
-    Args:
-      prefix: The prefix to filter the keys by.
-
-    Returns:
-      A list of the keys in the cache.
-    """
-    if self.redis_cache and self.get_redis_client():
-      try:
-        return self.redis_cache.json_list_keys(prefix=prefix)
-      except Exception as e:  # pylint: disable=broad-exception-caught
-        logging.warning('GOT THE ISSUE IN REDIS', e)
+  @override
+  def json_list_keys(self, prefix: str) -> List[str]:
+    """List all the keys with some prefix"""
+    if (keys := self._get_from_redis('json_list_keys', prefix)) is not None:
+      return keys
     prefix = prefix.replace(':', '/')
     whole_prefix = self._gcs_cache_path(key=prefix, suffix='')
     blobs = self.bucket.list_blobs(prefix=whole_prefix)

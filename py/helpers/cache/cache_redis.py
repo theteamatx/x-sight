@@ -1,12 +1,17 @@
 """This module contains a Redis Cache implementation."""
 
+import pickle
+
 from helpers.logs.logs_handler import logger as logging
+from overrides import override
 import redis
 from redis.commands.json import path
 
 from .cache_interface import CacheInterface
 
 Path = path.Path
+
+from typing import Any, List
 
 
 class RedisCache(CacheInterface):
@@ -49,30 +54,34 @@ class RedisCache(CacheInterface):
       logging.error("redis client not found..!!")
       raise ConnectionError("redis client not found , check connection !!")
 
-  def json_get(self, key):
-    """Gets a value from the cache using its JSON representation.
+  @override
+  def bin_get(self, key: str):
+    """Gets a value from the cache using key as binary data"""
+    self._is_redis_client_exist()
+    value = self.redis_client.get(key)
+    return pickle.loads(value) if value else None
 
-    Args:
-      key: The key to retrieve.
+  @override
+  def bin_set(self, key, value):
+    """Set the key with value as binary data"""
+    self._is_redis_client_exist()
+    self.redis_client.set(key, pickle.dumps(value))
 
-    Returns:
-      The value associated with the key, or None if the key is not found.
-    """
+  @override
+  def json_get(self, key: str) -> Any:
+    """Gets the JSON data from redis cache"""
     self._is_redis_client_exist()
     value = self.redis_client.json().get(key)
     return value if value else None
 
-  def json_set(self, key, value):
-    """Sets a value in the cache using its JSON representation.
-
-    Args:
-      key: The key to store the value under.
-      value: The value to store.
-    """
+  @override
+  def json_set(self, key: str, value: Any):
+    """Sets the JSON data as key->value in redis cache"""
     self._is_redis_client_exist()
     self.redis_client.json().set(key, Path.root_path(), value)
 
-  def json_list_keys(self, prefix: str) -> list[str]:
+  @override
+  def json_list_keys(self, prefix: str) -> List[str]:
     """Lists all keys in the cache that match a given prefix.
 
     Args:
