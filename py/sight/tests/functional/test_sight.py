@@ -58,7 +58,6 @@ class SightTest(unittest.TestCase):
     mock_close_avro.assert_called_once()
     mock_finalize_server.assert_called_once()
 
-  def test_
 
 
 

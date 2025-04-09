@@ -181,7 +181,7 @@ _CACHE_MODE = flags.DEFINE_enum(
     ['gcs', 'local', 'redis', 'none', 'gcs_with_redis', 'local_with_redis'],
     'Which Sight cache to use ? (default is none)')
 
-_file_name = 'decision_actor.py'
+_file_name = 'decision.py'
 _sight_id = None
 _rewards = []
 FLAGS = flags.FLAGS
@@ -244,74 +244,6 @@ class Optimizer:
 
 
 optimizer = Optimizer()
-
-# def attr_to_dict(attr, array):
-#     """Converts a spec type array to a dict of attribute constraints.
-
-#   Args:
-#     array: The spec array to be converted.
-#     attr: The name of the attribute.
-
-#   Returns:
-#     A dict of attribute constraints.
-#   """
-#     result = {}
-#     method_name = 'attr_to_dict'
-#     logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
-#     # print('Array : ', array)
-#     # if(array.dtype == np.float32):
-#     #   dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
-#     # elif(array.dtype == np.int64):
-#     #   dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_INT64
-
-#     # default
-#     # dtype = sight_pb2.DecisionConfigurationStart.DataType.DT_FLOAT32
-
-#     if isinstance(array, dm_env.specs.DiscreteArray):
-#         valid_values = []
-#         for i in range(array.num_values):
-#             valid_values.append(i)
-#         if array.shape == ():
-#             key = f'{attr}_{1}'
-#             result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
-#                 valid_int_values=valid_values)
-
-#     elif isinstance(array, dm_env.specs.BoundedArray):
-#         if array.shape == () or array.shape == (1, ):
-#             # minimum = float(array.minimum if array.minimum.size == 1 else array.minimum[0])
-#             # maximum = float(array.maximum if array.maximum.size == 1 else array.maximum[0])
-#             minimum = float(array.minimum[0])
-#             maximum = float(array.maximum[0])
-#             key = f'{attr}_{1}'
-#             result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
-#                 min_value=minimum,
-#                 max_value=maximum,
-#                 # datatype=dtype
-#             )
-#         else:
-#             minimum = np.repeat(
-#                 array.minimum,
-#                 array.shape[0]) if array.minimum.size == 1 else array.minimum
-#             maximum = np.repeat(
-#                 array.maximum,
-#                 array.shape[0]) if array.maximum.size == 1 else array.maximum
-
-#             for i in range(array.shape[0]):
-#                 key = f'{attr}_{i + 1}'
-#                 result[key] = sight_pb2.DecisionConfigurationStart.AttrProps(
-#                     min_value=float(minimum[i]),
-#                     max_value=float(maximum[i]),
-#                     # datatype=dtype
-#                 )
-#     # todo : need to handle this case when specs are in different form
-#     else:
-#         for i in range(array.shape[0]):
-#             key = f'{attr}_{i + 1}'
-#             result[key] = sight_pb2.DecisionConfigurationStart.AttrProps()
-
-#     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-#     return result
-
 
 def get_decision_messages_from_proto(
     decision_messages_proto: List[sight_pb2.DecisionMessage],
@@ -653,8 +585,8 @@ def run(
 
     decision_mode_actions = {
         'run': execute_run_mode,
-        'configured_run': (lambda sight=sight, driver_fn=driver_fn:
-                           execute_configured_run_mode(sight, driver_fn)),
+        # 'configured_run': (lambda sight=sight, driver_fn=driver_fn:
+        #                    execute_configured_run_mode(sight, driver_fn)),
         'train':
             (lambda sight=sight, decision_configuration=decision_configuration,
              driver_fn=driver_fn, optimizer_config=optimizer_config,
@@ -731,52 +663,53 @@ def execute_run_mode():
       lambda s, meta: s.FetchOptimalAction(req, 300, metadata=meta))
   print('response:', response.response_str)
 
+#? commenting out this flow as it calls code to add config file from sight,
+#  which uses capacitor file logic
+# def execute_configured_run_mode(sight, driver_fn):
+#   """Executes the configured run mode.
 
-def execute_configured_run_mode(sight, driver_fn):
-  """Executes the configured run mode.
+#   Args:
+#     sight: The Sight object to be used for logging.
+#     driver_fn: Driver function for calling application logic that uses the Sight
+#       Decision API to describe decisions and their outcomes. It is assumed that
+#       driver_fn does not maintain state across invocations and can be called as
+#       many time as needed, possibly concurrently (i.e. does not keep state
+#       within global variables either internally or via its interactions with
+#       external resources).
+#   """
+#   if FLAGS.decision_run_config_file:
+#     sight.add_config_file(_DECISION_RUN_CONFIG_FILE.value)
+#   elif _DECISION_PARAMS.value:
+#     chosen_action = {
+#         key: float(val) for key, val in (
+#             key_val.split('=') for key_val in _DECISION_PARAMS.value.split(':'))
+#     }
+#     sight.widget_decision_state['constant_action'] = chosen_action
+#     sight.widget_decision_state['last_reward'] = None
+#   else:
+#     raise ValueError(
+#         'In configured_run mode, decision_run_config_file is required.')
 
-  Args:
-    sight: The Sight object to be used for logging.
-    driver_fn: Driver function for calling application logic that uses the Sight
-      Decision API to describe decisions and their outcomes. It is assumed that
-      driver_fn does not maintain state across invocations and can be called as
-      many time as needed, possibly concurrently (i.e. does not keep state
-      within global variables either internally or via its interactions with
-      external resources).
-  """
-  if FLAGS.decision_run_config_file:
-    sight.add_config_file(_DECISION_RUN_CONFIG_FILE.value)
-  elif _DECISION_PARAMS.value:
-    chosen_action = {
-        key: float(val) for key, val in (
-            key_val.split('=') for key_val in _DECISION_PARAMS.value.split(':'))
-    }
-    sight.widget_decision_state['constant_action'] = chosen_action
-    sight.widget_decision_state['last_reward'] = None
-  else:
-    raise ValueError(
-        'In configured_run mode, decision_run_config_file is required.')
+#   logging.info(
+#       'decision_train_alg=%s docker_image=%s',
+#       FLAGS.deployment_mode,
+#       _DOCKER_IMAGE.value,
+#   )
 
-  logging.info(
-      'decision_train_alg=%s docker_image=%s',
-      FLAGS.deployment_mode,
-      _DOCKER_IMAGE.value,
-  )
-
-  if FLAGS.deployment_mode == 'local' and _DOCKER_IMAGE.value:
-    trials.start_job_in_docker(
-        1,
-        _BINARY_PATH.value,
-        _OPTIMIZER_TYPE.value,
-        _DOCKER_IMAGE.value,
-        _DECISON_MODE.value,
-        'docker_worker',
-        'worker_mode',
-        _DECISION_PARAMS.value,
-        sight,
-    )
-  else:
-    driver_fn(sight)
+#   if FLAGS.deployment_mode == 'local' and _DOCKER_IMAGE.value:
+#     trials.start_job_in_docker(
+#         1,
+#         _BINARY_PATH.value,
+#         _OPTIMIZER_TYPE.value,
+#         _DOCKER_IMAGE.value,
+#         _DECISON_MODE.value,
+#         'docker_worker',
+#         'worker_mode',
+#         _DECISION_PARAMS.value,
+#         sight,
+#     )
+#   else:
+#     driver_fn(sight)
 
 
 def execute_train_mode(sight, decision_configuration, driver_fn,
