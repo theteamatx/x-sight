@@ -9,7 +9,10 @@ from sight.widgets.decision import decision
 import os
 import sys
 from absl import flags
+from sight import sight
+from sight.sight import Sight
 from sight_service.proto import service_pb2
+from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
 
 FLAGS = flags.FLAGS
@@ -26,17 +29,28 @@ class DecisionTest(unittest.TestCase):
     # Ensure Abseil flags are parsed
     if not FLAGS.is_parsed():
       FLAGS(sys.argv)
+    # Default params to be used in Sight
+    self.params = sight_pb2.Params(
+        label='test-sight',
+        bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+    )
 
   @patch.object(decision, 'convert_proto_to_dict')
   def test_get_decision_messages_from_proto(self, mock_convert_proto_to_dict):
-    # Create two mocked DecisionMessage protos with specific action_id and action contents
-    msg1 = MagicMock(spec=sight_pb2.DecisionMessage)
-    msg1.action_id = '1'
-    msg1.action = {'region': 'US', 'project': 'kokua'}
+    # Create two dummy DecisionMessage protos with specific action_id and action contents
+    action1 = sight_pb2.DecisionParam(
+        params={
+            'region': sight_pb2.Value(string_value="US"),
+            'project': sight_pb2.Value(string_value="kokua")
+        })
+    action2 = sight_pb2.DecisionParam(
+        params={
+            'region': sight_pb2.Value(string_value="AU"),
+            'project': sight_pb2.Value(string_value="kokua-1")
+        })
 
-    msg2 = MagicMock(spec=sight_pb2.DecisionMessage)
-    msg2.action_id = '2'
-    msg2.action = {'region': 'AU', 'project': 'kokua-1'}
+    msg1 = sight_pb2.DecisionMessage(action_id=1, action=action1)
+    msg2 = sight_pb2.DecisionMessage(action_id=2, action=action2)
 
     # Mock the expected return values from convert_proto_to_dict for each message
     mock_convert_proto_to_dict.side_effect = [{
@@ -53,11 +67,11 @@ class DecisionTest(unittest.TestCase):
 
     # Expected output: dictionary mapping action_id to converted action content
     expected = {
-        '1': {
+        1: {
             'region': 'US',
             'project': 'kokua'
         },
-        '2': {
+        2: {
             'region': 'AU',
             'project': 'kokua-1'
         }
@@ -67,14 +81,8 @@ class DecisionTest(unittest.TestCase):
     self.assertEquals(result, expected)
 
     # Ensure that convert_proto_to_dict was called with the each proto's action
-    mock_convert_proto_to_dict.assert_any_call(proto={
-        'region': 'US',
-        'project': 'kokua'
-    })
-    mock_convert_proto_to_dict.assert_any_call(proto={
-        'region': 'AU',
-        'project': 'kokua-1'
-    })
+    mock_convert_proto_to_dict.assert_any_call(proto=action1)
+    mock_convert_proto_to_dict.assert_any_call(proto=action2)
 
   def test_execute_run_mode_without_sight_log_id(self):
     # Simulate the absence of sight_log_id flag
@@ -88,10 +96,11 @@ class DecisionTest(unittest.TestCase):
     self.assertEqual(str(cm.exception),
                      'sight_log_id must be provided for decision_mode = run')
 
-  @patch('sight.widgets.decision.decision.service.call')
+  @patch.object(decision.service, 'call')
   @patch('builtins.print')
   def test_execute_run_mode_with_sight_log_id(self, mock_print,
                                               mock_service_call):
+
     # Set the required flag sight_log_id to enable the run mode
     FLAGS.sight_log_id = '1234'
 
@@ -113,24 +122,31 @@ class DecisionTest(unittest.TestCase):
   #     decision.execute_configured_run_mode(sight, driver_fn)
   #   self.assertEqual(str(cm.exception), 'In configured_run mode, decision_run_config_file is required.')
 
-  def test_validate_train_mode(self):
+  @patch.object(sight.service, 'call')
+  def test_validate_train_mode(self, mock_service_call):
     # Set the required flag to simulate distributed deployment
     FLAGS.deployment_mode = 'distributed'
     FLAGS.optimizer_type = 'exhaustive_search'
     FLAGS.num_trials = 12
 
-    # Create Mock objects of sight and details to be used by the function
-    sight = MagicMock()
-    details = MagicMock()
-    details.action_max.values.return_value = [10]
-    details.action_min.values.return_value = [3]
+    # simulate service.call to return response with dummy ID
+    mock_service_call.return_value = service_pb2.CreateResponse(id=123)
+    sight = Sight(self.params)
+
+    details = decision_episode_fn.DecisionEpisodeFn(
+        state_attrs={},
+        action_attrs={
+            "a1":
+                sight_pb2.DecisionConfigurationStart.AttrProps(min_value=3,
+                                                               max_value=10)
+        })
     sight.widget_decision_state = {'decision_episode_fn': details}
 
     # Expect ValueError due to num_trials exceeding the possible action range (10 - 3 + 2 = 9)
     with self.assertRaises(ValueError) as cm:
       decision.validate_train_mode(sight)
     self.assertEqual(str(cm.exception),
-                     'Max possible value for num_trials is: 9')
+                     'Max possible value for num_trials is: 9.0')
 
     # Adjust flags to check separate condition
     FLAGS.num_trials = 5
@@ -142,12 +158,15 @@ class DecisionTest(unittest.TestCase):
     self.assertEqual(str(cm.exception),
                      'docker_image must be provided for distributed mode')
 
+  @patch.object(sight.service, 'call')
+  @patch.object(sight, 'create_external_bq_table')
   @patch.object(decision, 'execute_local_training')
   @patch.object(decision, 'create_opt_and_start_workers')
   @patch.object(decision, 'validate_train_mode')
   def test_execute_train_mode(self, mock_validate_train_mode,
                               mock_create_opt_and_start_workers,
-                              mock_execute_local_training):
+                              mock_execute_local_training,
+                              mock_create_external_bq_table, mock_service_call):
     # Test unsupported deployment mode to ensure proper error is raised
     FLAGS.deployment_mode = 'xyz'
     with self.assertRaises(ValueError) as cm:
@@ -158,6 +177,37 @@ class DecisionTest(unittest.TestCase):
     distributed_modes = ['distributed', 'vm']
     local_modes = ['local', 'dsub_local', 'docker_local', 'worker_mode']
 
+    # Simulate service.call with different id as response
+    mock_service_call.side_effect = [
+        service_pb2.CreateResponse(id=1),
+        service_pb2.CreateResponse(id=2),
+        service_pb2.CreateResponse(id=3),
+        service_pb2.CreateResponse(id=4),
+        service_pb2.CreateResponse(id=5),
+        service_pb2.CreateResponse(id=6)
+    ]
+    mock_create_external_bq_table.return_value = None
+
+    # Preparing input for the test function
+    driver_fn = MagicMock()  # function with user logic
+    question_config = {
+        "desc":
+            "generic question label",
+        "attrs_text_proto":
+            "py/sight/utils/.text_proto_configs/generic.textproto"
+    }
+    optimizer_config = {
+        "optimizer": "worklist_scheduler",
+        "num_questions": 2,
+        "mode": "dsub_local_worker",  #"dsub_cloud_worker" #(dsub_local, )
+    }
+    workers_config = {
+        "version": "v0.1",
+        "file_path": "worker/generic_worker.yaml"
+    }
+    optimizer_type = "worklist_scheduler"
+    question_label = "Q_label1"
+
     for mode in distributed_modes + local_modes:
       with self.subTest(deployment_mode=mode):
         # Reset mocks for each subtest to avoid call overlap
@@ -166,18 +216,22 @@ class DecisionTest(unittest.TestCase):
         mock_execute_local_training.reset_mock()
 
         FLAGS.deployment_mode = mode
-        sight = MagicMock()
-        decision_configuration = MagicMock()
-        driver_fn = MagicMock()
-        optimizer_config = MagicMock()
-        workers_config = MagicMock()
-        optimizer_type = MagicMock()
-        question_label = MagicMock()
+
+        # Preparing input for the test function
+        sight = Sight(self.params)
+        optimizer = decision.Optimizer()
+        optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
+
+        decision_configuration = decision.configure_decision(
+            sight, question_label, question_config, optimizer_config,
+            optimizer.obj)
 
         # Execute the function under test
         decision.execute_train_mode(sight, decision_configuration, driver_fn,
                                     optimizer_config, workers_config,
                                     optimizer_type, question_label)
+
+        sight.close()
 
         # Assert correct execution path based on deployment mode
         if FLAGS.deployment_mode in distributed_modes:
@@ -189,20 +243,46 @@ class DecisionTest(unittest.TestCase):
               sight, decision_configuration, driver_fn, optimizer_config,
               workers_config, optimizer_type)
 
+    assert mock_service_call.call_count == len(distributed_modes + local_modes)
+
+  @patch.object(sight.service, 'call')
+  @patch.object(sight, 'create_external_bq_table')
   @patch.object(trials, 'launch')
   @patch.object(trials, 'start_worker_jobs')
-  def test_execute_local_training(self, mock_start_worker_jobs, mock_lauch):
+  def test_execute_local_training(self, mock_start_worker_jobs, mock_lauch,
+                                  mock_create_external_bq_table,
+                                  mock_service_call):
     # Ensure 'worker_mode' and PARENT_LOG_ID path does nothing
     FLAGS.deployment_mode = 'worker_mode'
     decision.execute_local_training(None, None, None, None, None, None)
 
-    # Prepare reusable mocks for valid input args
-    sight = MagicMock()
-    decision_configuration = MagicMock()
-    driver_fn = MagicMock()
-    optimizer_config = MagicMock()
-    workers_config = MagicMock()
-    optimizer_type = MagicMock()
+    # Simulate service.call with different id as response
+    mock_service_call.side_effect = [
+        service_pb2.CreateResponse(id=1),
+        service_pb2.CreateResponse(id=2),
+        service_pb2.CreateResponse(id=3),
+    ]
+
+    # Preparing input for the test function
+    driver_fn = MagicMock()  # function with user logic
+    question_config = {
+        "desc":
+            "generic question label",
+        "attrs_text_proto":
+            "py/sight/utils/.text_proto_configs/generic.textproto"
+    }
+    optimizer_config = {
+        "optimizer": "worklist_scheduler",
+        "num_questions": 2,
+        "mode": "dsub_local_worker",
+    }
+    workers_config = {
+        "version": "v0.1",
+        "file_path": "worker/generic_worker.yaml"
+    }
+    optimizer_type = "worklist_scheduler"
+    question_label = "Q_label1"
+    optimizer = decision.Optimizer()
 
     # Test all supported local deployment modes
     local_modes = ['local', 'dsub_local', 'docker_local']
@@ -210,14 +290,24 @@ class DecisionTest(unittest.TestCase):
       with self.subTest(deployment_mode=mode):
 
         FLAGS.deployment_mode = mode
+        sight = Sight(self.params)
+        optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
+
+        decision_configuration = decision.configure_decision(
+            sight, question_label, question_config, optimizer_config,
+            optimizer.obj)
         # Reset mocks to ensure call counts are fresh for each mode
         mock_lauch.reset_mock()
         mock_start_worker_jobs.reset_mock()
+        mock_service_call.reset_mock()
 
         # Call the function under test
         decision.execute_local_training(sight, decision_configuration,
                                         driver_fn, optimizer_config,
                                         workers_config, optimizer_type)
+
+        sight.close()
+
         # launch() should be called in all local modes
         mock_lauch.assert_called_once_with(decision_configuration, sight)
 
@@ -228,26 +318,50 @@ class DecisionTest(unittest.TestCase):
         else:
           mock_start_worker_jobs.assert_not_called()
 
+  @patch.object(sight.service, 'call')
+  @patch.object(sight, 'create_external_bq_table')
   @patch.object(trials, 'launch')
   @patch.object(trials, 'start_worker_jobs')
   def test_create_opt_and_start_workers(self, mock_start_worker_jobs,
-                                        mock_launch):
+                                        mock_launch,
+                                        mock_create_external_bq_table,
+                                        mock_service_call):
 
     # create parent mock to track the call order of launch and start_worker_jobs
     parent_mock = MagicMock()
     parent_mock.attach_mock(mock_launch, 'launch')
     parent_mock.attach_mock(mock_start_worker_jobs, 'start_worker_jobs')
 
-    sight = MagicMock()
-    decision_configuration = MagicMock()
-    optimizer_config = MagicMock()
-    workers_config = MagicMock()
-    optimizer_type = MagicMock()
+    sight = Sight(self.params)
+
+    question_config = {
+        "desc":
+            "generic question label",
+        "attrs_text_proto":
+            "py/sight/utils/.text_proto_configs/generic.textproto"
+    }
+    optimizer_config = {
+        "optimizer": "worklist_scheduler",
+        "num_questions": 2,
+        "mode": "dsub_local_worker",  #"dsub_cloud_worker" #(dsub_local, )
+    }
+    workers_config = {
+        "version": "v0.1",
+        "file_path": "worker/generic_worker.yaml"
+    }
+    optimizer_type = "worklist_scheduler"
+    question_label = "Q_label1"
+    optimizer = decision.Optimizer()
+    optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
+
+    decision_configuration = decision.configure_decision(
+        sight, question_label, question_config, optimizer_config, optimizer.obj)
 
     # Call the function under test
     decision.create_opt_and_start_workers(sight, decision_configuration,
                                           optimizer_config, workers_config,
                                           optimizer_type)
+    sight.close()
 
     # Assert that each function was called exactly once with correct arguments
     mock_launch.assert_called_once_with(decision_configuration, sight)
@@ -263,15 +377,22 @@ class DecisionTest(unittest.TestCase):
     ]
     self.assertEqual(parent_mock.mock_calls, expected_order)
 
+  @patch.object(sight.service, 'call')
+  @patch.object(sight, 'create_external_bq_table')
   @patch.object(decision, 'finalize_episode')
   @patch.object(decision, 'get_decision_messages_from_proto')
-  @patch.object(decision, 'optimizer')
-  def test_process_worker_action(self, mock_optimizer,
-                                 mock_get_decision_messages,
-                                 mock_finalize_episode):
+  def test_process_worker_action(self, mock_get_decision_messages,
+                                 mock_finalize_episode,
+                                 mock_create_external_bq_table,
+                                 mock_service_call):
     # Create a mocked response object with dummy decision messages
-    response = MagicMock()
-    response.decision_messages = ['dm1', 'dm2']
+    response = service_pb2.WorkerAliveResponse(decision_messages=[
+        sight_pb2.DecisionMessage(action=sight_pb2.DecisionParam(
+            params={
+                "a1": sight_pb2.Value(string_value="abc"),
+                "a2": sight_pb2.Value(string_value="xyz")
+            }))
+    ])
 
     # Simulate parsed decision messages returned by proto converter
     mock_get_decision_messages.return_value = {
@@ -283,15 +404,21 @@ class DecisionTest(unittest.TestCase):
         }
     }
 
-    sight = MagicMock()
+    sight = Sight(self.params)
+
     driver_fn = MagicMock()
-    env = MagicMock()
-    question_label = MagicMock()
-    mock_optimizer.obj.cache = MagicMock()
+    env = None
+    question_label = "Q_label1"
+    optimizer_type = "worklist_scheduler"
+    # mock_optimizer.obj.cache = MagicMock()
+    optimizer = decision.Optimizer()
+    optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
+    optimizer.obj.cache = MagicMock()
 
     # Execute the function under test
     decision.process_worker_action(response, sight, driver_fn, env,
-                                   question_label)
+                                   question_label, optimizer.obj)
+    sight.close()
 
     # Ensure proto message parsed once from the reponse
     mock_get_decision_messages.assert_called_once_with(
@@ -313,34 +440,41 @@ class DecisionTest(unittest.TestCase):
     current_file = Path(__file__).resolve()
     sight_repo_path = current_file.parents[6]
     absoulte_text_proto_path = sight_repo_path.joinpath(
-      question_config['attrs_text_proto'])
+        question_config['attrs_text_proto'])
 
     # Assert the error message matches the path used internally in the function
-    self.assertEqual(str(cm.exception), f'File not found {absoulte_text_proto_path}')
+    self.assertEqual(str(cm.exception),
+                     f'File not found {absoulte_text_proto_path}')
 
-  @patch('sight.widgets.decision.decision.os.path.exists')
-  def test_get_decision_configuration_for_opt(self, mock_path_exist):
+  @patch.object(sight.service, 'call')
+  @patch.object(sight, 'create_external_bq_table')
+  @patch.object(decision.os.path, 'exists')
+  def test_get_decision_configuration_for_opt(self, mock_path_exist,
+                                              mock_create_external_bq_table,
+                                              mock_service_call):
     # Simulate that the proto file exists with valid proto path
     mock_path_exist.return_value = True
-    question_config = {'attrs_text_proto' :'py/sight/utils/.text_proto_configs/fvs.textproto'}
+    mock_service_call.return_value = service_pb2.CreateResponse(id=123)
+    question_config = {
+        'attrs_text_proto': 'py/sight/utils/.text_proto_configs/fvs.textproto'
+    }
 
-    # Mock the input parameters
-    sight = MagicMock()
-    sight.params.label = 'test_label'
+    # Prepare the input parameters
+    sight = Sight(self.params)
     question_label = 'sight-test'
-    opt_obj = MagicMock()
-    opt_obj.optimizer_type.return_value = sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT
-    opt_obj.create_config.return_value = sight_pb2.DecisionConfigurationStart.ChoiceConfig()
+    optimizer_type = "worklist_scheduler"
+    optimizer = decision.Optimizer()
+    optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
     optimizer_config = {'num_questions': 5}
 
     # Call the function under test
-    result = decision.get_decision_configuration_for_opt(sight, question_label, opt_obj, question_config,
-    optimizer_config)
+    result = decision.get_decision_configuration_for_opt(
+        sight, question_label, optimizer.obj, question_config, optimizer_config)
+
+    sight.close()
 
     # Assert that a valid DecisionConfigurationStart object is returned
     self.assertIsInstance(result, sight_pb2.DecisionConfigurationStart)
-
-
 
 
 if __name__ == "__main__":

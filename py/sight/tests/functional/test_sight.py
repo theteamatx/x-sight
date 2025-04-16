@@ -4,7 +4,9 @@ import unittest
 from unittest.mock import patch, MagicMock
 from tests.colorful_tests import ColorfulTestRunner
 from sight.proto import sight_pb2
+from sight_service.proto import service_pb2
 from sight.sight import Sight
+from sight import sight
 import os
 import sys
 from absl import flags
@@ -15,8 +17,8 @@ FLAGS = flags.FLAGS
 class SightTest(unittest.TestCase):
   """Tests for the Sight module."""
 
-  # def tearDown(self):
-  #   super().tearDown()
+  def tearDown(self):
+    super().tearDown()
 
   def setUp(self):
     super().setUp()
@@ -30,11 +32,10 @@ class SightTest(unittest.TestCase):
         bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
     )
 
-  @patch('sight.sight.service.call')
+  @patch.object(sight.service, 'call')
   def test_sight_obj_creation(self, mock_call):
     # Create a mock response for the service call with a dummy ID
-    mock_response = MagicMock()
-    mock_response.id = 'mock-id-123'
+    mock_response = service_pb2.CreateResponse(id=123)
     mock_call.return_value = mock_response  # This will be returned when `service.call()` is used
 
     # Instantiate the Sight object using test params from self.setUp()
@@ -44,7 +45,7 @@ class SightTest(unittest.TestCase):
     self.assertIsInstance(sight_obj, Sight)
 
     # Confirm that the ID returned from the mocked service call is set on the Sight instance
-    self.assertEqual(sight_obj.id, 'mock-id-123')
+    self.assertEqual(sight_obj.id, 123)
 
     # Ensure that the service call was made exactly once during initialization
     mock_call.assert_called_once()
@@ -57,9 +58,14 @@ class SightTest(unittest.TestCase):
     # In silent mode, no ID should be generated from a service call — it defaults to 0
     self.assertEqual(sight_obj.id, 0)
 
-  @patch('sight.sight.Sight._close_avro_log')
-  @patch('sight.sight.finalize_server')
-  def test_close_sight(self, mock_close_avro, mock_finalize_server):
+  @patch.object(sight.Sight, '_close_avro_log')
+  @patch.object(sight, 'finalize_server')
+  @patch.object(sight.service, 'call')
+  def test_close_sight(self, mock_call, mock_finalize_server, mock_close_avro):
+
+    # simulate service.call to return response with dummy ID
+    mock_call.return_value = service_pb2.CreateResponse(id=123)
+
     # Create a Sight object with default params
     sight_obj = Sight(self.params)
     self.assertIsInstance(sight_obj, Sight)
