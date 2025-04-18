@@ -22,7 +22,7 @@ import random
 import sys
 import threading
 import time
-from typing import Any, Callable, Dict, List, Optional, Text
+from typing import Any, Callable, Dict, List, Optional, Text, Union
 
 from absl import flags
 from google.protobuf.text_format import Merge
@@ -181,7 +181,7 @@ _CACHE_MODE = flags.DEFINE_enum(
     ['gcs', 'local', 'redis', 'none', 'gcs_with_redis', 'local_with_redis'],
     'Which Sight cache to use ? (default is none)')
 
-_file_name = 'decision.py'
+_file_name = os.path.basename(__file__)
 _sight_id = None
 _rewards = []
 FLAGS = flags.FLAGS
@@ -628,11 +628,11 @@ def run(
         logging.info('backed off for %s seconds... and trying for %s',
                      backoff_interval, num_retries)
         num_retries += 1
-        if (num_retries >= 10):
+        if (num_retries >= 5):
           break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-        process_worker_action(response, sight, driver_fn, env, question_label)
+        process_worker_action(response, sight, driver_fn, env, question_label, optimizer.obj)
       else:
         raise ValueError('Invalid response from server')
 
@@ -776,7 +776,7 @@ def execute_local_training(sight, decision_configuration, driver_fn,
                              optimizer_type)
 
 
-def process_worker_action(response, sight, driver_fn, env, question_label):
+def process_worker_action(response, sight, driver_fn, env, question_label, opt_obj):
   """Processes worker actions during local training.
 
   Args:
@@ -789,7 +789,7 @@ def process_worker_action(response, sight, driver_fn, env, question_label):
   decision_messages = get_decision_messages_from_proto(
       decision_messages_proto=response.decision_messages)
   # shared_batch_messages = CachedBatchMessages()
-  sight.widget_decision_state['cached_messages'] = optimizer.obj.cache
+  sight.widget_decision_state['cached_messages'] = opt_obj.cache
   logging.info('cached_messages=%s',
                sight.widget_decision_state['cached_messages'])
 
@@ -915,7 +915,7 @@ def configure_decision(sight, question_label, question_config, optimizer_config,
   return decision_configuration
 
 
-def setup_optimizer(sight, optimizer_type, description=''):
+def setup_optimizer(sight, optimizer_type, description='')-> Union[LLMOptimizerClient, SingleActionOptimizerClient]:
   """Sets up the optimizer based on the given type.
 
   Args:
@@ -1031,7 +1031,7 @@ def get_decision_outcome_proto(outcome_label: str,
 
   return decision_outcome_proto
 
-
+#! need to refactor this to merge it with get_decision_outcome_proto
 def get_decision_outcome_from_decision_message(
     outcome_label: str, decision_message: DecisionMessage):
   """Returns the decision outcome from the decision message."""

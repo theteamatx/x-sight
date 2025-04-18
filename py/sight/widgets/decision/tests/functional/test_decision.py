@@ -14,6 +14,8 @@ from sight.sight import Sight
 from sight_service.proto import service_pb2
 from sight.widgets.decision import decision_episode_fn
 from sight.widgets.decision import trials
+from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
+from sight.widgets.decision.single_action_optimizer_client import SingleActionOptimizerClient
 
 FLAGS = flags.FLAGS
 
@@ -114,13 +116,6 @@ class DecisionTest(unittest.TestCase):
 
     # Verify the function printed expected response
     mock_print.assert_called_with('response:', 'ok')
-
-  # def test_execute_configured_run_mode_without_any_flags(self):
-  #   with self.assertRaises(ValueError) as cm:
-  #     sight = MagicMock()
-  #     driver_fn = MagicMock()
-  #     decision.execute_configured_run_mode(sight, driver_fn)
-  #   self.assertEqual(str(cm.exception), 'In configured_run mode, decision_run_config_file is required.')
 
   @patch.object(sight.service, 'call')
   def test_validate_train_mode(self, mock_service_call):
@@ -476,6 +471,135 @@ class DecisionTest(unittest.TestCase):
     # Assert that a valid DecisionConfigurationStart object is returned
     self.assertIsInstance(result, sight_pb2.DecisionConfigurationStart)
 
+  @patch.object(sight.service, 'call')
+  @patch.object(sight, 'create_external_bq_table')
+  def test_setup_optimizer(self, mock_create_external_bq_table,
+                           mock_service_call):
+
+    mock_service_call.return_value = service_pb2.CreateResponse(id=123)
+
+    # Prepare inputs for the test function
+    sight = Sight(self.params)
+    description = ""
+    optimizer_type = 'invalid'
+
+    with self.assertRaises(ValueError) as cm:
+      result = decision.setup_optimizer(sight, optimizer_type, description)
+
+    # Ensure that the exception message matches with the expected message
+    self.assertEqual(str(cm.exception),
+                     f'Unknown optimizer type {optimizer_type}')
+
+    optimizer_types = [
+        'worklist_scheduler', 'bayesian_opt', 'exhaustive_search', 'vizier',
+        'sensitivity_analysis', 'smcpy', 'llm_text_bison_optimize', 'ng_bo'
+    ]
+
+    for opt in optimizer_types:
+      with self.subTest(optimizer_type=opt):
+
+        # simulate service.call to return response with dummy ID
+        mock_service_call.return_value = service_pb2.CreateResponse(id=123)
+
+        # Prepare inputs for the test function
+        sight = Sight(self.params)
+        description = ""
+        optimizer_type = opt
+
+        result = decision.setup_optimizer(sight, optimizer_type, description)
+        if optimizer_type.startswith('llm_'):
+          self.assertIsInstance(result, LLMOptimizerClient)
+        else:
+          self.assertIsInstance(result, SingleActionOptimizerClient)
+
+  @patch.object(sight.service, 'call')
+  @patch.object(sight, 'create_external_bq_table')
+  @patch.object(decision, 'convert_dict_to_proto')
+  def test_get_decision_outcome_proto(self, mock_convert_dict_to_proto,
+                                      mock_create_external_bq_table,
+                                      mock_service_call):
+    # simulate service.call to return response with dummy ID
+    mock_service_call.return_value = service_pb2.CreateResponse(id=123)
+
+    mock_convert_dict_to_proto.return_value = sight_pb2.DecisionParam(
+        params={
+            'outcome1':
+                sight_pb2.Value(sub_type=sight_pb2.Value.ST_JSON,
+                                json_value='123')
+        })
+
+    # Prepare inputs for the test function
+    sight = Sight(self.params)
+    outcome_label = "label_1"
+    sight.widget_decision_state = {
+        "sum_reward": 30.0,
+        "discount": 1.0,
+        "sum_outcome": {
+            'outcome1': '123'
+        }
+    }
+
+    result = decision.get_decision_outcome_proto(outcome_label, sight)
+
+    expected = sight_pb2.DecisionOutcome(
+        outcome_label=outcome_label,
+        reward=sight.widget_decision_state['sum_reward'],
+        discount=sight.widget_decision_state['discount'],
+        outcome_params=sight_pb2.DecisionParam(
+            params={
+                'outcome1':
+                    sight_pb2.Value(
+                        sub_type=sight_pb2.Value.ST_JSON,
+                        json_value=sight.widget_decision_state['sum_outcome']
+                        ['outcome1'])
+            }))
+
+    self.assertIsInstance(result, sight_pb2.DecisionOutcome)
+    self.assertEqual(result, expected)
+
+  @patch.object(sight, 'create_external_bq_table')
+  @patch.object(sight.service, 'call')
+  @patch.object(sight.Sight, 'log_object')
+  @patch.object(decision, '_update_cached_batch')
+  def test_decision_outcome(self, mock_update_cached_batch, mock_log_object,
+                            mock_service_call, mock_create_external_bq_table):
+    # simulate service.call to return response with dummy ID
+    mock_service_call.return_value = service_pb2.CreateResponse(id=123)
+    # Prepare inputs for the test function
+    sight = Sight(self.params)
+    outcome_label = 'label_outcome'
+    reward = 12.0
+    discount = 1.0
+    outcome = {"o1": "o-1", "o2": 2}
+
+    decision.decision_outcome(outcome_label, sight, reward, outcome, discount)
+    sight.close()
+
+    self.assertEqual(sight.widget_decision_state['reward'], reward)
+    self.assertNotIn('sum_reward',
+                     sight.widget_decision_state)  # Should be popped
+    self.assertNotIn('sum_outcome',
+                     sight.widget_decision_state)  # Should be popped
+
+    mock_log_object.assert_called_once()
+    mock_update_cached_batch.assert_called_once_with(sight)
+
+  @patch.object(sight, 'create_external_bq_table')
+  @patch.object(sight.service, 'call')
+  def test_propose_actions(self, mock_service_call,
+                           mock_create_external_bq_table):
+    mock_service_call.side_effect = [
+        service_pb2.CreateResponse(id=123),  # for Sight creation
+        service_pb2.ProposeActionResponse(
+            action_id=777),  # for propose_actions
+    ]
+
+    sight = Sight(self.params)
+    question_label = "q_label1"
+    action_dict = {"a1": 1, "a2": 2}
+
+    result = decision.propose_actions(sight, question_label, action_dict)
+    self.assertEqual(result, 777)
 
 if __name__ == "__main__":
   unittest.main(testRunner=ColorfulTestRunner())

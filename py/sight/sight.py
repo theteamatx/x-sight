@@ -206,6 +206,9 @@ class Sight(object):
       self.id = 0
 
   def _link_child_to_parent(self):
+    """ link existing log to it's parent log id with relationship as
+        child to parent
+    """
     if (FLAGS.parent_id):
       sight_obj = sight_pb2.Object()
       sight_obj.sub_type = sight_pb2.Object.SubType.ST_LINK
@@ -230,14 +233,9 @@ class Sight(object):
       self.path_prefix = (self.params.label + '_' + self.id + '_' + 'log' +
                           '_run_mode')
     else:
-      req = service_pb2.CreateRequest(
-          # log_owner=self.params.log_owner,
-          # label=self.params.label,
-          # log_dir_path=self.params.log_dir_path,
-          # format='LF_AVRO',
-      )
+      req = service_pb2.CreateRequest()
       response = service.call(lambda s, meta: s.Create(req, 300, metadata=meta))
-      logging.info('##### response=%s #####', response)
+      # logging.info('##### response=%s #####', response)
       self.id = response.id
       # logging.info('PARENT_LOG_ID not found - parent process')
       self.path_prefix = (self.params.label + '_' + str(response.id) + '_' +
@@ -285,14 +283,11 @@ class Sight(object):
   def __init__(
       self,
       params: sight_pb2.Params,
-      configuration: Optional[Sequence[sight_pb2.Object]] = None,
   ):
     self._initialize_default_params(params)
 
     # Initialize each widget's state to make sure its state field is created.
     self.widget_decision_state = defaultdict(dict)
-    self.widget_simulation_state = SimulationWidgetState()
-    # self._configure(configuration)
 
     self._initialize_context_vars()
     self._load_worker_location()
@@ -399,7 +394,7 @@ class Sight(object):
     # if this is the only avro file, table has not been created yet
     if self.avro_file_counter == 1:
       create_external_bq_table(self.params, self.table_name, self.id)
-    logging.info(
+    print(
         'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
         'log_id=%s.%s&log_owner=%s&project_id=%s', self.SIGHT_API_KEY,
         self.params.dataset_name, self.table_name, self.params.log_owner,
@@ -420,7 +415,6 @@ class Sight(object):
 
     if self.avro_log and self.avro_log.getbuffer().nbytes > 0:
       self._close_avro_log()
-
 
     #? need to check whether we need this condition at all?
     if not self.params.local and not self.params.in_memory:
@@ -610,6 +604,33 @@ class Sight(object):
 
     return obj_location
 
+  def _populate_block_end_metrics(self, obj: sight_pb2.Object, label: str) -> None:
+    """Populates block_end metrics like elapsed time and exclusive time."""
+    if not self.open_block_start_locations.get():
+        logging.warning('Exiting inactive Sight block "%s"', label)
+
+    obj.sub_type = sight_pb2.Object.SubType.ST_BLOCK_END
+    if obj.block_end is None:
+      obj.block_end = sight_pb2.BlockEnd()
+    obj.block_end.label = label
+    obj.block_end.num_direct_contents = self.num_direct_contents.get().pos()
+    obj.block_end.num_transitive_contents = self.num_transitive_contents.get(
+    ).pos()
+    obj.block_end.location_of_block_start = self.open_block_start_locations.get(
+    )[-1]
+
+    elapsed_time_ns = time.time_ns() - self.active_block_start_time.get()[-1]
+    obj.block_end.metrics.elapsed_time_ns = elapsed_time_ns
+    obj.block_end.metrics.exclusive_elapsed_time_ns = elapsed_time_ns - self.active_block_deeper_elapsed_time.get(
+    )[-1]
+
+    self.active_block_deeper_elapsed_time.get().pop()
+    self.active_block_deeper_elapsed_time.get()[-1] += elapsed_time_ns
+    obj.block_end.metrics.elapsed_time_ns = elapsed_time_ns
+
+    self.open_block_start_locations.get().pop()
+    self.active_block_start_time.get().pop()
+
   def exit_block(self, label: str, obj: sight_pb2.Object, frame=None) -> None:
     """Documents in the Sight log that a hierarchical block was exited.
 
@@ -637,30 +658,7 @@ class Sight(object):
     self.location.get().next()
 
     if self.is_binary_logged():
-      if not self.open_block_start_locations.get():
-        logging.warning('Exiting inactive Sight block "%s"', label)
-
-      obj.sub_type = sight_pb2.Object.SubType.ST_BLOCK_END
-      if obj.block_end is None:
-        obj.block_end = sight_pb2.BlockEnd()
-      obj.block_end.label = label
-      obj.block_end.num_direct_contents = self.num_direct_contents.get().pos()
-      obj.block_end.num_transitive_contents = self.num_transitive_contents.get(
-      ).pos()
-      obj.block_end.location_of_block_start = self.open_block_start_locations.get(
-      )[-1]
-
-      elapsed_time_ns = time.time_ns() - self.active_block_start_time.get()[-1]
-      obj.block_end.metrics.elapsed_time_ns = elapsed_time_ns
-      obj.block_end.metrics.exclusive_elapsed_time_ns = elapsed_time_ns - self.active_block_deeper_elapsed_time.get(
-      )[-1]
-
-      self.active_block_deeper_elapsed_time.get().pop()
-      self.active_block_deeper_elapsed_time.get()[-1] += elapsed_time_ns
-      obj.block_end.metrics.elapsed_time_ns = elapsed_time_ns
-
-      self.open_block_start_locations.get().pop()
-      self.active_block_start_time.get().pop()
+      self._populate_block_end_metrics(obj, label)
 
       if frame is None:
         # pytype: disable=attribute-error
@@ -753,7 +751,7 @@ class Sight(object):
     )
     if self.avro_file_counter == 1:
       create_external_bq_table(self.params, self.table_name, self.id)
-      logging.info(
+      print(
           'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
           'log_id=%s.%s&log_owner=%s&project_id=%s', self.SIGHT_API_KEY,
           self.params.dataset_name, self.table_name, self.params.log_owner,
