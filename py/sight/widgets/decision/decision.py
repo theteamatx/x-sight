@@ -1262,7 +1262,7 @@ def decision_outcome(
     for key in outcome:
       # print(key, outcome[key], type(outcome[key]))
       # checking for scalar types
-      if utils.is_scalar(outcome[key]):
+      if utils.is_numeric(outcome[key]):
         if key not in sight.widget_decision_state['sum_outcome']:
           sight.widget_decision_state['sum_outcome'][key] = 0
         sight.widget_decision_state['sum_outcome'][key] += outcome[key]

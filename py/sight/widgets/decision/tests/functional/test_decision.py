@@ -153,6 +153,7 @@ class DecisionTest(unittest.TestCase):
     self.assertEqual(str(cm.exception),
                      'docker_image must be provided for distributed mode')
 
+  @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight.service, 'call')
   @patch.object(sight, 'create_external_bq_table')
   @patch.object(decision, 'execute_local_training')
@@ -161,7 +162,8 @@ class DecisionTest(unittest.TestCase):
   def test_execute_train_mode(self, mock_validate_train_mode,
                               mock_create_opt_and_start_workers,
                               mock_execute_local_training,
-                              mock_create_external_bq_table, mock_service_call):
+                              mock_create_external_bq_table, mock_service_call,
+                              mock_upload_blob):
     # Test unsupported deployment mode to ensure proper error is raised
     FLAGS.deployment_mode = 'xyz'
     with self.assertRaises(ValueError) as cm:
@@ -240,13 +242,14 @@ class DecisionTest(unittest.TestCase):
 
     assert mock_service_call.call_count == len(distributed_modes + local_modes)
 
+  @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight.service, 'call')
   @patch.object(sight, 'create_external_bq_table')
   @patch.object(trials, 'launch')
   @patch.object(trials, 'start_worker_jobs')
   def test_execute_local_training(self, mock_start_worker_jobs, mock_lauch,
                                   mock_create_external_bq_table,
-                                  mock_service_call):
+                                  mock_service_call, mock_upload_blob):
     # Ensure 'worker_mode' and PARENT_LOG_ID path does nothing
     FLAGS.deployment_mode = 'worker_mode'
     decision.execute_local_training(None, None, None, None, None, None)
@@ -313,6 +316,7 @@ class DecisionTest(unittest.TestCase):
         else:
           mock_start_worker_jobs.assert_not_called()
 
+  @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight.service, 'call')
   @patch.object(sight, 'create_external_bq_table')
   @patch.object(trials, 'launch')
@@ -320,7 +324,7 @@ class DecisionTest(unittest.TestCase):
   def test_create_opt_and_start_workers(self, mock_start_worker_jobs,
                                         mock_launch,
                                         mock_create_external_bq_table,
-                                        mock_service_call):
+                                        mock_service_call, mock_upload_blob):
 
     # create parent mock to track the call order of launch and start_worker_jobs
     parent_mock = MagicMock()
@@ -372,6 +376,7 @@ class DecisionTest(unittest.TestCase):
     ]
     self.assertEqual(parent_mock.mock_calls, expected_order)
 
+  @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight.service, 'call')
   @patch.object(sight, 'create_external_bq_table')
   @patch.object(decision, 'finalize_episode')
@@ -379,7 +384,7 @@ class DecisionTest(unittest.TestCase):
   def test_process_worker_action(self, mock_get_decision_messages,
                                  mock_finalize_episode,
                                  mock_create_external_bq_table,
-                                 mock_service_call):
+                                 mock_service_call, mock_upload_blob):
     # Create a mocked response object with dummy decision messages
     response = service_pb2.WorkerAliveResponse(decision_messages=[
         sight_pb2.DecisionMessage(action=sight_pb2.DecisionParam(
@@ -441,12 +446,14 @@ class DecisionTest(unittest.TestCase):
     self.assertEqual(str(cm.exception),
                      f'File not found {absoulte_text_proto_path}')
 
+  @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight.service, 'call')
   @patch.object(sight, 'create_external_bq_table')
   @patch.object(decision.os.path, 'exists')
   def test_get_decision_configuration_for_opt(self, mock_path_exist,
                                               mock_create_external_bq_table,
-                                              mock_service_call):
+                                              mock_service_call,
+                                              mock_upload_blob):
     # Simulate that the proto file exists with valid proto path
     mock_path_exist.return_value = True
     mock_service_call.return_value = service_pb2.CreateResponse(id=123)
@@ -471,10 +478,11 @@ class DecisionTest(unittest.TestCase):
     # Assert that a valid DecisionConfigurationStart object is returned
     self.assertIsInstance(result, sight_pb2.DecisionConfigurationStart)
 
+  @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight.service, 'call')
   @patch.object(sight, 'create_external_bq_table')
   def test_setup_optimizer(self, mock_create_external_bq_table,
-                           mock_service_call):
+                           mock_service_call, mock_upload_blob):
 
     mock_service_call.return_value = service_pb2.CreateResponse(id=123)
 
@@ -512,12 +520,13 @@ class DecisionTest(unittest.TestCase):
         else:
           self.assertIsInstance(result, SingleActionOptimizerClient)
 
+  @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight.service, 'call')
   @patch.object(sight, 'create_external_bq_table')
   @patch.object(decision, 'convert_dict_to_proto')
   def test_get_decision_outcome_proto(self, mock_convert_dict_to_proto,
                                       mock_create_external_bq_table,
-                                      mock_service_call):
+                                      mock_service_call, mock_upload_blob):
     # simulate service.call to return response with dummy ID
     mock_service_call.return_value = service_pb2.CreateResponse(id=123)
 
@@ -557,12 +566,14 @@ class DecisionTest(unittest.TestCase):
     self.assertIsInstance(result, sight_pb2.DecisionOutcome)
     self.assertEqual(result, expected)
 
+  @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight, 'create_external_bq_table')
   @patch.object(sight.service, 'call')
   @patch.object(sight.Sight, 'log_object')
   @patch.object(decision, '_update_cached_batch')
   def test_decision_outcome(self, mock_update_cached_batch, mock_log_object,
-                            mock_service_call, mock_create_external_bq_table):
+                            mock_service_call, mock_create_external_bq_table,
+                            mock_upload_blob):
     # simulate service.call to return response with dummy ID
     mock_service_call.return_value = service_pb2.CreateResponse(id=123)
     # Prepare inputs for the test function
@@ -584,14 +595,14 @@ class DecisionTest(unittest.TestCase):
     mock_log_object.assert_called_once()
     mock_update_cached_batch.assert_called_once_with(sight)
 
+  @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight, 'create_external_bq_table')
   @patch.object(sight.service, 'call')
   def test_propose_actions(self, mock_service_call,
-                           mock_create_external_bq_table):
+                           mock_create_external_bq_table, mock_upload_blob):
     mock_service_call.side_effect = [
         service_pb2.CreateResponse(id=123),  # for Sight creation
-        service_pb2.ProposeActionResponse(
-            action_id=777),  # for propose_actions
+        service_pb2.ProposeActionResponse(action_id=777),  # for propose_actions
     ]
 
     sight = Sight(self.params)
@@ -600,6 +611,7 @@ class DecisionTest(unittest.TestCase):
 
     result = decision.propose_actions(sight, question_label, action_dict)
     self.assertEqual(result, 777)
+
 
 if __name__ == "__main__":
   unittest.main(testRunner=ColorfulTestRunner())
