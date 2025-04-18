@@ -2,6 +2,7 @@ import hashlib
 import json
 
 from .cache_factory import CacheFactory
+from .cache_factory import RedisCache
 
 
 def sort_nested_dict_or_list(d):
@@ -16,10 +17,11 @@ def sort_nested_dict_or_list(d):
 class CacheConfig:
 
   @staticmethod
-  def get_redis_instance(cache_type='none'):
+  def get_redis_instance(cache_type='none', config={}):
     if 'with_redis' in cache_type:
-      cache_redis = CacheFactory.get_cache(cache_type='redis', config={})
-      if cache_redis.get_client() is None:
+      cache_redis: RedisCache = CacheFactory.get_cache(cache_type='redis',
+                                                       config=config)
+      if cache_redis.get_redis_client() is None:
         raise Exception(
             'Redis config maybe wrong or you havn\'t started the redis instance '
         )

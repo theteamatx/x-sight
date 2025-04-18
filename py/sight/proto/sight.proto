@@ -740,6 +740,9 @@ message DecisionConfigurationStart {
   map<string, AttrProps> outcome_attrs = 5;
 
   int64 num_trials = 6;
+  int64 question_id = 7;
+  string question_label = 8;
+  int64 server_queue_batch_size = 9;
 }
 
 message DecisionParam {
@@ -771,4 +774,11 @@ message DecisionOutcome {
   float reward = 2;
   float discount = 3;
   DecisionParam outcome_params = 4;
+}
+
+message Question {
+  // The attributes of application's state
+  map<string, DecisionConfigurationStart.AttrProps> state_attrs = 1;
+  map<string, DecisionConfigurationStart.AttrProps> action_attrs = 2;
+  map<string, DecisionConfigurationStart.AttrProps> outcome_attrs = 3;
 }

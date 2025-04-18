@@ -41,14 +41,13 @@ _EXPERIMENT_NAME = flags.DEFINE_string(
     'The name of the experiment this worker will participate in.',
 )
 _PROJECT_ID = flags.DEFINE_string(
-    'project_id', os.environ.get('PROJECT_ID', os.environ.get('GOOGLE_CLOUD_PROJECT', '')), 'Id of cloud project'
-)
-_PROJECT_REGION = flags.DEFINE_string(
-    'project_region', 'us-central1', 'location to store project-data'
-)
-_DSUB_MACHINE_TYPE = flags.DEFINE_string(
-    'dsub_machine_type', 'e2-standard-2', ''
-)
+    'project_id',
+    os.environ.get('PROJECT_ID', os.environ.get('GOOGLE_CLOUD_PROJECT', '')),
+    'Id of cloud project')
+_PROJECT_REGION = flags.DEFINE_string('project_region', 'us-central1',
+                                      'location to store project-data')
+_DSUB_MACHINE_TYPE = flags.DEFINE_string('dsub_machine_type', 'e2-standard-2',
+                                         '')
 # _DSUB_LOGGING = flags.DEFINE_string(
 #     'log_path',
 #     # 'tmp/logs',
@@ -82,9 +81,9 @@ def launch(
     # optimizer_config: Any,
     # state_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
     # action_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
-    optimizer: OptimizerClient,
+    # optimizer: OptimizerClient,
     decision_configuration: sight_pb2.DecisionConfigurationStart,
-    num_train_workers: int,
+    # num_train_workers: int,
     sight: Any,
 ):
   """Launches the experiment with the service.
@@ -94,7 +93,7 @@ def launch(
     state_attrs: maps the name of each state variable to its possible values.
     action_attrs: maps the name of each variable that describes possible
       decisions to its possible values.
-    num_train_workers: numbers of workers to be spawned
+    # num_train_workers: numbers of workers to be spawned
     sight: The Sight object to be used for logging.
   """
   method_name = 'launch'
@@ -111,16 +110,44 @@ def launch(
 
   req.label = sight.params.label
   req.client_id = str(sight.id)
+  # req.question_id = decision_configuration.question_id
+  req.question_label = decision_configuration.question_label
 
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
   # start polling thread, fetching outcome from server for proposed actions
-  if (decision_configuration.optimizer_type == sight_pb2.
-      DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER and
-      response.display_string == "Worklist Scheduler SUCCESS!"):
-    decision.init_sight_polling_thread(sight.id)
+  # as we are awaiting till we get response back for this proposal of workerlist_scheduler, removing this thread
+
+  # if (decision_configuration.optimizer_type == sight_pb2.
+  #     DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER and
+  #     response.display_string == "Worklist Scheduler SUCCESS!"):
+  #   decision.init_sight_polling_thread(sight.id,
+  #                                      decision_configuration.question_label)
   logging.info('##### Launch response=%s #####', response)
 
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
+
+
+def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
+  # for worker_name in optimizer_config['worker_names']:
+  #   worker_details = worker_configs[worker_name]
+
+  num_questions = optimizer_config['num_questions']
+  for worker, worker_count in optimizer_config['workers'].items():
+    # print('worker_count : ', worker_count)
+    worker_details = worker_configs[worker]
+    if (optimizer_config['mode'] == 'dsub_cloud_worker'):
+      start_jobs(worker_count, worker_details['binary'], optimizer_type,
+                 worker_details['docker'], 'train', 'worker_mode',
+                 optimizer_config['mode'], sight)
+    elif (optimizer_config['mode'] == 'dsub_local_worker'):
+      start_job_in_dsub_local(worker_count, worker_details['binary'],
+                              optimizer_type, worker_details['docker'], 'train',
+                              'worker_mode', optimizer_config['mode'], sight)
+
+    else:
+      raise ValueError(
+          f"{optimizer_config['mode']} mode from optimizer_config not supported"
+      )
 
 
 def append_ist_time_to_logging_path_12hr():
@@ -230,8 +257,8 @@ def start_jobs(
     decision_mode: str,
     deployment_mode: str,
     worker_mode: str,
-    sight: Any,
-):
+    cache_mode: str,
+    sight: Any):
   """Starts the dsub workers that will run the optimization.
 
   Args:
@@ -243,6 +270,7 @@ def start_jobs(
     decision_mode: add
     deployment_mode: add
     worker_mode: add
+    cache_mode: add
     sight: The Sight object to be used for logging.
   """
   method_name = 'start_jobs'
@@ -279,7 +307,8 @@ def start_jobs(
       'ls -l && echo "${SCRIPT}" && echo "${PYTHONPATH}" && python3 "${SCRIPT}"'
       + f' --decision_mode={decision_mode}' +
       f' --deployment_mode={deployment_mode}' +
-      f' --worker_mode={worker_mode}' + f' --optimizer_type={optimizer_type}'
+      f' --worker_mode={worker_mode}' + f' --optimizer_type={optimizer_type}' +
+      f' --cache_mode={cache_mode}'
       # + f' --project_id={os.environ["PROJECT_ID"]}'
   )
   if FLAGS.env_name:
@@ -291,7 +320,9 @@ def start_jobs(
   logging_path += str(sight.id)
 
   env_vars = [
-      '--env', f'PARENT_LOG_ID={sight.id}', '--env',
+      '--env',
+      f'PARENT_LOG_ID={sight.id}',
+      '--env',
       f'PORT={service.get_port_number()}',
       f'PROJECT_ID={os.environ["PROJECT_ID"]}',
   ]
@@ -345,13 +376,14 @@ def start_jobs(
 
 def start_job_in_dsub_local(
     num_train_workers: int,
-    num_trials: int,
+    # num_trials: int,
     binary_path: Optional[str],
     optimizer_type: str,
     docker_image,
     decision_mode: str,
     deployment_mode: str,
     worker_mode: str,
+    cache_mode: str,
     sight: Any,
 ):
   """Starts the dsub workers that will run the optimization.
@@ -372,16 +404,18 @@ def start_job_in_dsub_local(
 
   sight.enter_block('Worker Spawning locally', sight_pb2.Object())
   with open('/tmp/optimization_tasks.tsv', 'w') as outf:
-    outf.write('--env worker_id\t--env num_samples\t--env worker_location\n')
-    num_tasks_per_worker = math.floor(num_trials / num_train_workers)
+    # outf.write('--env worker_id\t--env num_samples\t--env worker_location\n')
+    outf.write('--env worker_id\t--env worker_location\n')
+    # num_tasks_per_worker = math.floor(num_trials / num_train_workers)
     for worker_id in range(num_train_workers):
-      tasks_for_cur_worker = num_tasks_per_worker
-      # If _NUM_TRIALS is not evenly divisible by num_train_workers, add
-      # the extra extra tasks to the first few workers.
-      if worker_id < num_trials % num_train_workers:
-        tasks_for_cur_worker += 1
-      outf.write(
-          f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location.get()}\n')
+      # tasks_for_cur_worker = num_tasks_per_worker
+      # # If _NUM_TRIALS is not evenly divisible by num_train_workers, add
+      # # the extra extra tasks to the first few workers.
+      # if worker_id < num_trials % num_train_workers:
+      #   tasks_for_cur_worker += 1
+      # outf.write(
+      #     f'{worker_id}\t{tasks_for_cur_worker}\t{sight.location.get()}\n')
+      outf.write(f'{worker_id}\t{sight.location.get()}\n')
       sight.location.get().next()
 
   # remote_script = (f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/{str(sight.id)}/' +
@@ -394,7 +428,7 @@ def start_job_in_dsub_local(
   # provider = 'google-cls-v2' if deployment_mode == 'distributed' else 'local'
 
   script_args = (
-      f'--decision_mode={decision_mode} --deployment_mode={deployment_mode} --worker_mode={worker_mode} --optimizer_type={optimizer_type} '
+      f'--decision_mode={decision_mode} --deployment_mode={deployment_mode} --worker_mode={worker_mode} --optimizer_type={optimizer_type}  --cache_mode={cache_mode} '
   )
   # if FLAGS.service_account:
   #     script_args = (script_args +
@@ -420,7 +454,13 @@ def start_job_in_dsub_local(
       # '--env',
       # 'PYTHONPATH=/project',
       '--env',
+      f'IP_ADDR={service.get_docker0_ip()}',
+      '--env',
       f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
+      '--env',
+      f'WORKERS_CONFIG_PATH={FLAGS.workers_config_path}',
+      '--env',
+      f'OPTIMIZERS_CONFIG_PATH={FLAGS.optimizers_config_path}',
       '--input',
       f'SCRIPT={remote_script}',
       '--input-recursive',

@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 import json
 
 from absl import flags
@@ -26,15 +27,11 @@ from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import trials
+from sight.widgets.decision import utils
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight.widgets.decision.single_action_optimizer_client import (
     SingleActionOptimizerClient
 )
-
-_CACHE_MODE = flags.DEFINE_enum(
-    'cache_mode', 'none',
-    ['gcs', 'local', 'redis', 'none', 'gcs_with_redis', 'local_with_redis'],
-    'Which Sight cache to use ? (default is none)')
 
 global_outcome_mapping = RWLockDictWrapper()
 
@@ -65,14 +62,54 @@ async def fetch_outcome(sight_id, actions_id):
       raise e
 
 
-async def propose_actions(sight, action_dict, custom_part="sight_cache"):
+async def asyncio_wrapper(blocking_func, *args, max_threads=-1):
+  """Wrapper to execute a blocking function using asyncio.to_thread.
+
+  Parameters:
+      blocking_func (callable): The blocking function to execute.
+      *args: Positional arguments to pass to the blocking function.
+      max_threads (int): Number of threads for the custom ThreadPoolExecutor.
+                         If -1, use the default executor.
+
+  Returns:
+      The result of the blocking function.
+  """
+  if max_threads != -1:
+    # Create a custom ThreadPoolExecutor
+    custom_executor = ThreadPoolExecutor(max_workers=max_threads,
+                                         thread_name_prefix="CustomThread")
+    try:
+      # Temporarily set the custom executor
+      loop = asyncio.get_running_loop()
+      loop.set_default_executor(custom_executor)
+      print(f"Using custom thread pool with max threads: {max_threads}")
+      return await asyncio.to_thread(blocking_func, *args)
+    finally:
+      # Shutdown the custom executor after usage
+      custom_executor.shutdown(wait=True)
+  else:
+    print("Using default thread pool")
+    # Use the default executor
+    return await asyncio.to_thread(blocking_func, *args)
+
+
+async def propose_actions(sight,
+                          question_label,
+                          action_dict,
+                          custom_part="sight_cache"):
 
   key_maker = CacheKeyMaker()
+  worker_version = utils.get_worker_version(question_label)
+  custom_part = custom_part + ':' + worker_version
   cache_key = key_maker.make_custom_key(custom_part, action_dict)
 
   cache_client = CacheFactory.get_cache(
-      _CACHE_MODE.value,
-      with_redis=CacheConfig.get_redis_instance(_CACHE_MODE.value))
+      FLAGS.cache_mode,
+      with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode,
+                                                config={
+                                                    "redis_host": "10.138.0.53",
+                                                    "redis_port": 6379
+                                                }))
 
   outcome = cache_client.json_get(key=cache_key)
 
@@ -80,7 +117,11 @@ async def propose_actions(sight, action_dict, custom_part="sight_cache"):
     print('Getting response from cache !!')
     return outcome
 
-  unique_action_id = decision.propose_actions(sight, action_dict)
+  # unique_action_id = decision.propose_actions(sight, question_label, action_dict)
+  # unique_action_id = await asyncio.to_thread(decision.propose_actions, sight,
+  #                                            action_dict)
+  unique_action_id = await asyncio_wrapper(decision.propose_actions, sight,
+                                           question_label, action_dict)
   await push_message(sight.id, unique_action_id)
   response = await fetch_outcome(sight.id, unique_action_id)
   outcome = response.get('outcome', None)

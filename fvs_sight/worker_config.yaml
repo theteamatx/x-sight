@@ -1,0 +1,15 @@
+generic_worker0:
+  version: "v0.1"
+  file_path: "fvs_sight/fvs_config.yaml"
+
+generic_worker1:
+  version: "v0.1"
+  file_path: "worker/generic_worker.yaml"
+
+generic_worker2:
+  version: "v0.1"
+  file_path: "worker/generic_worker.yaml"
+
+fvs_worker:
+  version: "v0.1"
+  file_path: "fvs_sight/fvs_config.yaml"

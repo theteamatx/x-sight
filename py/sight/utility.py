@@ -25,21 +25,23 @@ from google.protobuf.json_format import _NAN
 from google.protobuf.json_format import _NEG_INFINITY
 from google.protobuf.json_format import _Printer as BasePrinter
 from google.protobuf.json_format import SerializeToJsonError
+from helpers.logs.logs_handler import logger as logging
 from sight import service_utils as service
 from sight.utils.proto_conversion import convert_proto_to_dict
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight_service.proto import service_pb2
 
-POLL_LIMIT = 10  # POLL_TIME_INTERVAL th part of second
-POLL_TIME_INTERVAL = 6  # seconds
+POLL_LIMIT = 360  # POLL_TIME_INTERVAL th part of second
+POLL_TIME_INTERVAL = 10  # seconds
 global_outcome_mapping = RWLockDictWrapper()
 
 
-def get_all_outcomes(sight_id, action_ids):
+def get_all_outcomes(sight_id, question_label, action_ids):
 
   # print(f'get all outcome for actions ids {action_ids}')
   request = service_pb2.GetOutcomeRequest()
   request.client_id = str(sight_id)
+  request.question_label = question_label
   request.unique_ids.extend(action_ids)
 
   # async_dict = global_outcome_mapping.get()
@@ -77,7 +79,7 @@ def get_all_outcomes(sight_id, action_ids):
     raise e
 
 
-def poll_network_batch_outcome(sight_id):
+def poll_network_batch_outcome(sight_id, question_label):
   counter = POLL_LIMIT
   while True:
     try:
@@ -89,8 +91,11 @@ def poll_network_batch_outcome(sight_id):
       # print("pending action ids : ", pending_action_ids)
       if len(pending_action_ids):
         counter = POLL_LIMIT
-        print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
-        outcome_of_action_ids = get_all_outcomes(sight_id, pending_action_ids)
+        logging.info(f'BATCH POLLING THE IDS FOR => %s',
+                     len(pending_action_ids))
+        # print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
+        outcome_of_action_ids = get_all_outcomes(sight_id, question_label,
+                                                 pending_action_ids)
 
         # print(f'Outcome from get_all_outcome => {outcome_of_action_ids}')
 
@@ -100,9 +105,9 @@ def poll_network_batch_outcome(sight_id):
         global_outcome_mapping.update(new_dict)
 
       else:
-        print(
-            f'Not sending request as no pending ids ...=> {pending_action_ids} with counter => {counter}'
-        )
+        logging.info(
+            f'Not sending request as no pending ids ...=> %s with counter => %s',
+            pending_action_ids, counter)
         if counter <= 0:
           return
         counter -= 1
@@ -110,6 +115,25 @@ def poll_network_batch_outcome(sight_id):
     except Exception as e:
       print(f"Error updating outcome mapping: {e}")
       raise e
+
+
+def calculate_exp_time(start_time: float, end_time: float):
+  '''
+  calculate the time taken for the experiment to run
+  '''
+  elapsed_time = end_time - start_time
+  print(f"Elapsed time: {elapsed_time} seconds")
+  hours, remainder = divmod(elapsed_time, 3600)
+  minutes, seconds = divmod(remainder, 60)
+
+  if hours > 0:
+    print(
+        f"Elapsed time: {int(hours)} hour(s), {int(minutes)} minute(s), {seconds:.2f} second(s)"
+    )
+  elif minutes > 0:
+    print(f"Elapsed time: {int(minutes)} minute(s), {seconds:.2f} second(s)")
+  else:
+    print(f"Elapsed time: {seconds:.2f} second(s)")
 
 
 def MessageToJson(
