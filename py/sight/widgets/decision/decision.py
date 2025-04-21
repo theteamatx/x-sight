@@ -621,15 +621,15 @@ def run(
         break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-        # logging.info('Retrying in 5 seconds......')
-        # time.sleep(5)
-        backoff_interval *= 2
-        time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
-        logging.info('backed off for %s seconds... and trying for %s',
-                     backoff_interval, num_retries)
-        num_retries += 1
-        if (num_retries >= 5):
-          break
+        logging.info('Retrying in 5 seconds......')
+        time.sleep(5)
+        # backoff_interval *= 2
+        # time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        # logging.info('backed off for %s seconds... and trying for %s',
+        #              backoff_interval, num_retries)
+        # num_retries += 1
+        # if (num_retries >= 10):
+        #   break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
         process_worker_action(response, sight, driver_fn, env, question_label, optimizer.obj)
