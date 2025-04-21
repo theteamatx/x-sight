@@ -78,31 +78,6 @@ def get_sight_instance():
   return sight_obj
 
 
-def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
-
-  num_questions = optimizer_config['num_questions']
-  for worker, worker_count in optimizer_config['workers'].items():
-
-    worker_file_path = worker_configs[worker]['file_path']
-    worker_config = utils.load_yaml_config(worker_file_path)
-    worker_details = worker_config[worker_configs[worker]['version']]
-
-    if (optimizer_config['mode'] == 'dsub_cloud_worker'):
-      trials.start_jobs(worker_count, worker_details['binary'], optimizer_type,
-                        worker_details['docker'], 'train', 'worker_mode',
-                        optimizer_config['mode'], FLAGS.cache_mode, sight)
-    elif (optimizer_config['mode'] == 'dsub_local_worker'):
-      trials.start_job_in_dsub_local(worker_count, worker_details['binary'],
-                                     optimizer_type, worker_details['docker'],
-                                     'train', 'worker_mode',
-                                     optimizer_config['mode'], FLAGS.cache_mode,
-                                     sight)
-
-    else:
-      raise ValueError(
-          f"{optimizer_config['mode']} mode from optimizer_config not supported"
-      )
-
 
 async def propose_actions(sight: Sight, question_label: str,
                           base_project_config: dict[str, Any],
@@ -195,7 +170,7 @@ def main_wrapper(argv):
       trials.launch(decision_configuration, sight)
 
       # Start worker jobs
-      start_worker_jobs(sight, optimizer_config, workers_config, optimizer_type)
+      decision.start_worker_jobs(sight, optimizer_config, workers_config, optimizer_type)
 
       if (POLL_EXAMPLE and decision_configuration.optimizer_type == sight_pb2.
           DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER):

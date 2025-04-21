@@ -711,6 +711,29 @@ def run(
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
+def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
+  for worker, worker_count in optimizer_config['workers'].items():
+
+    worker_file_path = worker_configs[worker]['file_path']
+    worker_config = utils.load_yaml_config(worker_file_path)
+    worker_details = worker_config[worker_configs[worker]['version']]
+
+    if (optimizer_config['mode'] == 'dsub_cloud_worker'):
+      trials.start_jobs(worker_count, worker_details['binary'], optimizer_type,
+                        worker_details['docker'], 'train', 'worker_mode',
+                        optimizer_config['mode'], FLAGS.cache_mode, sight)
+    elif (optimizer_config['mode'] == 'dsub_local_worker'):
+      trials.start_job_in_dsub_local(worker_count, worker_details['binary'],
+                                     optimizer_type, worker_details['docker'],
+                                     'train', 'worker_mode',
+                                     optimizer_config['mode'], FLAGS.cache_mode,
+                                     sight)
+
+    else:
+      raise ValueError(
+          f"{optimizer_config['mode']} mode from optimizer_config not supported"
+      )
+
 def execute_run_mode():
   """Executes the run mode.
 
@@ -919,18 +942,22 @@ def get_decision_configuration_for_opt(
   Returns:
       decision_configuration: The decision configuration protobuf object with optimizer configuration.
   """
+  relative_text_proto_path = question_config['attrs_text_proto']
+  if os.path.exists(relative_text_proto_path):
+    with open(relative_text_proto_path, 'r') as f:
+      text_proto_data = f.read()
+  else:
+    current_file = Path(__file__).resolve()
+    sight_repo_path = current_file.parents[4]
 
-  current_file = Path(__file__).resolve()
-  sight_repo_path = current_file.parents[4]
+    absolute_text_proto_path = sight_repo_path.joinpath(
+        question_config['attrs_text_proto'])
 
-  absoulte_text_proto_path = sight_repo_path.joinpath(
-      question_config['attrs_text_proto'])
+    if not os.path.exists(absolute_text_proto_path):
+      raise FileNotFoundError(f'File not found {relative_text_proto_path}')
 
-  if not os.path.exists(absoulte_text_proto_path):
-    raise FileNotFoundError(f'File not found {absoulte_text_proto_path}')
-
-  with open(absoulte_text_proto_path, 'r') as f:
-    text_proto_data = f.read()
+    with open(absolute_text_proto_path, 'r') as f:
+      text_proto_data = f.read()
 
   # # Extract attributes
   # action_attrs = decision_helper.config_to_attr(question_config, 'action')

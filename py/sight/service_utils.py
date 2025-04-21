@@ -107,12 +107,12 @@ def get_service_id() -> str:
 
 
 def get_port_number() -> str:
-  logging.info('FLAGS.port is %s', FLAGS.port)
-  logging.info('_PORT.value is %s', _PORT.value)
+  # logging.info('FLAGS.port is %s', FLAGS.port)
+  # logging.info('_PORT.value is %s', _PORT.value)
 
-  logging.info(
-      'in get_port_number => os.environ.PORT => %s FLAGS.deployment_mode => %s  ',
-      os.environ.get('PORT', 'None'), FLAGS.deployment_mode)
+  # logging.info(
+  #     'in get_port_number => os.environ.PORT => %s FLAGS.deployment_mode => %s  ',
+  #     os.environ.get('PORT', 'None'), FLAGS.deployment_mode)
 
   if (FLAGS.deployment_mode in ['dsub_local', 'local', 'vm'] or
       ('worker_mode' in FLAGS and FLAGS.worker_mode == 'dsub_local_worker')):
@@ -134,7 +134,7 @@ def _service_addr() -> str:
   else:
     # print('fetching unique string.....')
     try:
-      print('get_service_id()=', get_service_id())
+      # print('get_service_id()=', get_service_id())
       service_url = subprocess.getoutput(
           'gcloud run services describe'
           f" {_SERVICE_PREFIX}{get_service_id()} --region us-central1 --format='value(status.url)'"
@@ -142,7 +142,7 @@ def _service_addr() -> str:
       print("service url : ", service_url)
       _UNIQUE_STRING = re.search(r'https://.*-(\w+)-uc\.a\.run\.app',
                                  service_url).group(1)
-      print("_UNIQUE_STRING : ", _UNIQUE_STRING)
+      # print("_UNIQUE_STRING : ", _UNIQUE_STRING)
     except Exception as e:
       logging.exception("service not found : %s", e)
     # print("first _UNIQUE_STRING : ", _UNIQUE_STRING)
@@ -207,7 +207,7 @@ def _find_or_deploy_server() -> str:
         sys.exit(0)
 
   # deploy new service
-  print('_SERVICE_ID=', get_service_id())
+  # print('_SERVICE_ID=', get_service_id())
   docker_file_path = _SERVICE_DOCKER_FILE.value
   docker_img = _SERVICE_DOCKER_IMG.value
 
@@ -219,7 +219,7 @@ def _find_or_deploy_server() -> str:
     # )
 
   if (docker_file_path):
-    logging.info('building img from scratch.....................')
+    # logging.info('building img from scratch.....................')
     # Step 1: Build docker image
     build_out = subprocess.run(
         [
@@ -315,7 +315,7 @@ def _find_or_deploy_server() -> str:
   )
   print('deploy_out : ', deploy_out.stderr)
 
-  logging.info('_SERVICE_ID=%s', _SERVICE_ID)
+  # logging.info('_SERVICE_ID=%s', _SERVICE_ID)
   if (docker_file_path):
     logging.info('deleting newly built img')
     subprocess.run(
@@ -505,8 +505,8 @@ class GRPCClientCache:
   def generate_metadata(cls):
     """Generate metadata to call service with authentication."""
 
-    logging.info('_secure_cache %s and _insecure_cache %s ', cls._secure_cache,
-                 cls._insecure_cache)
+    # logging.info('_secure_cache %s and _insecure_cache %s ', cls._secure_cache,
+    #              cls._insecure_cache)
 
     channel_opts = [
         ('grpc.max_send_message_length', 512 * 1024 * 1024),
