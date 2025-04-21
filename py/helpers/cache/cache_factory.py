@@ -6,6 +6,7 @@ from .cache_local import LocalCache
 from .cache_none import NoneCache
 from .cache_redis import RedisCache
 from .constants import REDIS_HOST
+from .constants import REDIS_PASS
 from .constants import REDIS_PORT
 
 
