@@ -105,11 +105,8 @@ async def propose_actions(sight,
 
   cache_client = CacheFactory.get_cache(
       FLAGS.cache_mode,
-      with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode,
-                                                config={
-                                                    "redis_host": "10.138.0.53",
-                                                    "redis_port": 6379
-                                                }))
+      # * Update the config as per need , None config means it takes default redis config for localhost
+      with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode, config=None))
 
   outcome = cache_client.json_get(key=cache_key)
 

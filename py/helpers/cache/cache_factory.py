@@ -5,6 +5,8 @@ from .cache_interface import CacheInterface
 from .cache_local import LocalCache
 from .cache_none import NoneCache
 from .cache_redis import RedisCache
+from .constants import REDIS_HOST
+from .constants import REDIS_PORT
 
 
 class CacheFactory:
@@ -27,6 +29,13 @@ class CacheFactory:
     Raises:
         ValueError: If the cache type is unknown.
     """
+    if with_redis == 'default':
+      with_redis = RedisCache(
+          config={
+              "redis_host": REDIS_HOST,
+              "redis_port": REDIS_PORT,
+              "redis_pass": REDIS_PASS
+          })
     if config is None:
       config = {}
     if cache_type == 'local_with_redis':
