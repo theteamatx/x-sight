@@ -26,7 +26,7 @@ from dotenv import load_dotenv
 import grpc
 from helpers.logs.logs_handler import logger as logging
 import pytz
-from sight import service_utils as service
+from sight import service_utils
 from sight.proto import sight_pb2
 from sight.widgets.decision import decision
 # from sight.widgets.decision.acme import acme_optimizer_client
@@ -113,7 +113,7 @@ def launch(
   # req.question_id = decision_configuration.question_id
   req.question_label = decision_configuration.question_label
 
-  response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
+  response = service_utils.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
   # start polling thread, fetching outcome from server for proposed actions
   # as we are awaiting till we get response back for this proposal of workerlist_scheduler, removing this thread
 
@@ -226,7 +226,7 @@ def start_job_in_docker(
       '--env',
       f'PARENT_LOG_ID={sight.id}',
       '--env',
-      f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
+      f'SIGHT_SERVICE_ID={service_utils._SERVICE_ID}',
       # '--env',
       # f'SIGHT_SERVICE_ACCOUNT={_SERVICE_ACCOUNT.value}',
       '--env',
@@ -323,7 +323,7 @@ def start_jobs(
       '--env',
       f'PARENT_LOG_ID={sight.id}',
       '--env',
-      f'PORT={service.get_port_number()}',
+      f'PORT={service_utils.get_port_number()}',
       f'PROJECT_ID={os.environ["PROJECT_ID"]}',
   ]
 
@@ -333,7 +333,7 @@ def start_jobs(
       raise ValueError("ip_address must be provided for workers")
     env_vars += ['--env', f'IP_ADDR={FLAGS.ip_addr}']
   elif FLAGS.deployment_mode == 'distributed':
-    env_vars += ['--env', f'SIGHT_SERVICE_ID={service._SERVICE_ID}']
+    env_vars += ['--env', f'SIGHT_SERVICE_ID={service_utils._SERVICE_ID}']
 
   print('sight.id=%s' % sight.id)
   args = [
@@ -345,14 +345,14 @@ def start_jobs(
       f'--image={docker_image}',
       f'--machine-type={_DSUB_MACHINE_TYPE.value}',
       f'--project={_PROJECT_ID.value}',
-      # f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service._SERVICE_ID}/{sight.id}',
+      # f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service_utils._SERVICE_ID}/{sight.id}',
       f'--logging={logging_path}',
       # '--env',
       # f'PARENT_LOG_ID={sight.id}',
-      # '--env',
-      # f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
-      # '--env',
-      # f'PORT_NUMBER={service.get_port_number()}',
+      '--env',
+      f'SIGHT_SERVICE_ID={service_utils._SERVICE_ID}',
+      '--env',
+      f'PORT_NUMBER={service_utils.get_port_number()}',
       *env_vars,
       '--input',
       f'SCRIPT={remote_script}',
@@ -454,9 +454,9 @@ def start_job_in_dsub_local(
       # '--env',
       # 'PYTHONPATH=/project',
       '--env',
-      f'IP_ADDR={service.get_docker0_ip()}',
+      f'IP_ADDR={service_utils.get_docker0_ip()}',
       '--env',
-      f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
+      f'SIGHT_SERVICE_ID={service_utils._SERVICE_ID}',
       # REMOVED UNTIL WE DECIDE ON WHETHER WE'LL USE THESE FLAGS CONSISTENTLY OR NOT AT ALL
       # '--env',
       # f'WORKERS_CONFIG_PATH={FLAGS.workers_config_path}',

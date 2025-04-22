@@ -513,6 +513,7 @@ class GRPCClientCache:
         ('grpc.max_receive_message_length', 512 * 1024 * 1024),
     ]
 
+    logging.info('FLAGS.deployment_mode=%s', FLAGS.deployment_mode)
     if 'IP_ADDR' in os.environ or (
         'deployment_mode' in FLAGS and
         FLAGS.deployment_mode in ['dsub_local', 'local', 'vm']) or (
@@ -533,11 +534,11 @@ class GRPCClientCache:
         if 'deployment_mode' in FLAGS and FLAGS.deployment_mode == "distributed":
           _find_or_deploy_server()
         secure_channel = obtain_secure_channel()
-        # print("secure_channel : ", secure_channel)
+        logging.info("secure_channel : %s", secure_channel)
         sight_service = service_pb2_grpc.SightServiceStub(secure_channel)
         metadata = []
         id_token = generate_id_token()
-        # print('id_token : ', id_token)
+        logging.info('id_token : %s', id_token)
         metadata.append(('authorization', 'Bearer ' + id_token))
         cls._secure_cache = (sight_service, metadata)
       return cls._secure_cache
