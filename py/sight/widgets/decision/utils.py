@@ -20,10 +20,14 @@ import yaml
 
 FLAGS = flags.FLAGS
 
+# Not used anymore, replaced with is_numeric
+# def is_scalar(value):
+#   scalar_types = (int, float, str, bool, type(None), bytes)
+#   return isinstance(value, scalar_types)
 
-def is_scalar(value):
-  scalar_types = (int, float, str, bool, type(None), bytes)
-  return isinstance(value, scalar_types)
+
+def is_numeric(val):
+  return isinstance(val, (int, float))
 
 
 def load_yaml_config(file_path):
