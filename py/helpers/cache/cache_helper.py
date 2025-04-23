@@ -9,14 +9,9 @@ import redis
 from .cache_factory import RedisCache
 
 
-<<<<<<< HEAD
-def sort_nested_dict_or_list(data: dict | list) -> dict | list:
-  """Sort the nested dict or list
-=======
 def sort_nested_dict_or_list(
     data: dict[str, any] | list[any],) -> dict[str, any] | list[any]:
   """Sort the nested dict or list.
->>>>>>> 84b30ff7297baa98d89f4b28bb9b45c82e9cf05d
 
   Args:
       data (dict | list): input dict or list
