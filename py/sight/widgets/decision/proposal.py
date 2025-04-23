@@ -19,7 +19,7 @@ import json
 from absl import flags
 from helpers.cache.cache_factory import CacheFactory
 from helpers.cache.cache_helper import CacheConfig
-from helpers.cache.cache_helper import CacheKeyMaker
+from helpers.cache.cache_helper import KeyMaker
 from helpers.cache.cache_interface import CacheInterface
 from sight.attribute import Attribute
 from sight.block import Block
@@ -98,7 +98,7 @@ async def propose_actions(sight,
                           action_dict,
                           custom_part="sight_cache"):
 
-  key_maker = CacheKeyMaker()
+  key_maker = KeyMaker()
   worker_version = utils.get_worker_version(question_label)
   custom_part = custom_part + ':' + worker_version
   cache_key = key_maker.make_custom_key(custom_part, action_dict)

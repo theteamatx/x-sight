@@ -7,7 +7,7 @@ import unittest
 
 from helpers.cache.cache_factory import LocalCache
 from helpers.cache.cache_factory import RedisCache
-from helpers.cache.cache_helper import CacheKeyMaker
+from helpers.cache.cache_helper import KeyMaker
 import redis
 from tests.colorful_tests import ColorfulTestRunner
 
@@ -62,7 +62,7 @@ class CacheLocalWithRedisTest(unittest.TestCase):
 
   def test_local_json_data(self):
     """Tests the Local Cache."""
-    self.key_maker = CacheKeyMaker()
+    self.key_maker = KeyMaker()
     self.cache = LocalCache(
         config={
             "local_base_dir": "/tmp/testing_dir",
@@ -98,7 +98,7 @@ class CacheLocalWithRedisTest(unittest.TestCase):
 
   def test_local_bin_data(self):
     """Tests the Local Cache."""
-    self.key_maker = CacheKeyMaker()
+    self.key_maker = KeyMaker()
     self.cache = LocalCache(
         config={
             "local_base_dir": "/tmp/testing_dir",
