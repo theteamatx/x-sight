@@ -919,18 +919,22 @@ def get_decision_configuration_for_opt(
   Returns:
       decision_configuration: The decision configuration protobuf object with optimizer configuration.
   """
+  relative_text_proto_path = question_config['attrs_text_proto']
+  if os.path.exists(relative_text_proto_path):
+    with open(relative_text_proto_path, 'r') as f:
+      text_proto_data = f.read()
+  else:
+    current_file = Path(__file__).resolve()
+    sight_repo_path = current_file.parents[4]
 
-  current_file = Path(__file__).resolve()
-  sight_repo_path = current_file.parents[4]
+    absolute_text_proto_path = sight_repo_path.joinpath(
+        question_config['attrs_text_proto'])
 
-  absoulte_text_proto_path = sight_repo_path.joinpath(
-      question_config['attrs_text_proto'])
+    if not os.path.exists(absolute_text_proto_path):
+      raise FileNotFoundError(f'File not found {relative_text_proto_path}')
 
-  if not os.path.exists(absoulte_text_proto_path):
-    raise FileNotFoundError(f'File not found {absoulte_text_proto_path}')
-
-  with open(absoulte_text_proto_path, 'r') as f:
-    text_proto_data = f.read()
+    with open(absolute_text_proto_path, 'r') as f:
+      text_proto_data = f.read()
 
   # # Extract attributes
   # action_attrs = decision_helper.config_to_attr(question_config, 'action')
