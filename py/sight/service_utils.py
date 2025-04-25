@@ -505,7 +505,7 @@ class GRPCClientCache:
   def generate_metadata(cls):
     """Generate metadata to call service with authentication."""
 
-    logging.info('_secure_cache %s and _insecure_cache %s ', cls._secure_cache,
+    logging.debug('_secure_cache %s and _insecure_cache %s ', cls._secure_cache,
                  cls._insecure_cache)
 
     channel_opts = [
