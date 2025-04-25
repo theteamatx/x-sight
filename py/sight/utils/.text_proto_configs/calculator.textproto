@@ -1,0 +1,20 @@
+action_attrs {
+  key: "v1"
+  value {
+  }
+}
+action_attrs {
+  key: "v2"
+  value {
+  }
+}
+action_attrs {
+  key: "ops"
+  value {
+  }
+}
+outcome_attrs {
+  key: "final_result"
+  value {
+  }
+}

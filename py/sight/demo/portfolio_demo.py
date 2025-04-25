@@ -43,6 +43,7 @@ from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
 from sight.widgets.decision import utils
+from sight.widgets.decision import trials
 import yaml
 
 
@@ -152,13 +153,13 @@ def main_wrapper(argv):
       print('optimizer_config : ', optimizer_config)
 
       # Configure decision and launch trials
-      opt_obj, decision_configuration = decision.configure_decision(
+      decision_configuration = decision.configure_decision(
           sight, question_label, question_config, optimizer_config,
           optimizer_type)
       trials.launch(decision_configuration, sight)
 
       # Start worker jobs
-      start_worker_jobs(sight, optimizer_config, workers_config, optimizer_type)
+      trials.start_worker_jobs(sight, optimizer_config, workers_config, optimizer_type)
 
     start_time = time.perf_counter()
     sleep_time_in_min = 5

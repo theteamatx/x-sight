@@ -27,3 +27,10 @@ Q_label3:
 #   workers:
 #     # fvs_worker : 1
 #     fvs_worker : 1
+
+Q_label4:
+  optimizer: "worklist_scheduler"
+  num_questions: 1
+  mode: "dsub_local_worker" #"dsub_cloud_worker" #(dsub_local, )
+  workers:
+    calculator_worker: 1

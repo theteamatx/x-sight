@@ -1,7 +1,11 @@
-Q_label1:
-  desc: "generic question label"
-  attrs_text_proto: "py/sight/utils/.text_proto_configs/generic.textproto"
+# Q_label1:
+#   desc: "generic question label"
+#   attrs_text_proto: "py/sight/utils/.text_proto_configs/generic.textproto"
 
-Q_label3:
-  desc: "FVS question label"
-  attrs_text_proto: "py/sight/utils/.text_proto_configs/fvs.textproto"
+# Q_label3:
+#   desc: "FVS question label"
+#   attrs_text_proto: "py/sight/utils/.text_proto_configs/fvs.textproto"
+
+Q_label4:
+  desc: "calculator question label"
+  attrs_text_proto: "py/sight/utils/.text_proto_configs/calculator.textproto"

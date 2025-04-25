@@ -29,6 +29,7 @@ import pytz
 from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision import decision
+from sight.widgets.decision import utils
 # from sight.widgets.decision.acme import acme_optimizer_client
 from sight.widgets.decision.optimizer_client import OptimizerClient
 from sight_service.proto import service_pb2
@@ -128,21 +129,24 @@ def launch(
 
 
 def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
-  # for worker_name in optimizer_config['worker_names']:
-  #   worker_details = worker_configs[worker_name]
 
   num_questions = optimizer_config['num_questions']
   for worker, worker_count in optimizer_config['workers'].items():
-    # print('worker_count : ', worker_count)
-    worker_details = worker_configs[worker]
+
+    worker_file_path = worker_configs[worker]['file_path']
+    worker_config = utils.load_yaml_config(worker_file_path)
+    worker_details = worker_config[worker_configs[worker]['version']]
+
     if (optimizer_config['mode'] == 'dsub_cloud_worker'):
       start_jobs(worker_count, worker_details['binary'], optimizer_type,
-                 worker_details['docker'], 'train', 'worker_mode',
-                 optimizer_config['mode'], sight)
+                        worker_details['docker'], 'train', 'worker_mode',
+                        optimizer_config['mode'], FLAGS.cache_mode, sight)
     elif (optimizer_config['mode'] == 'dsub_local_worker'):
       start_job_in_dsub_local(worker_count, worker_details['binary'],
-                              optimizer_type, worker_details['docker'], 'train',
-                              'worker_mode', optimizer_config['mode'], sight)
+                                     optimizer_type, worker_details['docker'],
+                                     'train', 'worker_mode',
+                                     optimizer_config['mode'], FLAGS.cache_mode,
+                                     sight)
 
     else:
       raise ValueError(
