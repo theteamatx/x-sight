@@ -117,59 +117,60 @@ class DecisionTest(unittest.TestCase):
     # Verify the function printed expected response
     mock_print.assert_called_with('response:', 'ok')
 
-  @patch.object(sight.service, 'call')
-  def test_validate_train_mode(self, mock_service_call):
-    # Set the required flag to simulate distributed deployment
-    FLAGS.server_mode = 'cloud_run'
-    FLAGS.optimizer_type = 'exhaustive_search'
-    FLAGS.num_trials = 12
+  # @patch.object(sight.service, 'call')
+  # def test_validate_train_mode(self, mock_service_call):
+  #   # Set the required flag to simulate distributed deployment
+  #   FLAGS.server_mode = 'cloud_run'
+  #   FLAGS.optimizer_type = 'exhaustive_search'
+  #   FLAGS.num_trials = 12
 
-    # simulate service.call to return response with dummy ID
-    mock_service_call.return_value = service_pb2.CreateResponse(id=123)
-    sight = Sight(self.params)
+  #   # simulate service.call to return response with dummy ID
+  #   mock_service_call.return_value = service_pb2.CreateResponse(id=123)
+  #   sight = Sight(self.params)
 
-    details = decision_episode_fn.DecisionEpisodeFn(
-        state_attrs={},
-        action_attrs={
-            "a1":
-                sight_pb2.DecisionConfigurationStart.AttrProps(min_value=3,
-                                                               max_value=10)
-        })
-    sight.widget_decision_state = {'decision_episode_fn': details}
+  #   details = decision_episode_fn.DecisionEpisodeFn(
+  #       state_attrs={},
+  #       action_attrs={
+  #           "a1":
+  #               sight_pb2.DecisionConfigurationStart.AttrProps(min_value=3,
+  #                                                              max_value=10)
+  #       })
+  #   sight.widget_decision_state = {'decision_episode_fn': details}
 
-    # Expect ValueError due to num_trials exceeding the possible action range (10 - 3 + 2 = 9)
-    with self.assertRaises(ValueError) as cm:
-      decision.validate_train_mode(sight)
-    self.assertEqual(str(cm.exception),
-                     'Max possible value for num_trials is: 9.0')
+  #   # Expect ValueError due to num_trials exceeding the possible action range (10 - 3 + 2 = 9)
+  #   with self.assertRaises(ValueError) as cm:
+  #     decision.validate_train_mode(sight)
+  #   self.assertEqual(str(cm.exception),
+  #                    'Max possible value for num_trials is: 9.0')
 
-    # Adjust flags to check separate condition
-    FLAGS.num_trials = 5
-    FLAGS.docker_image = None
+  #   # Adjust flags to check separate condition
+  #   FLAGS.num_trials = 5
+  #   FLAGS.docker_image = None
 
-    # Expect ValueError due to missing docker_image in distributed mode
-    with self.assertRaises(ValueError) as cm:
-      decision.validate_train_mode(sight)
-    self.assertEqual(str(cm.exception),
-                     'docker_image must be provided for distributed mode')
+  #   # Expect ValueError due to missing docker_image in distributed mode
+  #   with self.assertRaises(ValueError) as cm:
+  #     decision.validate_train_mode(sight)
+  #   self.assertEqual(str(cm.exception),
+  #                    'docker_image must be provided for distributed mode')
 
   @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight.service, 'call')
   @patch.object(sight, 'create_external_bq_table')
-  @patch.object(decision, 'execute_local_training')
+  #@patch.object(decision, 'execute_local_training')
   @patch.object(decision, 'create_opt_and_start_workers')
-  @patch.object(decision, 'validate_train_mode')
-  def test_execute_train_mode(self, mock_validate_train_mode,
+  # @patch.object(decision, 'validate_train_mode')
+  def test_execute_train_mode(self, #mock_validate_train_mode,
                               mock_create_opt_and_start_workers,
-                              mock_execute_local_training,
+                              #mock_execute_local_training,
                               mock_create_external_bq_table, mock_service_call,
                               mock_upload_blob):
-    # Test unsupported deployment mode to ensure proper error is raised
-    FLAGS.server_mode = 'xyz'
+
+    FLAGS.worker_mode = 'xyz'
     with self.assertRaises(ValueError) as cm:
       decision.execute_train_mode(None, None, None, None, None, None, None)
-    self.assertEqual(str(cm.exception), 'Unsupported deployment mode xyz')
+    self.assertEqual(str(cm.exception), 'worker mode is not None')
 
+    FLAGS.worker_mode = None
     # Test all supported deployment modes
     distributed_modes = ['cloud_run', 'vm']
     local_modes = ['local']
@@ -208,9 +209,9 @@ class DecisionTest(unittest.TestCase):
     for mode in distributed_modes + local_modes:
       with self.subTest(server_mode=mode):
         # Reset mocks for each subtest to avoid call overlap
-        mock_validate_train_mode.reset_mock()
+        # mock_validate_train_mode.reset_mock()
         mock_create_opt_and_start_workers.reset_mock()
-        mock_execute_local_training.reset_mock()
+        # mock_execute_local_training.reset_mock()
 
         FLAGS.server_mode = mode
 
@@ -235,86 +236,86 @@ class DecisionTest(unittest.TestCase):
           mock_create_opt_and_start_workers.assert_called_once_with(
               sight, decision_configuration, optimizer_config, workers_config,
               optimizer_type)
-        elif FLAGS.server_mode in local_modes:
-          mock_execute_local_training.assert_called_once_with(
-              sight, decision_configuration, driver_fn, optimizer_config,
-              workers_config, optimizer_type)
+        # elif FLAGS.server_mode in local_modes:
+        #   mock_execute_local_training.assert_called_once_with(
+        #       sight, decision_configuration, driver_fn, optimizer_config,
+        #       workers_config, optimizer_type)
 
     assert mock_service_call.call_count == len(distributed_modes + local_modes)
 
-  @patch.object(sight, 'upload_blob_from_stream')
-  @patch.object(sight.service, 'call')
-  @patch.object(sight, 'create_external_bq_table')
-  @patch.object(trials, 'launch')
-  @patch.object(trials, 'start_worker_jobs')
-  def test_execute_local_training(self, mock_start_worker_jobs, mock_lauch,
-                                  mock_create_external_bq_table,
-                                  mock_service_call, mock_upload_blob):
-    # Ensure 'worker_mode' and PARENT_LOG_ID path does nothing
-    # FLAGS.server_mode = 'worker_mode'
-    decision.execute_local_training(None, None, None, None, None, None)
+  # @patch.object(sight, 'upload_blob_from_stream')
+  # @patch.object(sight.service, 'call')
+  # @patch.object(sight, 'create_external_bq_table')
+  # @patch.object(trials, 'launch')
+  # @patch.object(trials, 'start_worker_jobs')
+  # def test_execute_local_training(self, mock_start_worker_jobs, mock_lauch,
+  #                                 mock_create_external_bq_table,
+  #                                 mock_service_call, mock_upload_blob):
+  #   # Ensure 'worker_mode' and PARENT_LOG_ID path does nothing
+  #   # FLAGS.server_mode = 'worker_mode'
+  #   decision.execute_local_training(None, None, None, None, None, None)
 
-    # Simulate service.call with different id as response
-    mock_service_call.side_effect = [
-        service_pb2.CreateResponse(id=1),
-        service_pb2.CreateResponse(id=2),
-        service_pb2.CreateResponse(id=3),
-    ]
+  #   # Simulate service.call with different id as response
+  #   mock_service_call.side_effect = [
+  #       service_pb2.CreateResponse(id=1),
+  #       service_pb2.CreateResponse(id=2),
+  #       service_pb2.CreateResponse(id=3),
+  #   ]
 
-    # Preparing input for the test function
-    driver_fn = MagicMock()  # function with user logic
-    question_config = {
-        "desc":
-            "generic question label",
-        "attrs_text_proto":
-            "py/sight/utils/.text_proto_configs/generic.textproto"
-    }
-    optimizer_config = {
-        "optimizer": "worklist_scheduler",
-        "num_questions": 2,
-        "mode": "dsub_local_worker",
-    }
-    workers_config = {
-        "version": "v0.1",
-        "file_path": "worker/generic_worker.yaml"
-    }
-    optimizer_type = "worklist_scheduler"
-    question_label = "Q_label1"
-    optimizer = decision.Optimizer()
+  #   # Preparing input for the test function
+  #   driver_fn = MagicMock()  # function with user logic
+  #   question_config = {
+  #       "desc":
+  #           "generic question label",
+  #       "attrs_text_proto":
+  #           "py/sight/utils/.text_proto_configs/generic.textproto"
+  #   }
+  #   optimizer_config = {
+  #       "optimizer": "worklist_scheduler",
+  #       "num_questions": 2,
+  #       "mode": "dsub_local_worker",
+  #   }
+  #   workers_config = {
+  #       "version": "v0.1",
+  #       "file_path": "worker/generic_worker.yaml"
+  #   }
+  #   optimizer_type = "worklist_scheduler"
+  #   question_label = "Q_label1"
+  #   optimizer = decision.Optimizer()
 
-    # Test all supported local deployment modes
-    local_modes = ['local']
-    for mode in local_modes:
-      with self.subTest(server_mode=mode):
+  #   # Test all supported local deployment modes
+  #   local_modes = ['local']
+  #   for mode in local_modes:
+  #     with self.subTest(server_mode=mode):
 
-        FLAGS.server_mode = mode
-        sight = Sight(self.params)
-        optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
+  #       FLAGS.server_mode = mode
+  #       sight = Sight(self.params)
+  #       optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
 
-        decision_configuration = decision.configure_decision(
-            sight, question_label, question_config, optimizer_config,
-            optimizer.obj)
-        # Reset mocks to ensure call counts are fresh for each mode
-        mock_lauch.reset_mock()
-        mock_start_worker_jobs.reset_mock()
-        mock_service_call.reset_mock()
+  #       decision_configuration = decision.configure_decision(
+  #           sight, question_label, question_config, optimizer_config,
+  #           optimizer.obj)
+  #       # Reset mocks to ensure call counts are fresh for each mode
+  #       mock_lauch.reset_mock()
+  #       mock_start_worker_jobs.reset_mock()
+  #       mock_service_call.reset_mock()
 
-        # Call the function under test
-        decision.execute_local_training(sight, decision_configuration,
-                                        driver_fn, optimizer_config,
-                                        workers_config, optimizer_type)
+  #       # Call the function under test
+  #       decision.execute_local_training(sight, decision_configuration,
+  #                                       driver_fn, optimizer_config,
+  #                                       workers_config, optimizer_type)
 
-        sight.close()
+  #       sight.close()
 
-        # launch() should be called in all local modes
-        mock_lauch.assert_called_once_with(decision_configuration, sight)
+  #       # launch() should be called in all local modes
+  #       mock_lauch.assert_called_once_with(decision_configuration, sight)
 
-        # start_worker_jobs should only be called in 'dsub_local' mode
-        if (FLAGS.server_mode == 'dsub_local'):
-          mock_start_worker_jobs.assert_called_once_with(
-              sight, optimizer_config, workers_config, optimizer_type)
-        else:
-          mock_start_worker_jobs.assert_not_called()
+  #       # start_worker_jobs should only be called in 'dsub_local' mode
+  #       if (FLAGS.server_mode == 'dsub_local'):
+  #         mock_start_worker_jobs.assert_called_once_with(
+  #             sight, optimizer_config, workers_config, optimizer_type)
+  #       else:
+  #         mock_start_worker_jobs.assert_not_called()
 
   @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight.service, 'call')

@@ -138,6 +138,8 @@ def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
     worker_details = worker_config[worker_configs[worker]['version']]
 
     if (optimizer_config['mode'] == 'dsub_cloud_worker'):
+      if(FLAGS.server_mode == 'local'):
+        raise ValueError(f"{optimizer_config['mode']} is not supported for server mode :{FLAGS.server_mode}")
       start_jobs(worker_count, worker_details['binary'], optimizer_type,
                  worker_details['docker'], 'train', FLAGS.server_mode,
                  optimizer_config['mode'], FLAGS.cache_mode, sight)
@@ -436,6 +438,32 @@ def start_job_in_dsub_local(
   #     script_args = (script_args +
   #                    f'--service_account={FLAGS.service_account}')
 
+  env_vars = [
+      '--env',
+      f'PARENT_LOG_ID={sight.id}',
+      '--env',
+      f'PROJECT_ID={os.environ["PROJECT_ID"]}',
+      '--env',
+      f'GOOGLE_CLOUD_PROJECT={os.environ["PROJECT_ID"]}',
+      '--env',
+      f'PARENT_LOG_ID={sight.id}',
+      '--env',
+      f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
+      '--env',
+      f'WORKERS_CONFIG_PATH={FLAGS.workers_config_path}',
+      '--env',
+      f'OPTIMIZERS_CONFIG_PATH={FLAGS.optimizers_config_path}',
+  ]
+
+  if FLAGS.server_mode == 'vm':
+    if FLAGS.ip_addr == 'localhost':
+      raise ValueError("ip_address must be provided for workers")
+    env_vars += ['--env', f'IP_ADDR={FLAGS.ip_addr}']
+  elif FLAGS.server_mode == 'local':
+    env_vars += ['--env', f'IP_ADDR={service.get_docker0_ip()}']
+  elif FLAGS.server_mode == 'cloud_run':
+    env_vars += ['--env', f'SIGHT_SERVICE_ID={service._SERVICE_ID}']
+
   print('sight.id=%s' % sight.id)
   args = [
       'dsub',
@@ -444,25 +472,26 @@ def start_job_in_dsub_local(
       f'--project={_PROJECT_ID.value}',
       # f'--logging=gs://{os.environ["PROJECT_ID"]}/d-sub/logs/local/{sight.id}',
       f'--logging=extra/dsub-logs',
-      '--env',
-      f'GOOGLE_CLOUD_PROJECT={os.environ["PROJECT_ID"]}',
-      '--env',
-      f'PROJECT_ID={os.environ["PROJECT_ID"]}',
+      # '--env',
+      # f'GOOGLE_CLOUD_PROJECT={os.environ["PROJECT_ID"]}',
+      # '--env',
+      # f'PROJECT_ID={os.environ["PROJECT_ID"]}',
       # '--env',
       # 'GOOGLE_APPLICATION_CREDENTIALS=/mnt/data/mount/file'
       # + f'{FLAGS.gcloud_dir_path}/application_default_credentials.json',
-      '--env',
-      f'PARENT_LOG_ID={sight.id}',
+      # '--env',
+      # f'PARENT_LOG_ID={sight.id}',
       # '--env',
       # 'PYTHONPATH=/project',
       '--env',
       f'IP_ADDR={service.get_docker0_ip()}',
-      '--env',
-      f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
-      '--env',
-      f'WORKERS_CONFIG_PATH={FLAGS.workers_config_path}',
-      '--env',
-      f'OPTIMIZERS_CONFIG_PATH={FLAGS.optimizers_config_path}',
+      # '--env',
+      # f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
+      # '--env',
+      # f'WORKERS_CONFIG_PATH={FLAGS.workers_config_path}',
+      # '--env',
+      # f'OPTIMIZERS_CONFIG_PATH={FLAGS.optimizers_config_path}',
+      *env_vars,
       '--input',
       f'SCRIPT={remote_script}',
       '--input-recursive',
