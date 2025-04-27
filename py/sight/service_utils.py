@@ -107,12 +107,12 @@ def get_service_id() -> str:
 
 
 def get_port_number() -> str:
-  logging.info('FLAGS.port is %s', FLAGS.port)
-  logging.info('_PORT.value is %s', _PORT.value)
+  # logging.info('FLAGS.port is %s', FLAGS.port)
+  # logging.info('_PORT.value is %s', _PORT.value)
 
-  logging.info(
-      'in get_port_number => os.environ.PORT => %s FLAGS.server_mode => %s  ',
-      os.environ.get('PORT', 'None'), FLAGS.server_mode)
+  # logging.info(
+  #     'in get_port_number => os.environ.PORT => %s FLAGS.server_mode => %s  ',
+  #     os.environ.get('PORT', 'None'), FLAGS.server_mode)
 
   if (FLAGS.server_mode in ['local', 'vm']):
     return '8080'
@@ -462,7 +462,7 @@ def obtain_secure_channel(options=None):
   # else:
   url = _service_addr()
   target = '{}:{}'.format(url, get_port_number())
-  logging.info("target %s , creds %s and options %s here ", target, creds,
+  logging.info("secure channel : target %s , creds %s and options %s here ", target, creds,
                options)
   channel = grpc.secure_channel(
       target,
@@ -478,16 +478,18 @@ def obtain_insecure_channel(options):
   Returns:
     service_handle: to communicate with server
   """
+  # server_mode is VM or (local in dsub worker)
   if 'IP_ADDR' in os.environ:
     host = os.environ["IP_ADDR"]
   # elif FLAGS.worker_mode=='dsub_local_worker':
   #   host = get_docker0_ip()
+  # server_mode is local in client
   else:
     host = 'localhost'
   target = '{}:{}'.format(host, get_port_number())
   # print("service_url here : ", target)
 
-  logging.info("target %s , and options %s here ", target, options)
+  logging.info("Insecure channel : target %s , and options %s here ", target, options)
 
   channel = grpc.insecure_channel(
       target,
@@ -512,8 +514,7 @@ class GRPCClientCache:
         ('grpc.max_receive_message_length', 512 * 1024 * 1024),
     ]
 
-    if 'IP_ADDR' in os.environ or ('server_mode' in FLAGS and
-                                   FLAGS.server_mode in ['local', 'vm']):
+    if FLAGS.server_mode in ['local', 'vm']:
       if cls._insecure_cache is None:
         channel = obtain_insecure_channel(channel_opts)
         sight_service = service_pb2_grpc.SightServiceStub(channel)

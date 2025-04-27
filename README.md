@@ -885,7 +885,7 @@ To run the application in training mode users must run the application's binary
 while setting the command line flag ```--decision_mode``` as ```train``` and must use the
 following flags to control the training process:
 
-- ```deployment_mode```: The procedure to use when training a model to drive
+- ```server_mode```: The procedure to use when training a model to drive
     applications that use the Decision API.
 
   - distributed: The application is executed in parallel on the GCP cloud.
@@ -943,7 +943,7 @@ command with all the mandatory flags mentioned [here](#running-decision-api-enab
 ```python
 python py/sight/demo/shower_demo_without_env.py \
 --decision_mode=train \
---deployment_mode=distributed \
+--server_mode=distributed \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
@@ -960,7 +960,7 @@ need to pass env_name flag:
 ```python
 python py/sight/demo/gym_demo_env.py \
 --decision_mode=train \
---deployment_mode=distributed \
+--server_mode=distributed \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
@@ -977,7 +977,7 @@ following
 ```python
 python py/sight/demo/sweetness.py \
 --decision_mode=train \
---deployment_mode=distributed \
+--server_mode=distributed \
 --optimizer_type=vizier \
 --num_train_workers=2 \
 --num_trials=5 \
@@ -989,7 +989,7 @@ python py/sight/demo/sweetness.py \
 ```python
 python py/sight/demo/sweetness.py \
 --decision_mode=train \
---deployment_mode=distributed \
+--server_mode=distributed \
 --optimizer_type=exhaustive_search \
 --num_train_workers=2 \
 --num_trials=5 \
@@ -1028,7 +1028,7 @@ python py/sight/demo/gym_demo_env.py \
 --service_name=new-service \
 --service_docker_file=server/Dockerfile \
 --decision_mode=train \
---deployment_mode=distributed \
+--server_mode=distributed \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
@@ -1047,7 +1047,7 @@ cd ~/x-sight
 python sight_service/service_root.py
 ```
 
-And from another terminal session, User can run any valid command from [this](#example-training-invocation-commands) section and change the flag ```--deployment_mode=local``` to indicate that sight_service is running locally.
+And from another terminal session, User can run any valid command from [this](#example-training-invocation-commands) section and change the flag ```--server_mode=local``` to indicate that sight_service is running locally.
 
 ### VM server
 
