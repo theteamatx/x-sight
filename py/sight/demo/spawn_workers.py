@@ -50,7 +50,7 @@ def main(argv: Sequence[str]) -> None:
         optimizer_type='worklist_scheduler',
         docker_image='gcr.io/cameltrain/sight-portfolio-worker',
         decision_mode='train',
-        deployment_mode='worker_mode',
+        server_mode='cloud_run',
         worker_mode='dsub_cloud_worker',
         sight=sight,
     )

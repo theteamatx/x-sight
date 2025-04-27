@@ -139,14 +139,13 @@ def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
 
     if (optimizer_config['mode'] == 'dsub_cloud_worker'):
       start_jobs(worker_count, worker_details['binary'], optimizer_type,
-                        worker_details['docker'], 'train', 'worker_mode',
-                        optimizer_config['mode'], FLAGS.cache_mode, sight)
+                 worker_details['docker'], 'train', FLAGS.server_mode,
+                 optimizer_config['mode'], FLAGS.cache_mode, sight)
     elif (optimizer_config['mode'] == 'dsub_local_worker'):
       start_job_in_dsub_local(worker_count, worker_details['binary'],
-                                     optimizer_type, worker_details['docker'],
-                                     'train', 'worker_mode',
-                                     optimizer_config['mode'], FLAGS.cache_mode,
-                                     sight)
+                              optimizer_type, worker_details['docker'], 'train',
+                              FLAGS.server_mode, optimizer_config['mode'],
+                              FLAGS.cache_mode, sight)
 
     else:
       raise ValueError(
@@ -169,7 +168,7 @@ def start_job_in_docker(
     optimizer_type: str,
     docker_image: str,
     decision_mode: str,
-    deployment_mode: str,
+    server_mode: str,
     worker_mode: str,
     decision_params: str,
     sight: Any,
@@ -182,7 +181,7 @@ def start_job_in_docker(
     optimizer_type: Type of optimizer we are using.
     docker_image: Path of the docker image within which the binary is to be run.
     decision_mode: add
-    deployment_mode: add
+    server_mode: add
     worker_mode: add
     decision_params: add
     sight: The Sight object to be used for logging.
@@ -200,7 +199,7 @@ def start_job_in_docker(
     f.write('echo "$PYTHONPATH"')
     f.write(
         '/usr/bin/python3'
-        f' /project/{binary_path.split("/")[-1]} --decision_mode={decision_mode} --deployment_mode={deployment_mode}'
+        f' /project/{binary_path.split("/")[-1]} --decision_mode={decision_mode} --server_mode={server_mode}'
         f' --worker_mode={worker_mode} --optimizer_type={optimizer_type} --num_trials={num_trials} '
     )
     if FLAGS.service_account:
@@ -259,7 +258,7 @@ def start_jobs(
     optimizer_type: str,
     docker_image,
     decision_mode: str,
-    deployment_mode: str,
+    server_mode: str,
     worker_mode: str,
     cache_mode: str,
     sight: Any):
@@ -272,7 +271,7 @@ def start_jobs(
     optimizer_type: Type of optimizer we are using.
     docker_image: Path of the docker image within which the binary is to be run.
     decision_mode: add
-    deployment_mode: add
+    server_mode: add
     worker_mode: add
     cache_mode: add
     sight: The Sight object to be used for logging.
@@ -304,13 +303,12 @@ def start_jobs(
     raise ValueError(
         'flag --service_account required for worker_mode as dsub_cloud_worker.')
 
-  # provider = 'local' if deployment_mode == 'local' else 'google-cls-v2'
+  # provider = 'local' if server_mode == 'local' else 'google-cls-v2'
 
   # cd /x-sight &&
   command = (
       'ls -l && echo "${SCRIPT}" && echo "${PYTHONPATH}" && python3 "${SCRIPT}"'
-      + f' --decision_mode={decision_mode}' +
-      f' --deployment_mode={deployment_mode}' +
+      + f' --decision_mode={decision_mode}' + f' --server_mode={server_mode}' +
       f' --worker_mode={worker_mode}' + f' --optimizer_type={optimizer_type}' +
       f' --cache_mode={cache_mode}'
       # + f' --project_id={os.environ["PROJECT_ID"]}'
@@ -331,12 +329,12 @@ def start_jobs(
       f'PROJECT_ID={os.environ["PROJECT_ID"]}',
   ]
 
-  print("FLAGS.deployment_mode : ", FLAGS.deployment_mode)
-  if FLAGS.deployment_mode == 'vm':
+  print("FLAGS.server_mode : ", FLAGS.server_mode)
+  if FLAGS.server_mode == 'vm':
     if FLAGS.ip_addr == 'localhost':
       raise ValueError("ip_address must be provided for workers")
     env_vars += ['--env', f'IP_ADDR={FLAGS.ip_addr}']
-  elif FLAGS.deployment_mode == 'distributed':
+  elif FLAGS.server_mode == 'cloud_run':
     env_vars += ['--env', f'SIGHT_SERVICE_ID={service._SERVICE_ID}']
 
   print('sight.id=%s' % sight.id)
@@ -385,7 +383,7 @@ def start_job_in_dsub_local(
     optimizer_type: str,
     docker_image,
     decision_mode: str,
-    deployment_mode: str,
+    server_mode: str,
     worker_mode: str,
     cache_mode: str,
     sight: Any,
@@ -399,7 +397,7 @@ def start_job_in_dsub_local(
     optimizer_type: Type of optimizer we are using.
     docker_image: Path of the docker image within which the binary is to be run.
     decision_mode: add
-    deployment_mode: add
+    server_mode: add
     worker_mode: add
     sight: The Sight object to be used for logging.
   """
@@ -429,10 +427,10 @@ def start_job_in_dsub_local(
   # subprocess.run(['gsutil', 'cp', '-c', binary_path, remote_script],
   #                check=True)
 
-  # provider = 'google-cls-v2' if deployment_mode == 'distributed' else 'local'
+  # provider = 'google-cls-v2' if server_mode == 'distributed' else 'local'
 
   script_args = (
-      f'--decision_mode={decision_mode} --deployment_mode={deployment_mode} --worker_mode={worker_mode} --optimizer_type={optimizer_type}  --cache_mode={cache_mode} '
+      f'--decision_mode={decision_mode} --server_mode={server_mode} --worker_mode={worker_mode} --optimizer_type={optimizer_type}  --cache_mode={cache_mode} '
   )
   # if FLAGS.service_account:
   #     script_args = (script_args +

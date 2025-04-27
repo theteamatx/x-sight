@@ -120,7 +120,7 @@ class DecisionTest(unittest.TestCase):
   @patch.object(sight.service, 'call')
   def test_validate_train_mode(self, mock_service_call):
     # Set the required flag to simulate distributed deployment
-    FLAGS.deployment_mode = 'distributed'
+    FLAGS.server_mode = 'cloud_run'
     FLAGS.optimizer_type = 'exhaustive_search'
     FLAGS.num_trials = 12
 
@@ -165,14 +165,14 @@ class DecisionTest(unittest.TestCase):
                               mock_create_external_bq_table, mock_service_call,
                               mock_upload_blob):
     # Test unsupported deployment mode to ensure proper error is raised
-    FLAGS.deployment_mode = 'xyz'
+    FLAGS.server_mode = 'xyz'
     with self.assertRaises(ValueError) as cm:
       decision.execute_train_mode(None, None, None, None, None, None, None)
     self.assertEqual(str(cm.exception), 'Unsupported deployment mode xyz')
 
     # Test all supported deployment modes
-    distributed_modes = ['distributed', 'vm']
-    local_modes = ['local', 'dsub_local', 'docker_local', 'worker_mode']
+    distributed_modes = ['cloud_run', 'vm']
+    local_modes = ['local']
 
     # Simulate service.call with different id as response
     mock_service_call.side_effect = [
@@ -206,13 +206,13 @@ class DecisionTest(unittest.TestCase):
     question_label = "Q_label1"
 
     for mode in distributed_modes + local_modes:
-      with self.subTest(deployment_mode=mode):
+      with self.subTest(server_mode=mode):
         # Reset mocks for each subtest to avoid call overlap
         mock_validate_train_mode.reset_mock()
         mock_create_opt_and_start_workers.reset_mock()
         mock_execute_local_training.reset_mock()
 
-        FLAGS.deployment_mode = mode
+        FLAGS.server_mode = mode
 
         # Preparing input for the test function
         sight = Sight(self.params)
@@ -231,11 +231,11 @@ class DecisionTest(unittest.TestCase):
         sight.close()
 
         # Assert correct execution path based on deployment mode
-        if FLAGS.deployment_mode in distributed_modes:
+        if FLAGS.server_mode in distributed_modes:
           mock_create_opt_and_start_workers.assert_called_once_with(
               sight, decision_configuration, optimizer_config, workers_config,
               optimizer_type)
-        elif FLAGS.deployment_mode in local_modes:
+        elif FLAGS.server_mode in local_modes:
           mock_execute_local_training.assert_called_once_with(
               sight, decision_configuration, driver_fn, optimizer_config,
               workers_config, optimizer_type)
@@ -251,7 +251,7 @@ class DecisionTest(unittest.TestCase):
                                   mock_create_external_bq_table,
                                   mock_service_call, mock_upload_blob):
     # Ensure 'worker_mode' and PARENT_LOG_ID path does nothing
-    FLAGS.deployment_mode = 'worker_mode'
+    # FLAGS.server_mode = 'worker_mode'
     decision.execute_local_training(None, None, None, None, None, None)
 
     # Simulate service.call with different id as response
@@ -283,11 +283,11 @@ class DecisionTest(unittest.TestCase):
     optimizer = decision.Optimizer()
 
     # Test all supported local deployment modes
-    local_modes = ['local', 'dsub_local', 'docker_local']
+    local_modes = ['local']
     for mode in local_modes:
-      with self.subTest(deployment_mode=mode):
+      with self.subTest(server_mode=mode):
 
-        FLAGS.deployment_mode = mode
+        FLAGS.server_mode = mode
         sight = Sight(self.params)
         optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
 
@@ -310,7 +310,7 @@ class DecisionTest(unittest.TestCase):
         mock_lauch.assert_called_once_with(decision_configuration, sight)
 
         # start_worker_jobs should only be called in 'dsub_local' mode
-        if (FLAGS.deployment_mode == 'dsub_local'):
+        if (FLAGS.server_mode == 'dsub_local'):
           mock_start_worker_jobs.assert_called_once_with(
               sight, optimizer_config, workers_config, optimizer_type)
         else:

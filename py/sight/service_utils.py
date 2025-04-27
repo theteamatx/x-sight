@@ -65,10 +65,10 @@ _PORT = flags.DEFINE_string(
     '443',
     'port number on which service is deployed',
 )
-_DEPLOYMENT_MODE = flags.DEFINE_enum(
-    'deployment_mode',
+_SERVER_MODE = flags.DEFINE_enum(
+    'server_mode',
     None,
-    ['vm', 'distributed', 'local', 'dsub_local', 'docker_local', 'worker_mode'],
+    ['vm', 'cloud_run', 'local'],
     ('The procedure to use when training a model to drive applications that '
      'use the Decision API.'),
 )
@@ -111,11 +111,10 @@ def get_port_number() -> str:
   logging.info('_PORT.value is %s', _PORT.value)
 
   logging.info(
-      'in get_port_number => os.environ.PORT => %s FLAGS.deployment_mode => %s  ',
-      os.environ.get('PORT', 'None'), FLAGS.deployment_mode)
+      'in get_port_number => os.environ.PORT => %s FLAGS.server_mode => %s  ',
+      os.environ.get('PORT', 'None'), FLAGS.server_mode)
 
-  if (FLAGS.deployment_mode in ['dsub_local', 'local', 'vm'] or
-      ('worker_mode' in FLAGS and FLAGS.worker_mode == 'dsub_local_worker')):
+  if (FLAGS.server_mode in ['local', 'vm']):
     return '8080'
   else:
     return _PORT.value
@@ -505,7 +504,7 @@ class GRPCClientCache:
   def generate_metadata(cls):
     """Generate metadata to call service with authentication."""
 
-    logging.info('_secure_cache %s and _insecure_cache %s ', cls._secure_cache,
+    logging.debug('_secure_cache %s and _insecure_cache %s ', cls._secure_cache,
                  cls._insecure_cache)
 
     channel_opts = [
@@ -513,12 +512,8 @@ class GRPCClientCache:
         ('grpc.max_receive_message_length', 512 * 1024 * 1024),
     ]
 
-    if 'IP_ADDR' in os.environ or (
-        'deployment_mode' in FLAGS and
-        FLAGS.deployment_mode in ['dsub_local', 'local', 'vm']) or (
-            'worker_mode' in FLAGS and
-            FLAGS.worker_mode in ['dsub_local_worker']):
-
+    if 'IP_ADDR' in os.environ or ('server_mode' in FLAGS and
+                                   FLAGS.server_mode in ['local', 'vm']):
       if cls._insecure_cache is None:
         channel = obtain_insecure_channel(channel_opts)
         sight_service = service_pb2_grpc.SightServiceStub(channel)
@@ -527,10 +522,9 @@ class GRPCClientCache:
       return cls._insecure_cache
 
     else:
-
       if cls._secure_cache is None:
         # for client code, need to find or deploy cloud run service, workers will directly get via env
-        if 'deployment_mode' in FLAGS and FLAGS.deployment_mode == "distributed":
+        if FLAGS.worker_mode is None:
           _find_or_deploy_server()
         secure_channel = obtain_secure_channel()
         # print("secure_channel : ", secure_channel)

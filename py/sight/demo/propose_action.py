@@ -44,8 +44,7 @@ from sight.utils.proto_conversion import convert_proto_to_dict
 from sight.widgets.decision import decision
 from sight.widgets.decision import trials
 from sight.widgets.decision.single_action_optimizer_client import (
-    SingleActionOptimizerClient
-)
+    SingleActionOptimizerClient)
 from sight_service.proto import service_pb2
 
 _RUN_MODE = flags.DEFINE_enum(
@@ -157,7 +156,7 @@ def main(argv: Sequence[str]) -> None:
       #         optimizer_type='worklist_scheduler',
       #         docker_image='gcr.io/cameltrain/sight-portfolio-worker',
       #         decision_mode='train',
-      #         deployment_mode='worker_mode',
+      #         server_mode='worker_mode',
       #         worker_mode='dsub_cloud_worker',
       #         sight=sight,
       #     )
