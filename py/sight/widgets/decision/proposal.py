@@ -17,6 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 
 from absl import flags
+from absl import logging
 from helpers.cache.cache_factory import CacheFactory
 from helpers.cache.cache_helper import CacheConfig
 from helpers.cache.cache_helper import KeyMaker
@@ -132,5 +133,7 @@ async def propose_actions(sight,
     except (json.JSONDecodeError, TypeError):
       final_value = value
     outcome[key] = final_value
+  logging.info('cache_key=%s', cache_key)
+  logging.info('outcome=%s', outcome)
   cache_client.json_set(key=cache_key, value=outcome)
   return outcome

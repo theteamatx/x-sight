@@ -127,7 +127,10 @@ def launch(
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
 
 
-def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
+def start_worker_jobs(sight, 
+                      optimizer_config: dict, 
+                      worker_configs:dict, 
+                      optimizer_type: str):
   # for worker_name in optimizer_config['worker_names']:
   #   worker_details = worker_configs[worker_name]
 
@@ -135,19 +138,15 @@ def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
   for worker, worker_count in optimizer_config['workers'].items():
     # print('worker_count : ', worker_count)
     worker_details = worker_configs[worker]
-    if (optimizer_config['mode'] == 'dsub_cloud_worker'):
-      start_jobs(worker_count, worker_details['binary'], optimizer_type,
-                 worker_details['docker'], 'train', 'worker_mode',
-                 optimizer_config['mode'], sight)
-    elif (optimizer_config['mode'] == 'dsub_local_worker'):
-      start_job_in_dsub_local(worker_count, worker_details['binary'],
-                              optimizer_type, worker_details['docker'], 'train',
-                              'worker_mode', optimizer_config['mode'], sight)
-
-    else:
-      raise ValueError(
-          f"{optimizer_config['mode']} mode from optimizer_config not supported"
-      )
+    start_jobs(worker_count, 
+               worker_details['binary'], 
+               optimizer_type,
+               worker_details['docker'], 
+               'train', 
+               'worker_mode',
+               optimizer_config['mode'], 
+               FLAGS.cache_mode,
+               sight)
 
 
 def append_ist_time_to_logging_path_12hr():
