@@ -25,6 +25,7 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Text, Union
 
 from absl import flags
+from dataclasses import dataclass
 from google.protobuf.text_format import Merge
 # from absl import logging
 from helpers.logs.logs_handler import logger as logging
@@ -181,10 +182,72 @@ _CACHE_MODE = flags.DEFINE_enum(
     'Which Sight cache to use ? (default is none)')
 
 _file_name = os.path.basename(__file__)
-_sight_id = None
 _rewards = []
 FLAGS = flags.FLAGS
 
+@dataclass
+class DecisionConfig:
+  """Configuration for the decision module."""
+  questions: dict[str, Any]
+
+  optimizers: dict[str, Any]
+
+  workers: dict[str, Any]
+
+  def __init__(self, config_dir_path: str):
+    """
+    Arguments:
+      config_dir_path: Path of the directory that contains the optimizer_config.yaml, 
+        worker_config.yaml and question_config.yaml files.
+        """
+    self.questions = utils.load_yaml_config(
+        config_dir_path + '/question_config.yaml'
+    )
+    self.optimizers = utils.load_yaml_config(
+        config_dir_path + '/optimizer_config.yaml'
+    )
+    self.workers = utils.load_yaml_config(
+        config_dir_path + '/worker_config.yaml'
+    )
+    # Load the configuration parameter's for this worker from the worker-specific
+    # file path.
+    for name, cfg in self.workers.items():
+      self.workers[name] |= utils.load_yaml_config(cfg['file_path'])[cfg['version']]
+
+def initialize(config: DecisionConfig, sight) -> None:
+  """Initializes the decision module for this sight logger object.
+  
+  Arguments:
+    config: The configuration of the decision module.
+    sight: The sight object for which the decision module is being initialized.
+  """
+  
+  for question_label, question_config in config.questions.items():
+    if question_label not in config.optimizers:
+      continue
+    optimizer_type = config.optimizers[question_label]['optimizer']
+    optimizer_config = config.optimizers[question_label]
+
+    opt_obj = setup_optimizer(sight, optimizer_type)
+    trials.launch(
+        configure_decision(
+          sight, 
+          question_label, 
+          question_config, 
+          optimizer_config, 
+          opt_obj
+          ),
+        sight)
+
+    # Start worker jobs
+    trials.start_worker_jobs(sight, optimizer_config, config.workers, optimizer_type)
+
+    if (
+        optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER
+    ):
+      init_sight_polling_thread(
+          sight.id, question_label
+      )
 
 def configure(
     decision_configuration: Optional[sight_pb2.DecisionConfigurationStart],
@@ -332,15 +395,15 @@ def run(
         break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-        # logging.info('Retrying in 5 seconds......')
-        # time.sleep(5)
-        backoff_interval *= 2
-        time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
-        logging.info('backed off for %s seconds... and trying for %s',
-                     backoff_interval, num_retries)
-        num_retries += 1
-        if (num_retries >= 5):
-          break
+        logging.info('Retrying in 5 seconds......')
+        time.sleep(5)
+        # backoff_interval *= 2
+        # time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        # logging.info('backed off for %s seconds... and trying for %s',
+        #              backoff_interval, num_retries)
+        # num_retries += 1
+        # if (num_retries >= 10):
+        #   break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
         process_worker_action(response, sight, driver_fn, env, question_label,
@@ -573,18 +636,22 @@ def get_decision_configuration_for_opt(
   Returns:
       decision_configuration: The decision configuration protobuf object with optimizer configuration.
   """
+  relative_text_proto_path = question_config['attrs_text_proto']
+  if os.path.exists(relative_text_proto_path):
+    with open(relative_text_proto_path, 'r') as f:
+      text_proto_data = f.read()
+  else:
+    current_file = Path(__file__).resolve()
+    sight_repo_path = current_file.parents[4]
 
-  current_file = Path(__file__).resolve()
-  sight_repo_path = current_file.parents[4]
+    absolute_text_proto_path = sight_repo_path.joinpath(
+        question_config['attrs_text_proto'])
 
-  absoulte_text_proto_path = sight_repo_path.joinpath(
-      question_config['attrs_text_proto'])
+    if not os.path.exists(absolute_text_proto_path):
+      raise FileNotFoundError(f'File not found {relative_text_proto_path}')
 
-  if not os.path.exists(absoulte_text_proto_path):
-    raise FileNotFoundError(f'File not found {absoulte_text_proto_path}')
-
-  with open(absoulte_text_proto_path, 'r') as f:
-    text_proto_data = f.read()
+    with open(absolute_text_proto_path, 'r') as f:
+      text_proto_data = f.read()
 
   # # Extract attributes
   # action_attrs = decision_helper.config_to_attr(question_config, 'action')

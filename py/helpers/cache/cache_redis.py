@@ -35,7 +35,7 @@ class RedisCache(CacheInterface):
       self.redis_client = redis.StrictRedis(
           host=config.get("redis_host", "localhost"),
           port=config.get("redis_port", 1234),
-          password=config.get("password", ""),
+          password=config.get("redis_pass", ""),
           db=config.get("redis_db", 0),
       )
       self.redis_client.ping()
