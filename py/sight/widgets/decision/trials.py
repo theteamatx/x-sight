@@ -49,18 +49,6 @@ _PROJECT_REGION = flags.DEFINE_string('project_region', 'us-central1',
                                       'location to store project-data')
 _DSUB_MACHINE_TYPE = flags.DEFINE_string('dsub_machine_type', 'e2-standard-2',
                                          '')
-# _DSUB_LOGGING = flags.DEFINE_string(
-#     'log_path',
-#     # 'tmp/logs',
-#     f'gs://{os.environ["PROJECT_ID"]}/d-sub/logs/default',
-#     'storage URI to store d-sub logs',
-# )
-
-# _DSUB_LOCAL_LOGGING = flags.DEFINE_string(
-#     'dsub_local_logging',
-#     None,#'logs/Dsub_local_logs',
-#     'file path to store d-sub logs'
-# )
 
 _DSUB_BOOT_DISK_SIZE = flags.DEFINE_integer('dsub_boot_disk_size', 30, '')
 
@@ -78,51 +66,25 @@ def _get_experiment_name(sight: Any) -> str:
 
 
 def launch(
-    # optimizer_type: str,
-    # optimizer_config: Any,
-    # state_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
-    # action_attrs: Dict[str, sight_pb2.DecisionConfigurationStart.AttrProps],
-    # optimizer: OptimizerClient,
     decision_configuration: sight_pb2.DecisionConfigurationStart,
-    # num_train_workers: int,
     sight: Any,
 ):
   """Launches the experiment with the service.
 
   Args:
-    optimizer_type: Type of optimizer we are using.
-    state_attrs: maps the name of each state variable to its possible values.
-    action_attrs: maps the name of each variable that describes possible
-      decisions to its possible values.
-    # num_train_workers: numbers of workers to be spawned
+    decision_configuration: Object containing attributes for the question to be launched
     sight: The Sight object to be used for logging.
   """
   method_name = 'launch'
   logging.debug('>>>>>>>>>  In %s method of %s file.', method_name, _file_name)
 
   req = service_pb2.LaunchRequest()
-
-  # config_param = sight_pb2.DecisionConfigurationStart()
-  # for key, attr in action_attrs.items():
-  #   config_param.action_attrs[key].CopyFrom(attr)
-  # for key, attr in state_attrs.items():
-  #   config_param.state_attrs[key].CopyFrom(attr)
   req.decision_config_params.CopyFrom(decision_configuration)
-
   req.label = sight.params.label
   req.client_id = str(sight.id)
-  # req.question_id = decision_configuration.question_id
   req.question_label = decision_configuration.question_label
 
   response = service.call(lambda s, meta: s.Launch(req, 300, metadata=meta))
-  # start polling thread, fetching outcome from server for proposed actions
-  # as we are awaiting till we get response back for this proposal of workerlist_scheduler, removing this thread
-
-  # if (decision_configuration.optimizer_type == sight_pb2.
-  #     DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER and
-  #     response.display_string == "Worklist Scheduler SUCCESS!"):
-  #   decision.init_sight_polling_thread(sight.id,
-  #                                      decision_configuration.question_label)
   logging.info('##### Launch response=%s #####', response)
 
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
@@ -138,8 +100,10 @@ def start_worker_jobs(sight, optimizer_config, worker_configs, optimizer_type):
     worker_details = worker_config[worker_configs[worker]['version']]
 
     if (optimizer_config['mode'] == 'dsub_cloud_worker'):
-      if(FLAGS.server_mode == 'local'):
-        raise ValueError(f"{optimizer_config['mode']} is not supported for server mode :{FLAGS.server_mode}")
+      if (FLAGS.server_mode == 'local'):
+        raise ValueError(
+            f"{optimizer_config['mode']} is not supported for server mode :{FLAGS.server_mode}"
+        )
       start_jobs(worker_count, worker_details['binary'], optimizer_type,
                  worker_details['docker'], 'train', FLAGS.server_mode,
                  optimizer_config['mode'], FLAGS.cache_mode, sight)
@@ -218,12 +182,9 @@ def start_job_in_docker(
       '-v',
       '/tmp/sight_script:/project/sight_script:ro',
       '-v',
-      # f'{os.path.expanduser("~")}/.config/gcloud:/project/.config/gcloud:ro',
       f'{FLAGS.gcloud_dir_path}:/project/.config/gcloud:ro',
       '--env',
       'GOOGLE_APPLICATION_CREDENTIALS=/project/.config/gcloud/application_default_credentials.json',
-      # '--env',
-      # 'PYTHONPATH=/project',
       '--env',
       f'GOOGLE_CLOUD_PROJECT={_PROJECT_ID.value}',
       '--env',
@@ -232,8 +193,6 @@ def start_job_in_docker(
       f'PARENT_LOG_ID={sight.id}',
       '--env',
       f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
-      # '--env',
-      # f'SIGHT_SERVICE_ACCOUNT={_SERVICE_ACCOUNT.value}',
       '--env',
       f'worker_location={sight.location.get()}',
       '--env',
@@ -253,22 +212,13 @@ def start_job_in_docker(
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
 
 
-def start_jobs(
-    num_train_workers: int,
-    # num_trials: int,
-    binary_path: Optional[str],
-    optimizer_type: str,
-    docker_image,
-    decision_mode: str,
-    server_mode: str,
-    worker_mode: str,
-    cache_mode: str,
-    sight: Any):
+def start_jobs(num_train_workers: int, binary_path: Optional[str],
+               optimizer_type: str, docker_image, decision_mode: str,
+               server_mode: str, worker_mode: str, cache_mode: str, sight: Any):
   """Starts the dsub workers that will run the optimization.
 
   Args:
     num_train_workers: Number of workers to use in a training run.
-    num_trials: The number of times the experiment will be run during training.
     binary_path: Path of the Blaze target of this binary.
     optimizer_type: Type of optimizer we are using.
     docker_image: Path of the docker image within which the binary is to be run.
@@ -305,16 +255,11 @@ def start_jobs(
     raise ValueError(
         'flag --service_account required for worker_mode as dsub_cloud_worker.')
 
-  # provider = 'local' if server_mode == 'local' else 'google-cls-v2'
-
-  # cd /x-sight &&
   command = (
       'ls -l && echo "${SCRIPT}" && echo "${PYTHONPATH}" && python3 "${SCRIPT}"'
       + f' --decision_mode={decision_mode}' + f' --server_mode={server_mode}' +
       f' --worker_mode={worker_mode}' + f' --optimizer_type={optimizer_type}' +
-      f' --cache_mode={cache_mode}'
-      # + f' --project_id={os.environ["PROJECT_ID"]}'
-  )
+      f' --cache_mode={cache_mode}')
   if FLAGS.env_name:
     command += f' --env_name={FLAGS.env_name}'
 
@@ -345,18 +290,10 @@ def start_jobs(
       '--provider=google-cls-v2',
       f'--regions={_PROJECT_REGION.value}',
       '--use-private-address',
-      # f'--location={_PROJECT_REGION.value}',
       f'--image={docker_image}',
       f'--machine-type={_DSUB_MACHINE_TYPE.value}',
       f'--project={_PROJECT_ID.value}',
-      # f'--logging=gs://{os.environ["PROJECT_ID"]}-sight/d-sub/logs/{service._SERVICE_ID}/{sight.id}',
       f'--logging={logging_path}',
-      # '--env',
-      # f'PARENT_LOG_ID={sight.id}',
-      # '--env',
-      # f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
-      # '--env',
-      # f'PORT_NUMBER={service.get_port_number()}',
       *env_vars,
       '--input',
       f'SCRIPT={remote_script}',
@@ -380,7 +317,6 @@ def start_jobs(
 
 def start_job_in_dsub_local(
     num_train_workers: int,
-    # num_trials: int,
     binary_path: Optional[str],
     optimizer_type: str,
     docker_image,
@@ -422,21 +358,11 @@ def start_job_in_dsub_local(
       outf.write(f'{worker_id}\t{sight.location.get()}\n')
       sight.location.get().next()
 
-  # remote_script = (f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/{str(sight.id)}/' +
-  #                  binary_path.split('/')[-1])
   remote_script = binary_path
-  # print(f'Uploading {binary_path}...')
-  # subprocess.run(['gsutil', 'cp', '-c', binary_path, remote_script],
-  #                check=True)
-
-  # provider = 'google-cls-v2' if server_mode == 'distributed' else 'local'
 
   script_args = (
       f'--decision_mode={decision_mode} --server_mode={server_mode} --worker_mode={worker_mode} --optimizer_type={optimizer_type}  --cache_mode={cache_mode} '
   )
-  # if FLAGS.service_account:
-  #     script_args = (script_args +
-  #                    f'--service_account={FLAGS.service_account}')
 
   env_vars = [
       '--env',
@@ -470,37 +396,13 @@ def start_job_in_dsub_local(
       '--provider=local',
       f'--image={docker_image}',
       f'--project={_PROJECT_ID.value}',
-      # f'--logging=gs://{os.environ["PROJECT_ID"]}/d-sub/logs/local/{sight.id}',
       f'--logging=extra/dsub-logs',
-      # '--env',
-      # f'GOOGLE_CLOUD_PROJECT={os.environ["PROJECT_ID"]}',
-      # '--env',
-      # f'PROJECT_ID={os.environ["PROJECT_ID"]}',
-      # '--env',
-      # 'GOOGLE_APPLICATION_CREDENTIALS=/mnt/data/mount/file'
-      # + f'{FLAGS.gcloud_dir_path}/application_default_credentials.json',
-      # '--env',
-      # f'PARENT_LOG_ID={sight.id}',
-      # '--env',
-      # 'PYTHONPATH=/project',
-      '--env',
-      f'IP_ADDR={service.get_docker0_ip()}',
-      # '--env',
-      # f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
-      # '--env',
-      # f'WORKERS_CONFIG_PATH={FLAGS.workers_config_path}',
-      # '--env',
-      # f'OPTIMIZERS_CONFIG_PATH={FLAGS.optimizers_config_path}',
       *env_vars,
       '--input',
       f'SCRIPT={remote_script}',
       '--input-recursive',
       f'CLOUDSDK_CONFIG={os.path.expanduser("~")}/.config/gcloud',
       f'--command=python3 "${{SCRIPT}}" {script_args}',
-      # + f'--optimizer_type={optimizer_type}',
-      # '--mount',
-      # 'RESOURCES=file:/' + f'{FLAGS.gcloud_dir_path}',
-      # + f'{os.path.expanduser("~")}/.config/gcloud',
       '--tasks',
       '/tmp/optimization_tasks.tsv',
       '--name',

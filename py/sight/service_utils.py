@@ -107,12 +107,6 @@ def get_service_id() -> str:
 
 
 def get_port_number() -> str:
-  # logging.info('FLAGS.port is %s', FLAGS.port)
-  # logging.info('_PORT.value is %s', _PORT.value)
-
-  # logging.info(
-  #     'in get_port_number => os.environ.PORT => %s FLAGS.server_mode => %s  ',
-  #     os.environ.get('PORT', 'None'), FLAGS.server_mode)
 
   if (FLAGS.server_mode in ['local', 'vm']):
     return '8080'

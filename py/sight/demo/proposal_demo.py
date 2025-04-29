@@ -79,9 +79,8 @@ async def propose_actions(sight: Sight, question_label: str,
   return final_result
 
 
-async def propose_actions_wrapper(sight: Sight, question_label: str) -> None:
+async def propose_actions_wrapper(sight: Sight, question_label: str, actions: dict)  -> None:
 
-  actions = {"v1" : 3, "v2" : 5, "ops" : "multiplication"}
   with Block("Propose actions", sight):
     tasks = []
     tasks.append(
@@ -138,9 +137,11 @@ def main(argv: Sequence[str]) -> None:
     # this thread checks the outcome for proposed action from server
     decision.init_sight_polling_thread(sight.id,
                                        get_question_label())
-    asyncio.run(
-        propose_actions_wrapper(sight, get_question_label()))
 
+    #Ideally this actions will be proposed from some other module
+    actions = {"v1": 3, "v2": 5, "ops": 'multiply'}
+
+    asyncio.run(propose_actions_wrapper(sight, get_question_label(), actions))
 
 
 if __name__ == "__main__":

@@ -28,6 +28,7 @@ Q_label3:
 #     # fvs_worker : 1
 #     fvs_worker : 1
 
+# optimizer mapping to be used for calculator worker in langchain demo
 Q_label4:
   optimizer: "worklist_scheduler"
   num_questions: 1

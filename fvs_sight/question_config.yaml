@@ -6,6 +6,7 @@
 #   desc: "FVS question label"
 #   attrs_text_proto: "py/sight/utils/.text_proto_configs/fvs.textproto"
 
+# config attributes for calculator
 Q_label4:
   desc: "calculator question label"
   attrs_text_proto: "py/sight/utils/.text_proto_configs/calculator.textproto"
