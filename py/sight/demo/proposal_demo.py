@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Demo of using the Sight Decision API to run forest simulator."""
+"""Demo of using the Sight Propose action API to add actions to server and wait for it's outcome."""
 import warnings
 
 
@@ -41,10 +41,13 @@ from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
 from sight.widgets.decision import utils
 from helpers.logs.logs_handler import logger as logging
+
 FLAGS = flags.FLAGS
+
 
 def get_question_label():
   return 'Q_label4'
+
 
 _QUESTIONS_CONFIG = flags.DEFINE_string(
     'questions_config_path',
@@ -64,28 +67,29 @@ _WORKERS_CONFIG = flags.DEFINE_string(
     'Path of config.yaml containing worker related info.',
 )
 
-async def propose_actions(sight: Sight, question_label: str,
-                          actions: dict[str, Any],
-                          ) -> pd.Series:
+
+async def propose_actions(
+    sight: Sight,
+    question_label: str,
+    actions: dict[str, Any],
+) -> pd.Series:
   tasks = []
   with Attribute("task", "multiply", sight):
     task = sight.create_task(
-        proposal.propose_actions(sight,
-                                 question_label,
-                                 action_dict=actions))
+        proposal.propose_actions(sight, question_label, action_dict=actions))
     tasks.append(task)
 
   [final_result] = await asyncio.gather(*tasks)
   return final_result
 
 
-async def propose_actions_wrapper(sight: Sight, question_label: str, actions: dict)  -> None:
+async def propose_actions_wrapper(sight: Sight, question_label: str,
+                                  actions: dict) -> None:
 
   with Block("Propose actions", sight):
     tasks = []
     tasks.append(
-        sight.create_task(
-            propose_actions(sight, question_label, actions)))
+        sight.create_task(propose_actions(sight, question_label, actions)))
 
     logging.info("waiting for all get outcome to finish.....")
     result = await asyncio.gather(*tasks)
@@ -115,28 +119,23 @@ def main(argv: Sequence[str]) -> None:
   questions_config = utils.load_yaml_config(absolute_path +
                                             _QUESTIONS_CONFIG.value)
   optimizers_config = utils.load_yaml_config(absolute_path +
-                                              _OPTIMIZERS_CONFIG.value)
-  workers_config = utils.load_yaml_config(absolute_path +
-                                          _WORKERS_CONFIG.value)
+                                             _OPTIMIZERS_CONFIG.value)
+  workers_config = utils.load_yaml_config(absolute_path + _WORKERS_CONFIG.value)
 
   with get_sight_instance() as sight:
 
     config_dict = {
-          'questions_config': questions_config,
-          'optimizers_config': optimizers_config,
-          'workers_config': workers_config
-      }
+        'questions_config': questions_config,
+        'optimizers_config': optimizers_config,
+        'workers_config': workers_config
+    }
 
-    decision.run(
-        sight=sight,
-        question_label=get_question_label(),
-        configs=config_dict
-    )
-
+    decision.run(sight=sight,
+                 question_label=get_question_label(),
+                 configs=config_dict)
 
     # this thread checks the outcome for proposed action from server
-    decision.init_sight_polling_thread(sight.id,
-                                       get_question_label())
+    decision.init_sight_polling_thread(sight.id, get_question_label())
 
     #Ideally this actions will be proposed from some other module
     actions = {"v1": 3, "v2": 5, "ops": 'multiply'}
