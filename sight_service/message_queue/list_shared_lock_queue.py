@@ -1,4 +1,4 @@
-x"""A list lock message queue implementation using reader-writer locks."""
+"""A list lock message queue implementation using reader-writer locks."""
 
 import copy
 import time
