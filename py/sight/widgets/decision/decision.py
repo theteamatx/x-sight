@@ -226,7 +226,9 @@ def initialize(config: DecisionConfig, sight) -> None:
     if question_label not in config.optimizers:
       continue
     optimizer_type = config.optimizers[question_label]['optimizer']
+    logging.info('optimizer_type=%s', optimizer_type)
     optimizer_config = config.optimizers[question_label]
+    logging.info('optimizer_config=%s', optimizer_config)
 
     opt_obj = setup_optimizer(sight, optimizer_type)
     trials.launch(
@@ -240,10 +242,11 @@ def initialize(config: DecisionConfig, sight) -> None:
         sight)
 
     # Start worker jobs
-    trials.start_worker_jobs(sight, optimizer_config, config.workers, optimizer_type)
+    trials.start_worker_jobs(sight, question_label, optimizer_config, config.workers, optimizer_type)
 
     if (
-        optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER
+      optimizer_type == 'worklist_scheduler' or
+      optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER
     ):
       init_sight_polling_thread(
           sight.id, question_label

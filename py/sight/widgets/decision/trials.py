@@ -91,6 +91,7 @@ def launch(
 
 
 def start_worker_jobs(sight, 
+                      question_label: str,
                       optimizer_config: dict, 
                       worker_configs:dict, 
                       optimizer_type: str):
@@ -101,15 +102,29 @@ def start_worker_jobs(sight,
   for worker, worker_count in optimizer_config['workers'].items():
     # print('worker_count : ', worker_count)
     worker_details = worker_configs[worker]
-    start_jobs(worker_count, 
-               worker_details['binary'], 
-               optimizer_type,
-               worker_details['docker'], 
-               'train', 
-               'worker_mode',
-               optimizer_config['mode'], 
-               FLAGS.cache_mode,
-               sight)
+    if optimizer_config['mode'] == 'dsub_cloud_worker':
+      start_jobs(worker_count, 
+                worker_details['binary'], 
+                optimizer_type,
+                worker_details['docker'], 
+                'train',
+                FLAGS.server_mode,
+                optimizer_config['mode'], 
+                FLAGS.cache_mode,
+                sight)
+    elif optimizer_config['mode'] == 'dsub_local_worker':
+      start_job_in_dsub_local(
+        worker_count, 
+        worker_details['binary'], 
+        optimizer_type,
+        worker_details['docker'], 
+        'train',
+        FLAGS.server_mode,
+        optimizer_config['mode'],
+        FLAGS.cache_mode,
+        sight)
+    else:
+      raise ValueError(f'Unknown worker mode {optimizer_config["mode"]} for question {question_label}.')
 
 
 def append_ist_time_to_logging_path_12hr():
@@ -368,10 +383,10 @@ def start_job_in_dsub_local(
       f'PARENT_LOG_ID={sight.id}',
       '--env',
       f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
-      '--env',
-      f'WORKERS_CONFIG_PATH={FLAGS.workers_config_path}',
-      '--env',
-      f'OPTIMIZERS_CONFIG_PATH={FLAGS.optimizers_config_path}',
+      # '--env',
+      # f'WORKERS_CONFIG_PATH={FLAGS.workers_config_path}',
+      # '--env',
+      # f'OPTIMIZERS_CONFIG_PATH={FLAGS.optimizers_config_path}',
   ]
 
   if FLAGS.server_mode == 'vm':

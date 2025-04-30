@@ -1,4 +1,4 @@
-"""A list lock message queue implementation using reader-writer locks."""
+x"""A list lock message queue implementation using reader-writer locks."""
 
 import copy
 import time
@@ -129,7 +129,7 @@ class ListSharedLockMessageQueue(IMessageQueue[T]):
         self.push_message.__name__, message, unique_id)
     with self.shared_lock.gen_wlock():
       self.pending[unique_id] = message
-    logging.info('in function %s => shared_lock released for msg %s => %s ',
+    logging.debug('in function %s => shared_lock released for msg %s => %s ',
                  self.push_message.__name__, message, unique_id)
 
     time_taken_in_second = time.time() - start_time

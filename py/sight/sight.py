@@ -400,9 +400,9 @@ class Sight(object):
       create_external_bq_table(self.params, self.table_name, self.id)
     print(
         'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-        'log_id=%s.%s&log_owner=%s&project_id=%s', self.SIGHT_API_KEY,
+        'log_id=%s.%s&log_owner=%s&project_id=%s' %(self.SIGHT_API_KEY,
         self.params.dataset_name, self.table_name, self.params.log_owner,
-        os.environ['PROJECT_ID'])
+        os.environ['PROJECT_ID']))
     print(f'table generated : {self.params.dataset_name}.{self.table_name}')
     self.avro_log.close()
 
