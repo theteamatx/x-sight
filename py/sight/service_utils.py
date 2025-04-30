@@ -42,7 +42,7 @@ current_script_directory = os.path.dirname(os.path.abspath(__file__))
 #                                'sight_service', 'sight_service.cert')
 _SERVICE_NAME = flags.DEFINE_string(
     'service_name',
-    '',
+    'test-dev-service',
     'The name of the Sight service instance that will be managing this run.',
 )
 _SERVICE_DOCKER_FILE = flags.DEFINE_string(
@@ -67,7 +67,7 @@ _PORT = flags.DEFINE_string(
 )
 _SERVER_MODE = flags.DEFINE_enum(
     'server_mode',
-    None,
+    'cloud_run',
     ['vm', 'cloud_run', 'local'],
     ('The procedure to use when training a model to drive applications that '
      'use the Decision API.'),

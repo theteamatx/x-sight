@@ -58,7 +58,7 @@ from sight_service.shared_batch_messages import DecisionMessage
 
 _DECISON_MODE = flags.DEFINE_enum(
     'decision_mode',
-    None,
+    'train',
     ['train', 'run', 'configured_run'],
     ('Indicates whether the decision API should be used to train a decision '
      'model (train) or use it to run the application (run).'),
