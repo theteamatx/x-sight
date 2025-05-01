@@ -123,11 +123,13 @@ class DecisionTest(unittest.TestCase):
   #@patch.object(decision, 'execute_local_training')
   @patch.object(decision, 'create_opt_and_start_workers')
   # @patch.object(decision, 'validate_train_mode')
-  def test_execute_train_mode(self, #mock_validate_train_mode,
-                              mock_create_opt_and_start_workers,
-                              #mock_execute_local_training,
-                              mock_create_external_bq_table, mock_service_call,
-                              mock_upload_blob):
+  def test_execute_train_mode(
+      self,  #mock_validate_train_mode,
+      mock_create_opt_and_start_workers,
+      #mock_execute_local_training,
+      mock_create_external_bq_table,
+      mock_service_call,
+      mock_upload_blob):
 
     FLAGS.worker_mode = 'xyz'
     with self.assertRaises(ValueError) as cm:
@@ -156,7 +158,7 @@ class DecisionTest(unittest.TestCase):
         "desc":
             "generic question label",
         "attrs_text_proto":
-            "py/sight/utils/.text_proto_configs/generic.textproto"
+            "worker/configs/.text_proto_configs/generic.textproto"
     }
     optimizer_config = {
         "optimizer": "worklist_scheduler",
@@ -228,7 +230,7 @@ class DecisionTest(unittest.TestCase):
         "desc":
             "generic question label",
         "attrs_text_proto":
-            "py/sight/utils/.text_proto_configs/generic.textproto"
+            "worker/configs/.text_proto_configs/generic.textproto"
     }
     optimizer_config = {
         "optimizer": "worklist_scheduler",
@@ -349,7 +351,7 @@ class DecisionTest(unittest.TestCase):
     mock_path_exist.return_value = True
     mock_service_call.return_value = service_pb2.CreateResponse(id=123)
     question_config = {
-        'attrs_text_proto': 'py/sight/utils/.text_proto_configs/fvs.textproto'
+        'attrs_text_proto': 'worker/configs/.text_proto_configs/fvs.textproto'
     }
 
     # Prepare the input parameters

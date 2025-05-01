@@ -28,7 +28,6 @@ from sight.sight import Sight
 from sight.widgets.decision import utils
 from sight.widgets.decision import decision
 
-
 FLAGS = flags.FLAGS
 
 _QUESTIONS_CONFIG = flags.DEFINE_string(
@@ -49,8 +48,10 @@ _WORKERS_CONFIG = flags.DEFINE_string(
     'Path of config.yaml containing worker related info.',
 )
 
+
 def get_question_label():
-  return 'Q_label4'
+  return 'calculator'
+
 
 def get_sight_instance():
   print('creating sight object')
@@ -87,8 +88,6 @@ def main(argv: Sequence[str]) -> None:
     decision.run(sight=sight,
                  question_label=get_question_label(),
                  configs=config_dict)
-
-
 
 
 if __name__ == "__main__":

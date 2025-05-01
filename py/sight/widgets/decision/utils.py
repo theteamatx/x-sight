@@ -14,16 +14,17 @@
 """utility functions to be used in other functionalities."""
 
 import os
-
+from pathlib import Path
 from absl import flags
 import yaml
 
 FLAGS = flags.FLAGS
 
-# Not used anymore, replaced with is_numeric
-# def is_scalar(value):
-#   scalar_types = (int, float, str, bool, type(None), bytes)
-#   return isinstance(value, scalar_types)
+def get_config_dir_path():
+  current_file = Path(__file__).resolve()
+  sight_repo_path = current_file.parents[4]
+  config_dir_path = str(sight_repo_path) + '/sight_configs'
+  return config_dir_path
 
 
 def is_numeric(val):

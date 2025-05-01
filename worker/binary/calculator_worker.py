@@ -25,9 +25,11 @@ from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
 
+
 # Question mapped to calculator problem
 def get_question_label():
-  return 'Q_label4'
+  return 'calculator'
+
 
 # Primary logic to be handeled via calculator worker
 def calculator(v1, v2, ops):
@@ -54,6 +56,7 @@ def driver_fn(sight):
   print("outcome : ", outcome)
   decision.decision_outcome('outcome_label', sight, reward=0, outcome=outcome)
 
+
 # Create sight instance
 def get_sight_instance():
   params = sight_pb2.Params(
@@ -70,10 +73,9 @@ def main(argv: Sequence[str]) -> None:
 
   with get_sight_instance() as sight:
     # Enry point for the worker to start asking for the calculator question related actions
-    decision.run(
-        driver_fn=driver_fn,
-        sight=sight,
-        question_label=get_question_label())
+    decision.run(driver_fn=driver_fn,
+                 sight=sight,
+                 question_label=get_question_label())
 
 
 if __name__ == "__main__":

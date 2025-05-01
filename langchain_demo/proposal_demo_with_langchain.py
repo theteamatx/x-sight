@@ -49,7 +49,8 @@ FLAGS = flags.FLAGS
 
 
 def get_question_label():
-  return 'Q_label4'
+  return 'calculator'
+
 
 async def propose_actions(
     sight: Sight,
@@ -66,7 +67,8 @@ async def propose_actions(
   return final_result
 
 
-async def propose_actions_wrapper(sight: Sight, question_label: str, actions: dict) -> str:
+async def propose_actions_wrapper(sight: Sight, question_label: str,
+                                  actions: dict) -> str:
 
   with Block("Propose actions", sight):
     tasks = []
@@ -79,17 +81,17 @@ async def propose_actions_wrapper(sight: Sight, question_label: str, actions: di
     return result
 
 
-def get_sight_instance():
+def get_sight_instance(config=None):
   params = sight_pb2.Params(
       label=get_question_label(),
       bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
   )
-  sight_obj = Sight(params)
+  sight_obj = Sight(params, config)
   return sight_obj
+
 
 @tool
 def calculator_api_with_sight(a: int, b: int, ops: str) -> str:
-
   """
   Perform a basic arithmetic operation (addition, subtraction, etc.) on two integers using the Sight backend system.
 
@@ -114,24 +116,26 @@ def calculator_api_with_sight(a: int, b: int, ops: str) -> str:
   """
   # Initialize absl FLAGS manually if needed
   try:
-      flags.FLAGS.mark_as_parsed()
-      flags.FLAGS.sight_log_id = '2717381483903190742'
-      flags.FLAGS.server_mode = 'local'
+    flags.FLAGS.mark_as_parsed()
+    flags.FLAGS.server_mode = 'local'
   except _exceptions.DuplicateFlagError:
-      pass  # Already parsed
+    pass  # Already parsed
   except _exceptions.UnparsedFlagAccessError:
-      flags.FLAGS(['calculator_api_with_sight'])
+    flags.FLAGS(['calculator_api_with_sight'])
 
-  with get_sight_instance() as sight:
+  # config contains the data from all the config files
+  config = decision.DecisionConfig()
+
+  with get_sight_instance(config) as sight:
     # this thread checks the outcome for proposed action from server
-    print("sight.id : ", sight.id)
-    # raise SystemError
     decision.init_sight_polling_thread(sight.id, get_question_label())
+
     actions = {"v1": a, "v2": b, "ops": ops}
-    result = asyncio.run(propose_actions_wrapper(sight, get_question_label(), actions))
+    result = asyncio.run(
+        propose_actions_wrapper(sight, get_question_label(), actions))
     return result
+
 
 if __name__ == "__main__":
   result = calculator_api_with_sight.invoke({"a": 10, "b": 2, "ops": "add"})
   print(result)
-

@@ -43,6 +43,8 @@ from sight.widgets.decision import decision_helper
 from sight.widgets.decision import trials
 from sight.widgets.decision import utils
 from sight.widgets.decision.env_driver import driver_fn
+from sight.widgets.decision.utils import get_config_dir_path
+
 # from sight.widgets.decision.acme.acme_optimizer_client import (
 #     AcmeOptimizerClient
 # )
@@ -194,7 +196,7 @@ class DecisionConfig:
 
   workers: dict[str, Any]
 
-  def __init__(self, config_dir_path: str):
+  def __init__(self, config_dir_path: str = get_config_dir_path()):
     """
     Arguments:
       config_dir_path: Path of the directory that contains the optimizer_config.yaml,
@@ -323,7 +325,7 @@ def get_decision_messages_from_proto(
 def run(
     sight: Any,
     question_label: str = None,
-    configs: List[Dict] = None,
+    configs: Optional[DecisionConfig] = None,
     driver_fn: Callable[[Any], Any] = None,
     description: str = '',
     env: Any = None,
@@ -337,15 +339,12 @@ def run(
   sight.widget_decision_state['num_decision_points'] = 0
 
   # only true if run function called from main script
+  #! can we eliminate this condition by calling initialize from sight??
   if configs:
     # *** This configs are for each question's meta data
 
-    questions_config = configs.get('questions_config', {})
-    optimizers_config = configs.get('optimizers_config', {})
-    workers_config = configs.get('workers_config', {})
-
-    for question_label, question_config in questions_config.items():
-      optimizer_config = optimizers_config.get(question_label, None)
+    for question_label, question_config in configs.questions.items():
+      optimizer_config = configs.optimizers.get(question_label, None)
 
       optimizer_type = optimizer_config.get('optimizer', None)
 
@@ -366,7 +365,7 @@ def run(
           'train': (
               lambda sight=sight, decision_configuration=decision_configuration,
               driver_fn=driver_fn, optimizer_config=optimizer_config,
-              workers_config=workers_config, optimizer_type=optimizer_type,
+              workers_config=configs.workers, optimizer_type=optimizer_type,
               question_label=question_label: execute_train_mode(
                   sight, decision_configuration, driver_fn, optimizer_config,
                   workers_config, optimizer_type, question_label)),
@@ -499,7 +498,7 @@ def execute_train_mode(sight, decision_configuration, driver_fn,
   # validate_train_mode(sight)
   # if FLAGS.server_mode in ['cloud_run', 'vm']:
   if FLAGS.worker_mode is None:
-    create_opt_and_start_workers(sight, decision_configuration,
+    create_opt_and_start_workers(sight, question_label, decision_configuration,
                                  optimizer_config, workers_config,
                                  optimizer_type)
   # elif FLAGS.server_mode in [
@@ -610,7 +609,7 @@ def process_worker_action(response, sight, driver_fn, env, question_label,
   finalize_episode(question_label, sight)
 
 
-def create_opt_and_start_workers(sight, decision_configuration,
+def create_opt_and_start_workers(sight, question_label, decision_configuration,
                                  optimizer_config, workers_config,
                                  optimizer_type):
   """Executes the distributed training mode.
@@ -620,7 +619,7 @@ def create_opt_and_start_workers(sight, decision_configuration,
     decision_configuration: The decision configuration proto.
   """
   trials.launch(decision_configuration, sight)
-  trials.start_worker_jobs(sight, optimizer_config, workers_config,
+  trials.start_worker_jobs(sight, question_label, optimizer_config, workers_config,
                            optimizer_type)
 
 

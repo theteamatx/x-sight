@@ -1,0 +1,19 @@
+generic_worker0:
+  version: "v0.1"
+  file_path: "worker/configs/fvs_worker.yaml"
+
+generic_worker1:
+  version: "v0.1"
+  file_path: "worker/configs/generic_worker.yaml"
+
+generic_worker2:
+  version: "v0.1"
+  file_path: "worker/configs/generic_worker.yaml"
+
+fvs_worker:
+  version: "v0.1"
+  file_path: "worker/configs/fvs_worker.yaml"
+
+calculator_worker:
+  version: "v0.1"
+  file_path: "worker/configs/calculator_worker.yaml"
