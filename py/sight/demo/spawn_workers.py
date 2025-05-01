@@ -18,16 +18,39 @@ import math
 import os
 import subprocess
 from typing import Any, Callable, Dict, Optional, Sequence, Text, Tuple
+from pathlib import Path
 
 from absl import app
 from absl import flags
 from helpers.logs.logs_handler import logger as logging
 from sight.proto import sight_pb2
 from sight.sight import Sight
-from sight.widgets.decision import trials
+from sight.widgets.decision import utils
+from sight.widgets.decision import decision
+
 
 FLAGS = flags.FLAGS
 
+_QUESTIONS_CONFIG = flags.DEFINE_string(
+    'questions_config_path',
+    'fvs_sight/question_config.yaml',
+    'Path of config.yaml containing question related info.',
+)
+
+_OPTIMIZERS_CONFIG = flags.DEFINE_string(
+    'optimizers_config_path',
+    'fvs_sight/optimizer_config.yaml',
+    'Path of config.yaml containing optimizer related info.',
+)
+
+_WORKERS_CONFIG = flags.DEFINE_string(
+    'workers_config_path',
+    'fvs_sight/worker_config.yaml',
+    'Path of config.yaml containing worker related info.',
+)
+
+def get_question_label():
+  return 'Q_label4'
 
 def get_sight_instance():
   print('creating sight object')
@@ -43,17 +66,29 @@ def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
+  current_file = Path(__file__).resolve()
+  sight_repo_path = current_file.parents[3]
+  absolute_path = str(sight_repo_path) + '/'
+
+  questions_config = utils.load_yaml_config(absolute_path +
+                                            _QUESTIONS_CONFIG.value)
+  optimizers_config = utils.load_yaml_config(absolute_path +
+                                             _OPTIMIZERS_CONFIG.value)
+  workers_config = utils.load_yaml_config(absolute_path + _WORKERS_CONFIG.value)
+
   with get_sight_instance() as sight:
-    trials.start_jobs(
-        num_train_workers=1,
-        binary_path='py/sight/demo/demo.py',
-        optimizer_type='worklist_scheduler',
-        docker_image='gcr.io/cameltrain/sight-portfolio-worker',
-        decision_mode='train',
-        server_mode='cloud_run',
-        worker_mode='dsub_cloud_worker',
-        sight=sight,
-    )
+
+    config_dict = {
+        'questions_config': questions_config,
+        'optimizers_config': optimizers_config,
+        'workers_config': workers_config
+    }
+
+    decision.run(sight=sight,
+                 question_label=get_question_label(),
+                 configs=config_dict)
+
+
 
 
 if __name__ == "__main__":

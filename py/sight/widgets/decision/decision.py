@@ -197,7 +197,7 @@ class DecisionConfig:
   def __init__(self, config_dir_path: str):
     """
     Arguments:
-      config_dir_path: Path of the directory that contains the optimizer_config.yaml, 
+      config_dir_path: Path of the directory that contains the optimizer_config.yaml,
         worker_config.yaml and question_config.yaml files.
         """
     self.questions = utils.load_yaml_config(
@@ -216,12 +216,12 @@ class DecisionConfig:
 
 def initialize(config: DecisionConfig, sight) -> None:
   """Initializes the decision module for this sight logger object.
-  
+
   Arguments:
     config: The configuration of the decision module.
     sight: The sight object for which the decision module is being initialized.
   """
-  
+
   for question_label, question_config in config.questions.items():
     if question_label not in config.optimizers:
       continue
@@ -233,10 +233,10 @@ def initialize(config: DecisionConfig, sight) -> None:
     opt_obj = setup_optimizer(sight, optimizer_type)
     trials.launch(
         configure_decision(
-          sight, 
-          question_label, 
-          question_config, 
-          optimizer_config, 
+          sight,
+          question_label,
+          question_config,
+          optimizer_config,
           opt_obj
           ),
         sight)
@@ -398,15 +398,15 @@ def run(
         break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-        logging.info('Retrying in 5 seconds......')
-        time.sleep(5)
-        # backoff_interval *= 2
-        # time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
-        # logging.info('backed off for %s seconds... and trying for %s',
-        #              backoff_interval, num_retries)
-        # num_retries += 1
-        # if (num_retries >= 10):
-        #   break
+        # logging.info('Retrying in 5 seconds......')
+        # time.sleep(5)
+        backoff_interval *= 2
+        time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        logging.info('backed off for %s seconds... and trying for %s',
+                     backoff_interval, num_retries)
+        num_retries += 1
+        if (num_retries >= 50):
+          break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
         process_worker_action(response, sight, driver_fn, env, question_label,

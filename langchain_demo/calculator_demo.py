@@ -19,5 +19,5 @@ agent = initialize_agent(
     verbose=True,
 )
 
-response = agent.invoke({"input": "can you divide 200 to 40?"})
+response = agent.invoke({"input": "can you divide 200 to 10?"})
 print(response)
