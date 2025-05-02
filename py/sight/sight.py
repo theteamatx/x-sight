@@ -283,6 +283,7 @@ class Sight(object):
   def __init__(
       self,
       params: sight_pb2.Params,
+      config: Optional[decision.DecisionConfig] = None,
   ):
     self._initialize_default_params(params)
 
@@ -298,6 +299,9 @@ class Sight(object):
 
     self._initialize_avro_output()
     self._initialize_text_output()
+
+    if config:
+      decision.initialize(config, self)
 
   def get_location_state(self) -> SightLocationState:
     return SightLocationState(

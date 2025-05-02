@@ -39,14 +39,19 @@ def discover_and_run_tests(test_type=None, pattern="test_*.py"):
 
   ls_paths = []
 
+  excluded_dirs = [
+      "pycache", ".venv", "node_modules", ".git", ".streamlit", ".pyenv"
+  ]
+
   # Walk through all directories and subdirectories starting from the current
   # directory.
   for path, _, _ in os.walk("."):
     # Filter out paths that contain 'pycache' or virtual environment
     # directories. Also, ensure that the path contains a 'tests/' directory and
     # optionally match the 'test_type' if specified.
-    if ("pycache" not in path and ".venv" not in path and "tests/" in path and
-        (test_type == "full" or (test_type in path if test_type else True))):
+    if (not any(excluded in path for excluded in excluded_dirs) and
+        "tests/" in path and (test_type == "full" or
+                              (test_type in path if test_type else True))):
       # Add the path to the list of discovered test directories.
       ls_paths.append(path)
 

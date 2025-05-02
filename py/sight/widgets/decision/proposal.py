@@ -17,9 +17,10 @@ from concurrent.futures import ThreadPoolExecutor
 import json
 
 from absl import flags
+from absl import logging
 from helpers.cache.cache_factory import CacheFactory
 from helpers.cache.cache_helper import CacheConfig
-from helpers.cache.cache_helper import CacheKeyMaker
+from helpers.cache.cache_helper import KeyMaker
 from helpers.cache.cache_interface import CacheInterface
 from sight.attribute import Attribute
 from sight.block import Block
@@ -98,18 +99,15 @@ async def propose_actions(sight,
                           action_dict,
                           custom_part="sight_cache"):
 
-  key_maker = CacheKeyMaker()
+  key_maker = KeyMaker()
   worker_version = utils.get_worker_version(question_label)
   custom_part = custom_part + ':' + worker_version
   cache_key = key_maker.make_custom_key(custom_part, action_dict)
 
   cache_client = CacheFactory.get_cache(
       FLAGS.cache_mode,
-      with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode,
-                                                config={
-                                                    "redis_host": "10.138.0.53",
-                                                    "redis_port": 6379
-                                                }))
+      # * Update the config as per need , None config means it takes default redis config for localhost
+      with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode, config=None))
 
   outcome = cache_client.json_get(key=cache_key)
 
@@ -135,5 +133,7 @@ async def propose_actions(sight,
     except (json.JSONDecodeError, TypeError):
       final_value = value
     outcome[key] = final_value
+  logging.info('cache_key=%s', cache_key)
+  logging.info('outcome=%s', outcome)
   cache_client.json_set(key=cache_key, value=outcome)
   return outcome

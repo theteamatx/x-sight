@@ -3,7 +3,7 @@
 import unittest
 
 from helpers.cache.cache_factory import CacheFactory
-from helpers.cache.cache_helper import CacheKeyMaker
+from helpers.cache.cache_helper import KeyMaker
 from tests.colorful_tests import ColorfulTestRunner
 
 
@@ -13,7 +13,7 @@ class CacheNoneTest(unittest.TestCase):
   def setUp(self):
     super().setUp()
     self.cache = CacheFactory.get_cache(cache_type="none")
-    self.key_maker = CacheKeyMaker()
+    self.key_maker = KeyMaker()
 
   def test_json_list_keys(self):
     keys = self.cache.json_list_keys("any_prefix")

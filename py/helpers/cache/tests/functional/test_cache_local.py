@@ -5,7 +5,7 @@ import shutil
 import unittest
 
 from helpers.cache.cache_factory import LocalCache
-from helpers.cache.cache_helper import CacheKeyMaker
+from helpers.cache.cache_helper import KeyMaker
 from tests.colorful_tests import ColorfulTestRunner
 
 Path = pathlib.Path
@@ -25,7 +25,7 @@ class CacheLocalTest(unittest.TestCase):
     self.cache = LocalCache(config={
         "local_base_dir": "/tmp/testing_dir",
     },)
-    self.key_maker = CacheKeyMaker()
+    self.key_maker = KeyMaker()
 
   def test_local_cache(self):
     """Tests the Local Cache."""

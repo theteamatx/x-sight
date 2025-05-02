@@ -278,6 +278,7 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
   @rpc_call
   def ProposeAction(self, request, context):
+    logging.info('request=%s', request)
     return self.optimizers.get_instance(
         request.client_id, request.question_label).propose_action(request)
 
