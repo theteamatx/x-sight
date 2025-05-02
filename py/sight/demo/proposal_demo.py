@@ -89,7 +89,7 @@ def main(argv: Sequence[str]) -> None:
     raise app.UsageError("Too many command-line arguments.")
 
   # config contains the data from all the config files
-  config = decision.DecisionConfig()
+  config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
   # create sight object with configuration to spawn workers beforehand
   with get_sight_instance(config) as sight:

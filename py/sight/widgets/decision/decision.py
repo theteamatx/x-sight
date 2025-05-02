@@ -183,6 +183,9 @@ _CACHE_MODE = flags.DEFINE_enum(
     ['gcs', 'local', 'redis', 'none', 'gcs_with_redis', 'local_with_redis'],
     'Which Sight cache to use ? (default is none)')
 
+_CONFIG_PATH = flags.DEFINE_string(
+    'config_path', get_config_dir_path(), 'Directory location where the *_config.yaml files are stored')
+
 _file_name = os.path.basename(__file__)
 _rewards = []
 FLAGS = flags.FLAGS
@@ -196,12 +199,16 @@ class DecisionConfig:
 
   workers: dict[str, Any]
 
-  def __init__(self, config_dir_path: str = get_config_dir_path()):
+  def __init__(self, config_dir_path: Optional[str] = None):
     """
     Arguments:
       config_dir_path: Path of the directory that contains the optimizer_config.yaml,
         worker_config.yaml and question_config.yaml files.
-        """
+    """
+
+    if(config_dir_path == None):
+      raise ValueError("config_dir_path need to be passed and should contain all *_config.yaml files")
+
     self.questions = utils.load_yaml_config(
         config_dir_path + '/question_config.yaml'
     )
@@ -245,14 +252,6 @@ def initialize(config: DecisionConfig, sight) -> None:
 
     # Start worker jobs
     trials.start_worker_jobs(sight, question_label, optimizer_config, config.workers, optimizer_type)
-
-    if (
-      optimizer_type == 'worklist_scheduler' or
-      optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER
-    ):
-      init_sight_polling_thread(
-          sight.id, question_label
-      )
 
 def configure(
     decision_configuration: Optional[sight_pb2.DecisionConfigurationStart],

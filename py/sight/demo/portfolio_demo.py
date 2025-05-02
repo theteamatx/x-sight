@@ -31,9 +31,6 @@ import warnings
 
 from absl import app
 from absl import flags
-# from fvs_sight.fvs_api import action_attrs
-# from fvs_sight.fvs_api import outcome_attrs
-from fvs_sight import fvs_api
 from helpers.logs.logs_handler import logger as logging
 import pandas as pd
 from sight.attribute import Attribute
@@ -139,9 +136,6 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
 
 def main_wrapper(argv):
   with get_sight_instance() as sight:
-    # decision.run(action_attrs=fvs_api.get_action_attrs(),
-    #              outcome_attrs=fvs_api.get_outcome_attrs(),
-    #              sight=sight)
     questions_config = utils.load_yaml_config('fvs_sight/question_config.yaml')
     optimizers_config = utils.load_yaml_config(
         'fvs_sight/optimizer_config.yaml')

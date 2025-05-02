@@ -158,7 +158,7 @@ class DecisionTest(unittest.TestCase):
         "desc":
             "generic question label",
         "attrs_text_proto":
-            "worker/configs/.text_proto_configs/generic.textproto"
+            "py/sight/configs/.text_proto_configs/generic.textproto"
     }
     optimizer_config = {
         "optimizer": "worklist_scheduler",
@@ -167,7 +167,7 @@ class DecisionTest(unittest.TestCase):
     }
     workers_config = {
         "version": "v0.1",
-        "file_path": "worker/generic_worker.yaml"
+        "file_path": "py/sight/generic_worker.yaml"
     }
     optimizer_type = "worklist_scheduler"
     question_label = "Q_label1"
@@ -230,7 +230,7 @@ class DecisionTest(unittest.TestCase):
         "desc":
             "generic question label",
         "attrs_text_proto":
-            "worker/configs/.text_proto_configs/generic.textproto"
+            "py/sight/configs/.text_proto_configs/generic.textproto"
     }
     optimizer_config = {
         "optimizer": "worklist_scheduler",
@@ -239,7 +239,7 @@ class DecisionTest(unittest.TestCase):
     }
     workers_config = {
         "version": "v0.1",
-        "file_path": "worker/generic_worker.yaml"
+        "file_path": "py/sight/generic_worker.yaml"
     }
     optimizer_type = "worklist_scheduler"
     question_label = "Q_label1"
@@ -351,7 +351,7 @@ class DecisionTest(unittest.TestCase):
     mock_path_exist.return_value = True
     mock_service_call.return_value = service_pb2.CreateResponse(id=123)
     question_config = {
-        'attrs_text_proto': 'worker/configs/.text_proto_configs/fvs.textproto'
+        'attrs_text_proto': 'py/sight/configs/.text_proto_configs/fvs.textproto'
     }
 
     # Prepare the input parameters

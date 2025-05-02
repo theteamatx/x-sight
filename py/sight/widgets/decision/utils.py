@@ -23,7 +23,7 @@ FLAGS = flags.FLAGS
 def get_config_dir_path():
   current_file = Path(__file__).resolve()
   sight_repo_path = current_file.parents[4]
-  config_dir_path = str(sight_repo_path) + '/sight_configs'
+  config_dir_path = str(sight_repo_path) + '/py/sight/configs'
   return config_dir_path
 
 

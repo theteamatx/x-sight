@@ -31,8 +31,7 @@ from typing import Sequence
 
 from absl import app
 from absl import flags
-# from fvs_sight.fvs_api import action_attrs, outcome_attrs
-from fvs_sight import fvs_api
+from worker.attribute_configs import fvs_attribute_config
 import pandas as pd
 from sight import data_structures
 from sight import service_utils as service
@@ -77,9 +76,9 @@ def launch_dummy_optimizer(sight):
       optimizer_object.create_config())
   # decision._attr_dict_to_proto(state_attrs,
   #                              decision_configuration.state_attrs)
-  decision.attr_dict_to_proto(fvs_api.get_action_attrs(),
+  decision.attr_dict_to_proto(fvs_attribute_config.get_action_attrs(),
                               decision_configuration.action_attrs)
-  decision.attr_dict_to_proto(fvs_api.get_outcome_attrs(),
+  decision.attr_dict_to_proto(fvs_attribute_config.get_outcome_attrs(),
                               decision_configuration.outcome_attrs)
   trials.launch(
       optimizer_object,

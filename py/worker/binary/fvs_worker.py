@@ -1,20 +1,13 @@
-import json
 import os
 import random
 import time
 from typing import Sequence
 
 from absl import app
-from absl import flags
-# from fvs_sight.fvs_api import action_attrs, outcome_attrs
-from fvs_sight import fvs_api
 import pandas as pd
-from sight import data_structures
 from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
-from sight.widgets.decision import decision_episode_fn
-import yaml
 
 
 def get_question_label():
@@ -71,8 +64,6 @@ def main(argv: Sequence[str]) -> None:
     decision.run(
         driver_fn=driver_fn,
         sight=sight,
-        #  action_attrs=fvs_api.get_action_attrs(),
-        #  outcome_attrs=fvs_api.get_outcome_attrs(),
         question_label=get_question_label())
 
 
