@@ -107,9 +107,7 @@ message Object {
 
   // Encapsulates meta-data that tracks the partial or total order among log
   // events.
-  message Order {
-    int64 timestamp_ns = 1;
-  }
+  message Order { int64 timestamp_ns = 1; }
   Order order = 19;
 }
 
@@ -159,25 +157,15 @@ message Tensor {
 
   repeated StringValues dim_axis_values = 10;
 
-  message StringValues {
-    repeated string value = 1;
-  }
+  message StringValues { repeated string value = 1; }
 
-  message BytesValues {
-    repeated bytes value = 1;
-  }
+  message BytesValues { repeated bytes value = 1; }
 
-  message Int64Values {
-    repeated int64 value = 1;
-  }
+  message Int64Values { repeated int64 value = 1; }
 
-  message DoubleValues {
-    repeated double value = 1;
-  }
+  message DoubleValues { repeated double value = 1; }
 
-  message BoolValues {
-    repeated bool value = 1;
-  }
+  message BoolValues { repeated bool value = 1; }
 
   oneof value_type {
     StringValues string_values = 4;
@@ -219,9 +207,7 @@ message TensorFlowExample {
 
 // The wrapper for the entire log.
 // Next Tag: 2
-message Log {
-  repeated Object obj = 1;
-}
+message Log { repeated Object obj = 1; }
 
 // Region of raw text within the log.
 // Next Tag: 3
@@ -236,6 +222,10 @@ message Text {
   SubType sub_type = 2;
 }
 
+message ListValue { repeated Value values = 1; }
+
+message MapValue { map<string, Value> fields = 1; }
+
 // A typed value.
 // Next Tag: 8
 message Value {
@@ -247,8 +237,7 @@ message Value {
     ST_DOUBLE = 4;
     ST_BOOL = 5;
     ST_NONE = 6;
-    // add json type to send for finalized episode requeset
-    ST_JSON = 7;
+    ST_JSON = 7; // This includes the LIST , DICT as JSON
   }
   SubType sub_type = 1;
 
@@ -265,10 +254,14 @@ message Value {
 
     bool none_value = 7;
 
-    string json_value = 8;
+    string json_value = 8; //@depericated
+
+    // This is both can use for json_type
+    ListValue list_value = 9;
+    MapValue map_value = 10;
   }
 
-  string mime_type = 9;
+  string mime_type = 11;
 }
 
 // The starting point of a block. Must be matched to a BlockEnd.
@@ -440,15 +433,11 @@ message TensorFlowModelTrainingEpochStart {
 // is already set to a value, the value specified here overrides the value
 // of the containing block until the matching AttributeEnd is reached.
 // Next Tag: 2
-message AttributeStart {
-  Attribute attribute = 1;
-}
+message AttributeStart { Attribute attribute = 1; }
 
 // The ending point of a region where a given key has a given value.
 // Next Tag: 2
-message AttributeEnd {
-  string key = 1;
-}
+message AttributeEnd { string key = 1; }
 
 // Proto encoding of the configuration parameters of a Sight object.
 // Next Tag: 21
@@ -581,9 +570,7 @@ message DiscreteProbDist {
     int64 max_val = 2;
   }
 
-  oneof dist {
-    Uniform uniform = 1;
-  }
+  oneof dist { Uniform uniform = 1; }
 }
 
 message DecisionConfigurationStart {
@@ -609,24 +596,22 @@ message DecisionConfigurationStart {
       AA_DQN = 1;
       AA_D4PG = 2;
       AA_IMPALA = 3;
-      AA_MDQN=4;
-      AA_QRDQN=5;
-      AA_PPO=6;
-      AA_MPO=7;
-      AA_SAC=8;
-      AA_TD3=9;
+      AA_MDQN = 4;
+      AA_QRDQN = 5;
+      AA_PPO = 6;
+      AA_MPO = 7;
+      AA_SAC = 8;
+      AA_TD3 = 9;
     }
 
     // acme agents
     AcmeAgent acme_agent = 1;
 
-    // total possible values of action to be used in final layer of network architecture
-    // int64 possible_actions = 2;
+    // total possible values of action to be used in final layer of network
+    // architecture int64 possible_actions = 2;
   }
 
-  message GeneticAlgorithmConfig {
-    int64 max_population_size = 1;
-  }
+  message GeneticAlgorithmConfig { int64 max_population_size = 1; }
 
   message ExhaustiveSearchConfig {}
 
@@ -698,11 +683,11 @@ message DecisionConfigurationStart {
 
   OptimizerType optimizer_type = 1;
 
-
-  // Maps each choice label to the configuration of the algorithm to be used to choose the option.
+  // Maps each choice label to the configuration of the algorithm to be used to
+  // choose the option.
   map<string, ChoiceConfig> choice_config = 2;
 
-  enum DataType{
+  enum DataType {
     DT_UNKOWN = 0;
     DT_INT32 = 1;
     DT_INT64 = 2;
@@ -745,9 +730,7 @@ message DecisionConfigurationStart {
   int64 server_queue_batch_size = 9;
 }
 
-message DecisionParam {
-  map <string,Value> params = 1;
-}
+message DecisionParam { map<string, Value> params = 1; }
 
 message DecisionMessage {
   int64 action_id = 1;
