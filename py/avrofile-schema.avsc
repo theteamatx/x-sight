@@ -1061,6 +1061,27 @@
               "name": "mime_type",
               "type": ["null", "string"],
               "doc": ""
+            },
+            {
+              "name": "list_type",
+              "type": [
+                "null",
+                {
+                  "type": "array",
+                  "items": "type_value"
+                }
+              ],
+              "doc": ""
+            },
+            {
+              "name": "map_value",
+              "type": [
+                "null",
+                {
+                  "type": "map",
+                  "values": "type_value"
+                }
+              ]
             }
           ]
         }
@@ -2350,6 +2371,27 @@
                                 "name": "none_value",
                                 "type": ["null", "boolean"],
                                 "doc": ""
+                              },
+                              {
+                                "name": "list_type",
+                                "type": [
+                                  "null",
+                                  {
+                                    "type": "array",
+                                    "items": "type_params_value_02"
+                                  }
+                                ],
+                                "doc": ""
+                              },
+                              {
+                                "name": "map_value",
+                                "type": [
+                                  "null",
+                                  {
+                                    "type": "map",
+                                    "values": "type_params_value_02"
+                                  }
+                                ]
                               }
                             ]
                           }
