@@ -1,12 +1,4 @@
-generic_worker0:
-  version: "v0.1"
-  file_path: "py/worker/worker_configs/fvs_worker.yaml"
-
-generic_worker1:
-  version: "v0.1"
-  file_path: "py/worker/worker_configs/generic_worker.yaml"
-
-generic_worker2:
+generic_worker:
   version: "v0.1"
   file_path: "py/worker/worker_configs/generic_worker.yaml"
 

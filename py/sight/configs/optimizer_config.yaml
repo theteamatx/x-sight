@@ -1,37 +1,21 @@
-Q_label1:
+generic:
   optimizer: "bayesian_opt"
   num_questions: 1
-  mode: "dsub_local_worker" #"dsub_cloud_worker" #(dsub_local, )
+  mode: "dsub_local_worker"
   workers:
-    # fvs_worker : 1
-    generic_worker1: 1
-# Q_label2 :
-#   optimizer: 'ng_bo'
-#   num_questions: 7
-#   mode : 'dsub_local_worker' #"dsub_cloud_worker" #(dsub_local, )
-#   workers:
-#     # fvs_worker : 1
-#     generic_worker2 : 1
+    generic_worker: 1
 
-Q_label3:
+FVS:
   optimizer: "worklist_scheduler"
-  num_questions: 2
-  mode: "dsub_local_worker" #"dsub_cloud_worker" #(dsub_local, )
+  num_questions: 1
+  mode: "dsub_local_worker"
   workers:
     fvs_worker: 1
-    # generic_worker1: 1
-# Q_label3 :
-#   optimizer: 'worklist_scheduler'
-#   num_questions: 2
-#   mode : 'dsub_local_worker' #"dsub_cloud_worker" #(dsub_local, )
-#   workers:
-#     # fvs_worker : 1
-#     fvs_worker : 1
 
 # optimizer mapping to be used for calculator worker in langchain demo
 calculator:
   optimizer: "worklist_scheduler"
   num_questions: 1
-  mode: "dsub_local_worker" #"dsub_cloud_worker" #(dsub_local, )
+  mode: "dsub_local_worker"
   workers:
     calculator_worker: 1

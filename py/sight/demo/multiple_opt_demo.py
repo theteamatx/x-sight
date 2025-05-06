@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Demo of using the Sight Decision API to run forest simulator."""
+"""Demo of spawning multiple worker which can interact with each other."""
 
 import time
 import warnings
@@ -42,32 +42,13 @@ from sight.widgets.decision import decision_helper
 from sight.widgets.decision import proposal
 from sight.widgets.decision import trials
 from sight.widgets.decision import utils
-import yaml
-
-_QUESTIONS_CONFIG = flags.DEFINE_string(
-    'questions_config_path',
-    'fvs_sight/question_config.yaml',
-    'Path of config.yaml containing question related info.',
-)
-
-_OPTIMIZERS_CONFIG = flags.DEFINE_string(
-    'optimizers_config_path',
-    'fvs_sight/optimizer_config.yaml',
-    'Path of config.yaml containing optimizer related info.',
-)
-
-_WORKERS_CONFIG = flags.DEFINE_string(
-    'workers_config_path',
-    'fvs_sight/worker_config.yaml',
-    'Path of config.yaml containing worker related info.',
-)
 
 FLAGS = flags.FLAGS
 
-POLL_EXAMPLE = True and False
-
 sample = {'project_id': '133a6365-01cf-4b5e-8197-d4779e5ce25c', 'region': 'NC'}
 
+def get_question_label():
+  return 'calculator'
 
 def get_sight_instance():
   params = sight_pb2.Params(
@@ -136,49 +117,25 @@ async def propose_actions_wrapper(sight: Sight, question_label: str,
       print("all get outcome are finished.....")
       print(f'Combine Series : {diff_time_series}')
 
+def main(argv: Sequence[str]) -> None:
+  if len(argv) > 1:
+    raise app.UsageError("Too many command-line arguments.")
 
-def main_wrapper(argv):
+  # config contains the data from all the config files
+  config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
-  import os
-  from pathlib import Path
+  # create sight object with configuration to spawn workers beforehand
+  with Sight.create(get_question_label(), config) as sight:
 
-  current_file = Path(__file__).resolve()
-  sight_repo_path = current_file.parents[3]
-  absolute_path = str(sight_repo_path) + '/'
-
-  logging.info('my FLAGS are ==> %s ', FLAGS.parent_id)
-
-  with get_sight_instance() as sight:
-
-    questions_config = utils.load_yaml_config(absolute_path +
-                                              _QUESTIONS_CONFIG.value)
-    optimizers_config = utils.load_yaml_config(absolute_path +
-                                               _OPTIMIZERS_CONFIG.value)
-    workers_config = utils.load_yaml_config(absolute_path +
-                                            _WORKERS_CONFIG.value)
-
-    # put this in function
-    for question_label, question_config in questions_config.items():
-      optimizer_type = optimizers_config[question_label]['optimizer']
-      optimizer_config = optimizers_config[question_label]
-      print('optimizer_config : ', optimizer_config)
-
-      opt_obj = decision.setup_optimizer(sight, optimizer_type)
-      decision_configuration = decision.configure_decision(
-          sight, question_label, question_config, optimizer_config, opt_obj)
-      trials.launch(decision_configuration, sight)
-
-      # Start worker jobs
-      trials.start_worker_jobs(sight, optimizer_config, workers_config, optimizer_type)
-
-      if (POLL_EXAMPLE and decision_configuration.optimizer_type == sight_pb2.
-          DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER):
-        decision.init_sight_polling_thread(
-            sight.id, decision_configuration.question_label)
-        asyncio.run(
-            propose_actions_wrapper(sight, question_label,
-                                    optimizer_config['num_questions']))
+    logging.info("spawned the workers.................")
+      # if (decision_configuration.optimizer_type is not sight_pb2.
+      #     DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER):
+      #   decision.init_sight_polling_thread(
+      #       sight.id, decision_configuration.question_label)
+      #   asyncio.run(
+      #       propose_actions_wrapper(sight, question_label,
+      #                               optimizer_config['num_questions']))
 
 
 if __name__ == "__main__":
-  app.run(main_wrapper)
+  app.run(main)

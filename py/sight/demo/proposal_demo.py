@@ -75,13 +75,13 @@ async def propose_actions_wrapper(sight: Sight, question_label: str,
     logging.info(f'result : {result}')
 
 
-def get_sight_instance(config=None):
-  params = sight_pb2.Params(
-      label=get_question_label(),
-      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-  )
-  sight_obj = Sight(params, config)
-  return sight_obj
+# def get_sight_instance(config=None):
+#   params = sight_pb2.Params(
+#       label=get_question_label(),
+#       bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+#   )
+#   sight_obj = Sight(params, config)
+#   return sight_obj
 
 
 def main(argv: Sequence[str]) -> None:
@@ -92,7 +92,7 @@ def main(argv: Sequence[str]) -> None:
   config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
   # create sight object with configuration to spawn workers beforehand
-  with get_sight_instance(config) as sight:
+  with Sight.create(get_question_label(), config) as sight:
 
     # this thread checks the outcome for proposed action from server
     decision.init_sight_polling_thread(sight.id, get_question_label())

@@ -11,7 +11,7 @@ from sight.widgets.decision import decision
 
 
 def get_question_label():
-  return 'Q_label3'
+  return 'FVS'
 
 
 def simulate_fvs(sight, params_dict):
@@ -45,22 +45,11 @@ def driver_fn(sight):
   decision.decision_outcome('outcome_label', sight, reward=0, outcome=outcome)
   # return sight
 
-
-#temporary created
-def get_sight_instance():
-  params = sight_pb2.Params(
-      label=get_question_label(),
-      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-  )
-  sight_obj = Sight(params)
-  return sight_obj
-
-
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  with get_sight_instance() as sight:
+  with Sight.create(get_question_label()) as sight:
     decision.run(
         driver_fn=driver_fn,
         sight=sight,

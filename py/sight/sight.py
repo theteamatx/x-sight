@@ -151,6 +151,15 @@ class Sight(object):
   # SIGHT_API_KEY = 'AKfycbw9eY9dk-JstxeAizfMfJZ8qwHm6BVmOZEgBUey-HPL' #catan-(now generalized)
   SIGHT_API_KEY = 'AKfycbzU74yRL1Dc0Xu5--oJricaD-H50UgF3FKM_E8_CMP7uNesQEk-k3cm57R3vTsjbWCcxA'
 
+  @classmethod
+  def create(cls, label, config=None) -> Sight:
+    params = sight_pb2.Params(
+      label=label,
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+    )
+    sight_obj = Sight(params, config)
+    return sight_obj
+
   def _initialize_default_params(self, params: sight_pb2.params):
     """get default parameter and merges user-provided values."""
     # get default params to run sight
@@ -302,7 +311,9 @@ class Sight(object):
     self._initialize_avro_output()
     self._initialize_text_output()
 
-    if config:
+    # config should only be passed from client script, workers should never enter
+    # this condition
+    if config and FLAGS.worker_mode is None:
       decision.initialize(config, self)
 
   def get_location_state(self) -> SightLocationState:

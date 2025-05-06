@@ -338,80 +338,40 @@ def run(
 
   sight.widget_decision_state['num_decision_points'] = 0
 
-  # only true if run function called from main script
-  #! can we eliminate this condition by calling initialize from sight??
-  if configs:
-    # *** This configs are for each question's meta data
+  optimizer.obj = setup_optimizer(sight, _OPTIMIZER_TYPE.value)
+  client_id, worker_location = _configure_client_and_worker(sight=sight)
+  num_retries = 0
+  backoff_interval = 0.5
+  while True:
+    # #? new rpc just to check move forward or not?
 
-    for question_label, question_config in configs.questions.items():
-      optimizer_config = configs.optimizers.get(question_label, None)
-
-      optimizer_type = optimizer_config.get('optimizer', None)
-
-      optimizer.obj = setup_optimizer(sight, optimizer_type)
-      decision_configuration = configure_decision(sight, question_label,
-                                                  question_config,
-                                                  optimizer_config,
-                                                  optimizer.obj)
-
-      ## ! Don't know why we did this ?
-      # sight.widget_decision_state['proposed_actions'] = []
-
-      decision_mode_actions = {
-          'run':
-              execute_run_mode,
-          # 'configured_run': (lambda sight=sight, driver_fn=driver_fn:
-          #                    execute_configured_run_mode(sight, driver_fn)),
-          'train': (
-              lambda sight=sight, decision_configuration=decision_configuration,
-              driver_fn=driver_fn, optimizer_config=optimizer_config,
-              workers_config=configs.workers, optimizer_type=optimizer_type,
-              question_label=question_label: execute_train_mode(
-                  sight, decision_configuration, driver_fn, optimizer_config,
-                  workers_config, optimizer_type, question_label)),
-      }
-
-      action = decision_mode_actions.get(_DECISON_MODE.value)
-      if action:
-        action()
-      else:
-        raise ValueError(f'Unknown decision mode {_DECISON_MODE.value}')
-  # run function called from worker - without any config files
-  else:
-    optimizer.obj = setup_optimizer(sight, _OPTIMIZER_TYPE.value)
-    client_id, worker_location = _configure_client_and_worker(sight=sight)
-    num_retries = 0
-    backoff_interval = 0.5
-    while True:
-      # #? new rpc just to check move forward or not?
-
-      req = service_pb2.WorkerAliveRequest(
-          client_id=client_id,
-          worker_id=f'client_{client_id}_worker_{worker_location}',
-          question_label=question_label)
-      response = service.call(
-          lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
-      logging.info('Response from WorkerAlive RPC: %s', response)
-      if (response.status_type ==
-          service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
+    req = service_pb2.WorkerAliveRequest(
+        client_id=client_id,
+        worker_id=f'client_{client_id}_worker_{worker_location}',
+        question_label=question_label)
+    response = service.call(
+        lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+    logging.info('Response from WorkerAlive RPC: %s', response)
+    if (response.status_type ==
+        service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
+      break
+    elif (response.status_type ==
+          service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+      # logging.info('Retrying in 5 seconds......')
+      # time.sleep(5)
+      backoff_interval *= 2
+      time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+      logging.info('backed off for %s seconds... and trying for %s',
+                    backoff_interval, num_retries)
+      num_retries += 1
+      if (num_retries >= 50):
         break
-      elif (response.status_type ==
-            service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-        # logging.info('Retrying in 5 seconds......')
-        # time.sleep(5)
-        backoff_interval *= 2
-        time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
-        logging.info('backed off for %s seconds... and trying for %s',
-                     backoff_interval, num_retries)
-        num_retries += 1
-        if (num_retries >= 50):
-          break
-      elif (response.status_type ==
-            service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-        process_worker_action(response, sight, driver_fn, env, question_label,
-                              optimizer.obj)
-      else:
-        raise ValueError('Invalid response from server')
+    elif (response.status_type ==
+          service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
+      process_worker_action(response, sight, driver_fn, env, question_label,
+                            optimizer.obj)
+    else:
+      raise ValueError('Invalid response from server')
 
     logging.info('Exiting the training loop.')
 
@@ -420,6 +380,7 @@ def run(
   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
+# not used as of now, have to change it to some other mechanism
 def execute_run_mode():
   """Executes the run mode.
 
@@ -439,126 +400,6 @@ def execute_run_mode():
   response = service.call(
       lambda s, meta: s.FetchOptimalAction(req, 300, metadata=meta))
   print('response:', response.response_str)
-
-
-#? commenting out this flow as it calls code to add config file from sight,
-#  which uses capacitor file logic
-# def execute_configured_run_mode(sight, driver_fn):
-#   """Executes the configured run mode.
-
-#   Args:
-#     sight: The Sight object to be used for logging.
-#     driver_fn: Driver function for calling application logic that uses the Sight
-#       Decision API to describe decisions and their outcomes. It is assumed that
-#       driver_fn does not maintain state across invocations and can be called as
-#       many time as needed, possibly concurrently (i.e. does not keep state
-#       within global variables either internally or via its interactions with
-#       external resources).
-#   """
-#   if FLAGS.decision_run_config_file:
-#     sight.add_config_file(_DECISION_RUN_CONFIG_FILE.value)
-#   elif _DECISION_PARAMS.value:
-#     chosen_action = {
-#         key: float(val) for key, val in (
-#             key_val.split('=') for key_val in _DECISION_PARAMS.value.split(':'))
-#     }
-#     sight.widget_decision_state['constant_action'] = chosen_action
-#     sight.widget_decision_state['last_reward'] = None
-#   else:
-#     raise ValueError(
-#         'In configured_run mode, decision_run_config_file is required.')
-
-#   logging.info(
-#       'decision_train_alg=%s docker_image=%s',
-#       FLAGS.server_mode,
-#       _DOCKER_IMAGE.value,
-#   )
-
-#   if FLAGS.server_mode == 'local' and _DOCKER_IMAGE.value:
-#     trials.start_job_in_docker(
-#         1,
-#         _BINARY_PATH.value,
-#         _OPTIMIZER_TYPE.value,
-#         _DOCKER_IMAGE.value,
-#         _DECISON_MODE.value,
-#         'docker_worker',
-#         'worker_mode',
-#         _DECISION_PARAMS.value,
-#         sight,
-#     )
-#   else:
-#     driver_fn(sight)
-
-
-def execute_train_mode(sight, decision_configuration, driver_fn,
-                       optimizer_config, workers_config, optimizer_type,
-                       question_label):
-  """Executes the train mode.
-  """
-  # validate_train_mode(sight)
-  # if FLAGS.server_mode in ['cloud_run', 'vm']:
-  if FLAGS.worker_mode is None:
-    create_opt_and_start_workers(sight, question_label, decision_configuration,
-                                 optimizer_config, workers_config,
-                                 optimizer_type)
-  # elif FLAGS.server_mode in [
-  #     'local',
-  #     'dsub_local',
-  #     'docker_local',
-  #     'worker_mode',
-  # ]:
-  # elif FLAGS.worker_mode in [
-  #     'dsub_local_worker',
-  #     'dsub_cloud_worker',
-  # ]:
-  #   execute_local_training(sight, decision_configuration, driver_fn,
-  #                          optimizer_config, workers_config, optimizer_type)
-  else:
-    raise ValueError(f'worker mode is not None')
-
-
-# def validate_train_mode(sight):
-#   if FLAGS.server_mode in ['cloud_run', 'vm']:
-#     #! check if we need this condition now or not
-#     # details = sight.widget_decision_state['decision_episode_fn']
-#     # print("details : ", details)
-#     # possible_actions = (list(details.action_max.values())[0] -
-#     #                     list(details.action_min.values())[0] + 2)
-#     # if (_OPTIMIZER_TYPE.value == 'exhaustive_search' and
-#     #     possible_actions < _NUM_TRIALS.value):
-#     #   raise ValueError(
-#     #       f'Max possible value for num_trials is: {possible_actions}')
-#     if not _DOCKER_IMAGE.value:
-#       raise ValueError('docker_image must be provided for distributed mode')
-
-
-# def execute_local_training(sight, decision_configuration, driver_fn,
-#                            optimizer_config, workers_config, optimizer_type):
-#   """Executes the local training mode.
-#   """
-#   if FLAGS.worker_mode or 'PARENT_LOG_ID' in os.environ:
-#     pass
-#   else:
-#     trials.launch(
-#         decision_configuration,
-#         sight,
-#     )
-
-#   # if FLAGS.server_mode == 'docker_local':
-#   #   trials.start_job_in_docker(
-#   #       _NUM_TRIALS.value,
-#   #       _BINARY_PATH.value,
-#   #       _OPTIMIZER_TYPE.value,
-#   #       _DOCKER_IMAGE.value,
-#   #       _DECISON_MODE.value,
-#   #       'worker_mode',
-#   #       'docker_local_worker',
-#   #       _DECISION_PARAMS.value,
-#   #       sight,
-#   #   )
-#   if FLAGS.server_mode == 'dsub_local':
-#     trials.start_worker_jobs(sight, optimizer_config, workers_config,
-#                              optimizer_type)
 
 
 def process_worker_action(response, sight, driver_fn, env, question_label,
@@ -607,20 +448,6 @@ def process_worker_action(response, sight, driver_fn, env, question_label,
     sight.exit_block('Decision Sample', sight_pb2.Object())
 
   finalize_episode(question_label, sight)
-
-
-def create_opt_and_start_workers(sight, question_label, decision_configuration,
-                                 optimizer_config, workers_config,
-                                 optimizer_type):
-  """Executes the distributed training mode.
-
-  Args:
-    sight: The Sight object to be used for logging.
-    decision_configuration: The decision configuration proto.
-  """
-  trials.launch(decision_configuration, sight)
-  trials.start_worker_jobs(sight, question_label, optimizer_config, workers_config,
-                           optimizer_type)
 
 
 def get_decision_configuration_for_opt(
