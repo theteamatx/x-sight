@@ -321,63 +321,62 @@ def get_decision_messages_from_proto(
     messages[msg.action_id] = convert_proto_to_dict(proto=msg.action)
   return messages
 
+# def run(
+#     sight: Any,
+#     question_label: str = None,
+#     configs: Optional[DecisionConfig] = None,
+#     driver_fn: Callable[[Any], Any] = None,
+#     description: str = '',
+#     env: Any = None,
+# ):
+#   """Driver for running applications that use the Decision API.
+#   """
 
-def run(
-    sight: Any,
-    question_label: str = None,
-    configs: Optional[DecisionConfig] = None,
-    driver_fn: Callable[[Any], Any] = None,
-    description: str = '',
-    env: Any = None,
-):
-  """Driver for running applications that use the Decision API.
-  """
+#   method_name = 'run'
+#   logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
 
-  method_name = 'run'
-  logging.debug('>>>>>>>>>  In %s of %s', method_name, _file_name)
+#   sight.widget_decision_state['num_decision_points'] = 0
 
-  sight.widget_decision_state['num_decision_points'] = 0
+#   optimizer.obj = setup_optimizer(sight, _OPTIMIZER_TYPE.value)
+#   client_id, worker_location = _configure_client_and_worker(sight=sight)
+#   num_retries = 0
+#   backoff_interval = 0.5
+#   while True:
+#     # #? new rpc just to check move forward or not?
 
-  optimizer.obj = setup_optimizer(sight, _OPTIMIZER_TYPE.value)
-  client_id, worker_location = _configure_client_and_worker(sight=sight)
-  num_retries = 0
-  backoff_interval = 0.5
-  while True:
-    # #? new rpc just to check move forward or not?
+#     req = service_pb2.WorkerAliveRequest(
+#         client_id=client_id,
+#         worker_id=f'client_{client_id}_worker_{worker_location}',
+#         question_label=question_label)
+#     response = service.call(
+#         lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+#     logging.info('Response from WorkerAlive RPC: %s', response)
+#     if (response.status_type ==
+#         service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
+#       break
+#     elif (response.status_type ==
+#           service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+#       # logging.info('Retrying in 5 seconds......')
+#       # time.sleep(5)
+#       backoff_interval *= 2
+#       time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+#       logging.info('backed off for %s seconds... and trying for %s',
+#                     backoff_interval, num_retries)
+#       num_retries += 1
+#       if (num_retries >= 50):
+#         break
+#     elif (response.status_type ==
+#           service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
+#       process_worker_action(response, sight, driver_fn, env, question_label,
+#                             optimizer.obj)
+#     else:
+#       raise ValueError('Invalid response from server')
 
-    req = service_pb2.WorkerAliveRequest(
-        client_id=client_id,
-        worker_id=f'client_{client_id}_worker_{worker_location}',
-        question_label=question_label)
-    response = service.call(
-        lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
-    logging.info('Response from WorkerAlive RPC: %s', response)
-    if (response.status_type ==
-        service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
-      break
-    elif (response.status_type ==
-          service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-      # logging.info('Retrying in 5 seconds......')
-      # time.sleep(5)
-      backoff_interval *= 2
-      time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
-      logging.info('backed off for %s seconds... and trying for %s',
-                    backoff_interval, num_retries)
-      num_retries += 1
-      if (num_retries >= 50):
-        break
-    elif (response.status_type ==
-          service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-      process_worker_action(response, sight, driver_fn, env, question_label,
-                            optimizer.obj)
-    else:
-      raise ValueError('Invalid response from server')
+#     logging.info('Exiting the training loop.')
 
-    logging.info('Exiting the training loop.')
+#   logging.debug('<<<<<< Exiting run method')
 
-  logging.debug('<<<<<< Exiting run method')
-
-  logging.debug("<<<<  Out %s of %s", method_name, _file_name)
+#   logging.debug("<<<<  Out %s of %s", method_name, _file_name)
 
 
 # not used as of now, have to change it to some other mechanism
@@ -402,52 +401,52 @@ def execute_run_mode():
   print('response:', response.response_str)
 
 
-def process_worker_action(response, sight, driver_fn, env, question_label,
-                          opt_obj):
-  """Processes worker actions during local training.
+# def process_worker_action(response, sight, driver_fn, env, question_label,
+#                           opt_obj):
+#   """Processes worker actions during local training.
 
-  Args:
-      response: The response from the WorkerAlive RPC.
-      sight: Sight object used for logging and configuration.
-      driver_fn: The driver function that drives the training.
-      env: The environment in which the training takes place (optional).
-      question_label:
-  """
-  decision_messages = get_decision_messages_from_proto(
-      decision_messages_proto=response.decision_messages)
-  # shared_batch_messages = CachedBatchMessages()
-  sight.widget_decision_state['cached_messages'] = opt_obj.cache
-  logging.info('cached_messages=%s',
-               sight.widget_decision_state['cached_messages'])
+#   Args:
+#       response: The response from the WorkerAlive RPC.
+#       sight: Sight object used for logging and configuration.
+#       driver_fn: The driver function that drives the training.
+#       env: The environment in which the training takes place (optional).
+#       question_label:
+#   """
+#   decision_messages = get_decision_messages_from_proto(
+#       decision_messages_proto=response.decision_messages)
+#   # shared_batch_messages = CachedBatchMessages()
+#   sight.widget_decision_state['cached_messages'] = opt_obj.cache
+#   logging.info('cached_messages=%s',
+#                sight.widget_decision_state['cached_messages'])
 
-  for action_id, action_params in decision_messages.items():
-    logging.info('action_id=%s, action_params=%s', action_id, action_params)
-    sight.enter_block('Decision Sample', sight_pb2.Object())
+#   for action_id, action_params in decision_messages.items():
+#     logging.info('action_id=%s, action_params=%s', action_id, action_params)
+#     sight.enter_block('Decision Sample', sight_pb2.Object())
 
-    if 'constant_action' in sight.widget_decision_state:
-      del sight.widget_decision_state['constant_action']
+#     if 'constant_action' in sight.widget_decision_state:
+#       del sight.widget_decision_state['constant_action']
 
-    cached_messages = sight.widget_decision_state['cached_messages']
-    sight.widget_decision_state['discount'] = 0
-    sight.widget_decision_state['last_reward'] = None
-    sight.widget_decision_state['action_id'] = action_id
+#     cached_messages = sight.widget_decision_state['cached_messages']
+#     sight.widget_decision_state['discount'] = 0
+#     sight.widget_decision_state['last_reward'] = None
+#     sight.widget_decision_state['action_id'] = action_id
 
-    cached_messages.set(
-        action_id,
-        DecisionMessage(
-            action_id=action_id,
-            action_params=action_params,
-        ),
-    )
+#     cached_messages.set(
+#         action_id,
+#         DecisionMessage(
+#             action_id=action_id,
+#             action_params=action_params,
+#         ),
+#     )
 
-    if env:
-      driver_fn(env, sight)
-    else:
-      driver_fn(sight)
+#     if env:
+#       driver_fn(env, sight)
+#     else:
+#       driver_fn(sight)
 
-    sight.exit_block('Decision Sample', sight_pb2.Object())
+#     sight.exit_block('Decision Sample', sight_pb2.Object())
 
-  finalize_episode(question_label, sight)
+#   finalize_episode(question_label, sight)
 
 
 def get_decision_configuration_for_opt(
@@ -964,14 +963,14 @@ def propose_actions(sight, question_label, action_dict):
   return action_id
 
 
-def _handle_optimizer_finalize(sight: Any, req: Any) -> None:
+def _handle_optimizer_finalize(sight: Any, req: Any, optimizer_obj: Any) -> None:
   """Handles optimizer-specific finalization logic.
 
   Args:
       sight: Instance of a Sight logger.
       req: FinalizeEpisodeRequest object.
   """
-  optimizer_obj = optimizer.get_instance()
+  # optimizer_obj = optimizer.get_instance()
 
   # Get the list of action messages (supports multiple action IDs)
   cached_messages_obj = sight.widget_decision_state.get('cached_messages', {})
@@ -1025,7 +1024,7 @@ def _handle_optimizer_finalize(sight: Any, req: Any) -> None:
     del sight.widget_decision_state['outcome_value']
 
 
-def finalize_episode(question_label, sight):  # , optimizer_obj
+def finalize_episode(sight, question_label, optimizer_obj):
   """Finalize the run.
 
   Args:
@@ -1043,7 +1042,7 @@ def finalize_episode(question_label, sight):  # , optimizer_obj
       worker_id=f'client_{client_id}_worker_{worker_location}',
       question_label=question_label)
 
-  _handle_optimizer_finalize(sight, req)
+  _handle_optimizer_finalize(sight, req, optimizer_obj)
 
   #! Not sure about this condition so commented as of now
   # else:

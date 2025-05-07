@@ -7,6 +7,7 @@ from absl import app
 import pandas as pd
 from sight.proto import sight_pb2
 from sight.sight import Sight
+from sight import sight
 from sight.widgets.decision import decision
 
 
@@ -49,11 +50,10 @@ def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  with Sight.create(get_question_label()) as sight:
-    decision.run(
-        driver_fn=driver_fn,
-        sight=sight,
-        question_label=get_question_label())
+  with Sight.create(get_question_label()) as sight_obj:
+    sight.worker_main_function(sight=sight_obj,
+                 question_label=get_question_label(),
+                 driver_fn=driver_fn)
 
 
 if __name__ == "__main__":

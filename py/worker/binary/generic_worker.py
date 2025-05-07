@@ -36,6 +36,7 @@ from sight.attribute import Attribute
 from sight.block import Block
 from sight import data_structures
 from sight.proto import sight_pb2
+from sight import sight
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
@@ -107,34 +108,35 @@ def driver(sight: Sight) -> None:
   Args:
     sight: The Sight logger object used to drive decisions.
   """
+  next_point = decision.decision_point(get_question_label(), sight)
+  logging.info('next_point : %s', next_point)
 
-  for _ in range(1):
-    next_point = decision.decision_point(get_question_label(), sight)
-    logging.info('next_point : %s', next_point)
+  # using next_points to propose actions
+  asyncio.run(
+      propose_actions_wrapper(sight, get_question_label_to_propose_actions()))
 
-    # using next_points to propose actions
-    asyncio.run(
-        propose_actions_wrapper(sight, get_question_label_to_propose_actions()))
-
-    reward = black_box_function(list(next_point.values()))
-    print('reward : ', reward)
-    decision.decision_outcome(json.dumps(next_point), sight, reward)
+  reward = black_box_function(list(next_point.values()))
+  print('reward : ', reward)
+  decision.decision_outcome(json.dumps(next_point), sight, reward)
 
 
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  with Sight.create(get_question_label()) as sight:
+  with Sight.create(get_question_label()) as sight_obj:
 
     # this thread checks the outcome for proposed action from server
-    decision.init_sight_polling_thread(sight.id,
+    decision.init_sight_polling_thread(sight_obj.id,
                                        get_question_label_to_propose_actions())
 
-    decision.run(sight=sight,
+    # decision.run(sight=sight,
+    #              question_label=get_question_label(),
+    #              driver_fn=driver)
+
+    sight.worker_main_function(sight=sight_obj,
                  question_label=get_question_label(),
                  driver_fn=driver)
-
 
 if __name__ == "__main__":
   app.run(main)

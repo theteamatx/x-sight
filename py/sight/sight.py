@@ -22,9 +22,10 @@ import dataclasses
 import inspect
 import io
 import os
+import random
 import threading
 import time
-from typing import Any, Optional, Sequence
+from typing import Any, Optional, Sequence, Callable
 
 from absl import flags
 from dotenv import load_dotenv
@@ -44,6 +45,7 @@ from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation_widget_state import (
     SimulationWidgetState)
 from sight_service.proto import service_pb2
+from sight_service.shared_batch_messages import DecisionMessage
 
 load_dotenv()
 _PARENT_ID = flags.DEFINE_string('parent_id', None,
@@ -154,8 +156,8 @@ class Sight(object):
   @classmethod
   def create(cls, label, config=None) -> Sight:
     params = sight_pb2.Params(
-      label=label,
-      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+        label=label,
+        bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
     )
     sight_obj = Sight(params, config)
     return sight_obj
@@ -282,7 +284,6 @@ class Sight(object):
                                  self.path_prefix)
       self.file_name = self.avro_log_file_path.split('/')[-1]
       self.table_name = str(self.id) + '_' + 'log'
-
 
   def _initialize_text_output(self):
     if self.params.text_output:
@@ -412,11 +413,10 @@ class Sight(object):
     # if sight_log_id flags already set, table is created already
     if (self.avro_file_counter == 1 and (not FLAGS.sight_log_id)):
       create_external_bq_table(self.params, self.table_name, self.id)
-    print(
-        'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-        'log_id=%s.%s&log_owner=%s&project_id=%s' %(self.SIGHT_API_KEY,
-        self.params.dataset_name, self.table_name, self.params.log_owner,
-        os.environ['PROJECT_ID']))
+    print('Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+          'log_id=%s.%s&log_owner=%s&project_id=%s' %
+          (self.SIGHT_API_KEY, self.params.dataset_name, self.table_name,
+           self.params.log_owner, os.environ['PROJECT_ID']))
     print(f'table generated : {self.params.dataset_name}.{self.table_name}')
     self.avro_log.close()
 
@@ -622,10 +622,11 @@ class Sight(object):
 
     return obj_location
 
-  def _populate_block_end_metrics(self, obj: sight_pb2.Object, label: str) -> None:
+  def _populate_block_end_metrics(self, obj: sight_pb2.Object,
+                                  label: str) -> None:
     """Populates block_end metrics like elapsed time and exclusive time."""
     if not self.open_block_start_locations.get():
-        logging.warning('Exiting inactive Sight block "%s"', label)
+      logging.warning('Exiting inactive Sight block "%s"', label)
 
     obj.sub_type = sight_pb2.Object.SubType.ST_BLOCK_END
     if obj.block_end is None:
@@ -958,3 +959,99 @@ def text_block(label: str, text_val: str, sight, frame=None) -> str:
     frame = inspect.currentframe().f_back
     # pytype: enable=attribute-error
   return sight.text_block(label, text_val, frame)
+
+
+def worker_main_function(
+    sight: Any,
+    question_label: str = None,
+    driver_fn: Callable[[Any], Any] = None,
+):
+  """Driver for running applications that use the Decision API.
+  """
+
+  sight.widget_decision_state['num_decision_points'] = 0
+
+  optimizer = decision.Optimizer()
+  optimizer.obj = decision.setup_optimizer(sight, FLAGS.optimizer_type)
+  client_id, worker_location = decision._configure_client_and_worker(
+      sight=sight)
+  num_retries = 0
+  backoff_interval = 0.5
+  while True:
+    # #? new rpc just to check move forward or not?
+
+    req = service_pb2.WorkerAliveRequest(
+        client_id=client_id,
+        worker_id=f'client_{client_id}_worker_{worker_location}',
+        question_label=question_label)
+    response = service.call(
+        lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+    logging.info('Response from WorkerAlive RPC: %s', response)
+    if (response.status_type ==
+        service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
+      break
+    elif (response.status_type ==
+          service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+      # logging.info('Retrying in 5 seconds......')
+      # time.sleep(5)
+      backoff_interval *= 2
+      time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+      logging.info('backed off for %s seconds... and trying for %s',
+                   backoff_interval, num_retries)
+      num_retries += 1
+      if (num_retries >= 50):
+        break
+    elif (response.status_type ==
+          service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
+      process_worker_action(response, sight, driver_fn, question_label,
+                            optimizer.obj)
+    else:
+      raise ValueError('Invalid response from server')
+
+    logging.info('Exiting the training loop.')
+
+  logging.debug('<<<<<< Exiting run method')
+
+
+def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
+  """Processes worker actions during local training.
+
+  Args:
+      response: The response from the WorkerAlive RPC.
+      sight: Sight object used for logging and configuration.
+      driver_fn: The driver function that drives the training.
+      env: The environment in which the training takes place (optional).
+      question_label:
+  """
+  decision_messages = decision.get_decision_messages_from_proto(
+      decision_messages_proto=response.decision_messages)
+  # shared_batch_messages = CachedBatchMessages()
+  sight.widget_decision_state['cached_messages'] = opt_obj.cache
+  logging.info('cached_messages=%s',
+               sight.widget_decision_state['cached_messages'])
+
+  for action_id, action_params in decision_messages.items():
+    logging.info('action_id=%s, action_params=%s', action_id, action_params)
+    sight.enter_block('Decision Sample', sight_pb2.Object())
+
+    if 'constant_action' in sight.widget_decision_state:
+      del sight.widget_decision_state['constant_action']
+
+    cached_messages = sight.widget_decision_state['cached_messages']
+    sight.widget_decision_state['discount'] = 0
+    sight.widget_decision_state['last_reward'] = None
+    sight.widget_decision_state['action_id'] = action_id
+
+    cached_messages.set(
+        action_id,
+        DecisionMessage(
+            action_id=action_id,
+            action_params=action_params,
+        ),
+    )
+
+    driver_fn(sight)
+
+    sight.exit_block('Decision Sample', sight_pb2.Object())
+
+  decision.finalize_episode(sight, question_label, opt_obj)
