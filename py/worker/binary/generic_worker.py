@@ -102,7 +102,7 @@ async def propose_actions_wrapper(sight: Sight, question_label: str) -> None:
       logging.info(f'Combine Series : {diff_time_series}')
 
 
-def driver(sight: Sight) -> None:
+def driver_fn(sight: Sight) -> None:
   """Executes the logic of searching for a value.
 
   Args:
@@ -124,19 +124,11 @@ def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  with Sight.create(get_question_label()) as sight_obj:
+  # Enry point for the worker to start asking for the Generic actions
+  sight.worker_main_function(question_label=get_question_label(),
+                             driver_fn=driver_fn,
+                             proposal_label=get_question_label_to_propose_actions())
 
-    # this thread checks the outcome for proposed action from server
-    decision.init_sight_polling_thread(sight_obj.id,
-                                       get_question_label_to_propose_actions())
-
-    # decision.run(sight=sight,
-    #              question_label=get_question_label(),
-    #              driver_fn=driver)
-
-    sight.worker_main_function(sight=sight_obj,
-                 question_label=get_question_label(),
-                 driver_fn=driver)
 
 if __name__ == "__main__":
   app.run(main)

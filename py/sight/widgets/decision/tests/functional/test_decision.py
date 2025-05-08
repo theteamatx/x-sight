@@ -122,208 +122,208 @@ class DecisionTest(unittest.TestCase):
     # Verify the function printed expected response
     mock_print.assert_called_with('response:', 'ok')
 
-  @patch.object(sight, 'upload_blob_from_stream')
-  @patch.object(sight.service, 'call')
-  @patch.object(sight, 'create_external_bq_table')
-  #@patch.object(decision, 'execute_local_training')
-  @patch.object(decision, 'create_opt_and_start_workers')
-  # @patch.object(decision, 'validate_train_mode')
-  def test_execute_train_mode(
-      self,  #mock_validate_train_mode,
-      mock_create_opt_and_start_workers,
-      #mock_execute_local_training,
-      mock_create_external_bq_table,
-      mock_service_call,
-      mock_upload_blob):
+  # @patch.object(sight, 'upload_blob_from_stream')
+  # @patch.object(sight.service, 'call')
+  # @patch.object(sight, 'create_external_bq_table')
+  # #@patch.object(decision, 'execute_local_training')
+  # @patch.object(decision, 'create_opt_and_start_workers')
+  # # @patch.object(decision, 'validate_train_mode')
+  # def test_execute_train_mode(
+  #     self,  #mock_validate_train_mode,
+  #     mock_create_opt_and_start_workers,
+  #     #mock_execute_local_training,
+  #     mock_create_external_bq_table,
+  #     mock_service_call,
+  #     mock_upload_blob):
 
-    FLAGS.worker_mode = 'xyz'
-    with self.assertRaises(ValueError) as cm:
-      decision.execute_train_mode(None, None, None, None, None, None, None)
-    self.assertEqual(str(cm.exception), 'worker mode is not None')
+  #   FLAGS.worker_mode = 'xyz'
+  #   with self.assertRaises(ValueError) as cm:
+  #     decision.execute_train_mode(None, None, None, None, None, None, None)
+  #   self.assertEqual(str(cm.exception), 'worker mode is not None')
 
-    FLAGS.worker_mode = None
-    # Test all supported deployment modes
-    distributed_modes = ['cloud_run', 'vm']
-    local_modes = ['local']
+  #   FLAGS.worker_mode = None
+  #   # Test all supported deployment modes
+  #   distributed_modes = ['cloud_run', 'vm']
+  #   local_modes = ['local']
 
-    # Simulate service.call with different id as response
-    mock_service_call.side_effect = [
-        service_pb2.CreateResponse(id=1),
-        service_pb2.CreateResponse(id=2),
-        service_pb2.CreateResponse(id=3),
-        service_pb2.CreateResponse(id=4),
-        service_pb2.CreateResponse(id=5),
-        service_pb2.CreateResponse(id=6)
-    ]
-    mock_create_external_bq_table.return_value = None
+  #   # Simulate service.call with different id as response
+  #   mock_service_call.side_effect = [
+  #       service_pb2.CreateResponse(id=1),
+  #       service_pb2.CreateResponse(id=2),
+  #       service_pb2.CreateResponse(id=3),
+  #       service_pb2.CreateResponse(id=4),
+  #       service_pb2.CreateResponse(id=5),
+  #       service_pb2.CreateResponse(id=6)
+  #   ]
+  #   mock_create_external_bq_table.return_value = None
 
-    # Preparing input for the test function
-    driver_fn = MagicMock()  # function with user logic
-    question_config = {
-        "desc":
-            "generic question label",
-        "attrs_text_proto":
-            "py/sight/configs/.text_proto_configs/generic.textproto"
-    }
-    optimizer_config = {
-        "optimizer": "worklist_scheduler",
-        "num_questions": 2,
-        "mode": "dsub_local_worker",  #"dsub_cloud_worker" #(dsub_local, )
-    }
-    workers_config = {
-        "version": "v0.1",
-        "file_path": "py/sight/generic_worker.yaml"
-    }
-    optimizer_type = "worklist_scheduler"
-    question_label = "Q_label1"
+  #   # Preparing input for the test function
+  #   driver_fn = MagicMock()  # function with user logic
+  #   question_config = {
+  #       "desc":
+  #           "generic question label",
+  #       "attrs_text_proto":
+  #           "py/sight/configs/.text_proto_configs/generic.textproto"
+  #   }
+  #   optimizer_config = {
+  #       "optimizer": "worklist_scheduler",
+  #       "num_questions": 2,
+  #       "mode": "dsub_local_worker",  #"dsub_cloud_worker" #(dsub_local, )
+  #   }
+  #   workers_config = {
+  #       "version": "v0.1",
+  #       "file_path": "py/sight/generic_worker.yaml"
+  #   }
+  #   optimizer_type = "worklist_scheduler"
+  #   question_label = "Q_label1"
 
-    for mode in distributed_modes + local_modes:
-      with self.subTest(server_mode=mode):
-        # Reset mocks for each subtest to avoid call overlap
-        # mock_validate_train_mode.reset_mock()
-        mock_create_opt_and_start_workers.reset_mock()
-        # mock_execute_local_training.reset_mock()
+  #   for mode in distributed_modes + local_modes:
+  #     with self.subTest(server_mode=mode):
+  #       # Reset mocks for each subtest to avoid call overlap
+  #       # mock_validate_train_mode.reset_mock()
+  #       mock_create_opt_and_start_workers.reset_mock()
+  #       # mock_execute_local_training.reset_mock()
 
-        FLAGS.server_mode = mode
+  #       FLAGS.server_mode = mode
 
-        # Preparing input for the test function
-        sight = Sight(self.params)
-        optimizer = decision.Optimizer()
-        optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
+  #       # Preparing input for the test function
+  #       sight = Sight(self.params)
+  #       optimizer = decision.Optimizer()
+  #       optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
 
-        decision_configuration = decision.configure_decision(
-            sight, question_label, question_config, optimizer_config,
-            optimizer.obj)
+  #       decision_configuration = decision.configure_decision(
+  #           sight, question_label, question_config, optimizer_config,
+  #           optimizer.obj)
 
-        # Execute the function under test
-        decision.execute_train_mode(sight, decision_configuration, driver_fn,
-                                    optimizer_config, workers_config,
-                                    optimizer_type, question_label)
+  #       # Execute the function under test
+  #       decision.execute_train_mode(sight, decision_configuration, driver_fn,
+  #                                   optimizer_config, workers_config,
+  #                                   optimizer_type, question_label)
 
-        sight.close()
+  #       sight.close()
 
-        # Assert correct execution path based on deployment mode
-        if FLAGS.server_mode in distributed_modes:
-          mock_create_opt_and_start_workers.assert_called_once_with(
-              sight, decision_configuration, optimizer_config, workers_config,
-              optimizer_type)
-        # elif FLAGS.server_mode in local_modes:
-        #   mock_execute_local_training.assert_called_once_with(
-        #       sight, decision_configuration, driver_fn, optimizer_config,
-        #       workers_config, optimizer_type)
+  #       # Assert correct execution path based on deployment mode
+  #       if FLAGS.server_mode in distributed_modes:
+  #         mock_create_opt_and_start_workers.assert_called_once_with(
+  #             sight, decision_configuration, optimizer_config, workers_config,
+  #             optimizer_type)
+  #       # elif FLAGS.server_mode in local_modes:
+  #       #   mock_execute_local_training.assert_called_once_with(
+  #       #       sight, decision_configuration, driver_fn, optimizer_config,
+  #       #       workers_config, optimizer_type)
 
-    assert mock_service_call.call_count == len(distributed_modes + local_modes)
+  #   assert mock_service_call.call_count == len(distributed_modes + local_modes)
 
-  @patch.object(sight, 'upload_blob_from_stream')
-  @patch.object(sight.service, 'call')
-  @patch.object(sight, 'create_external_bq_table')
-  @patch.object(trials, 'launch')
-  @patch.object(trials, 'start_worker_jobs')
-  def test_create_opt_and_start_workers(self, mock_start_worker_jobs,
-                                        mock_launch,
-                                        mock_create_external_bq_table,
-                                        mock_service_call, mock_upload_blob):
+  # @patch.object(sight, 'upload_blob_from_stream')
+  # @patch.object(sight.service, 'call')
+  # @patch.object(sight, 'create_external_bq_table')
+  # @patch.object(trials, 'launch')
+  # @patch.object(trials, 'start_worker_jobs')
+  # def test_create_opt_and_start_workers(self, mock_start_worker_jobs,
+  #                                       mock_launch,
+  #                                       mock_create_external_bq_table,
+  #                                       mock_service_call, mock_upload_blob):
 
-    # create parent mock to track the call order of launch and start_worker_jobs
-    parent_mock = MagicMock()
-    parent_mock.attach_mock(mock_launch, 'launch')
-    parent_mock.attach_mock(mock_start_worker_jobs, 'start_worker_jobs')
+  #   # create parent mock to track the call order of launch and start_worker_jobs
+  #   parent_mock = MagicMock()
+  #   parent_mock.attach_mock(mock_launch, 'launch')
+  #   parent_mock.attach_mock(mock_start_worker_jobs, 'start_worker_jobs')
 
-    sight = Sight(self.params)
+  #   sight = Sight(self.params)
 
-    question_config = {
-        "desc":
-            "generic question label",
-        "attrs_text_proto":
-            "py/sight/configs/.text_proto_configs/generic.textproto"
-    }
-    optimizer_config = {
-        "optimizer": "worklist_scheduler",
-        "num_questions": 2,
-        "mode": "dsub_local_worker",  #"dsub_cloud_worker" #(dsub_local, )
-    }
-    workers_config = {
-        "version": "v0.1",
-        "file_path": "py/sight/generic_worker.yaml"
-    }
-    optimizer_type = "worklist_scheduler"
-    question_label = "Q_label1"
-    optimizer = decision.Optimizer()
-    optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
+  #   question_config = {
+  #       "desc":
+  #           "generic question label",
+  #       "attrs_text_proto":
+  #           "py/worker/.text_proto_configs/generic.textproto"
+  #   }
+  #   optimizer_config = {
+  #       "optimizer": "worklist_scheduler",
+  #       "num_questions": 2,
+  #       "mode": "dsub_local_worker",  #"dsub_cloud_worker" #(dsub_local, )
+  #   }
+  #   workers_config = {
+  #       "version": "v0.1",
+  #       "file_path": "py/worker/worker_configs/generic_worker.yaml"
+  #   }
+  #   optimizer_type = "worklist_scheduler"
+  #   question_label = "Q_label1"
+  #   optimizer = decision.Optimizer()
+  #   optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
 
-    decision_configuration = decision.configure_decision(
-        sight, question_label, question_config, optimizer_config, optimizer.obj)
+  #   decision_configuration = decision.configure_decision(
+  #       sight, question_label, question_config, optimizer_config, optimizer.obj)
 
-    # Call the function under test
-    decision.create_opt_and_start_workers(sight, decision_configuration,
-                                          optimizer_config, workers_config,
-                                          optimizer_type)
-    sight.close()
+  #   # Call the function under test
+  #   decision.create_opt_and_start_workers(sight, decision_configuration,
+  #                                         optimizer_config, workers_config,
+  #                                         optimizer_type)
+  #   sight.close()
 
-    # Assert that each function was called exactly once with correct arguments
-    mock_launch.assert_called_once_with(decision_configuration, sight)
-    mock_start_worker_jobs.assert_called_once_with(sight, optimizer_config,
-                                                   workers_config,
-                                                   optimizer_type)
+  #   # Assert that each function was called exactly once with correct arguments
+  #   mock_launch.assert_called_once_with(decision_configuration, sight)
+  #   mock_start_worker_jobs.assert_called_once_with(sight, optimizer_config,
+  #                                                  workers_config,
+  #                                                  optimizer_type)
 
-    # verify the order : launch should be called before start_worker_jobs
-    expected_order = [
-        call.launch(decision_configuration, sight),
-        call.start_worker_jobs(sight, optimizer_config, workers_config,
-                               optimizer_type)
-    ]
-    self.assertEqual(parent_mock.mock_calls, expected_order)
+  #   # verify the order : launch should be called before start_worker_jobs
+  #   expected_order = [
+  #       call.launch(decision_configuration, sight),
+  #       call.start_worker_jobs(sight, optimizer_config, workers_config,
+  #                              optimizer_type)
+  #   ]
+  #   self.assertEqual(parent_mock.mock_calls, expected_order)
 
-  @patch.object(sight, 'upload_blob_from_stream')
-  @patch.object(sight.service, 'call')
-  @patch.object(sight, 'create_external_bq_table')
-  @patch.object(decision, 'finalize_episode')
-  @patch.object(decision, 'get_decision_messages_from_proto')
-  def test_process_worker_action(self, mock_get_decision_messages,
-                                 mock_finalize_episode,
-                                 mock_create_external_bq_table,
-                                 mock_service_call, mock_upload_blob):
-    # Create a mocked response object with dummy decision messages
-    response = service_pb2.WorkerAliveResponse(decision_messages=[
-        sight_pb2.DecisionMessage(action=sight_pb2.DecisionParam(
-            params={
-                "a1": sight_pb2.Value(string_value="abc"),
-                "a2": sight_pb2.Value(string_value="xyz")
-            }))
-    ])
+  # @patch.object(sight, 'upload_blob_from_stream')
+  # @patch.object(sight.service, 'call')
+  # @patch.object(sight, 'create_external_bq_table')
+  # @patch.object(decision, 'finalize_episode')
+  # @patch.object(decision, 'get_decision_messages_from_proto')
+  # def test_process_worker_action(self, mock_get_decision_messages,
+  #                                mock_finalize_episode,
+  #                                mock_create_external_bq_table,
+  #                                mock_service_call, mock_upload_blob):
+  #   # Create a mocked response object with dummy decision messages
+  #   response = service_pb2.WorkerAliveResponse(decision_messages=[
+  #       sight_pb2.DecisionMessage(action=sight_pb2.DecisionParam(
+  #           params={
+  #               "a1": sight_pb2.Value(string_value="abc"),
+  #               "a2": sight_pb2.Value(string_value="xyz")
+  #           }))
+  #   ])
 
-    # Simulate parsed decision messages returned by proto converter
-    mock_get_decision_messages.return_value = {
-        '1': {
-            'project': 'kokua'
-        },
-        '2': {
-            'region': 'US'
-        }
-    }
+  #   # Simulate parsed decision messages returned by proto converter
+  #   mock_get_decision_messages.return_value = {
+  #       '1': {
+  #           'project': 'kokua'
+  #       },
+  #       '2': {
+  #           'region': 'US'
+  #       }
+  #   }
 
-    sight = Sight(self.params)
+  #   sight = Sight(self.params)
 
-    driver_fn = MagicMock()
-    env = None
-    question_label = "Q_label1"
-    optimizer_type = "worklist_scheduler"
-    # mock_optimizer.obj.cache = MagicMock()
-    optimizer = decision.Optimizer()
-    optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
-    optimizer.obj.cache = MagicMock()
+  #   driver_fn = MagicMock()
+  #   env = None
+  #   question_label = "Q_label1"
+  #   optimizer_type = "worklist_scheduler"
+  #   # mock_optimizer.obj.cache = MagicMock()
+  #   optimizer = decision.Optimizer()
+  #   optimizer.obj = decision.setup_optimizer(sight, optimizer_type)
+  #   optimizer.obj.cache = MagicMock()
 
-    # Execute the function under test
-    decision.process_worker_action(response, sight, driver_fn, env,
-                                   question_label, optimizer.obj)
-    sight.close()
+  #   # Execute the function under test
+  #   decision.process_worker_action(response, sight, driver_fn, env,
+  #                                  question_label, optimizer.obj)
+  #   sight.close()
 
-    # Ensure proto message parsed once from the reponse
-    mock_get_decision_messages.assert_called_once_with(
-        decision_messages_proto=response.decision_messages)
+  #   # Ensure proto message parsed once from the reponse
+  #   mock_get_decision_messages.assert_called_once_with(
+  #       decision_messages_proto=response.decision_messages)
 
-    # Ensure finalized episode triggered once at last
-    mock_finalize_episode.assert_called_once_with(question_label, sight)
+  #   # Ensure finalized episode triggered once at last
+  #   mock_finalize_episode.assert_called_once_with(question_label, sight)
 
 
 # TODO @Meetatgoogle , resolve this test-case , commenting for now

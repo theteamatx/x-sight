@@ -22,6 +22,7 @@ from typing import Sequence
 from absl import app
 from absl import flags
 from sight.proto import sight_pb2
+from sight import sight
 from sight.sight import Sight
 from sight.widgets.decision import decision
 
@@ -60,11 +61,9 @@ def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  with Sight.create(get_question_label()) as sight:
-    # Enry point for the worker to start asking for the calculator question related actions
-    decision.run(driver_fn=driver_fn,
-                 sight=sight,
-                 question_label=get_question_label())
+  # Enry point for the worker to start asking for the calculator related actions
+  sight.worker_main_function(question_label=get_question_label(),
+                             driver_fn=driver_fn)
 
 
 if __name__ == "__main__":

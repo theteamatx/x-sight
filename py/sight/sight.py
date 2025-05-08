@@ -776,7 +776,7 @@ class Sight(object):
           'log_id=%s.%s&log_owner=%s&project_id=%s', self.SIGHT_API_KEY,
           self.params.dataset_name, self.table_name, self.params.log_owner,
           os.environ['PROJECT_ID'])
-      print(f'table generated : {self.params.dataset_name}.{self.table_name}')
+      print('table generated : %s.%s' % (self.params.dataset_name, self.table_name))
     self.avro_log.close()
     self.avro_log = io.BytesIO()
 
@@ -962,12 +962,20 @@ def text_block(label: str, text_val: str, sight, frame=None) -> str:
 
 
 def worker_main_function(
-    sight: Any,
     question_label: str = None,
-    driver_fn: Callable[[Any], Any] = None,
+    driver_fn: Optional[Callable[[Any], Any]] = None,
+    proposal_label: str = None,
 ):
   """Driver for running applications that use the Decision API.
   """
+
+  sight = Sight.create(label=question_label)
+
+  #! can one WS type worker propose actions to another worker?
+  if(FLAGS.optimizer_type is not 'worklist_scheduler'):
+    # this thread checks the outcome for proposed action from server
+    decision.init_sight_polling_thread(sight.id,
+                                        proposal_label)
 
   sight.widget_decision_state['num_decision_points'] = 0
 

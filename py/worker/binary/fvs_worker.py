@@ -50,10 +50,10 @@ def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  with Sight.create(get_question_label()) as sight_obj:
-    sight.worker_main_function(sight=sight_obj,
-                 question_label=get_question_label(),
-                 driver_fn=driver_fn)
+  # Enry point for the worker to start asking for the FVS related actions
+  sight.worker_main_function(question_label=get_question_label(),
+                             driver_fn=driver_fn)
+
 
 
 if __name__ == "__main__":

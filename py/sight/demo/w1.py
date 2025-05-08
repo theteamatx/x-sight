@@ -36,6 +36,7 @@ from sight.attribute import Attribute
 from sight.block import Block
 from sight import data_structures
 from sight.proto import sight_pb2
+from sight import sight
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
@@ -101,7 +102,7 @@ async def propose_actions_wrapper(sight: Sight, question_label: str) -> None:
       logging.info(f'Combine Series : {diff_time_series}')
 
 
-def driver(sight: Sight) -> None:
+def driver_fn(sight: Sight) -> None:
   """Executes the logic of searching for a value.
 
   Args:
@@ -125,24 +126,10 @@ def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  with Sight.create(get_question_label()) as sight:
-
-    # if (FLAGS.parent_id):
-    #   sight_obj = sight_pb2.Object()
-    #   sight_obj.sub_type = sight_pb2.Object.SubType.ST_LINK
-    #   sight_obj.link.linked_sight_id = FLAGS.parent_id
-    #   sight_obj.link.link_type = sight_pb2.Link.LinkType.LT_CHILD_TO_PARENT
-    #   frame = inspect.currentframe().f_back.f_back.f_back
-    #   sight.set_object_code_loc(sight_obj, frame)
-    #   sight.log_object(sight_obj, True)
-
-    # this thread checks the outcome for proposed action from server
-    decision.init_sight_polling_thread(sight.id,
-                                       get_question_label_to_propose_actions())
-
-    decision.run(sight=sight,
-                 question_label=get_question_label(),
-                 driver_fn=driver)
+  # Enry point for the worker to start asking for the Generic actions
+  sight.worker_main_function(question_label=get_question_label(),
+                             driver_fn=driver_fn,
+                             proposal_label=get_question_label_to_propose_actions())
 
 
 if __name__ == "__main__":

@@ -103,7 +103,7 @@ def start_worker_jobs(sight,
     # print('worker_count : ', worker_count)
     worker_details = worker_configs[worker]
     if optimizer_config['mode'] == 'dsub_cloud_worker':
-      start_jobs(worker_count,
+      start_jobs_in_dsub_cloud(worker_count,
                 worker_details['binary'],
                 optimizer_type,
                 worker_details['docker'],
@@ -113,7 +113,7 @@ def start_worker_jobs(sight,
                 FLAGS.cache_mode,
                 sight)
     elif optimizer_config['mode'] == 'dsub_local_worker':
-      start_job_in_dsub_local(
+      start_jobs_in_dsub_local(
         worker_count,
         worker_details['binary'],
         optimizer_type,
@@ -220,7 +220,7 @@ def start_job_in_docker(
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
 
 
-def start_jobs(num_train_workers: int, binary_path: Optional[str],
+def start_jobs_in_dsub_cloud(num_train_workers: int, binary_path: Optional[str],
                optimizer_type: str, docker_image, decision_mode: str,
                server_mode: str, worker_mode: str, cache_mode: str, sight: Any):
   """Starts the dsub workers that will run the optimization.
@@ -236,7 +236,7 @@ def start_jobs(num_train_workers: int, binary_path: Optional[str],
     cache_mode: add
     sight: The Sight object to be used for logging.
   """
-  method_name = 'start_jobs'
+  method_name = 'start_jobs_in_dsub_cloud'
   logging.debug('>>>>>>>>>  In %s method of %s file.', method_name, _file_name)
 
   sight.enter_block('Worker Spawning', sight_pb2.Object())
@@ -323,7 +323,7 @@ def start_jobs(num_train_workers: int, binary_path: Optional[str],
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
 
 
-def start_job_in_dsub_local(
+def start_jobs_in_dsub_local(
     num_train_workers: int,
     binary_path: Optional[str],
     optimizer_type: str,
@@ -347,7 +347,7 @@ def start_job_in_dsub_local(
     worker_mode: add
     sight: The Sight object to be used for logging.
   """
-  method_name = 'start_job_in_dsub_local'
+  method_name = 'start_jobs_in_dsub_local'
   logging.debug('>>>>>>>>>  In %s method of %s file.', method_name, _file_name)
 
   sight.enter_block('Worker Spawning locally', sight_pb2.Object())
