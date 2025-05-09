@@ -47,8 +47,6 @@ FLAGS = flags.FLAGS
 
 sample = {'project_id': '133a6365-01cf-4b5e-8197-d4779e5ce25c', 'region': 'NC'}
 
-def get_question_label():
-  return 'calculator'
 
 def get_sight_instance():
   params = sight_pb2.Params(
@@ -125,16 +123,9 @@ def main(argv: Sequence[str]) -> None:
   config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
   # create sight object with configuration to spawn workers beforehand
-  with Sight.create(get_question_label(), config) as sight:
+  with Sight.create('multiple_opt_label', config) as sight:
 
     logging.info("spawned the workers.................")
-      # if (decision_configuration.optimizer_type is not sight_pb2.
-      #     DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER):
-      #   decision.init_sight_polling_thread(
-      #       sight.id, decision_configuration.question_label)
-      #   asyncio.run(
-      #       propose_actions_wrapper(sight, question_label,
-      #                               optimizer_config['num_questions']))
 
 
 if __name__ == "__main__":

@@ -57,13 +57,13 @@ def driver_fn(sight):
   print("outcome : ", outcome)
   decision.decision_outcome('outcome_label', sight, reward=0, outcome=outcome)
 
+
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
   # Enry point for the worker to start asking for the calculator related actions
-  sight.worker_main_function(question_label=get_question_label(),
-                             driver_fn=driver_fn)
+  sight.run_worker(question_label=get_question_label(), driver_fn=driver_fn)
 
 
 if __name__ == "__main__":

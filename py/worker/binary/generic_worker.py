@@ -26,7 +26,7 @@ import inspect
 import json
 import os
 import random
-from typing import Sequence, Any
+from typing import Sequence, Any, Tuple
 
 from absl import app
 from absl import flags
@@ -41,7 +41,7 @@ from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
 from helpers.logs.logs_handler import logger as logging
-
+from helpers.decorators.decision_worker import decision_worker
 
 FLAGS = flags.FLAGS
 
@@ -56,10 +56,39 @@ def get_question_label():
   return 'generic'
 
 
-# Define the black box function to optimize.
-def black_box_function(args):
-  return sum(xi**2 for xi in args)
+# @sight.worker
+# def main(action: dict) -> Tuple[float, dict]:
+#    work....
+#    return reward, outcome
 
+
+@decision_worker(question_label = get_question_label())
+def main(sight: Sight, action: dict) -> Tuple[float, dict]:
+
+  # using actions we received from optimizer to propose actions to worklist_scheduler
+  outcome = asyncio.run(
+      propose_actions_wrapper(sight, get_question_label_to_propose_actions(),
+                              action))
+
+  vals = list(action.values())
+  # some mechanchism to calculate reward from the response of WS worker
+  reward = sum(xi**2 for xi in vals)
+
+  return reward, outcome
+
+
+# # Define the black box function to optimize.
+# def driver_fn(sight:Sight , params_dict: dict):
+
+#   vals = list(params_dict.values())
+
+#   # using actions we received from optimizer to propose actions to worklist_scheduler
+#   outcome = asyncio.run(
+#       propose_actions_wrapper(sight, get_question_label_to_propose_actions(), params_dict))
+
+#   # some mechanchism to calculate reward from the response of WS worker
+#   reward =  sum(xi**2 for xi in vals)
+#   return reward, outcome
 
 async def propose_actions(sight: Sight, question_label: str,
                           base_project_config: dict[str, Any],
@@ -82,8 +111,7 @@ async def propose_actions(sight: Sight, question_label: str,
   [unmanaged_response, managed_response] = await asyncio.gather(*tasks)
   return unmanaged_response, managed_response
 
-
-async def propose_actions_wrapper(sight: Sight, question_label: str) -> None:
+async def propose_actions_wrapper(sight: Sight, question_label: str, action_dict: dict) -> None:
 
   with Block("Propose actions", sight):
     with Attribute("project_id", "APR107", sight):
@@ -94,41 +122,43 @@ async def propose_actions_wrapper(sight: Sight, question_label: str) -> None:
         tasks.append(
             sight.create_task(
                 # both base and treatment are considerred to be same dict here
-                propose_actions(sight, question_label, sample, sample)))
+                propose_actions(sight, question_label, action_dict, action_dict)))
 
       logging.info("waiting for all get outcome to finish.....")
       diff_time_series = await asyncio.gather(*tasks)
       logging.info("all get outcome are finished.....")
       logging.info(f'Combine Series : {diff_time_series}')
 
+# def driver_fn(sight: Sight) -> None:
+#   """Executes the logic of searching for a value.
 
-def driver_fn(sight: Sight) -> None:
-  """Executes the logic of searching for a value.
+#   Args:
+#     sight: The Sight logger object used to drive decisions.
+#   """
+#   next_point = decision.decision_point(get_question_label(), sight)
+#   logging.info('next_point : %s', next_point)
 
-  Args:
-    sight: The Sight logger object used to drive decisions.
-  """
-  next_point = decision.decision_point(get_question_label(), sight)
-  logging.info('next_point : %s', next_point)
+#   # using next_points to propose actions
+#   asyncio.run(
+#       propose_actions_wrapper(sight, get_question_label_to_propose_actions()))
 
-  # using next_points to propose actions
-  asyncio.run(
-      propose_actions_wrapper(sight, get_question_label_to_propose_actions()))
-
-  reward = black_box_function(list(next_point.values()))
-  print('reward : ', reward)
-  decision.decision_outcome(json.dumps(next_point), sight, reward)
+#   reward = black_box_function(list(next_point.values()))
+#   print('reward : ', reward)
+#   decision.decision_outcome(json.dumps(next_point), sight, reward)
 
 
-def main(argv: Sequence[str]) -> None:
-  if len(argv) > 1:
-    raise app.UsageError("Too many command-line arguments.")
+# def main(question_label: str) -> None:
 
-  # Enry point for the worker to start asking for the Generic actions
-  sight.worker_main_function(question_label=get_question_label(),
-                             driver_fn=driver_fn,
-                             proposal_label=get_question_label_to_propose_actions())
+#   # Enry point for the worker to start asking for the Generic actions
+#   sight.run_worker(question_label=get_question_label(),
+#                    driver_fn=driver_fn,
+#                    proposal_label=get_question_label_to_propose_actions())
 
 
 if __name__ == "__main__":
-  app.run(main)
+  # app.run(main)
+
+
+
+
+  app.run(lambda _ : sight.run_worker(main, get_question_label(), get_question_label_to_propose_actions()))
