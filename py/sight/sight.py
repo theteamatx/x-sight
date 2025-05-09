@@ -972,11 +972,6 @@ def run_worker(
   """
 
   sight = Sight.create(label=question_label)
-  #! can one WS type worker propose actions to another worker?
-  if (FLAGS.optimizer_type != 'worklist_scheduler'):
-    # this thread checks the outcome for proposed action from server
-    decision.init_sight_polling_thread(sight.id, proposal_label)
-
   sight.widget_decision_state['num_decision_points'] = 0
 
   optimizer = decision.Optimizer()

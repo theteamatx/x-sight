@@ -45,8 +45,6 @@ from helpers.decorators.decision_worker import decision_worker
 
 FLAGS = flags.FLAGS
 
-sample = {'base-FERTILIZ-extra_offset': 0.0}
-
 
 def get_question_label_to_propose_actions():
   return 'FVS'
@@ -56,19 +54,14 @@ def get_question_label():
   return 'generic'
 
 
-# @sight.worker
-# def main(action: dict) -> Tuple[float, dict]:
-#    work....
-#    return reward, outcome
-
-
-@decision_worker(question_label = get_question_label())
+@decision_worker(question_label=get_question_label())
 def main(sight: Sight, action: dict) -> Tuple[float, dict]:
 
   # using actions we received from optimizer to propose actions to worklist_scheduler
   outcome = asyncio.run(
-      propose_actions_wrapper(sight, get_question_label_to_propose_actions(),
-                              action))
+      proposal.propose_actions(sight,
+                               get_question_label_to_propose_actions(),
+                               action_dict=action))
 
   vals = list(action.values())
   # some mechanchism to calculate reward from the response of WS worker
@@ -77,88 +70,6 @@ def main(sight: Sight, action: dict) -> Tuple[float, dict]:
   return reward, outcome
 
 
-# # Define the black box function to optimize.
-# def driver_fn(sight:Sight , params_dict: dict):
-
-#   vals = list(params_dict.values())
-
-#   # using actions we received from optimizer to propose actions to worklist_scheduler
-#   outcome = asyncio.run(
-#       propose_actions_wrapper(sight, get_question_label_to_propose_actions(), params_dict))
-
-#   # some mechanchism to calculate reward from the response of WS worker
-#   reward =  sum(xi**2 for xi in vals)
-#   return reward, outcome
-
-async def propose_actions(sight: Sight, question_label: str,
-                          base_project_config: dict[str, Any],
-                          treatments: dict[str, Any]) -> pd.Series:
-  treatment_project_config = treatments
-  tasks = []
-  with Attribute("Managed", "0", sight):
-    unmanaged_task = sight.create_task(
-        proposal.propose_actions(sight,
-                                 question_label,
-                                 action_dict=base_project_config))
-    tasks.append(unmanaged_task)
-  with Attribute("Managed", "1", sight):
-    managed_task = sight.create_task(
-        proposal.propose_actions(sight,
-                                 question_label,
-                                 action_dict=treatment_project_config))
-    tasks.append(managed_task)
-
-  [unmanaged_response, managed_response] = await asyncio.gather(*tasks)
-  return unmanaged_response, managed_response
-
-async def propose_actions_wrapper(sight: Sight, question_label: str, action_dict: dict) -> None:
-
-  with Block("Propose actions", sight):
-    with Attribute("project_id", "APR107", sight):
-      tasks = []
-      # print("len(sample_list) : ", len(sample_list))
-      # for id in range(len(sample_list)):
-      with Attribute("sample_id", 'sample_1', sight):
-        tasks.append(
-            sight.create_task(
-                # both base and treatment are considerred to be same dict here
-                propose_actions(sight, question_label, action_dict, action_dict)))
-
-      logging.info("waiting for all get outcome to finish.....")
-      diff_time_series = await asyncio.gather(*tasks)
-      logging.info("all get outcome are finished.....")
-      logging.info(f'Combine Series : {diff_time_series}')
-
-# def driver_fn(sight: Sight) -> None:
-#   """Executes the logic of searching for a value.
-
-#   Args:
-#     sight: The Sight logger object used to drive decisions.
-#   """
-#   next_point = decision.decision_point(get_question_label(), sight)
-#   logging.info('next_point : %s', next_point)
-
-#   # using next_points to propose actions
-#   asyncio.run(
-#       propose_actions_wrapper(sight, get_question_label_to_propose_actions()))
-
-#   reward = black_box_function(list(next_point.values()))
-#   print('reward : ', reward)
-#   decision.decision_outcome(json.dumps(next_point), sight, reward)
-
-
-# def main(question_label: str) -> None:
-
-#   # Enry point for the worker to start asking for the Generic actions
-#   sight.run_worker(question_label=get_question_label(),
-#                    driver_fn=driver_fn,
-#                    proposal_label=get_question_label_to_propose_actions())
-
-
 if __name__ == "__main__":
-  # app.run(main)
-
-
-
-
-  app.run(lambda _ : sight.run_worker(main, get_question_label(), get_question_label_to_propose_actions()))
+  app.run(lambda _: sight.run_worker(main, get_question_label(),
+                                     get_question_label_to_propose_actions()))
