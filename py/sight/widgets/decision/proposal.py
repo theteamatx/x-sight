@@ -33,6 +33,8 @@ from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight.widgets.decision.single_action_optimizer_client import (
     SingleActionOptimizerClient
 )
+from sight.widgets.decision.resource_lock import RWLockDictWrapper
+
 
 global_outcome_mapping = RWLockDictWrapper()
 
@@ -98,6 +100,10 @@ async def propose_actions(sight,
                           question_label,
                           action_dict,
                           custom_part="sight_cache"):
+
+  if(not global_outcome_mapping.get_for_key(f'is_poll_thread_started_{question_label}')):
+    decision.init_sight_polling_thread(sight.id, question_label)
+    global_outcome_mapping.set_for_key(f'is_poll_thread_started_{question_label}', True)
 
   key_maker = KeyMaker()
   worker_version = utils.get_worker_version(question_label)

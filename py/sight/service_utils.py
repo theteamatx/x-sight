@@ -42,7 +42,7 @@ current_script_directory = os.path.dirname(os.path.abspath(__file__))
 #                                'sight_service', 'sight_service.cert')
 _SERVICE_NAME = flags.DEFINE_string(
     'service_name',
-    '',
+    'test-dev-service',
     'The name of the Sight service instance that will be managing this run.',
 )
 _SERVICE_DOCKER_FILE = flags.DEFINE_string(
@@ -65,10 +65,10 @@ _PORT = flags.DEFINE_string(
     '443',
     'port number on which service is deployed',
 )
-_DEPLOYMENT_MODE = flags.DEFINE_enum(
-    'deployment_mode',
-    None,
-    ['vm', 'distributed', 'local', 'dsub_local', 'docker_local', 'worker_mode'],
+_SERVER_MODE = flags.DEFINE_enum(
+    'server_mode',
+    'cloud_run',
+    ['vm', 'cloud_run', 'local'],
     ('The procedure to use when training a model to drive applications that '
      'use the Decision API.'),
 )
@@ -107,15 +107,8 @@ def get_service_id() -> str:
 
 
 def get_port_number() -> str:
-  logging.info('FLAGS.port is %s', FLAGS.port)
-  logging.info('_PORT.value is %s', _PORT.value)
 
-  logging.info(
-      'in get_port_number => os.environ.PORT => %s FLAGS.deployment_mode => %s  ',
-      os.environ.get('PORT', 'None'), FLAGS.deployment_mode)
-
-  if (FLAGS.deployment_mode in ['dsub_local', 'local', 'vm'] or
-      ('worker_mode' in FLAGS and FLAGS.worker_mode == 'dsub_local_worker')):
+  if (FLAGS.server_mode in ['local', 'vm']):
     return '8080'
   else:
     return _PORT.value
@@ -463,7 +456,7 @@ def obtain_secure_channel(options=None):
   # else:
   url = _service_addr()
   target = '{}:{}'.format(url, get_port_number())
-  logging.info("target %s , creds %s and options %s here ", target, creds,
+  logging.info("secure channel : target %s , creds %s and options %s here ", target, creds,
                options)
   channel = grpc.secure_channel(
       target,
@@ -479,16 +472,18 @@ def obtain_insecure_channel(options):
   Returns:
     service_handle: to communicate with server
   """
+  # server_mode is VM or (local in dsub worker)
   if 'IP_ADDR' in os.environ:
     host = os.environ["IP_ADDR"]
   # elif FLAGS.worker_mode=='dsub_local_worker':
   #   host = get_docker0_ip()
+  # server_mode is local in client
   else:
     host = 'localhost'
   target = '{}:{}'.format(host, get_port_number())
   # print("service_url here : ", target)
 
-  logging.info("target %s , and options %s here ", target, options)
+  logging.info("Insecure channel : target %s , and options %s here ", target, options)
 
   channel = grpc.insecure_channel(
       target,
@@ -506,19 +501,14 @@ class GRPCClientCache:
     """Generate metadata to call service with authentication."""
 
     logging.debug('_secure_cache %s and _insecure_cache %s ', cls._secure_cache,
-                  cls._insecure_cache)
+                 cls._insecure_cache)
 
     channel_opts = [
         ('grpc.max_send_message_length', 512 * 1024 * 1024),
         ('grpc.max_receive_message_length', 512 * 1024 * 1024),
     ]
 
-    if 'IP_ADDR' in os.environ or (
-        'deployment_mode' in FLAGS and
-        FLAGS.deployment_mode in ['dsub_local', 'local', 'vm']) or (
-            'worker_mode' in FLAGS and
-            FLAGS.worker_mode in ['dsub_local_worker']):
-
+    if FLAGS.server_mode in ['local', 'vm']:
       if cls._insecure_cache is None:
         channel = obtain_insecure_channel(channel_opts)
         sight_service = service_pb2_grpc.SightServiceStub(channel)
@@ -527,10 +517,9 @@ class GRPCClientCache:
       return cls._insecure_cache
 
     else:
-
       if cls._secure_cache is None:
         # for client code, need to find or deploy cloud run service, workers will directly get via env
-        if 'deployment_mode' in FLAGS and FLAGS.deployment_mode == "distributed":
+        if FLAGS.worker_mode is None:
           _find_or_deploy_server()
         secure_channel = obtain_secure_channel()
         # print("secure_channel : ", secure_channel)

@@ -13,17 +13,18 @@
 # limitations under the License.
 
 # using base image
-FROM google/cloud-sdk:latest as cloud_base
+# FROM google/cloud-sdk:latest as cloud_base
+FROM gcr.io/cameltrain/kokua/gcp_cloudsdk_with_3_10:v1 as cloud_base
 LABEL Maintainer="bronevet@google.com"
 
 USER root
 
-# Basic Installation
-RUN set -xe && apt-get -y update
-RUN apt-get -y install apt-transport-https ca-certificates gnupg
-RUN apt-get -y install python3.10
-RUN apt-get -y install virtualenv
-RUN apt-get -y install python3-pip
+# # Basic Installation - already covered in base image
+# RUN set -xe && apt-get -y update
+# RUN apt-get -y install apt-transport-https ca-certificates gnupg
+# RUN apt-get -y install python3.10
+# RUN apt-get -y install virtualenv
+# RUN apt-get -y install python3-pip
 
 # set up working directory in container
 WORKDIR /x-sight
@@ -37,8 +38,6 @@ RUN pip install -r py/sight/requirements-worker.txt
 COPY py/ py/
 COPY sight_service/ sight_service/
 COPY .env .env
-COPY fvs_sight/ fvs_sight/
-
 
 # updating PYTHONPATH to resolve relative imports
 ENV PYTHONPATH "$HOME/x-sight:$HOME/x-sight/py:${PYTHONPATH}"
