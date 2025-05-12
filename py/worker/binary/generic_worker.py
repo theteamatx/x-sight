@@ -71,5 +71,7 @@ def main(sight: Sight, action: dict) -> Tuple[float, dict]:
 
 
 if __name__ == "__main__":
-  app.run(lambda _: sight.run_worker(main, get_question_label(),
-                                     get_question_label_to_propose_actions()))
+  app.run(lambda _: sight.run_worker(
+      main,
+      get_question_label(),
+  ))

@@ -966,7 +966,6 @@ def text_block(label: str, text_val: str, sight, frame=None) -> str:
 def run_worker(
     driver_fn: Optional[Callable[[Any], Any]] = None,
     question_label: str = None,
-    proposal_label = None
 ):
   """Driver for running applications that use the Decision API.
   """
