@@ -22,73 +22,18 @@ def warn(*args, **kwargs):
 warnings.warn = warn
 
 import asyncio
-import inspect
-import json
-import os
-import random
-from typing import Sequence, Any
-import os
-from pathlib import Path
-from absl import app
 from absl import flags
-import numpy as np
-import pandas as pd
 from langchain_core.tools import tool
-from sight.attribute import Attribute
-from sight.block import Block
 from absl.flags import _exceptions
-from sight import data_structures
-from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
-from sight.widgets.decision import utils
-from helpers.logs.logs_handler import logger as logging
 
 FLAGS = flags.FLAGS
 
 
 def get_question_label():
   return 'calculator'
-
-
-async def propose_actions(
-    sight: Sight,
-    question_label: str,
-    actions: dict[str, Any],
-) -> pd.Series:
-  tasks = []
-  with Attribute("task", "multiply", sight):
-    task = sight.create_task(
-        proposal.propose_actions(sight, question_label, action_dict=actions))
-    tasks.append(task)
-
-  [final_result] = await asyncio.gather(*tasks)
-  return final_result
-
-
-async def propose_actions_wrapper(sight: Sight, question_label: str,
-                                  actions: dict) -> str:
-
-  with Block("Propose actions", sight):
-    tasks = []
-    tasks.append(
-        sight.create_task(propose_actions(sight, question_label, actions)))
-
-    logging.info("waiting for all get outcome to finish.....")
-    result = await asyncio.gather(*tasks)
-    logging.info(f'result : {result}')
-    return result
-
-
-def get_sight_instance(config=None):
-  params = sight_pb2.Params(
-      label=get_question_label(),
-      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-  )
-  sight_obj = Sight(params, config)
-  return sight_obj
-
 
 @tool
 def calculator_api_with_sight(a: int, b: int, ops: str) -> str:
@@ -124,15 +69,12 @@ def calculator_api_with_sight(a: int, b: int, ops: str) -> str:
     flags.FLAGS(['calculator_api_with_sight'])
 
   # config contains the data from all the config files
-  config = decision.DecisionConfig()
+  config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
-  with get_sight_instance(config) as sight:
-    # this thread checks the outcome for proposed action from server
-    decision.init_sight_polling_thread(sight.id, get_question_label())
-
+  with Sight.create('langchain_demo_label', config) as sight:
     actions = {"v1": a, "v2": b, "ops": ops}
     result = asyncio.run(
-        propose_actions_wrapper(sight, get_question_label(), actions))
+        proposal.propose_actions(sight, get_question_label(), actions))
     return result
 
 

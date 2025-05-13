@@ -3,7 +3,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import initialize_agent, AgentType
 from langchain.agents import create_tool_calling_agent, AgentExecutor
 # from langchain_demo.proposal_demo_with_langchain import calculator_tool
-from langchain_demo.proposal_demo_with_langchain import calculator_api_with_sight
+from sight.demo.agentic_demo.proposal_demo_with_langchain import calculator_api_with_sight
 
 load_dotenv(find_dotenv())
 
@@ -19,5 +19,6 @@ agent = initialize_agent(
     verbose=True,
 )
 
-response = agent.invoke({"input": "can you divide 200 to 10 and add 20 to the result"})
+response = agent.invoke({"input": "can you divide 200 to 10 "})
+# and add 20 to the result
 print(response)

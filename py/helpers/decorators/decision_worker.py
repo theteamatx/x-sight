@@ -44,6 +44,6 @@ def decision_worker(question_label):
       logging.info('actions we got : %s', action)
       reward, outcome = func(sight, action)
       logging.info('reward we got : %s', reward)
-      decision.decision_outcome('decisionin_outcome', sight, reward)
+      decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
     return wrapper
   return decorator
