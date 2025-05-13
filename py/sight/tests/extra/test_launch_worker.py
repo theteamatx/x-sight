@@ -5,18 +5,16 @@ from absl import app
 from sight import service_utils as service
 from helpers.logs.logs_handler import logger as logging
 
-
 project_name = 'cameltrain'
-deployment_mode = 'worker_mode'
+server_mode = 'local'
 worker_mode = 'dsub_local_worker'
 remote_script = 'py/sight/demo/test_rpc.py'
 docker_image = 'gcr.io/cameltrain/test-dsub_local'
 sight_id = '1234'
 
+
 def main(argv: Sequence[str]) -> None:
-  script_args = (
-      f'--deployment_mode={deployment_mode} --worker_mode={worker_mode} '
-  )
+  script_args = (f'--server_mode={server_mode} --worker_mode={worker_mode} ')
 
   args = [
       'dsub',
@@ -41,7 +39,7 @@ def main(argv: Sequence[str]) -> None:
       # '/tmp/optimization_tasks.tsv',
       '--name',
       'test1234',
-    ]
+  ]
   logging.info('CLI=%s', ' '.join(args))
   # subprocess.run(args, check=True)
 

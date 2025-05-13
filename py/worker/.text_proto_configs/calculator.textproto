@@ -1,0 +1,26 @@
+action_attrs {
+  key: "v1"
+  value {
+    min_value:1
+    max_value:5
+  }
+}
+action_attrs {
+  key: "v2"
+  value {
+    min_value:1
+    max_value:5
+  }
+}
+action_attrs {
+  key: "ops"
+  value {
+    min_value:0
+    max_value:0
+  }
+}
+outcome_attrs {
+  key: "final_result"
+  value {
+  }
+}

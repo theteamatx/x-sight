@@ -31,9 +31,6 @@ import warnings
 
 from absl import app
 from absl import flags
-# from fvs_sight.fvs_api import action_attrs
-# from fvs_sight.fvs_api import outcome_attrs
-from fvs_sight import fvs_api
 from helpers.logs.logs_handler import logger as logging
 import pandas as pd
 from sight.attribute import Attribute
@@ -43,6 +40,7 @@ from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
 from sight.widgets.decision import utils
+from sight.widgets.decision import trials
 import yaml
 
 
@@ -138,9 +136,6 @@ async def main(sight: Sight, argv: Sequence[str]) -> None:
 
 def main_wrapper(argv):
   with get_sight_instance() as sight:
-    # decision.run(action_attrs=fvs_api.get_action_attrs(),
-    #              outcome_attrs=fvs_api.get_outcome_attrs(),
-    #              sight=sight)
     questions_config = utils.load_yaml_config('fvs_sight/question_config.yaml')
     optimizers_config = utils.load_yaml_config(
         'fvs_sight/optimizer_config.yaml')
@@ -152,13 +147,13 @@ def main_wrapper(argv):
       print('optimizer_config : ', optimizer_config)
 
       # Configure decision and launch trials
-      opt_obj, decision_configuration = decision.configure_decision(
+      decision_configuration = decision.configure_decision(
           sight, question_label, question_config, optimizer_config,
           optimizer_type)
       trials.launch(decision_configuration, sight)
 
       # Start worker jobs
-      start_worker_jobs(sight, optimizer_config, workers_config, optimizer_type)
+      trials.start_worker_jobs(sight, optimizer_config, workers_config, optimizer_type)
 
     start_time = time.perf_counter()
     sleep_time_in_min = 5

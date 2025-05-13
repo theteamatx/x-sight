@@ -13,6 +13,7 @@
 # limitations under the License.
 """GCS related helper functions."""
 
+from absl import logging
 import os
 import subprocess
 
@@ -39,6 +40,7 @@ def upload_blob_from_stream(bucket_name, gcp_path, file_obj, file_name, count):
     bucket = storage_client.create_bucket(bucket_name)
 
   blob_name = gcp_path + '/' + file_name + '_' + str(count) + '.avro'
+  logging.info('Log file: %s', blob_name)
   blob = bucket.blob(blob_name)
   # Rewind the stream to the beginning. This step can be omitted if the input
   # stream will always be at a correct position.
