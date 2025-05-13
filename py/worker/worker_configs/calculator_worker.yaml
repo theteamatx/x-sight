@@ -1,7 +1,3 @@
 v0.1 :
   docker: "gcr.io/cameltrain/test-calculator-worker:latest"
-<<<<<<< HEAD:worker/calculator_worker.yaml
-  binary: "langchain_demo/calculator_worker.py"
-=======
   binary: "py/worker/binary/calculator_worker.py"
->>>>>>> dev:py/worker/worker_configs/calculator_worker.yaml
