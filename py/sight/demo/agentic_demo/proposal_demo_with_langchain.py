@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Demo of using the Sight Propose action API to add actions to server and wait for it's outcome."""
+"""Demo of using the Sight Decision API to run forest simulator."""
 import warnings
 
 
@@ -27,18 +27,22 @@ import json
 import os
 import random
 from typing import Sequence, Any
-
+import os
+from pathlib import Path
 from absl import app
 from absl import flags
 import numpy as np
 import pandas as pd
+from langchain_core.tools import tool
 from sight.attribute import Attribute
 from sight.block import Block
+from absl.flags import _exceptions
 from sight import data_structures
 from sight.proto import sight_pb2
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
+from sight.widgets.decision import utils
 from helpers.logs.logs_handler import logger as logging
 
 FLAGS = flags.FLAGS
@@ -46,6 +50,7 @@ FLAGS = flags.FLAGS
 
 def get_question_label():
   return 'calculator'
+
 
 async def propose_actions(
     sight: Sight,
@@ -63,7 +68,7 @@ async def propose_actions(
 
 
 async def propose_actions_wrapper(sight: Sight, question_label: str,
-                                  actions: dict) -> None:
+                                  actions: dict) -> str:
 
   with Block("Propose actions", sight):
     tasks = []
@@ -73,35 +78,64 @@ async def propose_actions_wrapper(sight: Sight, question_label: str,
     logging.info("waiting for all get outcome to finish.....")
     result = await asyncio.gather(*tasks)
     logging.info(f'result : {result}')
+    return result
 
 
-# def get_sight_instance(config=None):
-#   params = sight_pb2.Params(
-#       label=get_question_label(),
-#       bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-#   )
-#   sight_obj = Sight(params, config)
-#   return sight_obj
+def get_sight_instance(config=None):
+  params = sight_pb2.Params(
+      label=get_question_label(),
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
+  )
+  sight_obj = Sight(params, config)
+  return sight_obj
 
 
-def main(argv: Sequence[str]) -> None:
-  if len(argv) > 1:
-    raise app.UsageError("Too many command-line arguments.")
+@tool
+def calculator_api_with_sight(a: int, b: int, ops: str) -> str:
+  """
+  Perform a basic arithmetic operation (addition, subtraction, etc.) on two integers using the Sight backend system.
+
+  This function proposes a calculation action (with inputs `a`, `b`, and the operation `ops`) to the server via a Sight worker.
+  It waits for the worker to process the action and return the computed result.
+
+  Args:
+      a (int): The first integer operand.
+      b (int): The second integer operand.
+      ops (str): The operation to perform. Supported operations include:
+          - "add" for addition
+          - "subtract" for subtraction
+          - "multiply" for multiplication
+          - "divide" for division
+
+  Returns:
+      str: The result of the calculation as a string.
+
+  Example:
+      >>> calculator_api_with_sight(5, 3, "add")
+      "8"
+  """
+  # Initialize absl FLAGS manually if needed
+  try:
+    flags.FLAGS.mark_as_parsed()
+    flags.FLAGS.server_mode = 'local'
+  except _exceptions.DuplicateFlagError:
+    pass  # Already parsed
+  except _exceptions.UnparsedFlagAccessError:
+    flags.FLAGS(['calculator_api_with_sight'])
 
   # config contains the data from all the config files
-  config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
+  config = decision.DecisionConfig()
 
-  # create sight object with configuration to spawn workers beforehand
-  with Sight.create(get_question_label(), config) as sight:
-
+  with get_sight_instance(config) as sight:
     # this thread checks the outcome for proposed action from server
     decision.init_sight_polling_thread(sight.id, get_question_label())
 
-    #Ideally this actions will be proposed from some other module
-    actions = {"v1": 3, "v2": 5, "ops": 'multiply'}
-
-    asyncio.run(propose_actions_wrapper(sight, get_question_label(), actions))
+    actions = {"v1": a, "v2": b, "ops": ops}
+    result = asyncio.run(
+        propose_actions_wrapper(sight, get_question_label(), actions))
+    return result
 
 
 if __name__ == "__main__":
-  app.run(main)
+  result = calculator_api_with_sight.invoke({"a": 10, "b": 2, "ops": "add"})
+  print(result)

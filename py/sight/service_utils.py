@@ -42,7 +42,7 @@ current_script_directory = os.path.dirname(os.path.abspath(__file__))
 #                                'sight_service', 'sight_service.cert')
 _SERVICE_NAME = flags.DEFINE_string(
     'service_name',
-    '',
+    'test-dev-service',
     'The name of the Sight service instance that will be managing this run.',
 )
 _SERVICE_DOCKER_FILE = flags.DEFINE_string(
@@ -67,7 +67,11 @@ _PORT = flags.DEFINE_string(
 )
 _SERVER_MODE = flags.DEFINE_enum(
     'server_mode',
+<<<<<<< HEAD
     None,
+=======
+    'cloud_run',
+>>>>>>> dev
     ['vm', 'cloud_run', 'local'],
     ('The procedure to use when training a model to drive applications that '
      'use the Decision API.'),
@@ -107,7 +111,6 @@ def get_service_id() -> str:
 
 
 def get_port_number() -> str:
-
   if (FLAGS.server_mode in ['local', 'vm']):
     return '8080'
   else:
@@ -127,7 +130,7 @@ def _service_addr() -> str:
   else:
     # print('fetching unique string.....')
     try:
-      print('get_service_id()=', get_service_id())
+      # print('get_service_id()=', get_service_id())
       service_url = subprocess.getoutput(
           'gcloud run services describe'
           f" {_SERVICE_PREFIX}{get_service_id()} --region us-central1 --format='value(status.url)'"
@@ -135,7 +138,7 @@ def _service_addr() -> str:
       print("service url : ", service_url)
       _UNIQUE_STRING = re.search(r'https://.*-(\w+)-uc\.a\.run\.app',
                                  service_url).group(1)
-      print("_UNIQUE_STRING : ", _UNIQUE_STRING)
+      # print("_UNIQUE_STRING : ", _UNIQUE_STRING)
     except Exception as e:
       logging.exception("service not found : %s", e)
     # print("first _UNIQUE_STRING : ", _UNIQUE_STRING)
@@ -200,7 +203,7 @@ def _find_or_deploy_server() -> str:
         sys.exit(0)
 
   # deploy new service
-  print('_SERVICE_ID=', get_service_id())
+  # print('_SERVICE_ID=', get_service_id())
   docker_file_path = _SERVICE_DOCKER_FILE.value
   docker_img = _SERVICE_DOCKER_IMG.value
 
@@ -212,7 +215,7 @@ def _find_or_deploy_server() -> str:
     # )
 
   if (docker_file_path):
-    logging.info('building img from scratch.....................')
+    # logging.info('building img from scratch.....................')
     # Step 1: Build docker image
     build_out = subprocess.run(
         [
@@ -308,7 +311,7 @@ def _find_or_deploy_server() -> str:
   )
   print('deploy_out : ', deploy_out.stderr)
 
-  logging.info('_SERVICE_ID=%s', _SERVICE_ID)
+  # logging.info('_SERVICE_ID=%s', _SERVICE_ID)
   if (docker_file_path):
     logging.info('deleting newly built img')
     subprocess.run(
@@ -500,8 +503,8 @@ class GRPCClientCache:
   def generate_metadata(cls):
     """Generate metadata to call service with authentication."""
 
-    logging.debug('_secure_cache %s and _insecure_cache %s ', cls._secure_cache,
-                 cls._insecure_cache)
+    # logging.debug('_secure_cache %s and _insecure_cache %s ', cls._secure_cache,
+    #              cls._insecure_cache)
 
     channel_opts = [
         ('grpc.max_send_message_length', 512 * 1024 * 1024),
@@ -522,11 +525,11 @@ class GRPCClientCache:
         if FLAGS.worker_mode is None:
           _find_or_deploy_server()
         secure_channel = obtain_secure_channel()
-        # print("secure_channel : ", secure_channel)
+        logging.info("secure_channel : %s", secure_channel)
         sight_service = service_pb2_grpc.SightServiceStub(secure_channel)
         metadata = []
         id_token = generate_id_token()
-        # print('id_token : ', id_token)
+        logging.info('id_token : %s', id_token)
         metadata.append(('authorization', 'Bearer ' + id_token))
         cls._secure_cache = (sight_service, metadata)
       return cls._secure_cache
