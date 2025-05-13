@@ -606,6 +606,8 @@ def process_worker_action(response, sight, driver_fn, env, question_label,
       driver_fn(sight)
 
     sight.exit_block('Decision Sample', sight_pb2.Object())
+  
+  sight._flush_log()
 
   finalize_episode(question_label, sight)
 
@@ -885,9 +887,9 @@ def _process_cached_messages_scheduler(sight, req):
      working-alive call
   """
   widget_state = sight.widget_decision_state
-  logging.info(
-      '_process_cached_messages_scheduler: optimizer.obj=%s, action_id=%s',
-      optimizer.obj, widget_state['action_id'])
+  # logging.info(
+  #     '_process_cached_messages_scheduler: optimizer.obj=%s, action_id=%s',
+  #     optimizer.obj, widget_state['action_id'])
 
   # we have action_id means we already cached them from the workeralive call
   # and not performing the actual server decision call

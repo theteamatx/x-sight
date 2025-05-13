@@ -262,7 +262,8 @@ class Sight(object):
       self.avro_log_file_path = (self.params.label + '_' + str(self.id) + '/' +
                                  self.path_prefix)
       self.file_name = self.avro_log_file_path.split('/')[-1]
-      self.table_name = str(self.id) + '_' + 'log'
+      self.table_name = self.params.label + '_' + str(self.id) + '_' + 'log'
+      logging.info('self.avro_log_file_path=%s', self.avro_log_file_path)
 
       if 'SIGHT_PATH' in os.environ:
         self.avro_schema = load_schema(
@@ -400,7 +401,7 @@ class Sight(object):
       create_external_bq_table(self.params, self.table_name, self.id)
     print(
         'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-        'log_id=%s.%s&log_owner=%s&project_id=%s' %(self.SIGHT_API_KEY,
+        'log_id=%s.%s&log_owner=%s&project_id=%s' % (self.SIGHT_API_KEY,
         self.params.dataset_name, self.table_name, self.params.log_owner,
         os.environ['PROJECT_ID']))
     print(f'table generated : {self.params.dataset_name}.{self.table_name}')
@@ -745,6 +746,7 @@ class Sight(object):
     return values[-1]
 
   def _upload_avro_file_to_gcs(self):
+    logging.info('_upload_avro_file_to_gcs self.avro_file_counter=%s', self.avro_file_counter)
     self.avro_file_counter += 1
     upload_blob_from_stream(
         self.params.bucket_name,
@@ -757,10 +759,10 @@ class Sight(object):
       create_external_bq_table(self.params, self.table_name, self.id)
       print(
           'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-          'log_id=%s.%s&log_owner=%s&project_id=%s', self.SIGHT_API_KEY,
+          'log_id=%s.%s&log_owner=%s&project_id=%s' % (self.SIGHT_API_KEY,
           self.params.dataset_name, self.table_name, self.params.log_owner,
-          os.environ['PROJECT_ID'])
-      print(f'table generated : {self.params.dataset_name}.{self.table_name}')
+          os.environ['PROJECT_ID']))
+      logging.info(f'table generated : {self.params.dataset_name}.{self.table_name}')
     self.avro_log.close()
     self.avro_log = io.BytesIO()
 
@@ -769,6 +771,11 @@ class Sight(object):
     fastavro.writer(self.avro_log, self.avro_schema, [dict_obj])
     self.avro_record_counter += 1
     if self.avro_record_counter % 1000 == 0:
+      self._upload_avro_file_to_gcs()
+  
+  def _flush_log(self):
+    """Flushes the log to remote storage."""
+    if self.avro_log:
       self._upload_avro_file_to_gcs()
 
   def log_object(self,

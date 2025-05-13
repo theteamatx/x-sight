@@ -347,6 +347,8 @@ def start_job_in_dsub_local(
     worker_mode: add
     sight: The Sight object to be used for logging.
   """
+  if num_train_workers <= 0:
+    return
   method_name = 'start_job_in_dsub_local'
   logging.debug('>>>>>>>>>  In %s method of %s file.', method_name, _file_name)
 
