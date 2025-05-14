@@ -19,3 +19,31 @@ calculator:
   mode: "dsub_local_worker"
   workers:
     calculator_worker: 1
+
+Addition:
+  optimizer: "worklist_scheduler"
+  num_questions: 1
+  mode: "dsub_local_worker"
+  workers:
+    Addition_worker: 1
+
+Subtraction:
+  optimizer: "worklist_scheduler"
+  num_questions: 1
+  mode: "dsub_local_worker"
+  workers:
+    Subtraction_worker: 1
+
+Multiplication:
+  optimizer: "worklist_scheduler"
+  num_questions: 1
+  mode: "dsub_local_worker"
+  workers:
+    Multiplication_worker: 1
+
+Division:
+  optimizer: "worklist_scheduler"
+  num_questions: 1
+  mode: "dsub_local_worker"
+  workers:
+    Division_worker: 1

@@ -7,6 +7,26 @@
 #   attrs_text_proto: "py/worker/.text_proto_configs/fvs.textproto"
 
 # config attributes for calculator
-calculator:
-  desc: "calculator question label"
-  attrs_text_proto: "py/worker/.text_proto_configs/calculator.textproto"
+# calculator:
+#   desc: "calculator question label"
+#   attrs_text_proto: "py/worker/.text_proto_configs/calculator.textproto"
+
+
+Addition:
+  desc: "Addition"
+  attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
+
+
+Subtraction:
+  desc: "Subtraction"
+  attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
+
+
+Multiplication:
+  desc: "Multiplication"
+  attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
+
+
+Division:
+  desc: "Division"
+  attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
