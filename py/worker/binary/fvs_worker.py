@@ -16,7 +16,6 @@ def get_question_label():
   return 'FVS'
 
 
-@decision_worker(question_label=get_question_label())
 def main(sight: Sight, action: dict) -> Tuple[float, dict]:
   mitigation_list = [
       227.6, 273.4, 273.3, 248.6, 165.3, 130.6, 106.4, 92.1, 81.7, 62.8
