@@ -48,11 +48,11 @@ sample = {'base-FERTILIZ-extra_offset': 0.0}
 
 
 def get_question_label_to_propose_actions():
-  return 'FVS'
+  return 'Fvs'
 
 
 def get_question_label():
-  return 'generic'
+  return 'Generic'
 
 
 # Define the black box function to optimize.

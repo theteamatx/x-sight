@@ -47,11 +47,11 @@ FLAGS = flags.FLAGS
 
 
 def get_question_label_to_propose_actions():
-  return 'FVS'
+  return 'Fvs'
 
 
 def get_question_label():
-  return 'generic'
+  return 'Generic'
 
 
 @decision_worker(question_label=get_question_label())

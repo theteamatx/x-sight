@@ -1,14 +1,14 @@
-generic_worker:
+Generic_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/generic_worker.yaml"
+  file_path: "py/worker/worker_configs/Generic_worker.yaml"
 
-fvs_worker:
+Fvs_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/fvs_worker.yaml"
+  file_path: "py/worker/worker_configs/Fvs_worker.yaml"
 
-calculator_worker:
+Calculator_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/calculator_worker.yaml"
+  file_path: "py/worker/worker_configs/Calculator_worker.yaml"
 
 Addition_worker:
   version: "v0.1"

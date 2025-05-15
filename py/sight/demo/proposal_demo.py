@@ -35,7 +35,7 @@ FLAGS = flags.FLAGS
 
 
 def get_question_label_to_propose_actions():
-  return 'calculator'
+  return 'Calculator'
 
 
 def main(argv: Sequence[str]) -> None:

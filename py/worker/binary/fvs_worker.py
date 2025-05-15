@@ -13,7 +13,7 @@ from helpers.decorators.decision_worker import decision_worker
 
 
 def get_question_label():
-  return 'FVS'
+  return 'Fvs'
 
 
 @decision_worker(question_label=get_question_label())
@@ -21,9 +21,9 @@ def main(sight: Sight, action: dict) -> Tuple[float, dict]:
   mitigation_list = [
       227.6, 273.4, 273.3, 248.6, 165.3, 130.6, 106.4, 92.1, 81.7, 62.8
   ]
-  simulation_time = random.uniform(2, 2)
+  random_reward = random.uniform(2, 2)
 
-  reward = simulation_time
+  reward = random_reward
   outcome = {
     'time_series' : mitigation_list
   }

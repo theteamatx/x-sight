@@ -21,7 +21,7 @@ from helpers.decorators.decision_worker import decision_worker
 
 # Question mapped to calculator problem
 def get_question_label():
-  return 'calculator'
+  return 'Calculator'
 
 
 @decision_worker(question_label = get_question_label())

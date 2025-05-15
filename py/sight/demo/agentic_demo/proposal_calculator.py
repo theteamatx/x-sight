@@ -33,7 +33,7 @@ FLAGS = flags.FLAGS
 
 
 def get_question_label():
-  return 'calculator'
+  return 'Calculator'
 
 @tool
 def calculator_api_with_sight(a: int, b: int, ops: str) -> str:
@@ -71,7 +71,7 @@ def calculator_api_with_sight(a: int, b: int, ops: str) -> str:
   # config contains the data from all the config files
   config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
-  with Sight.create('langchain_demo_label', config) as sight:
+  with Sight.create({'label' : 'langchain_demo_label'}, config) as sight:
     actions = {"v1": a, "v2": b, "ops": ops}
     result = asyncio.run(
         proposal.propose_actions(sight, get_question_label(), actions))

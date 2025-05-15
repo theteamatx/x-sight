@@ -1,15 +1,15 @@
-generic:
-  desc: "generic question label"
-  attrs_text_proto: "py/worker/.text_proto_configs/generic.textproto"
+# Generic:
+#   desc: "Generic question label"
+#   attrs_text_proto: "py/worker/.text_proto_configs/generic.textproto"
 
-FVS:
-  desc: "FVS question label"
-  attrs_text_proto: "py/worker/.text_proto_configs/fvs.textproto"
+# Fvs:
+#   desc: "Fvs question label"
+#   attrs_text_proto: "py/worker/.text_proto_configs/fvs.textproto"
 
 # config attributes for calculator
-# calculator:
-#   desc: "calculator question label"
-#   attrs_text_proto: "py/worker/.text_proto_configs/calculator.textproto"
+Calculator:
+  desc: "Calculator question label"
+  attrs_text_proto: "py/worker/.text_proto_configs/calculator.textproto"
 
 
 # Addition:
