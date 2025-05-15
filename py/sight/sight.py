@@ -26,7 +26,7 @@ import random
 import threading
 import time
 import json
-from typing import Any, Optional, Sequence, Callable
+from typing import Any, Optional, Sequence, Callable, Union
 
 from absl import flags
 from dotenv import load_dotenv
@@ -155,15 +155,16 @@ class Sight(object):
   SIGHT_API_KEY = 'AKfycbzU74yRL1Dc0Xu5--oJricaD-H50UgF3FKM_E8_CMP7uNesQEk-k3cm57R3vTsjbWCcxA'
 
   @classmethod
-  def create(cls, params: dict, config=None) -> Sight:
-    if not isinstance(params, dict):
-      raise ValueError("Expected params to be a dictionary.")
-    try:
-      proto_params = sight_pb2.Params(**params)
-      sight_obj = Sight(proto_params, config)
-    except TypeError as e:
-      raise ValueError(f"Invalid params for sight_pb2.Params: {e}")
-    return sight_obj
+  def create(cls, params: Union[dict, sight_pb2.Params], config=None) -> Sight:
+    if isinstance(params, dict):
+        try:
+            params = sight_pb2.Params(**params)
+        except TypeError as e:
+            raise ValueError(f"Invalid params for sight_pb2.Params: {e}")
+    elif not isinstance(params, sight_pb2.Params):
+        raise ValueError("Expected params to be a dict or sight_pb2.Params instance.")
+
+    return Sight(params, config)
 
   def _initialize_default_params(self, params: sight_pb2.params):
     """get default parameter and merges user-provided values."""

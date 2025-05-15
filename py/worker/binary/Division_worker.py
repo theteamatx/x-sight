@@ -34,4 +34,6 @@ def main(sight: Sight, action: dict) -> Tuple[float, dict]:
   return 1, outcome
 
 if __name__ == "__main__":
-  app.run(lambda _ : sight.run_worker(main, get_question_label()))
+  app.run(lambda _ : sight.run_worker(main, {
+      'label': get_question_label(),
+  }))
