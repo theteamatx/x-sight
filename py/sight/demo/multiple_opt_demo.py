@@ -40,8 +40,11 @@ def main(argv: Sequence[str]) -> None:
   # config contains the data from all the config files
   config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
+  # Sight parameters dictionary with valid key values from sight_pb2.Params
+  params  = {'label' : 'multiple_opt_label'}
+
   # create sight object with configuration to spawn workers beforehand
-  with Sight.create('multiple_opt_label', config) as sight:
+  with Sight.create(params, config) as sight:
 
     logging.info("spawned the workers.................")
 

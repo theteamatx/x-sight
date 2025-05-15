@@ -70,7 +70,7 @@ def get_default_sight_params():
       text_output=False,
       avro_output=True,
       log_dir_path='/tmp/',
-      bucket_name='sight-bucket',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
       gcp_path='sight-logs',
       file_format='.avro',
       dataset_name='sight_logs',
@@ -155,12 +155,14 @@ class Sight(object):
   SIGHT_API_KEY = 'AKfycbzU74yRL1Dc0Xu5--oJricaD-H50UgF3FKM_E8_CMP7uNesQEk-k3cm57R3vTsjbWCcxA'
 
   @classmethod
-  def create(cls, label, config=None) -> Sight:
-    params = sight_pb2.Params(
-        label=label,
-        bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-    )
-    sight_obj = Sight(params, config)
+  def create(cls, params: dict, config=None) -> Sight:
+    if not isinstance(params, dict):
+      raise ValueError("Expected params to be a dictionary.")
+    try:
+      proto_params = sight_pb2.Params(**params)
+      sight_obj = Sight(proto_params, config)
+    except TypeError as e:
+      raise ValueError(f"Invalid params for sight_pb2.Params: {e}")
     return sight_obj
 
   def _initialize_default_params(self, params: sight_pb2.params):
@@ -965,12 +967,12 @@ def text_block(label: str, text_val: str, sight, frame=None) -> str:
 
 def run_worker(
     driver_fn: Optional[Callable[[Any], Any]] = None,
-    question_label: str = None,
+    sight_params: dict = None,
 ):
   """Driver for running applications that use the Decision API.
   """
 
-  sight = Sight.create(label=question_label)
+  sight = Sight.create(sight_params)
   sight.widget_decision_state['num_decision_points'] = 0
 
   optimizer = decision.Optimizer()
@@ -985,7 +987,7 @@ def run_worker(
     req = service_pb2.WorkerAliveRequest(
         client_id=client_id,
         worker_id=f'client_{client_id}_worker_{worker_location}',
-        question_label=question_label)
+        question_label=sight_params['label'])
     response = service.call(
         lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
     logging.info('Response from WorkerAlive RPC: %s', response)
@@ -1005,7 +1007,7 @@ def run_worker(
         break
     elif (response.status_type ==
           service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-      process_worker_action(response, sight, driver_fn, question_label,
+      process_worker_action(response, sight, driver_fn, sight_params['label'],
                             optimizer.obj)
     else:
       raise ValueError('Invalid response from server')

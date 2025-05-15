@@ -45,8 +45,12 @@ def main(argv: Sequence[str]) -> None:
   # config contains the data from all the config files
   config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
+  # Sight parameters dictionary with valid key values from sight_pb2.Params
+  params  = {'label' : 'calculator_demo'}
+
   # create sight object with configuration to spawn workers beforehand
-  with Sight.create("calculator_demo", config) as sight:
+  with Sight.create(params, config) as sight:
+
 
     #Ideally this actions will be proposed from some other module
     actions = {"v1": 3, "v2": 5, "ops": 'multiply'}
