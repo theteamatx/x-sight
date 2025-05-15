@@ -1,10 +1,10 @@
-# generic:
-#   desc: "generic question label"
-#   attrs_text_proto: "py/worker/.text_proto_configs/generic.textproto"
+generic:
+  desc: "generic question label"
+  attrs_text_proto: "py/worker/.text_proto_configs/generic.textproto"
 
-# FVS:
-#   desc: "FVS question label"
-#   attrs_text_proto: "py/worker/.text_proto_configs/fvs.textproto"
+FVS:
+  desc: "FVS question label"
+  attrs_text_proto: "py/worker/.text_proto_configs/fvs.textproto"
 
 # config attributes for calculator
 # calculator:
@@ -12,21 +12,21 @@
 #   attrs_text_proto: "py/worker/.text_proto_configs/calculator.textproto"
 
 
-Addition:
-  desc: "Addition"
-  attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
+# Addition:
+#   desc: "Addition"
+#   attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
 
 
-Subtraction:
-  desc: "Subtraction"
-  attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
+# Subtraction:
+#   desc: "Subtraction"
+#   attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
 
 
-Multiplication:
-  desc: "Multiplication"
-  attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
+# Multiplication:
+#   desc: "Multiplication"
+#   attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
 
 
-Division:
-  desc: "Division"
-  attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"
+# Division:
+#   desc: "Division"
+#   attrs_text_proto: "py/worker/.text_proto_configs/calculator_individual.textproto"

@@ -21,10 +21,14 @@ def main(sight: Sight, action: dict) -> Tuple[float, dict]:
   mitigation_list = [
       227.6, 273.4, 273.3, 248.6, 165.3, 130.6, 106.4, 92.1, 81.7, 62.8
   ]
-  sim_stream = pd.Series(mitigation_list)
   simulation_time = random.uniform(2, 2)
 
-  return simulation_time, sim_stream
+  reward = simulation_time
+  outcome = {
+    'time_series' : mitigation_list
+  }
+
+  return reward, outcome
 
 
 if __name__ == "__main__":
