@@ -285,7 +285,6 @@ class Sight(object):
                                  self.path_prefix)
       self.file_name = self.avro_log_file_path.split('/')[-1]
       self.table_name = self.params.label + '_' + str(self.id) + '_' + 'log'
-      logging.info('self.avro_log_file_path=%s', self.avro_log_file_path)
 
   def _initialize_text_output(self):
     if self.params.text_output:
@@ -774,7 +773,6 @@ class Sight(object):
           'log_id=%s.%s&log_owner=%s&project_id=%s' % (self.SIGHT_API_KEY,
           self.params.dataset_name, self.table_name, self.params.log_owner,
           os.environ['PROJECT_ID']))
-      logging.info(f'table generated : {self.params.dataset_name}.{self.table_name}')
     self.avro_log.close()
     self.avro_log = io.BytesIO()
 

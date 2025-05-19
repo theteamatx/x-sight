@@ -93,8 +93,6 @@ class SimulationState(object):
     if not self.sight.is_logging_enabled():
       return
     
-    logging.info('SimulationState>>>')
-
     if exc_type is not None:
       # pytype: disable=attribute-error
       exception(exc_type, value, traceback, self.sight,
@@ -102,7 +100,6 @@ class SimulationState(object):
       # pytype: enable=attribute-error
 
     if self.sight is None:
-      logging.info('SimulationState>>>')
       return
 
     self.type = type
