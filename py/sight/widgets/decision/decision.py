@@ -242,10 +242,10 @@ def initialize(config: DecisionConfig, sight) -> None:
     opt_obj = setup_optimizer(sight, optimizer_type)
     trials.launch(
         configure_decision(
-          sight, 
-          question_label, 
-          question_config, 
-          optimizer_config, 
+          sight,
+          question_label,
+          question_config,
+          optimizer_config,
           opt_obj
           ),
         sight)
