@@ -51,6 +51,29 @@ class LocalCache(CacheInterface):
         logging.warning(f"Redis error in {method}: {e}")
 
   @override
+  def get(self, key: str) -> Any:
+    """Retrieve data from cache"""
+    if (value := self._get_from_redis('get', key)) is not None:
+      return value
+    path = self._local_cache_path(key)
+    if path.exists():
+      with open(path, "r") as file:
+        value = file.read()
+        self._set_to_redis('set', key, value)
+        value = json.loads(value)
+        return value
+    return None
+
+  @override
+  def set(self, key: str, value: Any):
+    """Store data in cache"""
+    self._set_to_redis('set', key, value)
+    path = self._local_cache_path(key)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as file:
+      file.write(json.dumps(value))
+
+  @override
   def bin_get(self, key: str) -> Any:
     """Retrieve binary data from cache"""
     if (value := self._get_from_redis('bin_get', key)) is not None:
@@ -95,9 +118,9 @@ class LocalCache(CacheInterface):
       json.dump(value, file)
 
   @override
-  def json_list_keys(self, prefix: str) -> list[str]:
+  def list_keys(self, prefix: str) -> list[str]:
     """List all the keys with some prefix"""
-    if (keys := self._get_from_redis('json_list_keys', prefix)) is not None:
+    if (keys := self._get_from_redis('list_keys', prefix)) is not None:
       return keys
     prefix = prefix.replace(':', '/')
     whole_prefix = self._local_cache_path(key=prefix, suffix='')
@@ -106,5 +129,6 @@ class LocalCache(CacheInterface):
     return [
         str(file.relative_to(self.base_dir)).replace('/',
                                                      ':').replace('.json', '')
-        for file in whole_prefix.rglob('*.json')
+        for file in whole_prefix.rglob('*')
+        if file.is_file()
     ]
