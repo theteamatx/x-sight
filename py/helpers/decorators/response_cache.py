@@ -51,7 +51,7 @@ def flask_api_level_cache(namespace="default",
                 json.dumps(sort_nested_dict_or_list(
                     data=payload)).encode()).hexdigest(),
         ])
-        cached = cache_client.json_get(key=raw_key)
+        cached = cache_client.get(key=raw_key)
         if cached:
           return jsonify(cached)
       except (
@@ -66,7 +66,7 @@ def flask_api_level_cache(namespace="default",
 
       try:
         if raw_key:
-          cache_client.json_set(key=raw_key, value=result.get_json())
+          cache_client.set(key=raw_key, value=result.get_json())
           if cache_type == "redis" and ttl:
             cache_client.get_redis_client().expire(raw_key, ttl)
       except (

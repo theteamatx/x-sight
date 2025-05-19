@@ -19,6 +19,15 @@ class NoneCache(CacheInterface):
     logging.warning('CACHE-TYPE-NONE -init # cache-ignore')
 
   @override
+  def get(self, key: str):
+    logging.warning('CACHE-TYPE-NONE -trying to  get # cache-ignore')
+    return None
+
+  @override
+  def set(self, key: str, value: Any):
+    logging.warning('CACHE-TYPE-NONE -trying to  set # cache-ignore')
+
+  @override
   def json_get(self, key: str) -> None:
     logging.warning('CACHE-TYPE-NONE -trying to json get # cache-ignore')
     return None
@@ -37,6 +46,6 @@ class NoneCache(CacheInterface):
     logging.warning('CACHE-TYPE-NONE -trying to bin set # cache-ignore')
 
   @override
-  def json_list_keys(self, prefix: str) -> list[str]:
+  def list_keys(self, prefix: str) -> list[str]:
     logging.warning('CACHE-TYPE-NONE -list keys # cache-ignore')
     return []

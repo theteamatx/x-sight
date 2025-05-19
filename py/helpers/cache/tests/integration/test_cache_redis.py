@@ -59,7 +59,32 @@ class CacheRedisTest(unittest.TestCase):
       logging.info(f'Failed to start Docker containers : {e}')
       raise e
 
-  def test_redis_cache(self):
+  def test_redis_get_set(self):
+    """Tests the Redis cache."""
+
+    # Configuration for the Redis cache
+    config = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
+    # Initialize the Redis cache
+    self.cache = RedisCache(config=config)
+
+    self.assertIsNotNone(
+        self.cache.get_redis_client(),
+        'Cache client is not found , check your redis connection !!',
+    )
+
+    # Set data in the Redis cache
+    self.cache.set('testing:ACR203:2013:FVS:MANAGED:FIRE_0001011100',
+                   {'Fire': [2023, 2034, 3004]})
+
+    # Retrieve data from the Redis cache
+    result = self.cache.get('testing:ACR203:2013:FVS:MANAGED:FIRE_0001011100')
+
+    # Assert the retrieved data is correct
+    expected_result = {'Fire': [2023, 2034, 3004]}
+    self.assertEqual(result, expected_result,
+                     f'Expected {expected_result}, but got {result}')
+
+  def test_reds_json_get_set(self):
     """Tests the Redis cache."""
 
     # Configuration for the Redis cache
@@ -97,7 +122,7 @@ class CacheRedisTest(unittest.TestCase):
     self.cache.json_set('testing:KEY', {'welcome': 'back'})
     self.assertEqual({'welcome': 'back'}, self.cache.json_get('testing:KEY'))
 
-  def test_bin_data(self):
+  def test_redis_bin_get_set(self):
     # Configuration for the Redis cache
     config = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
     # Initialize the Redis cache

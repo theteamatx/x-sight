@@ -27,7 +27,32 @@ class CacheLocalTest(unittest.TestCase):
     },)
     self.key_maker = KeyMaker()
 
-  def test_local_cache(self):
+  def test_cache_get_set(self):
+    """Tests the Local Cache."""
+    key = self.key_maker.make_custom_key(
+        custom_part=":".join(["ACR203", "FVS", "fire"]),
+        managed_sample={
+            "fire": "20%",
+            "base": None
+        },
+    )
+
+    # Assert the retrieved data is correct
+    expected_result = {"Fire": [2023, 2034, 3004]}
+
+    # Set data in the cache
+    self.cache.set(
+        key,
+        expected_result,
+    )
+
+    # Retrieve data from the cache
+    result = self.cache.get(key)
+
+    assert (result == expected_result
+           ), f"Expected {expected_result}, but got {result}"
+
+  def test_cache_json_get_set(self):
     """Tests the Local Cache."""
     key = self.key_maker.make_custom_key(
         custom_part=":".join(["ACR203", "FVS", "fire"]),
@@ -52,8 +77,8 @@ class CacheLocalTest(unittest.TestCase):
     assert (result == expected_result
            ), f"Expected {expected_result}, but got {result}"
 
-  def test_json_list_keys(self):
-    """Tests the json_list_keys method."""
+  def test_list_keys(self):
+    """Tests the list_keys method."""
 
     self.test_keys = [
         "logs:experiment1:chunk1",
@@ -64,20 +89,20 @@ class CacheLocalTest(unittest.TestCase):
 
     # Populate cache with test data
     for key, value in zip(self.test_keys, self.test_values):
-      self.cache.json_set(key, value)
+      self.cache.set(key, value)
 
     # Test listing keys with prefix "logs:experiment1"
-    keys = self.cache.json_list_keys("logs:experiment1")
+    keys = self.cache.list_keys("logs:experiment1")
 
     self.assertCountEqual(
         keys, ["logs:experiment1:chunk1", "logs:experiment1:chunk2"])
 
     # Test listing keys with prefix "logs"
-    keys = self.cache.json_list_keys("logs")
+    keys = self.cache.list_keys("logs")
     self.assertCountEqual(keys, self.test_keys)
 
     # Test listing keys with a non-existent prefix
-    keys = self.cache.json_list_keys("non_existent_prefix")
+    keys = self.cache.list_keys("non_existent_prefix")
     self.assertEqual(keys, [])
 
 
