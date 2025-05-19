@@ -51,6 +51,29 @@ class LocalCache(CacheInterface):
         logging.warning(f"Redis error in {method}: {e}")
 
   @override
+  def get(self, key: str) -> Any:
+    """Retrieve data from cache"""
+    if (value := self._get_from_redis('get', key)) is not None:
+      return value
+    path = self._local_cache_path(key)
+    if path.exists():
+      with open(path, "r") as file:
+        value = file.read()
+        self._set_to_redis('set', key, value)
+        value = json.loads(value)
+        return value
+    return None
+
+  @override
+  def set(self, key: str, value: Any):
+    """Store data in cache"""
+    self._set_to_redis('set', key, value)
+    path = self._local_cache_path(key)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "w") as file:
+      file.write(json.dumps(value))
+
+  @override
   def bin_get(self, key: str) -> Any:
     """Retrieve binary data from cache"""
     if (value := self._get_from_redis('bin_get', key)) is not None:

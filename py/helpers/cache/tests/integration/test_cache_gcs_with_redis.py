@@ -72,7 +72,36 @@ class CacheGCSTest(unittest.TestCase):
       logging.info(f"Failed to start Docker containers : {e}")
       raise e
 
-  def test_gcs_json_data(self):
+  def test_gcs_get_set(self):
+    """Tests the GCS Cache."""
+
+    self.cache = GCSCache(
+        config={
+            "gcs_base_dir": "test_sight_cache",
+            "gcs_bucket": "cameltrain-sight",
+        },
+        with_redis_cache=RedisCache(config={
+            "redis_host": "localhost",
+            "redis_port": 1234,
+            "redis_db": 0,
+        }),
+    )
+
+    # Set data in the cache
+    self.cache.set(
+        "ACR203:2013:FVS:MANAGED:FIRE_0001011100",
+        {"Fire": [2023, 2034, 3004, "Nice And Working"]},
+    )
+
+    # Retrieve data from the cache
+    result = self.cache.get("ACR203:2013:FVS:MANAGED:FIRE_0001011100")
+
+    # Assert the retrieved data is correct
+    expected_result = {"Fire": [2023, 2034, 3004, "Nice And Working"]}
+    assert (result == expected_result
+           ), f"Expected {expected_result}, but got {result}"
+
+  def test_gcs_json_get_set(self):
     """Tests the GCS cache."""
 
     self.cache = GCSCache(
@@ -101,7 +130,7 @@ class CacheGCSTest(unittest.TestCase):
     assert (result == expected_result
            ), f"Expected {expected_result}, but got {result}"
 
-  def test_gcs_bin_data(self):
+  def test_gcs_bin_get_set(self):
     """Tests the GCS cache."""
 
     self.cache = GCSCache(

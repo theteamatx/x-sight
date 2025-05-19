@@ -33,8 +33,6 @@ from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight.widgets.decision.single_action_optimizer_client import (
     SingleActionOptimizerClient
 )
-from sight.widgets.decision.resource_lock import RWLockDictWrapper
-
 
 global_outcome_mapping = RWLockDictWrapper()
 
@@ -101,9 +99,11 @@ async def propose_actions(sight,
                           action_dict,
                           custom_part="sight_cache"):
 
-  if(not global_outcome_mapping.get_for_key(f'is_poll_thread_started_{question_label}')):
+  if (not global_outcome_mapping.get_for_key(
+      f'is_poll_thread_started_{question_label}')):
     decision.init_sight_polling_thread(sight.id, question_label)
-    global_outcome_mapping.set_for_key(f'is_poll_thread_started_{question_label}', True)
+    global_outcome_mapping.set_for_key(
+        f'is_poll_thread_started_{question_label}', True)
 
   key_maker = KeyMaker()
   worker_version = utils.get_worker_version(question_label)
@@ -115,7 +115,7 @@ async def propose_actions(sight,
       # * Update the config as per need , None config means it takes default redis config for localhost
       with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode, config=None))
 
-  outcome = cache_client.json_get(key=cache_key)
+  outcome = cache_client.get(key=cache_key)
 
   if outcome is not None:
     print('Getting response from cache !!')
@@ -141,5 +141,5 @@ async def propose_actions(sight,
     outcome[key] = final_value
   logging.info('cache_key=%s', cache_key)
   logging.info('outcome=%s', outcome)
-  cache_client.json_set(key=cache_key, value=outcome)
+  cache_client.set(key=cache_key, value=outcome)
   return outcome

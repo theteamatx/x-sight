@@ -70,6 +70,26 @@ class GCSCache(CacheInterface):
         logging.warning(f"Redis error in {method}: {e}")
 
   @override
+  def get(self, key: str):
+    """Retrieve data from cache"""
+    if (value := self._get_from_redis('get', key)) is not None:
+      return value
+    blob = self.bucket.blob(self._gcs_cache_path(key=key))
+    if blob.exists():
+      value = blob.download_as_text()
+      value = json.loads(value)
+      self._set_to_redis('set', key, value)
+      return value
+    return None
+
+  @override
+  def set(self, key: str, value: Any):
+    """Store data in cache"""
+    self._set_to_redis('set', key, value)
+    blob = self.bucket.blob(self._gcs_cache_path(key=key))
+    blob.upload_from_string(json.dumps(value))
+
+  @override
   def bin_get(self, key: str) -> Any:
     """Retrieve binary data from cache"""
     if (value := self._get_from_redis('bin_get', key)) is not None:

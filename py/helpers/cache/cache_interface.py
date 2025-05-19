@@ -6,6 +6,16 @@ from typing import Any, List
 class CacheInterface(ABC):
 
   @abstractmethod
+  def get(self, key: str) -> Any:
+    """Get the data from cache"""
+    pass
+
+  @abstractmethod
+  def set(self, key: str, value: Any) -> None:
+    """Set the data to the cache"""
+    pass
+
+  @abstractmethod
   def bin_get(self, key: str) -> Any:
     """Get the Binary data from cache"""
     pass
