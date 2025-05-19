@@ -3,7 +3,7 @@
 import os
 from typing import Any, Callable, Dict, Sequence, Tuple
 
-from absl import app
+from absl import logging
 from dataclasses import dataclass
 import glob
 from google.cloud import bigquery
@@ -66,33 +66,34 @@ def load_table(table_name: str, bq_client: bigquery.Client) -> pd.DataFrame:
       )).to_dataframe()     
 
       
-def load_ts(log_id: str, project_id: str) -> pd.DataFrame:
+def load_ts(log_label: str, log_id: str, project_id: str) -> pd.DataFrame:
   bq_client = bigquery.Client(project=project_id)
 
   for type in ['autoreg', 'boundary', 'initial']:
-    run_query(f'sim_named_{type}_var', bq_client, {'log_id': log_id})
-    run_query('sim_value', bq_client, {'type': type, 'log_id': log_id})
-    run_query('sim_all_vars', bq_client, {'type': type, 'log_id': log_id})
+    run_query(f'sim_named_{type}_var', bq_client, {'log_label': log_label, 'log_id': log_id})
+    run_query('sim_value', bq_client, {'type': type, 'log_label': log_label, 'log_id': log_id})
+    run_query('sim_all_vars', bq_client, {'type': type, 'log_label': log_label, 'log_id': log_id})
   
-  autoreg_variables = load_table(f'cameltrain.sight_logs.{log_id}_autoreg_all_vars_log', bq_client)['label'].tolist()
-  boundary_variables = load_table(f'cameltrain.sight_logs.{log_id}_boundary_all_vars_log', bq_client)['label'].tolist()
-  initial_variables = load_table(f'cameltrain.sight_logs.{log_id}_initial_all_vars_log', bq_client)['label'].tolist()
+  autoreg_variables = load_table(f'cameltrain.sight_logs.{log_label}_{log_id}_autoreg_all_vars_log', bq_client)['label'].tolist()
+  boundary_variables = load_table(f'cameltrain.sight_logs.{log_label}_{log_id}_boundary_all_vars_log', bq_client)['label'].tolist()
+  initial_variables = load_table(f'cameltrain.sight_logs.{log_label}_{log_id}_initial_all_vars_log', bq_client)['label'].tolist()
   print('autoreg_variables(#%d)=%s' % (len(autoreg_variables), autoreg_variables))
   print('boundary_variables(#%d)=%s' % (len(boundary_variables), boundary_variables))
   print('initial_variables(#%d)=%s' % (len(initial_variables), initial_variables))
 
   for type in ['autoreg', 'boundary', 'initial']:
-    run_query('sim_unordered_time_series', bq_client, {'type': type, 'log_id': log_id})
+    run_query('sim_unordered_time_series', bq_client, {'type': type, 'log_label': log_label, 'log_id': log_id})
 
   run_query('sim_ordered_time_series', bq_client, {'num_autoreg_vars': len(autoreg_variables),
                                                     'num_boundary_vars': len(boundary_variables),
                                                     'num_initial_vars': len(initial_variables),
+                                                    'log_label': log_label,
                                                     'log_id': log_id
                                                     })
   
   extract_job = bq_client.extract_table(
-      bigquery.DatasetReference(project_id, 'sight_logs').table(f'{log_id}_simulation_ordered_time_series_log'),
-      f'gs://{project_id}-sight/sight-logs/{log_id}.sim_ordered_time_series.*.csv',
+      bigquery.DatasetReference(project_id, 'sight_logs').table(f'{log_label}_{log_id}_simulation_ordered_time_series_log'),
+      f'gs://{project_id}-sight/sight-logs/{log_label}_{log_id}.sim_ordered_time_series.*.csv',
       # Location must match that of the source table.
       location="US",
   )  # API request
@@ -100,7 +101,7 @@ def load_ts(log_id: str, project_id: str) -> pd.DataFrame:
 
   out = subprocess.run(
       ['gsutil', 'cp', 
-        f'gs://{project_id}-sight/sight-logs/*{log_id}.sim_ordered_time_series.*.csv',
+        f'gs://{project_id}-sight/sight-logs/*{log_label}_{log_id}.sim_ordered_time_series.*.csv',
         '/tmp'],
       capture_output=True,
       # check=True,
@@ -108,7 +109,7 @@ def load_ts(log_id: str, project_id: str) -> pd.DataFrame:
   print(out)
   
   time_series = []
-  for i, ts_file in enumerate(glob.glob(f'/tmp/*{log_id}.sim_ordered_time_series.*.csv')):
+  for i, ts_file in enumerate(glob.glob(f'/tmp/*{log_label}_{log_id}.sim_ordered_time_series.*.csv')):
     print(ts_file)
     # print(pd.read_csv(ts_file))
     cur_ts = pd.read_csv(ts_file)
@@ -125,7 +126,6 @@ def load_ts(log_id: str, project_id: str) -> pd.DataFrame:
     # cur_ts.drop(columns='Tree Species', inplace=True)
     # cur_ts = pd.concat([cur_ts, tree_species_dummies], axis=1)
 
-    print('cur_ts.columns=%s=%s' %(len(cur_ts.columns), cur_ts.columns.tolist()))
     time_series.append(cur_ts)
   return pd.concat(time_series, axis=0)
   

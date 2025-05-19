@@ -26,7 +26,7 @@ from dotenv import load_dotenv
 import grpc
 from helpers.logs.logs_handler import logger as logging
 import pytz
-from sight import service_utils
+from sight import service_utils as service
 from sight.proto import sight_pb2
 from sight.widgets.decision import decision
 from sight.widgets.decision import utils
@@ -100,7 +100,8 @@ def start_worker_jobs(sight,
 
   num_questions = optimizer_config['num_questions']
   for worker, worker_count in optimizer_config['workers'].items():
-    # print('worker_count : ', worker_count)
+    if worker_count <= 0:
+      continue
     worker_details = worker_configs[worker]
     if optimizer_config['mode'] == 'dsub_cloud_worker':
       start_jobs_in_dsub_cloud(worker_count,
@@ -280,7 +281,7 @@ def start_jobs_in_dsub_cloud(num_train_workers: int, binary_path: Optional[str],
       '--env',
       f'PARENT_LOG_ID={sight.id}',
       '--env',
-      f'PORT={service_utils.get_port_number()}',
+      f'PORT={service.get_port_number()}',
       f'PROJECT_ID={os.environ["PROJECT_ID"]}',
   ]
 
@@ -347,8 +348,6 @@ def start_jobs_in_dsub_local(
     worker_mode: add
     sight: The Sight object to be used for logging.
   """
-  if num_train_workers <= 0:
-    return
   method_name = 'start_job_in_dsub_local'
   logging.debug('>>>>>>>>>  In %s method of %s file.', method_name, _file_name)
 

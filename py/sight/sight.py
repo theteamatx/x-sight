@@ -65,7 +65,7 @@ def get_default_sight_params():
   """
   default_prams = sight_pb2.Params(
       label='default_sight',
-      log_owner='bronovetsky@google.com',
+      log_owner='bronevet@google.com',
       local=True,
       text_output=False,
       avro_output=True,
@@ -303,6 +303,7 @@ class Sight(object):
 
     # Initialize each widget's state to make sure its state field is created.
     self.widget_decision_state = defaultdict(dict)
+    self.widget_simulation_state = SimulationWidgetState()
 
     self._initialize_context_vars()
     self._load_worker_location()
@@ -756,7 +757,7 @@ class Sight(object):
     return values[-1]
 
   def _upload_avro_file_to_gcs(self):
-    logging.info('_upload_avro_file_to_gcs self.avro_file_counter=%s', self.avro_file_counter)
+    # logging.info('_upload_avro_file_to_gcs self.avro_file_counter=%s', self.avro_file_counter)
     self.avro_file_counter += 1
     upload_blob_from_stream(
         self.params.bucket_name,
@@ -1053,6 +1054,7 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
     )
 
     driver_fn(sight)
+    sight._flush_log()
 
     sight.exit_block('Decision Sample', sight_pb2.Object())
 

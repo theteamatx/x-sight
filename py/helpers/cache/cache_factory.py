@@ -2,6 +2,7 @@
 
 from typing import Dict, Union
 
+from absl import logging
 from .cache_gcs import GCSCache
 from .cache_interface import CacheInterface
 from .cache_local import LocalCache

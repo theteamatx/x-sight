@@ -48,7 +48,6 @@ class SimulationState(object):
     """
     self.sight = sight
     if sight is None:
-      logging.info('<<<SimulationState')
       return None
 
     if not self.sight.is_logging_enabled():
@@ -93,6 +92,8 @@ class SimulationState(object):
 
     if not self.sight.is_logging_enabled():
       return
+    
+    logging.info('SimulationState>>>')
 
     if exc_type is not None:
       # pytype: disable=attribute-error

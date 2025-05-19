@@ -41,9 +41,7 @@ COPY py/helpers/logs/ py/helpers/logs/
 COPY py/helpers/cache/ py/helpers/cache/
 COPY py/sight/proto/ py/sight/proto/
 COPY py/sight/utils py/sight/utils/
-# COPY py/sight/widgets/decision py/sight/widgets/decision
 COPY sight_service/ sight_service/
-COPY fvs_sight/ fvs_sight/
 COPY .env .env
 
 # updating PYTHONPATH to resolve relative imports
@@ -51,5 +49,4 @@ ENV PYTHONPATH "$HOME/x-sight:$HOME/x-sight/py:${PYTHONPATH}"
 ENV PROTOCOL_BUFFERS_PYTHON_IMPLEMENTATION python
 
 # run the python command
-# CMD [ "python3", "sight_service/service_root.py"]
 CMD [ "python3", "sight_service/service_root.py"]

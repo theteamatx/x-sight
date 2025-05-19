@@ -67,11 +67,7 @@ _PORT = flags.DEFINE_string(
 )
 _SERVER_MODE = flags.DEFINE_enum(
     'server_mode',
-<<<<<<< HEAD
-    None,
-=======
     'cloud_run',
->>>>>>> dev
     ['vm', 'cloud_run', 'local'],
     ('The procedure to use when training a model to drive applications that '
      'use the Decision API.'),
