@@ -36,6 +36,6 @@ class CacheInterface(ABC):
     pass
 
   @abstractmethod
-  def json_list_keys(self, prefix: str) -> List[str]:
+  def list_keys(self, prefix: str) -> List[str]:
     """List all keys with a given prefix."""
     pass

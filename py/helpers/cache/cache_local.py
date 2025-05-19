@@ -118,9 +118,9 @@ class LocalCache(CacheInterface):
       json.dump(value, file)
 
   @override
-  def json_list_keys(self, prefix: str) -> list[str]:
+  def list_keys(self, prefix: str) -> list[str]:
     """List all the keys with some prefix"""
-    if (keys := self._get_from_redis('json_list_keys', prefix)) is not None:
+    if (keys := self._get_from_redis('list_keys', prefix)) is not None:
       return keys
     prefix = prefix.replace(':', '/')
     whole_prefix = self._local_cache_path(key=prefix, suffix='')
@@ -129,5 +129,6 @@ class LocalCache(CacheInterface):
     return [
         str(file.relative_to(self.base_dir)).replace('/',
                                                      ':').replace('.json', '')
-        for file in whole_prefix.rglob('*.json')
+        for file in whole_prefix.rglob('*')
+        if file.is_file()
     ]

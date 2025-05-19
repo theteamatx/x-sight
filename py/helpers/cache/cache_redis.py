@@ -102,7 +102,7 @@ class RedisCache(CacheInterface):
     self.redis_client.json().set(key, Path.root_path(), value)
 
   @override
-  def json_list_keys(self, prefix: str) -> List[str]:
+  def list_keys(self, prefix: str) -> List[str]:
     """Lists all keys in the cache that match a given prefix.
 
     Args:

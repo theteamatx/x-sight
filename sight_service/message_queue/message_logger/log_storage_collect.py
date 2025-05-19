@@ -63,7 +63,7 @@ class CachedBasedLogStorageCollectStrategy(ILogStorageCollectStrategy):
     """
     all_logs = []
     try:
-      chunk_files = self.cache.json_list_keys(
+      chunk_files = self.cache.list_keys(
           prefix=self.dir_prefix)  # Get all files matching the prefix
       logging.debug(f'TRYING TO COLLECT ALL CHUNKS {len(chunk_files)}')
       for file_name in sorted(

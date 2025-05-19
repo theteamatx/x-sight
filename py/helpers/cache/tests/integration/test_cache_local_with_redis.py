@@ -168,8 +168,8 @@ class CacheLocalWithRedisTest(unittest.TestCase):
     assert (result == expected_result
            ), f"Expected {expected_result}, but got {result}"
 
-  def test_json_list_keys(self):
-    """Tests the json_list_keys method."""
+  def test_list_keys(self):
+    """Tests the list_keys method."""
     self.cache = LocalCache(
         config={
             "local_base_dir": "/tmp/testing_dir",
@@ -192,7 +192,7 @@ class CacheLocalWithRedisTest(unittest.TestCase):
       self.cache.json_set(key, value)
 
     # Test listing keys with prefix "logs:experiment1"
-    keys = self.cache.json_list_keys("testing:logs:experiment1")
+    keys = self.cache.list_keys("testing:logs:experiment1")
 
     self.assertEqual(
         sorted(keys, key=json.dumps),
@@ -206,11 +206,11 @@ class CacheLocalWithRedisTest(unittest.TestCase):
     )
 
     # Test listing keys with prefix "logs"
-    keys = self.cache.json_list_keys("testing:logs")
+    keys = self.cache.list_keys("testing:logs")
     self.assertCountEqual(keys, self.test_keys)
 
     # Test listing keys with a non-existent prefix
-    keys = self.cache.json_list_keys("non_existent_prefix")
+    keys = self.cache.list_keys("non_existent_prefix")
     self.assertEqual(keys, [])
 
 

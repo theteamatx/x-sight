@@ -128,9 +128,9 @@ class GCSCache(CacheInterface):
     blob.upload_from_string(json.dumps(value))
 
   @override
-  def json_list_keys(self, prefix: str) -> List[str]:
+  def list_keys(self, prefix: str) -> List[str]:
     """List all the keys with some prefix"""
-    if (keys := self._get_from_redis('json_list_keys', prefix)) is not None:
+    if (keys := self._get_from_redis('list_keys', prefix)) is not None:
       return keys
     prefix = prefix.replace(':', '/')
     whole_prefix = self._gcs_cache_path(key=prefix, suffix='')

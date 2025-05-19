@@ -46,6 +46,6 @@ class NoneCache(CacheInterface):
     logging.warning('CACHE-TYPE-NONE -trying to bin set # cache-ignore')
 
   @override
-  def json_list_keys(self, prefix: str) -> list[str]:
+  def list_keys(self, prefix: str) -> list[str]:
     logging.warning('CACHE-TYPE-NONE -list keys # cache-ignore')
     return []
