@@ -24,7 +24,6 @@ def get_question_label():
   return 'Subtraction'
 
 
-@decision_worker(question_label = get_question_label())
 def main(sight: Sight, action: dict) -> Tuple[float, dict]:
   v1 = action['v1']
   v2 = action['v2']

@@ -54,7 +54,6 @@ def get_question_label():
   return 'Generic'
 
 
-@decision_worker(question_label=get_question_label())
 def main(sight: Sight, action: dict) -> Tuple[float, dict]:
 
   # using actions we received from optimizer to propose actions to worklist_scheduler

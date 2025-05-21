@@ -23,8 +23,6 @@ from helpers.decorators.decision_worker import decision_worker
 def get_question_label():
   return 'Calculator'
 
-
-@decision_worker(question_label = get_question_label())
 def main(sight: Sight, action: dict) -> Tuple[float, dict]:
 # def main(v1, v2, ops):
   ops = action['ops']
