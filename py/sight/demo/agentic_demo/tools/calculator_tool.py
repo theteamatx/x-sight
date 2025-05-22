@@ -1,6 +1,6 @@
 from langchain_core.tools import Tool, tool
 from sight.widgets.decision import proposal
-from typing import Any
+from typing import Any, Dict
 from typing_extensions import Annotated
 import asyncio
 from absl import flags
@@ -10,45 +10,51 @@ from pydantic import BaseModel, Field  # <--- For explicit args_schema
 
 FLAGS = flags.FLAGS
 
+# calculator_args_schema_json = {
+#     "type": "object",
+#     "properties": {
+#         "action_dict": {
+#             "type":
+#                 "object",
+#             "description":
+#                 "Dictionary of action parameters for the calculator.",
+#             "properties": {
+#                 "v1": {
+#                     "type": "integer",
+#                     "description": "The first integer operand."
+#                 },
+#                 "v2": {
+#                     "type": "integer",
+#                     "description": "The second integer operand."
+#                 },
+#                 "ops": {
+#                     "type":
+#                         "string",
+#                     "description":
+#                         "The operation to perform. Must be one of: 'add', 'subtract', 'multiply', 'divide'.",
+#                     "enum": ["add", "subtract", "multiply",
+#                              "divide"]  # Using 'enum' for allowed values
+#                 }
+#             },
+#             "required": ["v1", "v2", "ops"]
+#         }
+#     },
+#     "required": ["action_dict"]
+# }
+
 
 def get_question_label():
   return 'Calculator'
 
 
 class CalculatorToolArgs(BaseModel):
-  a: int = Field(description="The first integer operand.")
-  b: int = Field(description="The second integer operand.")
-  ops: str = Field(
-      description=
-      "The operation to perform. Must be one of: 'add', 'subtract', 'multiply', 'divide'."
-  )
+  action_dict: Dict[str,
+                    Any] = Field(...,
+                                 description="Dictionary of action parameters.")
 
 
-def calculator_api(a: int, b: int, ops: str, sight: Sight) -> str:
-  """
-  Perform a basic arithmetic operation (addition, subtraction, etc.) on two integers using the Sight backend system.
+def calculator_api(action_dict: Dict[str, Any], sight: Sight) -> str:
 
-  This function proposes a calculation action (with inputs `a`, `b`, and the operation `ops`) to the server via a Sight worker.
-  It waits for the worker to process the action and return the computed result.
-
-  Args:
-      a (int): The first integer operand.
-      b (int): The second integer operand.
-      ops (str): The operation to perform. Supported operations include:
-          - "add" for addition
-          - "subtract" for subtraction
-          - "multiply" for multiplication
-          - "divide" for division
-
-  Returns:
-      str: The result of the calculation as a string.
-
-  Example:
-      >>> calculator_api_with_sight(5, 3, "add")
-      "8"
-  """
-
-  actions = {"v1": a, "v2": b, "ops": ops}
   result = asyncio.run(
-      proposal.propose_actions(sight, get_question_label(), actions))
+      proposal.propose_actions(sight, get_question_label(), action_dict))
   return result

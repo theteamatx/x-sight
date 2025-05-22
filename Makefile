@@ -22,3 +22,6 @@ run_multiple_opt_demo:
 
 run_proposal_demo:
 	python3 py/sight/demo/proposal_demo.py --server_mode local
+
+run_calculator_demo:
+	python3 py/sight/demo/agentic_demo/calculator_demo.py --server_mode local

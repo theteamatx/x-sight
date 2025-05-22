@@ -8,6 +8,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import initialize_agent, AgentType
 from langchain.agents import create_tool_calling_agent, AgentExecutor
+# from sight.demo.agentic_demo.tools.calculator_tool import calculator_args_schema_json
 from sight.demo.agentic_demo.tools.calculator_tool import calculator_api, CalculatorToolArgs  #,CalculatorTool, build_calculator_tool
 from sight.demo.agentic_demo.proposal_calculator import calculator_api_with_sight
 from sight.sight import Sight
@@ -36,7 +37,11 @@ def main(argv: Sequence[str]) -> None:
         name="calculator_tool",
         func=partial(calculator_api, sight=sight_instance),
         description=
-        "Perform arithmetic operation (add, subtract, multiply, divide) using Sight backend.",
+        ("Perform arithmetic operation (add, subtract, multiply, divide) using Sight backend. "
+         "The action input must contains a dictionary with key `action_dict` and value as dict with keys-values as follows"
+         " `v1` : `operand1`, `v2` : `operand2`, and `ops` from any values of (add, subtract, multiply, divide)."
+        ),
+        # args_schema=calculator_args_schema_json)
         args_schema=CalculatorToolArgs)
     tools = [calculator_tool]
 
