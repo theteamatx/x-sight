@@ -1,4 +1,4 @@
-CREATE OR REPLACE TABLE `cameltrain.sight_logs.{log_id}_simulation_ordered_time_series_log` AS (
+CREATE OR REPLACE TABLE `cameltrain.sight_logs.{log_label}_{log_id}_simulation_ordered_time_series_log` AS (
 -- SELECT
 --   sim_location,
 --   time_step_index,
@@ -7,7 +7,7 @@ CREATE OR REPLACE TABLE `cameltrain.sight_logs.{log_id}_simulation_ordered_time_
 --   string_values,
 --   value_types
 -- FROM
---   `cameltrain.sight_logs.{log_id}_simulation_unordered_time_series_log`
+--   `cameltrain.sight_logs.{log_label}_{log_id}_simulation_unordered_time_series_log`
 -- ORDER BY sim_location, time_step_index
 
 WITH 
@@ -15,7 +15,7 @@ AllCompleteAutoregObservations AS (
   SELECT
     * 
   FROM 
-    `cameltrain.sight_logs.{log_id}_autoreg_simulation_unordered_time_series_log` 
+    `cameltrain.sight_logs.{log_label}_{log_id}_autoreg_simulation_unordered_time_series_log`
   WHERE 
     ARRAY_LENGTH(values)={num_autoreg_vars} 
 ),
@@ -23,7 +23,7 @@ AllCompleteBoundaryObservations AS (
   SELECT
     * 
   FROM 
-    `cameltrain.sight_logs.{log_id}_boundary_simulation_unordered_time_series_log` 
+    `cameltrain.sight_logs.{log_label}_{log_id}_boundary_simulation_unordered_time_series_log`
   WHERE 
     ARRAY_LENGTH(values)={num_boundary_vars} 
 ),
@@ -31,7 +31,7 @@ AllCompleteInitialObservations AS (
   SELECT
     * 
   FROM 
-    `cameltrain.sight_logs.{log_id}_initial_simulation_unordered_time_series_log` 
+    `cameltrain.sight_logs.{log_label}_{log_id}_initial_simulation_unordered_time_series_log`
   WHERE 
     ARRAY_LENGTH(values)={num_initial_vars} 
 ),

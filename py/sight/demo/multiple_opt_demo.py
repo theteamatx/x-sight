@@ -124,7 +124,6 @@ def main(argv: Sequence[str]) -> None:
 
   # create sight object with configuration to spawn workers beforehand
   with Sight.create('multiple_opt_label', config) as sight:
-
     logging.info("spawned the workers.................")
 
 

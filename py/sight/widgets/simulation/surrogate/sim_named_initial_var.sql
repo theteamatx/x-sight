@@ -1,17 +1,17 @@
-CREATE OR REPLACE TABLE `cameltrain.sight_logs.{log_id}_initial_named_var_log` AS (
+CREATE OR REPLACE TABLE `cameltrain.sight_logs.{log_label}_{log_id}_initial_named_var_log` AS (
 WITH
 SimulationInitialState AS (
   SELECT
     location,
     array_reverse(ancestor_start_location)[offset(1)] AS parent_loc,
-  FROM `cameltrain.sight_logs.{log_id}_log`
+  FROM `cameltrain.sight_logs.{log_label}_{log_id}_log`
   WHERE sub_type='ST_BLOCK_START' AND block_start.sub_type = 'ST_SIMULATION_INITIAL_STATE'
 ),
 Simulation AS (
   SELECT
     location,
     array_reverse(ancestor_start_location)[offset(1)] AS parent_loc,
-  FROM `cameltrain.sight_logs.{log_id}_log`
+  FROM `cameltrain.sight_logs.{log_label}_{log_id}_log`
   WHERE sub_type='ST_BLOCK_START' AND block_start.sub_type = 'ST_SIMULATION'
 ),  
 NamedVar AS (
@@ -19,7 +19,7 @@ NamedVar AS (
     location,
     block_start.label,
     array_reverse(ancestor_start_location)[offset(1)] AS parent_loc
-  FROM `cameltrain.sight_logs.{log_id}_log`
+  FROM `cameltrain.sight_logs.{log_label}_{log_id}_log`
   WHERE sub_type='ST_BLOCK_START' AND block_start.sub_type = 'ST_NAMED_VALUE'
 )
 SELECT

@@ -26,7 +26,6 @@ from typing import Any, Callable, Dict, List, Optional, Text, Union
 
 from absl import flags
 from dataclasses import dataclass
-from dataclasses import dataclass
 from google.protobuf.text_format import Merge
 # from absl import logging
 from helpers.logs.logs_handler import logger as logging
@@ -200,15 +199,16 @@ class DecisionConfig:
 
   workers: dict[str, Any]
 
-  def __init__(self, config_dir_path: Optional[str] = None):
+  def __init__(self, config_dir_path: str):
     """
     Arguments:
       config_dir_path: Path of the directory that contains the optimizer_config.yaml,
         worker_config.yaml and question_config.yaml files.
     """
-
-    if(config_dir_path == None):
-      raise ValueError("config_dir_path need to be passed and should contain all *_config.yaml files")
+    if not os.path.isfile(config_dir_path + '/question_config.yaml') or \
+      not os.path.isfile(config_dir_path + '/optimizer_config.yaml') or \
+      not os.path.isfile(config_dir_path + '/worker_config.yaml'):
+      raise ValueError(f'config_dir_path="{config_dir_path}" and should contain all *_config.yaml files')
 
     self.questions = utils.load_yaml_config(
         config_dir_path + '/question_config.yaml'
@@ -226,12 +226,11 @@ class DecisionConfig:
 
 def initialize(config: DecisionConfig, sight) -> None:
   """Initializes the decision module for this sight logger object.
-
+  
   Arguments:
     config: The configuration of the decision module.
     sight: The sight object for which the decision module is being initialized.
   """
-
   for question_label, question_config in config.questions.items():
     if question_label not in config.optimizers:
       continue
@@ -471,26 +470,13 @@ def get_decision_configuration_for_opt(
   else:
     current_file = Path(__file__).resolve()
     sight_repo_path = current_file.parents[4]
-  relative_text_proto_path = question_config['attrs_text_proto']
-  if os.path.exists(relative_text_proto_path):
-    with open(relative_text_proto_path, 'r') as f:
-      text_proto_data = f.read()
-  else:
-    current_file = Path(__file__).resolve()
-    sight_repo_path = current_file.parents[4]
 
-    absolute_text_proto_path = sight_repo_path.joinpath(
-        question_config['attrs_text_proto'])
     absolute_text_proto_path = sight_repo_path.joinpath(
         question_config['attrs_text_proto'])
 
     if not os.path.exists(absolute_text_proto_path):
       raise FileNotFoundError(f'File not found {relative_text_proto_path}')
-    if not os.path.exists(absolute_text_proto_path):
-      raise FileNotFoundError(f'File not found {relative_text_proto_path}')
 
-    with open(absolute_text_proto_path, 'r') as f:
-      text_proto_data = f.read()
     with open(absolute_text_proto_path, 'r') as f:
       text_proto_data = f.read()
 
@@ -723,9 +709,9 @@ def _process_cached_messages_scheduler(sight, req):
      working-alive call
   """
   widget_state = sight.widget_decision_state
-  logging.info(
-      '_process_cached_messages_scheduler: optimizer.obj=%s, action_id=%s',
-      optimizer.obj, widget_state['action_id'])
+  # logging.info(
+  #     '_process_cached_messages_scheduler: optimizer.obj=%s, action_id=%s',
+  #     optimizer.obj, widget_state['action_id'])
 
   # we have action_id means we already cached them from the workeralive call
   # and not performing the actual server decision call

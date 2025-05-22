@@ -100,7 +100,8 @@ def start_worker_jobs(sight,
 
   num_questions = optimizer_config['num_questions']
   for worker, worker_count in optimizer_config['workers'].items():
-    # print('worker_count : ', worker_count)
+    if worker_count <= 0:
+      continue
     worker_details = worker_configs[worker]
     if optimizer_config['mode'] == 'dsub_cloud_worker':
       start_jobs_in_dsub_cloud(worker_count,
@@ -347,7 +348,7 @@ def start_jobs_in_dsub_local(
     worker_mode: add
     sight: The Sight object to be used for logging.
   """
-  method_name = 'start_jobs_in_dsub_local'
+  method_name = 'start_job_in_dsub_local'
   logging.debug('>>>>>>>>>  In %s method of %s file.', method_name, _file_name)
 
   sight.enter_block('Worker Spawning locally', sight_pb2.Object())

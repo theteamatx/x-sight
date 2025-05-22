@@ -13,6 +13,11 @@ _LOG_ID = flags.DEFINE_string(
     '',
     'Unique ID of the simulation run log.',
 )
+_LOG_LABEL = flags.DEFINE_string(
+    'log_label',
+    '',
+    'Unique ID of the simulation run log.',
+)
 _OUTFILE = flags.DEFINE_string(
     'outfile',
     '',
@@ -46,6 +51,7 @@ def main(argv: Sequence[str]) -> None:
     ts = pd.read_csv(_OUTFILE.value) 
   else:
     ts = log_to_time_series.load_ts(
+      _LOG_LABEL.value,
       _LOG_ID.value,
       _PROJECT_ID.value,
     )
@@ -56,7 +62,7 @@ def main(argv: Sequence[str]) -> None:
     ts.reset_index().to_csv(_OUTFILE.value, index=False)
     
     if _OUTFILE_TRAIN.value or _OUTFILE_VALIDATE.value:
-      dataset = log_to_time_series.split_time_series(ts, _TRAIN_FRAC.value)
+      dataset = log_to_time_series.split_time_series_randomly(ts, _TRAIN_FRAC.value)
       if _OUTFILE_TRAIN.value:
         dataset.train.reset_index().to_csv(_OUTFILE_TRAIN.value, index=False)
       if _OUTFILE_VALIDATE.value:
