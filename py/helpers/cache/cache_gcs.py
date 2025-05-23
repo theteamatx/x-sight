@@ -75,6 +75,7 @@ class GCSCache(CacheInterface):
     if (value := self._get_from_redis('get', key)) is not None:
       return value
     blob = self.bucket.blob(self._gcs_cache_path(key=key))
+    logging.debug('This is our path for key %s', blob.name)
     if blob.exists():
       value = blob.download_as_text()
       value = json.loads(value)
@@ -87,6 +88,7 @@ class GCSCache(CacheInterface):
     """Store data in cache"""
     self._set_to_redis('set', key, value)
     blob = self.bucket.blob(self._gcs_cache_path(key=key))
+    logging.info('This is our path for key %s', blob.name)
     blob.upload_from_string(json.dumps(value))
 
   @override

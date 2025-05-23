@@ -15,6 +15,11 @@ class CacheInterface(ABC):
     """Set the data to the cache"""
     pass
 
+  # @abstractmethod
+  # def delete(self , key: str) -> Any:
+  #   """Delete the key from cache"""
+  #   pass
+
   @abstractmethod
   def bin_get(self, key: str) -> Any:
     """Get the Binary data from cache"""

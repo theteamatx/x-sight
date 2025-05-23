@@ -13,6 +13,7 @@
 # limitations under the License.
 """Decisions and their outcomes within the Sight log."""
 
+from dataclasses import dataclass
 import inspect
 # import dm_env
 import json
@@ -25,8 +26,11 @@ import time
 from typing import Any, Callable, Dict, List, Optional, Text, Union
 
 from absl import flags
-from dataclasses import dataclass
+from google.protobuf import text_format
 from google.protobuf.text_format import Merge
+from helpers.cache.cache_factory import CacheFactory
+from helpers.cache.cache_factory import CacheType
+from helpers.cache.cache_payload_transport import CachedPayloadTransport
 # from absl import logging
 from helpers.logs.logs_handler import logger as logging
 import numpy as np
@@ -43,18 +47,20 @@ from sight.widgets.decision import decision_helper
 from sight.widgets.decision import trials
 from sight.widgets.decision import utils
 from sight.widgets.decision.env_driver import driver_fn
-from sight.widgets.decision.utils import get_config_dir_path
-
 # from sight.widgets.decision.acme.acme_optimizer_client import (
 #     AcmeOptimizerClient
 # )
 # from sight.widgets.decision.env_driver import driver_fn
 from sight.widgets.decision.llm_optimizer_client import LLMOptimizerClient
 from sight.widgets.decision.single_action_optimizer_client import (
-    SingleActionOptimizerClient)
+    SingleActionOptimizerClient
+)
+from sight.widgets.decision.utils import get_config_dir_path
 from sight_service.proto import service_pb2
 from sight_service.shared_batch_messages import CachedBatchMessages
 from sight_service.shared_batch_messages import DecisionMessage
+
+MessageToString = text_format.MessageToString
 
 # logging.basicConfig(level=logging.DEBUG)
 
@@ -184,11 +190,13 @@ _CACHE_MODE = flags.DEFINE_enum(
     'Which Sight cache to use ? (default is none)')
 
 _CONFIG_PATH = flags.DEFINE_string(
-    'config_path', get_config_dir_path(), 'Directory location where the *_config.yaml files are stored')
+    'config_path', get_config_dir_path(),
+    'Directory location where the *_config.yaml files are stored')
 
 _file_name = os.path.basename(__file__)
 _rewards = []
 FLAGS = flags.FLAGS
+
 
 @dataclass
 class DecisionConfig:
@@ -208,25 +216,26 @@ class DecisionConfig:
     if not os.path.isfile(config_dir_path + '/question_config.yaml') or \
       not os.path.isfile(config_dir_path + '/optimizer_config.yaml') or \
       not os.path.isfile(config_dir_path + '/worker_config.yaml'):
-      raise ValueError(f'config_dir_path="{config_dir_path}" and should contain all *_config.yaml files')
+      raise ValueError(
+          f'config_dir_path="{config_dir_path}" and should contain all *_config.yaml files'
+      )
 
-    self.questions = utils.load_yaml_config(
-        config_dir_path + '/question_config.yaml'
-    )
-    self.optimizers = utils.load_yaml_config(
-        config_dir_path + '/optimizer_config.yaml'
-    )
-    self.workers = utils.load_yaml_config(
-        config_dir_path + '/worker_config.yaml'
-    )
+    self.questions = utils.load_yaml_config(config_dir_path +
+                                            '/question_config.yaml')
+    self.optimizers = utils.load_yaml_config(config_dir_path +
+                                             '/optimizer_config.yaml')
+    self.workers = utils.load_yaml_config(config_dir_path +
+                                          '/worker_config.yaml')
     # Load the configuration parameter's for this worker from the worker-specific
     # file path.
     for name, cfg in self.workers.items():
-      self.workers[name] |= utils.load_yaml_config(cfg['file_path'])[cfg['version']]
+      self.workers[name] |= utils.load_yaml_config(
+          cfg['file_path'])[cfg['version']]
+
 
 def initialize(config: DecisionConfig, sight) -> None:
   """Initializes the decision module for this sight logger object.
-  
+
   Arguments:
     config: The configuration of the decision module.
     sight: The sight object for which the decision module is being initialized.
@@ -241,17 +250,13 @@ def initialize(config: DecisionConfig, sight) -> None:
 
     opt_obj = setup_optimizer(sight, optimizer_type)
     trials.launch(
-        configure_decision(
-          sight,
-          question_label,
-          question_config,
-          optimizer_config,
-          opt_obj
-          ),
-        sight)
+        configure_decision(sight, question_label, question_config,
+                           optimizer_config, opt_obj), sight)
 
     # Start worker jobs
-    trials.start_worker_jobs(sight, question_label, optimizer_config, config.workers, optimizer_type)
+    trials.start_worker_jobs(sight, question_label, optimizer_config,
+                             config.workers, optimizer_type)
+
 
 def configure(
     decision_configuration: Optional[sight_pb2.DecisionConfigurationStart],
@@ -319,6 +324,7 @@ def get_decision_messages_from_proto(
   for msg in decision_messages_proto:
     messages[msg.action_id] = convert_proto_to_dict(proto=msg.action)
   return messages
+
 
 # def run(
 #     sight: Any,
@@ -550,40 +556,31 @@ def setup_optimizer(
   """
   optimizer_map = {
       # 'dm_acme': lambda: AcmeOptimizerClient(sight),
-      'vizier':
-          lambda: SingleActionOptimizerClient(
-              sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER,
-              sight),
+      'vizier': lambda: SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_VIZIER, sight),
       # 'genetic_algorithm': lambda: GeneticAlgorithmOptimizerClient(
       #     max_population_size=_NUM_TRAIN_WORKERS.value, sight=sight),
-      'exhaustive_search':
-          lambda: SingleActionOptimizerClient(
-              sight_pb2.DecisionConfigurationStart.OptimizerType.
-              OT_EXHAUSTIVE_SEARCH,
-              sight,
-          ),
-      'bayesian_opt':
-          lambda: SingleActionOptimizerClient(
-              sight_pb2.DecisionConfigurationStart.OptimizerType.
-              OT_BAYESIAN_OPT,
-              sight,
-          ),
-      'sensitivity_analysis':
-          lambda: SingleActionOptimizerClient(
-              sight_pb2.DecisionConfigurationStart.OptimizerType.
-              OT_SENSITIVITY_ANALYSIS,
-              sight,
-          ),
-      'smcpy':
-          lambda: SingleActionOptimizerClient(
-              sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY,
-              sight),
-      'worklist_scheduler':
-          lambda: SingleActionOptimizerClient(
-              sight_pb2.DecisionConfigurationStart.OptimizerType.
-              OT_WORKLIST_SCHEDULER,
-              sight,
-          ),
+      'exhaustive_search': lambda: SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.
+          OT_EXHAUSTIVE_SEARCH,
+          sight,
+      ),
+      'bayesian_opt': lambda: SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_BAYESIAN_OPT,
+          sight,
+      ),
+      'sensitivity_analysis': lambda: SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.
+          OT_SENSITIVITY_ANALYSIS,
+          sight,
+      ),
+      'smcpy': lambda: SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.OT_SMC_PY, sight),
+      'worklist_scheduler': lambda: SingleActionOptimizerClient(
+          sight_pb2.DecisionConfigurationStart.OptimizerType.
+          OT_WORKLIST_SCHEDULER,
+          sight,
+      ),
   }
 
   # Add support for dynamic optimizers
@@ -949,7 +946,8 @@ def propose_actions(sight, question_label, action_dict):
   return action_id
 
 
-def _handle_optimizer_finalize(sight: Any, req: Any, optimizer_obj: Any) -> None:
+def _handle_optimizer_finalize(sight: Any, req: Any,
+                               optimizer_obj: Any) -> None:
   """Handles optimizer-specific finalization logic.
 
   Args:
@@ -959,11 +957,16 @@ def _handle_optimizer_finalize(sight: Any, req: Any, optimizer_obj: Any) -> None
   # optimizer_obj = optimizer.get_instance()
 
   # Get the list of action messages (supports multiple action IDs)
-  cached_messages_obj = sight.widget_decision_state.get('cached_messages', {})
+  cached_messages_obj = sight.widget_decision_state.get('cached_messages', None)
   logging.info('cached_messages_obj=%s', cached_messages_obj)
   all_messages: dict[str, DecisionMessage] = cached_messages_obj.all_messages()
   logging.info('all_messages => %s', all_messages)
 
+  caching_large_response = True
+  cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
+      cache_type=_CACHE_MODE.value))
+
+  f_ep_with_decision_msgs = service_pb2.FinalizeEpisodeRequest()
   for action_id, msg in all_messages.items():
     logging.info('action_id=%s, msg=%s', action_id, msg)
     logging.info('msg.action_params=%s', msg.action_params)
@@ -976,13 +979,22 @@ def _handle_optimizer_finalize(sight: Any, req: Any, optimizer_obj: Any) -> None
     choice_params = sight_pb2.DecisionParam()
     choice_params.CopyFrom(convert_dict_to_proto(dict=msg.action_params))
     decision_message.decision_point.choice_params.CopyFrom(choice_params)
+    f_ep_with_decision_msgs.decision_messages.append(decision_message)
 
+  logging.info('printing something hehe %s',
+               text_format.MessageToString(f_ep_with_decision_msgs))
+
+  if caching_large_response:
+    req.decision_messages_ref_key = cache_transport.store_payload(
+        text_format.MessageToString(f_ep_with_decision_msgs))
+    logging.info('this is our cache key : %s', req.decision_messages_ref_key)
+  else:
+    req.MergeFrom(f_ep_with_decision_msgs)
     # logging.info('decision_message=%s', decision_message)
-    req.decision_messages.append(decision_message)
-  logging.info('Finalize req=%s', req)
+    logging.info('Finalize req=%s', req)
 
-  # clearing the cached
-  cached_messages_obj.clear()
+    # clearing the cached
+    cached_messages_obj.clear()
 
   if _OPTIMIZER_TYPE.value in {
       'genetic_algorithm',

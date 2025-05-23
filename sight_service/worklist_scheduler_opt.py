@@ -16,6 +16,7 @@
 import threading
 from typing import Any, Dict, List, Tuple
 
+from google.protobuf import text_format
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
@@ -159,19 +160,32 @@ class WorklistScheduler(SingleActionOptimizer):
 
     # logging.debug("self.queue => %s", self.queue)
 
-    logging.debug('we have decision messages %s',
-                  len(request.decision_messages))
+    caching_large_response = True
+    from helpers.cache.cache_factory import CacheFactory
+    from helpers.cache.cache_factory import CacheType
+    from helpers.cache.cache_payload_transport import CachedPayloadTransport
 
-    for i in range(len(request.decision_messages)):
+    cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
+        cache_type=CacheType.GCS))
+
+    if caching_large_response:
+      proto_cached_data = cache_transport.fetch_payload(
+          request.decision_messages_ref_key)
+      text_format.Parse(proto_cached_data, request)
+
+    decision_messages = request.decision_messages
+    logging.debug('we have decision messages %s', len(decision_messages))
+
+    for i in range(len(decision_messages)):
       logging.debug('calling queue.complete_message for %s th msg', i)
       self.queue.complete_message(
           worker_id=request.worker_id,
-          message_id=request.decision_messages[i].action_id,
+          message_id=decision_messages[i].action_id,
           update_fn=lambda msg: msg.update(
-              reward=request.decision_messages[i].decision_outcome.reward,
-              outcome=convert_proto_to_dict(proto=request.decision_messages[i].
+              reward=decision_messages[i].decision_outcome.reward,
+              outcome=convert_proto_to_dict(proto=decision_messages[i].
                                             decision_outcome.outcome_params),
-              action=convert_proto_to_dict(proto=request.decision_messages[i].
+              action=convert_proto_to_dict(proto=decision_messages[i].
                                            decision_point.choice_params)))
 
     # logging.debug("self.queue => %s", self.queue)
