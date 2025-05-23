@@ -60,8 +60,6 @@ from sight_service.proto import service_pb2
 from sight_service.shared_batch_messages import CachedBatchMessages
 from sight_service.shared_batch_messages import DecisionMessage
 
-MessageToString = text_format.MessageToString
-
 # logging.basicConfig(level=logging.DEBUG)
 
 _DECISON_MODE = flags.DEFINE_enum(
@@ -958,18 +956,18 @@ def _handle_optimizer_finalize(sight: Any, req: Any,
 
   # Get the list of action messages (supports multiple action IDs)
   cached_messages_obj = sight.widget_decision_state.get('cached_messages', None)
-  logging.info('cached_messages_obj=%s', cached_messages_obj)
   all_messages: dict[str, DecisionMessage] = cached_messages_obj.all_messages()
-  logging.info('all_messages => %s', all_messages)
 
+  # Hard-wire to mode where all outcomes are communicated via the cache.
+  # TODO: make this configurable.
   caching_large_response = True
   cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
       cache_type=_CACHE_MODE.value))
 
   f_ep_with_decision_msgs = service_pb2.FinalizeEpisodeRequest()
   for action_id, msg in all_messages.items():
-    logging.info('action_id=%s, msg=%s', action_id, msg)
-    logging.info('msg.action_params=%s', msg.action_params)
+    # logging.info('action_id=%s, msg=%s', action_id, msg)
+    # logging.info('msg.action_params=%s', msg.action_params)
     decision_message = sight_pb2.DecisionMessage()
     decision_message.decision_outcome.CopyFrom(
         get_decision_outcome_from_decision_message(outcome_label='outcome',
@@ -981,20 +979,18 @@ def _handle_optimizer_finalize(sight: Any, req: Any,
     decision_message.decision_point.choice_params.CopyFrom(choice_params)
     f_ep_with_decision_msgs.decision_messages.append(decision_message)
 
-  logging.info('printing something hehe %s',
-               text_format.MessageToString(f_ep_with_decision_msgs))
-
   if caching_large_response:
+    # Store the decision outcome in the cache and communicate the key to the server.
     req.decision_messages_ref_key = cache_transport.store_payload(
         text_format.MessageToString(f_ep_with_decision_msgs))
-    logging.info('this is our cache key : %s', req.decision_messages_ref_key)
   else:
+    # Place the decision outcome in the FinalizeEpisode rpc to the server.
     req.MergeFrom(f_ep_with_decision_msgs)
-    # logging.info('decision_message=%s', decision_message)
-    logging.info('Finalize req=%s', req)
+  
+  logging.info('Finalize req=%s', req)
 
-    # clearing the cached
-    cached_messages_obj.clear()
+  # clearing the cached
+  cached_messages_obj.clear()
 
   if _OPTIMIZER_TYPE.value in {
       'genetic_algorithm',
