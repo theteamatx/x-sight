@@ -159,8 +159,6 @@ class WorklistScheduler(SingleActionOptimizer):
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
     # logging.debug("self.queue => %s", self.queue)
-
-    caching_large_response = True
     from helpers.cache.cache_factory import CacheFactory
     from helpers.cache.cache_factory import CacheType
     from helpers.cache.cache_payload_transport import CachedPayloadTransport
@@ -168,7 +166,8 @@ class WorklistScheduler(SingleActionOptimizer):
     cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
         cache_type=CacheType.GCS))
 
-    if caching_large_response:
+    # If the decision outcome was communicated via the cache.
+    if request.decision_messages_ref_key:
       proto_cached_data = cache_transport.fetch_payload(
           request.decision_messages_ref_key)
       text_format.Parse(proto_cached_data, request)
