@@ -1,22 +1,22 @@
 action_attrs {
-  key: "v1"
+  key: "operand1"
   value {
-    min_value:1
-    max_value:5
+    description: "The first integer operand."
+    data_type: DT_INT64
   }
 }
 action_attrs {
-  key: "v2"
+  key: "operand2"
   value {
-    min_value:1
-    max_value:5
+    description: "The second integer operand."
+    data_type: DT_INT64
   }
 }
 action_attrs {
-  key: "ops"
+  key: "operator"
   value {
-    min_value:0
-    max_value:0
+    description: "The operation to perform. Must be one of: add, subtract, multiply, divide."
+    data_type: DT_STRING
   }
 }
 outcome_attrs {
@@ -24,3 +24,4 @@ outcome_attrs {
   value {
   }
 }
+

@@ -3,7 +3,8 @@
 import os
 from typing import Any, Dict
 
-import fvs_sight.fvs_api as fvs_attrs_config
+# import fvs_sight.fvs_api as fvs_attrs_config
+from worker.attribute_configs import calculator_attribute_config
 from google.protobuf import text_format
 from sight.proto import sight_pb2
 from sight.widgets.decision import decision_helper
@@ -40,6 +41,7 @@ def generate_the_text_protos(models: Dict[str, Any], dir_path: str):
 
 if __name__ == '__main__':
 
-  model_configs = {'fvs': fvs_attrs_config}
+  model_configs = {'calc': calculator_attribute_config}
   dir_path = os.path.dirname(os.path.realpath(__file__))
+  
   generate_the_text_protos(model_configs, dir_path)

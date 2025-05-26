@@ -1,19 +1,16 @@
-from typing import Any, Sequence
+from typing import Any, Sequence, Dict
 from absl import app, flags
-from typing_extensions import Annotated
 
 from dotenv import load_dotenv, find_dotenv
 from langchain_core.tools import Tool, StructuredTool
-from langchain_core.runnables import RunnableConfig
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import initialize_agent, AgentType
-from langchain.agents import create_tool_calling_agent, AgentExecutor
-# from sight.demo.agentic_demo.tools.calculator_tool import calculator_args_schema_json
-from sight.demo.agentic_demo.tools.calculator_tool import calculator_api, CalculatorToolArgs  #,CalculatorTool, build_calculator_tool
-from sight.demo.agentic_demo.proposal_calculator import calculator_api_with_sight
+
+from sight.demo.agentic_demo.tools.calculator_tool import generate_description, calculator_api
 from sight.sight import Sight
 from sight.widgets.decision import decision
 from functools import partial
+from langchain.globals import set_debug
 
 FLAGS = flags.FLAGS
 load_dotenv(find_dotenv())
@@ -33,16 +30,17 @@ def main(argv: Sequence[str]) -> None:
 
   # create sight object with configuration to spawn workers beforehand
   with Sight.create(params, config) as sight_instance:
+
+    # set_debug(True)
+    def calculator_tool_fn(action_dict: Dict[str, Any]):
+      return calculator_api(action_dict=action_dict, sight=sight_instance)
+
     calculator_tool = StructuredTool.from_function(
         name="calculator_tool",
-        func=partial(calculator_api, sight=sight_instance),
-        description=
-        ("Perform arithmetic operation (add, subtract, multiply, divide) using Sight backend. "
-         "The action input must contains a dictionary with key `action_dict` and value as dict with keys-values as follows"
-         " `v1` : `operand1`, `v2` : `operand2`, and `ops` from any values of (add, subtract, multiply, divide)."
-        ),
-        # args_schema=calculator_args_schema_json)
-        args_schema=CalculatorToolArgs)
+        func=calculator_tool_fn,
+        verbose=True,
+        description=generate_description(),
+    )
     tools = [calculator_tool]
 
     agent = initialize_agent(

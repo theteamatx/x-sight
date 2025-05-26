@@ -693,6 +693,7 @@ message DecisionConfigurationStart {
     DT_INT64 = 2;
     DT_FLOAT32 = 3;
     DT_FLOAT64 = 4;
+    DT_STRING = 5;
   }
   // Properties of and constraints on attributes.
   message AttrProps {
@@ -717,6 +718,8 @@ message DecisionConfigurationStart {
     // Distribution of possible values
     ContinuousProbDist continuous_prob_dist = 6;
     DiscreteProbDist discrete_prob_dist = 7;
+
+    DataType data_type = 9;
   }
 
   // The attributes of application's state
