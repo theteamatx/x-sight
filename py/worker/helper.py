@@ -84,7 +84,7 @@ def get_text_proto_data(question_label):
   return text_proto_data
 
 
-def get_action_attr(question_label) -> str:
+def get_description_from_textproto(question_label) -> tuple[str, str]:
   # we get text_proto data in string type
   text_proto_data = get_text_proto_data(question_label)
 
@@ -92,9 +92,11 @@ def get_action_attr(question_label) -> str:
   proto_data = sight_pb2.DecisionConfigurationStart()
   text_format.Parse(text_proto_data, proto_data)
 
+  api_description = proto_data.choice_config[question_label].llm_config.description
+
+
   # Extract only action_attrs
   action_attrs = proto_data.action_attrs
-  # print('action_attrs : ', action_attrs)
 
   items = []
   for k, v_obj in action_attrs.items():
@@ -103,14 +105,22 @@ def get_action_attr(question_label) -> str:
     items.append(f"{k} : {description_text}")
 
   # Join all items with a comma and space, add a period at the end if not empty
-  return ", ".join(items) + ("." if items else "")
+  argument_description = ", \n".join(items) + ("." if items else "")
 
-  # convert to a regular dict for easier use
-  action_attr_dict = {k: v.description for k, v in action_attrs.items()}
+  return api_description, argument_description
 
-  # action_dict_wrapped = {
-  #   'action_dict': action_attr_dict
-  # }
 
-  # print('action_attr_dict : ', action_attr_dict)
-  return str(action_attr_dict)
+
+def create_choice_config(
+    label,
+    description
+) -> dict[str, sight_pb2.DecisionConfigurationStart.ChoiceConfig]:
+  choice_config_dict = {}
+  choice_config = sight_pb2.DecisionConfigurationStart.ChoiceConfig()
+
+  llm_config = sight_pb2.DecisionConfigurationStart.LLMConfig()
+  llm_config.description = description
+  choice_config.llm_config.CopyFrom(llm_config)
+
+  choice_config_dict[label] = choice_config
+  return choice_config_dict

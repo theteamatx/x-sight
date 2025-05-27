@@ -1,3 +1,11 @@
+choice_config {
+  key: "Calculator"
+  value {
+    llm_config {
+      description: "This tool can perform a basic arithmetic operation (addition, subtraction, multiplication and division) on two integers using the Sight backend system.\n  This function proposes a calculation action (with action dictionary as input containing all action parameter as key value pairs) to the server via a Sight worker.\n  It waits for the worker to process the action and return the computed result."
+    }
+  }
+}
 action_attrs {
   key: "operand1"
   value {

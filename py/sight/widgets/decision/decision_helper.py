@@ -31,3 +31,11 @@ def attr_dict_to_proto(
   """Converts a dict of attribute constraints to its proto representation."""
   for attr_name, attr_details in attrs.items():
     attrs_proto[attr_name].CopyFrom(attr_details)
+
+def description_to_proto(
+    choice_config: Dict[str, sight_pb2.DecisionConfigurationStart.ChoiceConfig],
+    choice_config_proto: Any,
+):
+  """Converts a dict of choice constraints to its proto representation."""
+  for label, choice_details in choice_config.items():
+    choice_config_proto[label].CopyFrom(choice_details)

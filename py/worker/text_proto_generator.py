@@ -25,6 +25,9 @@ def generate_the_text_protos(models: Dict[str, Any], dir_path: str):
     protodata = sight_pb2.DecisionConfigurationStart()
     # *** Config should have the this functions
     _ = hasattr(config,
+                'get_tool_description') and decision_helper.description_to_proto(
+                    config.get_tool_description(), protodata.choice_config)
+    _ = hasattr(config,
                 'get_action_attrs') and decision_helper.attr_dict_to_proto(
                     config.get_action_attrs(), protodata.action_attrs)
     _ = hasattr(config,
@@ -43,5 +46,5 @@ if __name__ == '__main__':
 
   model_configs = {'calc': calculator_attribute_config}
   dir_path = os.path.dirname(os.path.realpath(__file__))
-  
+
   generate_the_text_protos(model_configs, dir_path)
