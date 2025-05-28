@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Demo of using the Sight worker to be used as tool in langchain."""
+"""Addition tool that propose action to sight backend."""
 import warnings
 
 

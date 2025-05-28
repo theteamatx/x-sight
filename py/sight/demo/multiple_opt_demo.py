@@ -13,8 +13,14 @@
 # limitations under the License.
 """Demo of spawning multiple worker which can interact with each other."""
 
-import time
+from typing import Sequence
 import warnings
+
+from absl import app
+from absl import flags
+from helpers.logs.logs_handler import logger as logging
+from sight.sight import Sight
+from sight.widgets.decision import decision
 
 
 def warn(*args, **kwargs):
@@ -23,28 +29,20 @@ def warn(*args, **kwargs):
 
 warnings.warn = warn
 
-from typing import Any, Sequence
-
-from absl import app
-from absl import flags
-from helpers.logs.logs_handler import logger as logging
-from sight.sight import Sight
-from sight.widgets.decision import decision
-
 FLAGS = flags.FLAGS
+
 
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  # config contains the data from all the config files
   config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
   # Sight parameters dictionary with valid key values from sight_pb2.Params
-  params  = {'label' : 'multiple_opt_label'}
+  params = {"label": "multiple_opt_label"}
 
   # create sight object with configuration to spawn workers beforehand
-  with Sight.create(params, config) as sight:
+  with Sight.create(params, config):
 
     logging.info("spawned the workers.................")
 

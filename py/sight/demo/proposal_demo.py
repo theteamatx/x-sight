@@ -12,7 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Demo of using the Sight Propose action API to add actions to server and wait for it's outcome."""
+
+import asyncio
+from typing import Sequence
 import warnings
+
+from absl import app
+from absl import flags
+from sight.sight import Sight
+from sight.widgets.decision import decision
+from sight.widgets.decision import proposal
 
 
 def warn(*args, **kwargs):
@@ -21,21 +30,11 @@ def warn(*args, **kwargs):
 
 warnings.warn = warn
 
-import asyncio
-from typing import Sequence, Any
-
-from absl import app
-from absl import flags
-from sight.sight import Sight
-from sight.widgets.decision import decision
-from sight.widgets.decision import proposal
-from helpers.logs.logs_handler import logger as logging
-
 FLAGS = flags.FLAGS
 
 
 def get_question_label_to_propose_actions():
-  return 'Calculator'
+  return "Calculator"
 
 
 def main(argv: Sequence[str]) -> None:
@@ -46,17 +45,19 @@ def main(argv: Sequence[str]) -> None:
   config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
   # Sight parameters dictionary with valid key values from sight_pb2.Params
-  params  = {'label' : 'calculator_demo'}
+  params = {"label": "calculator_demo"}
 
   # create sight object with configuration to spawn workers beforehand
   with Sight.create(params, config) as sight:
 
+    # Ideally this actions will be proposed from some other module
+    actions = {"v1": 3, "v2": 5, "ops": "multiply"}
 
-    #Ideally this actions will be proposed from some other module
-    actions = {"v1": 3, "v2": 5, "ops": 'multiply'}
-
-    asyncio.run(proposal.propose_actions(sight, get_question_label_to_propose_actions(), actions))
-
+    asyncio.run(
+        proposal.propose_actions(
+            sight, get_question_label_to_propose_actions(), actions
+        )
+    )
 
 if __name__ == "__main__":
   app.run(main)

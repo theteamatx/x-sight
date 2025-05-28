@@ -12,7 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Generic worker which propose to worklist_scheduler optimizer."""
+
+import asyncio
+from typing import Tuple, Dict
 import warnings
+
+from absl import app
+from absl import flags
+from sight import sight
+from sight.sight import Sight
+from sight.widgets.decision import proposal
 
 
 def warn(*args, **kwargs):
@@ -21,42 +30,21 @@ def warn(*args, **kwargs):
 
 warnings.warn = warn
 
-import asyncio
-import inspect
-import json
-import os
-import random
-from typing import Sequence, Any, Tuple
-
-from absl import app
-from absl import flags
-import numpy as np
-import pandas as pd
-from sight.attribute import Attribute
-from sight.block import Block
-from sight import data_structures
-from sight.proto import sight_pb2
-from sight import sight
-from sight.sight import Sight
-from sight.widgets.decision import decision
-from sight.widgets.decision import proposal
-from helpers.logs.logs_handler import logger as logging
-from helpers.decorators.decision_worker import decision_worker
-
 FLAGS = flags.FLAGS
 
 
 def get_question_label_to_propose_actions():
-  return 'Fvs'
+  return "Fvs"
 
 
 def get_question_label():
-  return 'Generic'
+  return "Generic"
 
 
-def main(sight: Sight, action: dict) -> Tuple[float, dict]:
+def main(sight: Sight, action: Dict[str, int]) -> Tuple[float, Dict[str, int]]:
 
-  # using actions we received from optimizer to propose actions to worklist_scheduler
+  # using actions we received from optimizer to propose actions to
+  # worklist_scheduler
   outcome = asyncio.run(
       proposal.propose_actions(sight,
                                get_question_label_to_propose_actions(),
@@ -70,6 +58,9 @@ def main(sight: Sight, action: dict) -> Tuple[float, dict]:
 
 
 if __name__ == "__main__":
-  app.run(lambda _: sight.run_worker(main, {
-      'label': get_question_label(),
-  }))
+  app.run(lambda _: sight.run_worker(
+      main,
+      {
+          "label": get_question_label(),
+      },
+  ))
