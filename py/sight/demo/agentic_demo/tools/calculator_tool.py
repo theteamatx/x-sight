@@ -43,7 +43,7 @@ def get_question_label():
 
 
 def calculator_api(action_dict: Dict[str, Any], sight: Sight) -> str:
-  """Perform arithmetic operation (add, subtract, multiply, divide) using Sight backend."""
+  """Propose actions to the server using Sight backend."""
 
   result = asyncio.run(
       proposal.propose_actions(sight, get_question_label(), action_dict))

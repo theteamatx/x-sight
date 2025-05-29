@@ -16,17 +16,15 @@ from typing import Sequence,Tuple
 
 from absl import app
 from sight import sight
-from sight.sight import Sight
-from helpers.decorators.decision_worker import decision_worker
 
 # Question mapped to calculator problem
 def get_question_label():
   return 'Division'
 
 
-def main(sight: Sight, action: dict) -> Tuple[float, dict]:
-  v1 = action['v1']
-  v2 = action['v2']
+def main(action: dict) -> Tuple[float, dict]:
+  v1 = action['operand1']
+  v2 = action['operand2']
   result =  v1 / v2
 
   outcome = {'final_result' : result}

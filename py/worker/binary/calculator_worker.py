@@ -24,9 +24,9 @@ def get_question_label():
 
 
 def main(action: Dict[str, Any]) -> Tuple[float, Dict[str, Any]]:
-  ops = action["ops"]
-  v1 = action["v1"]
-  v2 = action["v2"]
+  ops = action["operator"]
+  v1 = action["operand1"]
+  v2 = action["operand2"]
   if ops.lower() == "add":
     result = v1 + v2
   elif ops.lower() == "subtract":

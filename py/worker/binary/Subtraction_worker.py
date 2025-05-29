@@ -24,9 +24,9 @@ def get_question_label():
   return 'Subtraction'
 
 
-def main(sight: Sight, action: dict) -> Tuple[float, dict]:
-  v1 = action['v1']
-  v2 = action['v2']
+def main(action: dict) -> Tuple[float, dict]:
+  v1 = action['operand1']
+  v2 = action['operand2']
   result =  v1 - v2
 
   outcome = {'final_result' : result}
