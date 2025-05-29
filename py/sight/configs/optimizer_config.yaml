@@ -3,14 +3,14 @@ Generic:
   num_questions: 1
   mode: "dsub_local_worker"
   workers:
-    Generic_worker: 1
+    generic_worker: 1
 
 Fvs:
   optimizer: "worklist_scheduler"
   num_questions: 1
   mode: "dsub_local_worker"
   workers:
-    Fvs_worker: 1
+    fvs_worker: 1
 
 # optimizer mapping to be used for calculator worker in langchain demo
 Calculator:
@@ -18,32 +18,32 @@ Calculator:
   num_questions: 1
   mode: "dsub_local_worker"
   workers:
-    Calculator_worker: 1
+    calculator_worker: 1
 
 Addition:
   optimizer: "worklist_scheduler"
   num_questions: 1
   mode: "dsub_local_worker"
   workers:
-    Addition_worker: 1
+    addition_worker: 1
 
 Subtraction:
   optimizer: "worklist_scheduler"
   num_questions: 1
   mode: "dsub_local_worker"
   workers:
-    Subtraction_worker: 1
+    subtraction_worker: 1
 
 Multiplication:
   optimizer: "worklist_scheduler"
   num_questions: 1
   mode: "dsub_local_worker"
   workers:
-    Multiplication_worker: 1
+    multiplication_worker: 1
 
 Division:
   optimizer: "worklist_scheduler"
   num_questions: 1
   mode: "dsub_local_worker"
   workers:
-    Division_worker: 1
+    division_worker: 1

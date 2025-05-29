@@ -1,27 +1,27 @@
-Generic_worker:
+generic_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/Generic_worker.yaml"
+  file_path: "py/worker/worker_configs/generic_worker.yaml"
 
-Fvs_worker:
+fvs_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/Fvs_worker.yaml"
+  file_path: "py/worker/worker_configs/fvs_worker.yaml"
 
-Calculator_worker:
+calculator_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/Calculator_worker.yaml"
+  file_path: "py/worker/worker_configs/calculator_worker.yaml"
 
-Addition_worker:
+addition_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/Addition_worker.yaml"
+  file_path: "py/worker/worker_configs/addition_worker.yaml"
 
-Subtraction_worker:
+subtraction_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/Subtraction_worker.yaml"
+  file_path: "py/worker/worker_configs/subtraction_worker.yaml"
 
-Multiplication_worker:
+multiplication_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/Multiplication_worker.yaml"
+  file_path: "py/worker/worker_configs/multiplication_worker.yaml"
 
-Division_worker:
+division_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/Division_worker.yaml"
+  file_path: "py/worker/worker_configs/division_worker.yaml"
