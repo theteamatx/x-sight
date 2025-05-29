@@ -1,4 +1,4 @@
-from worker.helper import create_attr_props, create_choice_config
+from sight.worker.worker_helper import create_attr_props, create_choice_config
 
 def get_question_label():
   return "Calculator"

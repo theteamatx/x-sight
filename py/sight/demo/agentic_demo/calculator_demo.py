@@ -22,11 +22,10 @@ from langchain.agents import AgentType
 from langchain.agents import initialize_agent
 from langchain_core.tools import StructuredTool
 from langchain_google_genai import ChatGoogleGenerativeAI
-from sight.demo.agentic_demo.tools.calculator_tool import calculator_api
-from sight.demo.agentic_demo.tools.calculator_tool import generate_description
+from sight.demo.agentic_demo.tools.proposal_tool import proposal_api
+from sight.tools.tool_helper import create_tool_with_sight
 from sight.sight import Sight
 from sight.widgets.decision import decision
-
 
 load_dotenv = dotenv.load_dotenv
 find_dotenv = dotenv.find_dotenv
@@ -34,6 +33,10 @@ load_dotenv(find_dotenv())
 FLAGS = flags.FLAGS
 
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
+
+
+def get_question_label():
+  return "Calculator"
 
 
 def main(argv: Sequence[str]) -> None:
@@ -49,17 +52,9 @@ def main(argv: Sequence[str]) -> None:
   # create sight object with configuration to spawn workers beforehand
   with Sight.create(params, config) as sight_instance:
 
-    # function to be used by tool - wrapped with sight object
-    def calculator_tool_fn(action_dict: Dict[str, Any]):
-      return calculator_api(action_dict=action_dict, sight=sight_instance)
+    calculator_tool = create_tool_with_sight(sight_instance,
+                                             get_question_label(), proposal_api)
 
-    # tool object to be used by agent
-    calculator_tool = StructuredTool.from_function(
-        name="calculator_tool",
-        func=calculator_tool_fn,
-        verbose=True,
-        description=generate_description(),
-    )
     tools = [calculator_tool]
 
     # initialize agent with tools and llm
@@ -70,10 +65,10 @@ def main(argv: Sequence[str]) -> None:
         verbose=True,
     )
 
-    user_input = input(
-        "Enter the operations you want to perform in plain english: "
-    )
-    # user_input = "can you please divide 25 by 5"
+    # user_input = input(
+    #     "Enter the operations you want to perform in plain english: "
+    # )
+    user_input = "can you please multiply 25 by 5"
 
     response = agent.invoke({"input": user_input})
     print("Response: ", response)
