@@ -20,12 +20,12 @@ from absl import flags
 import dotenv
 from langchain.agents import AgentType
 from langchain.agents import initialize_agent
-from langchain_core.tools import StructuredTool
 from langchain_google_genai import ChatGoogleGenerativeAI
-from sight.demo.agentic_demo.tools.proposal_tool import proposal_api
-from sight.tools.tool_helper import create_tool_with_sight
+from sight.tools.proposal_tool import proposal_api
 from sight.sight import Sight
+from sight.tools.tool_helper import create_tool_with_sight
 from sight.widgets.decision import decision
+
 
 load_dotenv = dotenv.load_dotenv
 find_dotenv = dotenv.find_dotenv

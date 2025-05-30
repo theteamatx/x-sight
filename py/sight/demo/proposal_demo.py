@@ -51,7 +51,7 @@ def main(argv: Sequence[str]) -> None:
   with Sight.create(params, config) as sight:
 
     # Ideally this actions will be proposed from some other module
-    actions = {"v1": 3, "v2": 5, "ops": "multiply"}
+    actions = {"operand1": 3, "operand2": 5, "operator": "multiply"}
 
     asyncio.run(
         proposal.propose_actions(

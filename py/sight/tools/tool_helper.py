@@ -2,7 +2,7 @@ from helpers.logs.logs_handler import logger as logging
 from langchain_core.tools import StructuredTool
 from typing import Any, Dict
 from sight.worker.worker_helper import get_description_from_textproto
-from sight.demo.agentic_demo.tools.proposal_tool import proposal_api
+from sight.tools.proposal_tool import proposal_api
 
 
 

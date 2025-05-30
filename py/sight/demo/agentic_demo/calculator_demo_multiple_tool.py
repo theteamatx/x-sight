@@ -12,18 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Demo of using calculator tool with multiple worker using Langchain."""
-from typing import Any, Dict, Sequence
+
+from typing import Sequence
 
 from absl import app
 from absl import flags
 import dotenv
-from langchain.agents import AgentExecutor
 from langchain.agents import AgentType
 from langchain.agents import initialize_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
 from sight.sight import Sight
-from sight.widgets.decision import decision
 from sight.tools.tool_helper import create_lc_tool
+from sight.widgets.decision import decision
+
 
 find_dotenv = dotenv.find_dotenv
 load_dotenv = dotenv.load_dotenv
@@ -31,6 +32,7 @@ load_dotenv(find_dotenv())
 FLAGS = flags.FLAGS
 
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
+
 
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
@@ -45,7 +47,7 @@ def main(argv: Sequence[str]) -> None:
   # create sight object with configuration to spawn workers beforehand
   with Sight.create(params, config) as sight:
 
-    #creating langchain tools with propose_action_api as default function
+    # creating langchain tools with propose_action_api as default function
     tools = [
         create_lc_tool("Addition", sight),
         create_lc_tool("Subtraction", sight),
