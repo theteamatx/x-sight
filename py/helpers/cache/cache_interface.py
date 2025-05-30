@@ -6,6 +6,21 @@ from typing import Any, List
 class CacheInterface(ABC):
 
   @abstractmethod
+  def get(self, key: str) -> Any:
+    """Get the data from cache"""
+    pass
+
+  @abstractmethod
+  def set(self, key: str, value: Any) -> None:
+    """Set the data to the cache"""
+    pass
+
+  # @abstractmethod
+  # def delete(self , key: str) -> Any:
+  #   """Delete the key from cache"""
+  #   pass
+
+  @abstractmethod
   def bin_get(self, key: str) -> Any:
     """Get the Binary data from cache"""
     pass
@@ -26,6 +41,6 @@ class CacheInterface(ABC):
     pass
 
   @abstractmethod
-  def json_list_keys(self, prefix: str) -> List[str]:
+  def list_keys(self, prefix: str) -> List[str]:
     """List all keys with a given prefix."""
     pass

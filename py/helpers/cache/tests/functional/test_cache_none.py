@@ -15,13 +15,13 @@ class CacheNoneTest(unittest.TestCase):
     self.cache = CacheFactory.get_cache(cache_type="none")
     self.key_maker = KeyMaker()
 
-  def test_json_list_keys(self):
-    keys = self.cache.json_list_keys("any_prefix")
+  def test_list_keys(self):
+    keys = self.cache.list_keys("any_prefix")
     self.assertEqual(keys, [])
     # Ensure no exceptions or errors occur
 
-  def test_json_list_keys_empty_prefix(self):
-    keys = self.cache.json_list_keys("")
+  def test_list_keys_empty_prefix(self):
+    keys = self.cache.list_keys("")
     self.assertEqual(keys, [])
     # The result should always be an empty list
 

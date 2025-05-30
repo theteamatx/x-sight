@@ -70,6 +70,28 @@ class GCSCache(CacheInterface):
         logging.warning(f"Redis error in {method}: {e}")
 
   @override
+  def get(self, key: str):
+    """Retrieve data from cache"""
+    if (value := self._get_from_redis('get', key)) is not None:
+      return value
+    blob = self.bucket.blob(self._gcs_cache_path(key=key))
+    logging.debug('This is our path for key %s', blob.name)
+    if blob.exists():
+      value = blob.download_as_text()
+      value = json.loads(value)
+      self._set_to_redis('set', key, value)
+      return value
+    return None
+
+  @override
+  def set(self, key: str, value: Any):
+    """Store data in cache"""
+    self._set_to_redis('set', key, value)
+    blob = self.bucket.blob(self._gcs_cache_path(key=key))
+    logging.info('This is our path for key %s', blob.name)
+    blob.upload_from_string(json.dumps(value))
+
+  @override
   def bin_get(self, key: str) -> Any:
     """Retrieve binary data from cache"""
     if (value := self._get_from_redis('bin_get', key)) is not None:
@@ -108,9 +130,9 @@ class GCSCache(CacheInterface):
     blob.upload_from_string(json.dumps(value))
 
   @override
-  def json_list_keys(self, prefix: str) -> List[str]:
+  def list_keys(self, prefix: str) -> List[str]:
     """List all the keys with some prefix"""
-    if (keys := self._get_from_redis('json_list_keys', prefix)) is not None:
+    if (keys := self._get_from_redis('list_keys', prefix)) is not None:
       return keys
     prefix = prefix.replace(':', '/')
     whole_prefix = self._gcs_cache_path(key=prefix, suffix='')

@@ -1,5 +1,6 @@
 """This module contains a Redis Cache implementation."""
 
+import json
 import pickle
 
 from helpers.logs.logs_handler import logger as logging
@@ -35,6 +36,7 @@ class RedisCache(CacheInterface):
       self.redis_client = redis.StrictRedis(
           host=config.get("redis_host", "localhost"),
           port=config.get("redis_port", 1234),
+          # port=config.get("redis_port", 6379),
           password=config.get("redis_pass", ""),
           db=config.get("redis_db", 0),
       )
@@ -53,6 +55,26 @@ class RedisCache(CacheInterface):
     if self.redis_client is None:
       logging.error("redis client not found..!!")
       raise ConnectionError("redis client not found , check connection !!")
+
+  @override
+  def get(self, key: str) -> Any:
+    """Gets the value from the cache using key as string data"""
+    self._is_redis_client_exist()
+    string_value = self.redis_client.get(key)
+    if string_value:
+      return json.loads(string_value)
+    return None
+
+  @override
+  def set(self, key: str, value: Any) -> None:
+    """Set the key with value as string data"""
+    self._is_redis_client_exist()
+    try:
+      string_value = json.dumps(value)
+      self.redis_client.set(key, string_value)
+    except TypeError as e:
+      if "circular reference" in str(e):
+        raise TypeError("Circular JSON object detected") from e
 
   @override
   def bin_get(self, key: str):
@@ -81,7 +103,7 @@ class RedisCache(CacheInterface):
     self.redis_client.json().set(key, Path.root_path(), value)
 
   @override
-  def json_list_keys(self, prefix: str) -> List[str]:
+  def list_keys(self, prefix: str) -> List[str]:
     """Lists all keys in the cache that match a given prefix.
 
     Args:
