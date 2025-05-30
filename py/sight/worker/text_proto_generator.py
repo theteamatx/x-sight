@@ -6,8 +6,12 @@ from typing import Any, Dict
 from google.protobuf import text_format
 from sight.proto import sight_pb2
 from sight.widgets.decision import decision_helper
-# import fvs_sight.fvs_api as fvs_attrs_config
 from worker.attribute_configs import calculator_attribute_config
+from worker.attribute_configs import addition_attribute_config
+from worker.attribute_configs import subtraction_attribute_config
+from worker.attribute_configs import multiplication_attribute_config
+from worker.attribute_configs import division_attribute_config
+
 
 
 MessageToString = text_format.MessageToString
@@ -54,8 +58,12 @@ def generate_the_text_protos(models: Dict[str, Any], output_dir_path: str):
 
 if __name__ == '__main__':
 
-  model_configs = {'calculator': calculator_attribute_config}
-  output_dir_path = os.path.dirname(os.path.realpath(__file__))
-
+  model_configs = {'addition': addition_attribute_config,
+                   'subtraction': subtraction_attribute_config,
+                   'multiplication': multiplication_attribute_config,
+                   'division': division_attribute_config,
+                   }
+  current_dir = os.path.dirname(os.path.realpath(__file__))
+  output_dir_path = os.path.join(current_dir, '..', '..', 'worker')
   generate_the_text_protos(model_configs, output_dir_path)
 

@@ -2,12 +2,15 @@ from helpers.logs.logs_handler import logger as logging
 from langchain_core.tools import StructuredTool
 from typing import Any, Dict
 from sight.worker.worker_helper import get_description_from_textproto
+from sight.demo.agentic_demo.tools.proposal_tool import proposal_api
+
 
 
 def generate_description(question_label) -> str:
   arg_info_str = (
-      "\n  The action input must contains a dictionary with only one key `action_dict` and"
-      " it's corresponding value as dictionary with keys-values as follows : \n"
+      "\n  The action input must contains a dictionary with only one key named "
+      "`action_dict` and it's corresponding value must be dictionary with "
+      " keys-values as follows : \n"
   )
   api_description, arguments_description = get_description_from_textproto(
       question_label)
@@ -16,7 +19,7 @@ def generate_description(question_label) -> str:
   return description
 
 
-def create_tool_with_sight(sight, question_label, tool_fn) -> StructuredTool:
+def create_lc_tool(question_label, sight, tool_fn=proposal_api) -> StructuredTool:
 
   def tool_fn_with_sight(action_dict: Dict[str, Any]):
     return tool_fn(action_dict=action_dict,
@@ -25,7 +28,7 @@ def create_tool_with_sight(sight, question_label, tool_fn) -> StructuredTool:
 
   # tool object to be used by agent
   tool_with_sight = StructuredTool.from_function(
-      name="sight_tool",
+      name=f"{question_label}_sight_tool",
       func=tool_fn_with_sight,
       verbose=True,
       description=generate_description(question_label),
