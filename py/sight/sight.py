@@ -969,7 +969,9 @@ def run_worker(
   driver_fn:  Callable[[Any], Any] = None,
   sight_params: dict = None,
 ):
-  """Wrapped the driver function with decision API
+  """Wrapped the driver function with decision API,
+     One can directly call run_generic_worker function,
+     if have their own driver function.
   """
   def wrapped_driver_fn(sight):
     action = decision.decision_point(sight_params['label'], sight)
@@ -978,7 +980,7 @@ def run_worker(
   return run_generic_worker(wrapped_driver_fn, sight_params)
 
 def run_generic_worker(
-    wrapped_driver_fn: Optional[Callable[[Any], Any]] = None,
+    driver_fn: Optional[Callable[[Any], Any]] = None,
     sight_params: dict = None,
 ):
   """Generic worker utility for running applications that use the Decision API.
@@ -1019,7 +1021,7 @@ def run_generic_worker(
         break
     elif (response.status_type ==
           service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-      process_worker_action(response, sight, wrapped_driver_fn, sight_params['label'],
+      process_worker_action(response, sight, driver_fn, sight_params['label'],
                             optimizer.obj)
     else:
       raise ValueError('Invalid response from server')
@@ -1029,13 +1031,13 @@ def run_generic_worker(
   logging.debug('<<<<<< Exiting run method')
 
 
-def process_worker_action(response, sight, wrapped_driver_fn, question_label, opt_obj):
+def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
   """Processes worker actions during local training.
 
   Args:
       response: The response from the WorkerAlive RPC.
       sight: Sight object used for logging and configuration.
-      wrapped_driver_fn: The driver function that drives the training.
+      driver_fn: The driver function that drives the training.
       env: The environment in which the training takes place (optional).
       question_label:
   """
@@ -1066,7 +1068,7 @@ def process_worker_action(response, sight, wrapped_driver_fn, question_label, op
         ),
     )
 
-    wrapped_driver_fn(sight)
+    driver_fn(sight)
     sight._flush_log()
 
     sight.exit_block('Decision Sample', sight_pb2.Object())
