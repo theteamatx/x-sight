@@ -12,7 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """Demo of using the Sight Propose action API to add actions to server and wait for it's outcome."""
+
+import asyncio
+from typing import Sequence
 import warnings
+
+from absl import app
+from absl import flags
+from sight.sight import Sight
+from sight.widgets.decision import decision
+from sight.widgets.decision import proposal
 
 
 def warn(*args, **kwargs):
@@ -21,67 +30,11 @@ def warn(*args, **kwargs):
 
 warnings.warn = warn
 
-import asyncio
-import inspect
-import json
-import os
-import random
-from typing import Sequence, Any
-
-from absl import app
-from absl import flags
-import numpy as np
-import pandas as pd
-from sight.attribute import Attribute
-from sight.block import Block
-from sight import data_structures
-from sight.proto import sight_pb2
-from sight.sight import Sight
-from sight.widgets.decision import decision
-from sight.widgets.decision import proposal
-from helpers.logs.logs_handler import logger as logging
-
 FLAGS = flags.FLAGS
 
 
-def get_question_label():
-  return 'calculator'
-
-async def propose_actions(
-    sight: Sight,
-    question_label: str,
-    actions: dict[str, Any],
-) -> pd.Series:
-  tasks = []
-  with Attribute("task", "multiply", sight):
-    task = sight.create_task(
-        proposal.propose_actions(sight, question_label, action_dict=actions))
-    tasks.append(task)
-
-  [final_result] = await asyncio.gather(*tasks)
-  return final_result
-
-
-async def propose_actions_wrapper(sight: Sight, question_label: str,
-                                  actions: dict) -> None:
-
-  with Block("Propose actions", sight):
-    tasks = []
-    tasks.append(
-        sight.create_task(propose_actions(sight, question_label, actions)))
-
-    logging.info("waiting for all get outcome to finish.....")
-    result = await asyncio.gather(*tasks)
-    logging.info(f'result : {result}')
-
-
-# def get_sight_instance(config=None):
-#   params = sight_pb2.Params(
-#       label=get_question_label(),
-#       bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-#   )
-#   sight_obj = Sight(params, config)
-#   return sight_obj
+def get_question_label_to_propose_actions():
+  return "Calculator"
 
 
 def main(argv: Sequence[str]) -> None:
@@ -91,17 +44,20 @@ def main(argv: Sequence[str]) -> None:
   # config contains the data from all the config files
   config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
+  # Sight parameters dictionary with valid key values from sight_pb2.Params
+  params = {"label": "calculator_demo"}
+
   # create sight object with configuration to spawn workers beforehand
-  with Sight.create(get_question_label(), config) as sight:
+  with Sight.create(params, config) as sight:
 
-    # this thread checks the outcome for proposed action from server
-    decision.init_sight_polling_thread(sight.id, get_question_label())
+    # Ideally this actions will be proposed from some other module
+    actions = {"operand1": 3, "operand2": 5, "operator": "multiply"}
 
-    #Ideally this actions will be proposed from some other module
-    actions = {"v1": 3, "v2": 5, "ops": 'multiply'}
-
-    asyncio.run(propose_actions_wrapper(sight, get_question_label(), actions))
-
+    asyncio.run(
+        proposal.propose_actions(
+            sight, get_question_label_to_propose_actions(), actions
+        )
+    )
 
 if __name__ == "__main__":
   app.run(main)

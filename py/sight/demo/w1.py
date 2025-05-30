@@ -22,20 +22,14 @@ def warn(*args, **kwargs):
 warnings.warn = warn
 
 import asyncio
-import inspect
 import json
-import os
-import random
 from typing import Sequence, Any
 
 from absl import app
 from absl import flags
-import numpy as np
 import pandas as pd
 from sight.attribute import Attribute
 from sight.block import Block
-from sight import data_structures
-from sight.proto import sight_pb2
 from sight import sight
 from sight.sight import Sight
 from sight.widgets.decision import decision
@@ -48,11 +42,11 @@ sample = {'base-FERTILIZ-extra_offset': 0.0}
 
 
 def get_question_label_to_propose_actions():
-  return 'FVS'
+  return 'Fvs'
 
 
 def get_question_label():
-  return 'generic'
+  return 'Generic'
 
 
 # Define the black box function to optimize.

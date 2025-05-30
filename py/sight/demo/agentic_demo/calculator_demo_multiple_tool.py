@@ -11,9 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Demo of using calculator tool with Langchain."""
+"""Demo of using calculator tool with multiple worker using Langchain."""
 
-from typing import Any, Dict, Sequence
+from typing import Sequence
 
 from absl import app
 from absl import flags
@@ -21,22 +21,17 @@ import dotenv
 from langchain.agents import AgentType
 from langchain.agents import initialize_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
-from sight.tools.proposal_tool import proposal_api
 from sight.sight import Sight
-from sight.tools.tool_helper import create_tool_with_sight
+from sight.tools.tool_helper import create_lc_tool
 from sight.widgets.decision import decision
 
 
-load_dotenv = dotenv.load_dotenv
 find_dotenv = dotenv.find_dotenv
+load_dotenv = dotenv.load_dotenv
 load_dotenv(find_dotenv())
 FLAGS = flags.FLAGS
 
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
-
-
-def get_question_label():
-  return "Calculator"
 
 
 def main(argv: Sequence[str]) -> None:
@@ -47,15 +42,18 @@ def main(argv: Sequence[str]) -> None:
   config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
 
   # Sight parameters dictionary with valid key values from sight_pb2.Params
-  params = {"label": "multiple_opt_label"}
+  params = {"label": "Addition_label"}
 
   # create sight object with configuration to spawn workers beforehand
-  with Sight.create(params, config) as sight_instance:
+  with Sight.create(params, config) as sight:
 
-    calculator_tool = create_tool_with_sight(sight_instance,
-                                             get_question_label(), proposal_api)
-
-    tools = [calculator_tool]
+    # creating langchain tools with propose_action_api as default function
+    tools = [
+        create_lc_tool("Addition", sight),
+        create_lc_tool("Subtraction", sight),
+        create_lc_tool("Multiplication", sight),
+        create_lc_tool("Division", sight),
+    ]
 
     # initialize agent with tools and llm
     agent = initialize_agent(
@@ -65,10 +63,10 @@ def main(argv: Sequence[str]) -> None:
         verbose=True,
     )
 
-    # user_input = input(
-    #     "Enter the operations you want to perform in plain english: "
-    # )
-    user_input = "can you please multiply 25 by 5"
+    user_input = input(
+        "Enter the operations you want to perform in plain english: ")
+    # user_input = ("can you please add 25 by 5 and multiply it by 3 and then "
+    #               "divide it by 2")
 
     response = agent.invoke({"input": user_input})
     print("Response: ", response)

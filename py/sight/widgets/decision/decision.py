@@ -659,7 +659,7 @@ def get_decision_outcome_from_decision_message(
     outcome_label: str, decision_message: DecisionMessage):
   """Returns the decision outcome from the decision message."""
 
-  logging.info('decision message =>%s', decision_message)
+  # logging.info('decision message =>%s', decision_message)
 
   decision_outcome_proto = sight_pb2.DecisionOutcome(
       outcome_label=outcome_label)
@@ -667,7 +667,7 @@ def get_decision_outcome_from_decision_message(
   decision_outcome_proto.outcome_params.CopyFrom(
       convert_dict_to_proto(dict=decision_message.outcome_params))
   decision_outcome_proto.discount = decision_message.discount
-  logging.info('decision decision_outcome_proto =>%s', decision_outcome_proto)
+  # logging.info('decision decision_outcome_proto =>%s', decision_outcome_proto)
   return decision_outcome_proto
 
 
@@ -986,7 +986,7 @@ def _handle_optimizer_finalize(sight: Any, req: Any,
   else:
     # Place the decision outcome in the FinalizeEpisode rpc to the server.
     req.MergeFrom(f_ep_with_decision_msgs)
-  
+
   logging.info('Finalize req=%s', req)
 
   # clearing the cached

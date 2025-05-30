@@ -1,22 +1,30 @@
-action_attrs {
-  key: "v1"
+choice_config {
+  key: "Calculator"
   value {
-    min_value:1
-    max_value:5
+    llm_config {
+      description: "This tool can perform a basic arithmetic operation (addition, subtraction, multiplication and division) on two integers using the Sight backend system.\n  This function proposes a calculation action (with action dictionary as input containing all action parameter as key value pairs) to the server via a Sight worker.\n  It waits for the worker to process the action and return the computed result."
+    }
   }
 }
 action_attrs {
-  key: "v2"
+  key: "operand1"
   value {
-    min_value:1
-    max_value:5
+    description: "The first integer operand."
+    data_type: DT_INT64
   }
 }
 action_attrs {
-  key: "ops"
+  key: "operand2"
   value {
-    min_value:0
-    max_value:0
+    description: "The second integer operand."
+    data_type: DT_INT64
+  }
+}
+action_attrs {
+  key: "operator"
+  value {
+    description: "The operation to perform. Must be one of: add, subtract, multiply, divide."
+    data_type: DT_STRING
   }
 }
 outcome_attrs {

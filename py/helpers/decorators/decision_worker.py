@@ -2,7 +2,7 @@
 from helpers.logs.logs_handler import logger as logging
 from sight.widgets.decision import decision
 
-
+# not used anymore, replaced this with run_generic method
 def decision_worker(question_label):
   """Decorator that adds a decision API to the Sight log.
 
@@ -44,6 +44,7 @@ def decision_worker(question_label):
       logging.info('actions we got : %s', action)
       reward, outcome = func(sight, action)
       logging.info('reward we got : %s', reward)
-      decision.decision_outcome('decisionin_outcome', sight, reward)
+      logging.info('outcome we got : %s', outcome)
+      decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
     return wrapper
   return decorator

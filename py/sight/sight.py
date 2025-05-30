@@ -26,7 +26,7 @@ import random
 import threading
 import time
 import json
-from typing import Any, Optional, Sequence, Callable
+from typing import Any, Optional, Sequence, Callable, Union
 
 from absl import flags
 from dotenv import load_dotenv
@@ -70,7 +70,7 @@ def get_default_sight_params():
       text_output=False,
       avro_output=True,
       log_dir_path='/tmp/',
-      bucket_name='sight-bucket',
+      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
       gcp_path='sight-logs',
       file_format='.avro',
       dataset_name='sight_logs',
@@ -155,13 +155,16 @@ class Sight(object):
   SIGHT_API_KEY = 'AKfycbzU74yRL1Dc0Xu5--oJricaD-H50UgF3FKM_E8_CMP7uNesQEk-k3cm57R3vTsjbWCcxA'
 
   @classmethod
-  def create(cls, label, config=None) -> Sight:
-    params = sight_pb2.Params(
-        label=label,
-        bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-    )
-    sight_obj = Sight(params, config)
-    return sight_obj
+  def create(cls, params: Union[dict, sight_pb2.Params], config=None) -> Sight:
+    if isinstance(params, dict):
+        try:
+            params = sight_pb2.Params(**params)
+        except TypeError as e:
+            raise ValueError(f"Invalid params for sight_pb2.Params: {e}")
+    elif not isinstance(params, sight_pb2.Params):
+        raise ValueError("Expected params to be a dict or sight_pb2.Params instance.")
+
+    return Sight(params, config)
 
   def _initialize_default_params(self, params: sight_pb2.params):
     """get default parameter and merges user-provided values."""
@@ -782,7 +785,7 @@ class Sight(object):
     self.avro_record_counter += 1
     if self.avro_record_counter % 1000 == 0:
       self._upload_avro_file_to_gcs()
-  
+
   def _flush_log(self):
     """Flushes the log to remote storage."""
     if self.avro_log:
@@ -963,13 +966,27 @@ def text_block(label: str, text_val: str, sight, frame=None) -> str:
 
 
 def run_worker(
-    driver_fn: Optional[Callable[[Any], Any]] = None,
-    question_label: str = None,
+  driver_fn:  Callable[[Any], Any] = None,
+  sight_params: dict = None,
 ):
-  """Driver for running applications that use the Decision API.
+  """Wrapped the driver function with decision API,
+     One can directly call run_generic_worker function,
+     if have their own driver function.
+  """
+  def wrapped_driver_fn(sight):
+    action = decision.decision_point(sight_params['label'], sight)
+    reward, outcome = driver_fn(action)
+    decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
+  return run_generic_worker(wrapped_driver_fn, sight_params)
+
+def run_generic_worker(
+    driver_fn: Optional[Callable[[Any], Any]] = None,
+    sight_params: dict = None,
+):
+  """Generic worker utility for running applications that use the Decision API.
   """
 
-  sight = Sight.create(label=question_label)
+  sight = Sight.create(sight_params)
   sight.widget_decision_state['num_decision_points'] = 0
 
   optimizer = decision.Optimizer()
@@ -984,7 +1001,7 @@ def run_worker(
     req = service_pb2.WorkerAliveRequest(
         client_id=client_id,
         worker_id=f'client_{client_id}_worker_{worker_location}',
-        question_label=question_label)
+        question_label=sight_params['label'])
     response = service.call(
         lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
     logging.info('Response from WorkerAlive RPC: %s', response)
@@ -1004,7 +1021,7 @@ def run_worker(
         break
     elif (response.status_type ==
           service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-      process_worker_action(response, sight, driver_fn, question_label,
+      process_worker_action(response, sight, driver_fn, sight_params['label'],
                             optimizer.obj)
     else:
       raise ValueError('Invalid response from server')

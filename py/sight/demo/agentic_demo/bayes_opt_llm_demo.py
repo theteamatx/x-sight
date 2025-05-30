@@ -16,7 +16,7 @@
 from dotenv import load_dotenv, find_dotenv
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import initialize_agent, AgentType
-from langchain_demo.bayes_opt_worker import run_BO_tool
+from sight.demo.agentic_demo.bayes_opt_worker import run_BO_tool
 load_dotenv(find_dotenv())
 
 llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
