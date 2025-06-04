@@ -958,12 +958,6 @@ def _handle_optimizer_finalize(sight: Any, req: Any,
   cached_messages_obj = sight.widget_decision_state.get('cached_messages', None)
   all_messages: dict[str, DecisionMessage] = cached_messages_obj.all_messages()
 
-  # Hard-wire to mode where all outcomes are communicated via the cache.
-  # TODO: make this configurable.
-  caching_large_response = True
-  cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
-      cache_type=_CACHE_MODE.value))
-
   f_ep_with_decision_msgs = service_pb2.FinalizeEpisodeRequest()
   for action_id, msg in all_messages.items():
     # logging.info('action_id=%s, msg=%s', action_id, msg)
@@ -979,7 +973,10 @@ def _handle_optimizer_finalize(sight: Any, req: Any,
     decision_message.decision_point.choice_params.CopyFrom(choice_params)
     f_ep_with_decision_msgs.decision_messages.append(decision_message)
 
-  if caching_large_response:
+  # lets enable caching larger response when we use +CACHE_MODE.value other than local or none
+  if _CACHE_MODE.value not in [CacheType.NONE, CacheType.LOCAL]:
+    cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
+        cache_type=_CACHE_MODE.value))
     # Store the decision outcome in the cache and communicate the key to the server.
     req.decision_messages_ref_key = cache_transport.store_payload(
         text_format.MessageToString(f_ep_with_decision_msgs))

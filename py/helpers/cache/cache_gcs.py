@@ -40,7 +40,7 @@ class GCSCache(CacheInterface):
     bucket_name = config.get('gcs_bucket', 'cameltrain-sight')
     self.bucket = gcs_client.bucket(bucket_name=bucket_name)
     self.redis_cache = with_redis_cache
-    self.gcs_base_dir = config.get('gcs_base_dir', 'sight_cache')
+    self.gcs_base_dir = config.get('gcs_base_dir', 'sight_object_storage_cache')
 
   def _gcs_cache_path(self, key: str, suffix: str = '.json'):
     """Returns the GCS cache path for the given key"""
