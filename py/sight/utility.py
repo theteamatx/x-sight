@@ -16,7 +16,9 @@ import base64
 import math
 import time
 
+from absl import flags
 from google.protobuf import descriptor
+from google.protobuf import text_format
 from google.protobuf.internal import type_checkers
 from google.protobuf.json_format import _FLOAT_TYPES
 from google.protobuf.json_format import _INFINITY
@@ -25,11 +27,17 @@ from google.protobuf.json_format import _NAN
 from google.protobuf.json_format import _NEG_INFINITY
 from google.protobuf.json_format import _Printer as BasePrinter
 from google.protobuf.json_format import SerializeToJsonError
+from google.protobuf.text_format import Merge
+from helpers.cache.cache_factory import CacheFactory
+from helpers.cache.cache_factory import CacheType
+from helpers.cache.cache_payload_transport import CachedPayloadTransport
 from helpers.logs.logs_handler import logger as logging
 from sight import service_utils as service
 from sight.utils.proto_conversion import convert_proto_to_dict
 from sight.widgets.decision.resource_lock import RWLockDictWrapper
 from sight_service.proto import service_pb2
+
+FLAGS = flags.FLAGS
 
 POLL_LIMIT = 600  # POLL_TIME_INTERVAL th part of second
 POLL_TIME_INTERVAL = 5  # seconds
@@ -44,14 +52,18 @@ def get_all_outcomes(sight_id, question_label, action_ids):
   request.question_label = question_label
   request.unique_ids.extend(action_ids)
 
-  # async_dict = global_outcome_mapping.get()
-  # print(f'GLOBAL MAP OF GET OUTCOME => {async_dict}')
-  # time.sleep(10)
-  # return [[1] * 10]*len(action_ids)
+  cache_mode = FLAGS.cache_mode or 'none'
+  cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
+      cache_type=cache_mode))
 
   try:
     response = service.call(
         lambda s, meta: s.GetOutcome(request, 300, metadata=meta))
+
+    if response.outcomes_ref_key:
+      proto_cached_data = cache_transport.fetch_payload(
+          response.outcomes_ref_key)
+      text_format.Parse(proto_cached_data, response)
 
     # when worker finished fvs run of that sample
     # this `if` will goes inside for loop for each outcome
