@@ -341,6 +341,7 @@ message GetOutcomeResponse {
     int64 action_id = 8;
   }
   repeated Outcome outcome = 1;
+  string outcomes_ref_key = 2; // cache ref key
 }
 
 message FinalizeEpisodeRequest {
@@ -353,7 +354,7 @@ message FinalizeEpisodeRequest {
   Acme_Request acme_config = 6;
   // int64 action_id = 7;
   repeated sight.x.proto.DecisionMessage decision_messages = 8;
-  string decision_messages_ref_key = 9;
+  string decision_messages_ref_key = 9; // cache ref key
 }
 
 message FinalizeEpisodeResponse {

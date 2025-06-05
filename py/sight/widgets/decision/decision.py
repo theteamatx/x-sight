@@ -504,6 +504,8 @@ def get_decision_configuration_for_opt(
 
   decision_configuration.server_queue_batch_size = FLAGS.server_queue_batch_size or 1
 
+  decision_configuration.cache_mode = FLAGS.cache_mode or 'none'
+
   Merge(text_proto_data, decision_configuration)
 
   # decision_helper.attr_dict_to_proto(state_attrs,
@@ -958,7 +960,9 @@ def _handle_optimizer_finalize(sight: Any, req: Any,
   cached_messages_obj = sight.widget_decision_state.get('cached_messages', None)
   all_messages: dict[str, DecisionMessage] = cached_messages_obj.all_messages()
 
-  f_ep_with_decision_msgs = service_pb2.FinalizeEpisodeRequest()
+  # f_ep_req_proto_msg => Its the finalizedEpisodeRequest Proto
+  # either it gets cached or merged with a
+  f_ep_req_proto_msg = service_pb2.FinalizeEpisodeRequest()
   for action_id, msg in all_messages.items():
     # logging.info('action_id=%s, msg=%s', action_id, msg)
     # logging.info('msg.action_params=%s', msg.action_params)
@@ -971,18 +975,20 @@ def _handle_optimizer_finalize(sight: Any, req: Any,
     choice_params = sight_pb2.DecisionParam()
     choice_params.CopyFrom(convert_dict_to_proto(dict=msg.action_params))
     decision_message.decision_point.choice_params.CopyFrom(choice_params)
-    f_ep_with_decision_msgs.decision_messages.append(decision_message)
+    f_ep_req_proto_msg.decision_messages.append(decision_message)
 
   # lets enable caching larger response when we use +CACHE_MODE.value other than local or none
-  if _CACHE_MODE.value not in [CacheType.NONE, CacheType.LOCAL]:
+  if _CACHE_MODE.value not in [
+      CacheType.NONE, CacheType.LOCAL, CacheType.LOCAL_WITH_REDIS
+  ]:
     cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
         cache_type=_CACHE_MODE.value))
     # Store the decision outcome in the cache and communicate the key to the server.
     req.decision_messages_ref_key = cache_transport.store_payload(
-        text_format.MessageToString(f_ep_with_decision_msgs))
+        text_format.MessageToString(f_ep_req_proto_msg))
   else:
     # Place the decision outcome in the FinalizeEpisode rpc to the server.
-    req.MergeFrom(f_ep_with_decision_msgs)
+    req.MergeFrom(f_ep_req_proto_msg)
 
   logging.info('Finalize req=%s', req)
 

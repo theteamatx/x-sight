@@ -133,6 +133,7 @@ class Optimizers:
     """
     optimizer_type = request.decision_config_params.optimizer_type
     mq_batch_size = request.decision_config_params.server_queue_batch_size
+    cache_mode = request.decision_config_params.cache_mode
     logging.debug(">>>>>>>  In %s method of %s file. optimizer_type=%s",
                   sys._getframe().f_code.co_name, os.path.basename(__file__),
                   optimizer_type)
@@ -186,8 +187,10 @@ class Optimizers:
         return obj
       elif optimizer_type == sight_pb2.DecisionConfigurationStart.OptimizerType.OT_WORKLIST_SCHEDULER:
         self.instances[request.client_id][
-            request.question_label] = WorklistScheduler(
-                meta_data={"mq_batch_size": mq_batch_size})
+            request.question_label] = WorklistScheduler(meta_data={
+                "mq_batch_size": mq_batch_size,
+                "cache_mode": cache_mode
+            })
         obj = self.instances[request.client_id][request.question_label].launch(
             request)
         return obj

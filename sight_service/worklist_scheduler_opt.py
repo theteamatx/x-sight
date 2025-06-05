@@ -17,6 +17,9 @@ import threading
 from typing import Any, Dict, List, Tuple
 
 from google.protobuf import text_format
+from helpers.cache.cache_factory import CacheFactory
+from helpers.cache.cache_factory import CacheType
+from helpers.cache.cache_payload_transport import CachedPayloadTransport
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
@@ -42,11 +45,14 @@ class WorklistScheduler(SingleActionOptimizer):
   def __init__(self, meta_data: dict[str, any]):
     mq_batch_size = meta_data["mq_batch_size"]
     super().__init__(batch_size=mq_batch_size)
+    self.cache_mode = meta_data['cache_mode']
     self.next_sample_to_issue = []
     self.last_sample = False
     self.exp_completed = False
     self.possible_values = {}
     self.max_reward_sample = {}
+    self.cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
+        cache_type=self.cache_mode))
 
   def add_outcome_to_outcome_response(
       self, msg_details: MessageDetails, sample_id,
@@ -95,21 +101,21 @@ class WorklistScheduler(SingleActionOptimizer):
       request: service_pb2.GetOutcomeRequest) -> service_pb2.GetOutcomeResponse:
 
     all_completed_messages = self.queue.get_completed()
-
     response = service_pb2.GetOutcomeResponse()
+    g_o_res_proto_msg = service_pb2.GetOutcomeResponse()
     if not request.unique_ids:
       for sample_id in all_completed_messages:
-        outcome = response.outcome.add()
+        outcome = g_o_res_proto_msg.outcome.add()
         given_msg_details = all_completed_messages[sample_id]
         self.add_outcome_to_outcome_response(msg_details=given_msg_details,
                                              sample_id=sample_id,
-                                             outcome=response)
+                                             outcome=g_o_res_proto_msg)
     else:
       required_samples = list(request.unique_ids)
       all_pending_messages = self.queue.get_pending()
       all_active_messages = self.queue.get_active()
       for sample_id in required_samples:
-        outcome = response.outcome.add()
+        outcome = g_o_res_proto_msg.outcome.add()
         outcome.action_id = sample_id
         if sample_id in all_completed_messages:
           given_msg_details = all_completed_messages[sample_id]
@@ -126,6 +132,15 @@ class WorklistScheduler(SingleActionOptimizer):
           outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.NOT_EXIST
           outcome.response_str = f'!! requested sample Id {sample_id} does not exist !!'
     logging.info('self.queue => %s', self.queue)
+
+    if self.cache_mode not in [
+        CacheType.NONE, CacheType.LOCAL, CacheType.LOCAL_WITH_REDIS
+    ]:
+      response.outcomes_ref_key = self.cache_transport.store_payload(
+          text_format.MessageToString(g_o_res_proto_msg))
+    else:
+      response.MergeFrom(g_o_res_proto_msg)
+
     return response
 
   @overrides
@@ -158,13 +173,7 @@ class WorklistScheduler(SingleActionOptimizer):
     method_name = "finalize_episode"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-    # logging.debug("self.queue => %s", self.queue)
-    from helpers.cache.cache_factory import CacheFactory
-    from helpers.cache.cache_factory import CacheType
-    from helpers.cache.cache_payload_transport import CachedPayloadTransport
-
-    cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
-        cache_type=CacheType.GCS))
+    cache_transport = self.cache_transport
 
     # If the decision outcome was communicated via the cache.
     if request.decision_messages_ref_key:

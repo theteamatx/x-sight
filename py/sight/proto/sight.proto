@@ -731,6 +731,7 @@ message DecisionConfigurationStart {
   int64 question_id = 7;
   string question_label = 8;
   int64 server_queue_batch_size = 9;
+  string cache_mode = 10;
 }
 
 message DecisionParam { map<string, Value> params = 1; }
