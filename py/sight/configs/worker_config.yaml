@@ -25,3 +25,7 @@ multiplication_worker:
 division_worker:
   version: "v0.1"
   file_path: "py/worker/worker_configs/division_worker.yaml"
+
+pyrolyzer_worker:
+  version: "v0.1"
+  file_path: "py/worker/worker_configs/pyrolyzer_worker.yaml"

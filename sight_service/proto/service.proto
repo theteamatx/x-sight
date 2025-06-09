@@ -112,6 +112,7 @@ service SightService {
   }
 
   rpc ProposeAction(ProposeActionRequest) returns (ProposeActionResponse) {}
+  rpc SendFunction(SendFunctionRequest) returns (SendFunctionResponse) {}
   rpc GetOutcome(GetOutcomeRequest) returns (GetOutcomeResponse) {}
 
   rpc FinalizeEpisode(FinalizeEpisodeRequest)
@@ -302,6 +303,17 @@ message LaunchRequest {
 }
 message LaunchResponse { string display_string = 1; }
 
+message SendFunctionRequest{
+  string client_id = 1;
+  string question_label = 2;
+  string function_code = 3;
+}
+
+message SendFunctionResponse{
+  string response_str = 1;
+}
+
+
 message ProposeActionRequest {
   // message Action {
   //   sight.x.proto.DecisionParam action_attrs = 1;
@@ -421,4 +433,6 @@ message WorkerAliveResponse {
   }
   StatusType status_type = 4;
   repeated sight.x.proto.DecisionMessage decision_messages = 5;
+  string function_code = 6;
+
 }

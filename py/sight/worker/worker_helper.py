@@ -59,6 +59,11 @@ def create_attr_props(
           value_proto.data_type = DATA_TYPE_MAP[data_type_str]
         else:
           raise ValueError(f"Unknown data type: {data_type_str}")
+      if "min_value" in value:
+        value_proto.min_value = value["min_value"]
+      if "max_value" in value:
+        value_proto.max_value = value["max_value"]
+
 
     attr_prop_dict[key] = value_proto
 

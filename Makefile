@@ -21,7 +21,9 @@ proto-server:
 
 build_calculator_worker:
 	docker build --tag gcr.io/${PROJECT_ID}/test-calculator-worker:latest -f py/Dockerfile .
-	docker push gcr.io/${PROJECT_ID}/test-calculator-worker:latest
+
+build_pyrolyzer_worker:
+	docker build --tag gcr.io/${PROJECT_ID}/test-pyrolyzer-worker:latest -f py/Dockerfile .
 
 build_generic_worker:
 	docker build --tag gcr.io/${PROJECT_ID}/test-generic-worker-local:latest -f py/Dockerfile .

@@ -11,6 +11,7 @@ from worker.attribute_configs import addition_attribute_config
 from worker.attribute_configs import subtraction_attribute_config
 from worker.attribute_configs import multiplication_attribute_config
 from worker.attribute_configs import division_attribute_config
+from worker.attribute_configs import pyrolyzer_attribute_config
 
 
 
@@ -58,10 +59,7 @@ def generate_the_text_protos(models: Dict[str, Any], output_dir_path: str):
 
 if __name__ == '__main__':
 
-  model_configs = {'addition': addition_attribute_config,
-                   'subtraction': subtraction_attribute_config,
-                   'multiplication': multiplication_attribute_config,
-                   'division': division_attribute_config,
+  model_configs = {'pyrolyzer': pyrolyzer_attribute_config
                    }
   current_dir = os.path.dirname(os.path.realpath(__file__))
   output_dir_path = os.path.join(current_dir, '..', '..', 'worker')

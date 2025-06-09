@@ -1,0 +1,32 @@
+action_attrs {
+  key: "X"
+  value {
+    min_value: 1.0
+    max_value: 5.0
+    description: "The first variable."
+    data_type: DT_INT64
+  }
+}
+action_attrs {
+  key: "Y"
+  value {
+    min_value: 1.0
+    max_value: 5.0
+    description: "The second variable."
+    data_type: DT_INT64
+  }
+}
+action_attrs {
+  key: "Z"
+  value {
+    min_value: 1.0
+    max_value: 5.0
+    description: "The third variable."
+    data_type: DT_INT64
+  }
+}
+outcome_attrs {
+  key: "final_result"
+  value {
+  }
+}

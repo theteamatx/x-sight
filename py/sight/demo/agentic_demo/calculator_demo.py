@@ -23,7 +23,7 @@ from langchain.agents import initialize_agent
 from langchain_google_genai import ChatGoogleGenerativeAI
 from sight.tools.proposal_tool import proposal_api
 from sight.sight import Sight
-from sight.tools.tool_helper import create_tool_with_sight
+from sight.tools.tool_helper import create_lc_tool
 from sight.widgets.decision import decision
 
 
@@ -32,7 +32,7 @@ find_dotenv = dotenv.find_dotenv
 load_dotenv(find_dotenv())
 FLAGS = flags.FLAGS
 
-llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash")
+llm = ChatGoogleGenerativeAI(model="gemini-1.5-pro")
 
 
 def get_question_label():
@@ -50,10 +50,9 @@ def main(argv: Sequence[str]) -> None:
   params = {"label": "multiple_opt_label"}
 
   # create sight object with configuration to spawn workers beforehand
-  with Sight.create(params, config) as sight_instance:
+  with Sight.create(params, config) as sight:
 
-    calculator_tool = create_tool_with_sight(sight_instance,
-                                             get_question_label(), proposal_api)
+    calculator_tool = create_lc_tool(get_question_label(), sight)
 
     tools = [calculator_tool]
 

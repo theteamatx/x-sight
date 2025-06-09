@@ -47,3 +47,10 @@ Division:
   mode: "dsub_local_worker"
   workers:
     division_worker: 1
+
+Pyrolyzer:
+  optimizer: "bayesian_opt"
+  num_questions: 100
+  mode: "dsub_local_worker"
+  workers:
+    pyrolyzer_worker: 1

@@ -1021,6 +1021,7 @@ def run_generic_worker(
         break
     elif (response.status_type ==
           service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
+
       process_worker_action(response, sight, driver_fn, sight_params['label'],
                             optimizer.obj)
     else:
@@ -1041,6 +1042,19 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
       env: The environment in which the training takes place (optional).
       question_label:
   """
+  function_code = response.function_code
+  exec_scope = {}
+  exec(function_code, {}, exec_scope)
+  function_name = "calculate_reward" # This is the name the LLM should have used
+
+  if function_name in exec_scope and callable(exec_scope[function_name]):
+      # Get a reference to the dynamically defined function
+      driver_fn = exec_scope[function_name]
+  else:
+      print(f"\nError: Function '{function_name}' not found or not callable in the generated code's scope.")
+      print("Please check the LLM's output and the expected function name.")
+
+
   decision_messages = decision.get_decision_messages_from_proto(
       decision_messages_proto=response.decision_messages)
   # shared_batch_messages = CachedBatchMessages()
@@ -1068,7 +1082,10 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
         ),
     )
 
-    driver_fn(sight)
+    action = decision.decision_point(question_label, sight)
+    reward, outcome = driver_fn(action)
+    decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
+
     sight._flush_log()
 
     sight.exit_block('Decision Sample', sight_pb2.Object())

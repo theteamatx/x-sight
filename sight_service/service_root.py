@@ -297,6 +297,11 @@ class SightService(service_pb2_grpc.SightServiceServicer):
     return self.optimizers.launch(request)
 
   @rpc_call
+  def SendFunction(self, request, context):
+    return self.optimizers.get_instance(
+        request.client_id, request.question_label).send_function(request)
+
+  @rpc_call
   def Create(self, request, context):
     unique_id = generate_unique_number()
     return service_pb2.CreateResponse(id=unique_id, path_prefix="/tmp/")

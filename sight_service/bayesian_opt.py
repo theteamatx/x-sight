@@ -37,6 +37,7 @@ class BayesianOpt(OptimizerInstance):
     self._lock = threading.RLock()
     self._total_count = 0
     self._completed_count = 0
+    self.function_code = None
 
   @overrides
   def launch(self,
@@ -130,8 +131,8 @@ class BayesianOpt(OptimizerInstance):
     response = service_pb2.WorkerAliveResponse()
     if (self._completed_count == self._total_count):
       response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
-    # elif(not self.pending_samples):
-    #    response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
+    elif(not self.function_code):
+       response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
       # Increasing count here so that multiple workers can't enter the dp call for same sample at last
       self._completed_count += 1
@@ -143,6 +144,7 @@ class BayesianOpt(OptimizerInstance):
       decision_message = response.decision_messages.add()
       decision_message.action_id = self._completed_count
       decision_message.action.CopyFrom(convert_dict_to_proto(dict=selected_actions))
+      response.function_code = self.function_code
 
       response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
 
@@ -157,3 +159,7 @@ class BayesianOpt(OptimizerInstance):
         "sight experiment completed in bayes_opt")
 
     return service_pb2.CloseResponse(response_str="success")
+
+  def send_function(self, request: service_pb2.SendFunctionRequest) -> service_pb2.SendFunctionResponse:
+    self.function_code = request.function_code
+    return service_pb2.SendFunctionResponse(response_str="success")
