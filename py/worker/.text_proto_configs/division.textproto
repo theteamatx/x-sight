@@ -1,0 +1,27 @@
+choice_config {
+  key: "Division"
+  value {
+    llm_config {
+      description: "This tool can perform Division operation on two integers using the Sight backend system.\n  This function proposes action dictionary to the server via a Sight worker.\n  It waits for the worker to process the action and return the computed result."
+    }
+  }
+}
+action_attrs {
+  key: "operand1"
+  value {
+    description: "The first integer operand."
+    data_type: DT_INT64
+  }
+}
+action_attrs {
+  key: "operand2"
+  value {
+    description: "The second integer operand."
+    data_type: DT_INT64
+  }
+}
+outcome_attrs {
+  key: "final_result"
+  value {
+  }
+}

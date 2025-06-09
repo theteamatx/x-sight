@@ -1,4 +1,4 @@
-CREATE OR REPLACE TABLE `cameltrain.sight_logs.{log_id}_{type}_simulation_unordered_time_series_log` AS (
+CREATE OR REPLACE TABLE `cameltrain.sight_logs.{log_label}_{log_id}_{type}_simulation_unordered_time_series_log` AS (
 WITH
 -- AllTimeSteps AS (
 --   SELECT
@@ -6,7 +6,7 @@ WITH
 --     time_step,
 --     time_step_index
 --   FROM 
---     `cameltrain.sight_logs.{log_id}_value_var_log`
+--     `cameltrain.sight_logs.{log_label}_{log_id}_value_var_log`
 --   GROUP BY sim_location, time_step, time_step_index
 -- ),
 -- AllVarsTimeSteps AS (
@@ -18,7 +18,7 @@ WITH
 -- FROM
 --   AllTimeSteps
 -- CROSS JOIN
---   `cameltrain.sight_logs.{log_id}_all_vars_log`
+--   `cameltrain.sight_logs.{log_label}_{log_id}_all_vars_log`
 -- ),
 -- FilledData AS (
 -- SELECT
@@ -37,7 +37,7 @@ WITH
 -- FROM
 --   AllVarsTimeSteps
 -- LEFT JOIN
---   `cameltrain.sight_logs.{log_id}_value_var_log`
+--   `cameltrain.sight_logs.{log_label}_{log_id}_value_var_log`
 -- USING(sim_location, label, time_step, time_step_index)
 -- -- ORDER BY time_step_index, label
 -- ),
@@ -56,7 +56,7 @@ FilledData AS (
     time_step,
     time_step_index,
   FROM
-    `cameltrain.sight_logs.{log_id}_{type}_value_var_log`
+    `cameltrain.sight_logs.{log_label}_{log_id}_{type}_value_var_log`
 ),
 States AS (
   SELECT

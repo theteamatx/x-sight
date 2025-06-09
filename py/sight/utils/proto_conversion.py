@@ -44,12 +44,24 @@ def get_value_from_proto_value(proto_value: sight_pb2.Value) -> Any:
     return proto_value.bool_value
   elif proto_value.sub_type == sight_pb2.Value.ST_NONE:
     return None
+  # Handle ST_JSON, which can be either a list or a map
   elif proto_value.sub_type == sight_pb2.Value.ST_JSON:
-    try:
-      return json.loads(proto_value.json_value)
-    except (ValueError, TypeError):
-      return (proto_value.json_value
-             )  # Fall back to the raw string if JSON parsing fails
+    if proto_value.HasField("list_value"):
+      return [
+          get_value_from_proto_value(v) for v in proto_value.list_value.values
+      ]
+    elif proto_value.HasField("map_value"):
+      return {
+          key: get_value_from_proto_value(val)
+          for key, val in proto_value.map_value.fields.items()
+      }
+    else:
+      #  !! depercated logic using json_value as string dummped value
+      try:
+        return json.loads(proto_value.json_value)
+      except (ValueError, TypeError):
+        return (proto_value.json_value
+               )  # Fall back to the raw string if JSON parsing fails
   else:
     raise ValueError(f"Unsupported subtype: {proto_value.sub_type}")
 
@@ -68,28 +80,32 @@ def get_proto_value_from_value(v) -> sight_pb2.Value:
   val = sight_pb2.Value()
   if isinstance(v, dict):
     val.sub_type = sight_pb2.Value.ST_JSON
-    val.json_value = json.dumps(v)
-  elif isinstance(v, pd.Series):
+    for key, value in v.items():
+      val.map_value.fields[key].CopyFrom(get_proto_value_from_value(value))
+  elif isinstance(v, list):
     val.sub_type = sight_pb2.Value.ST_JSON
-    val.json_value = json.dumps(v.to_dict())
+    for item in v:
+      nested_val = get_proto_value_from_value(item)
+      val.list_value.values.append(nested_val)
   elif isinstance(v, str):
     try:
       # Try to parse as JSON if possible
+      # !! keeping this for backward compatibility
       json.loads(v)
       val.sub_type = sight_pb2.Value.ST_JSON
       val.json_value = v
     except (ValueError, TypeError):
       val.sub_type = sight_pb2.Value.ST_STRING
       val.string_value = v
+  elif isinstance(v, bool):
+    val.sub_type = sight_pb2.Value.ST_BOOL
+    val.bool_value = v
   elif isinstance(v, int):
     val.sub_type = sight_pb2.Value.ST_INT64
     val.int64_value = v
   elif isinstance(v, float):
     val.sub_type = sight_pb2.Value.ST_DOUBLE
     val.double_value = v
-  elif isinstance(v, bool):
-    val.sub_type = sight_pb2.Value.ST_BOOL
-    val.bool_value = v
   elif isinstance(v, bytes):
     val.sub_type = sight_pb2.Value.ST_BYTES
     val.bytes_value = v

@@ -156,7 +156,8 @@ class SightServiceServicer(object):
   def Tell(self, request, context):
     """rpc DecisionOutcome(DecisionOutcomeRequest)
         returns (DecisionOutcomeResponse) {}
-        rpc CopyDataToReplayServer(CopyDataToReplayServerRequest) returns (CopyDataToReplayServerResponse) {}
+        rpc CopyDataToReplayServer(CopyDataToReplayServerRequest) returns
+        (CopyDataToReplayServerResponse) {}
         """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
     context.set_details('Method not implemented!')

@@ -19,6 +19,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      # Set up Python 3.10
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.10"
+
       - name: Print Python Path
         run: |
           which python
@@ -27,14 +33,18 @@ jobs:
 
       - name: Install dependencies
         run: |
+          pip install --upgrade setuptools wheel
           python -m pip install --upgrade pip
-          pip install -r sight_service/requirements.txt
+          pip install -r py/sight/requirements.txt
+          # pip install -r sight_service/requirements.txt
           pip install absl-py==1.4.0
           pip install colorama==0.4.6
+          pip install redis==5.0.5
 
       - name: Set and print python path
         run: |
           echo "PYTHONPATH=$PYTHONPATH:$(pwd)/py" >> $GITHUB_ENV
+          echo "PROJECT_ID=dummy-gcp-project" >> $GITHUB_ENV
           which python
           python -c "import sys; print(sys.executable)"
           python -c "import sys; print(sys.path)"

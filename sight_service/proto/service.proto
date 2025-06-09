@@ -3,7 +3,8 @@
 // cloned on your system
 
 // git clone https://github.com/googleapis/googleapis
-// GOOGLEAPIS_DIR=<your-local-googleapis-folder> (/usr/local/google/home/meetashah/googleapis)
+// GOOGLEAPIS_DIR=<your-local-googleapis-folder>
+// (/usr/local/google/home/meetashah/googleapis)
 
 // and then run protoc like this from x-sight directory:
 // python -m grpc_tools.protoc \
@@ -33,10 +34,11 @@ import "google/api/annotations.proto";
 service SightService {
   // A test request to validate that the service is up.
   rpc Test(TestRequest) returns (TestResponse) {
-    // Client example (Assuming your service is hosted at the given 'DOMAIN_NAME'):
+    // Client example (Assuming your service is hosted at the given
+    // 'DOMAIN_NAME'):
     //   curl http://DOMAIN_NAME/v1/test/{client_id}
     option (google.api.http) = {
-      get: "/v1/test/{client_id}"
+      get : "/v1/test/{client_id}"
       // body: ""
     };
   }
@@ -45,70 +47,79 @@ service SightService {
   rpc Create(CreateRequest) returns (CreateResponse) {
     // Client example:
     //   curl http://DOMAIN_NAME/v1/create
-    option (google.api.http) = { get: "/v1/create" };
+    option (google.api.http) = {
+      get : "/v1/create"
+    };
   }
   rpc Close(CloseRequest) returns (CloseResponse) {
     // Client example:
     //   curl http://DOMAIN_NAME/v1/Close
-    option (google.api.http) = { get: "/v1/Close" };
+    option (google.api.http) = {
+      get : "/v1/Close"
+    };
   }
   rpc WorkerAlive(WorkerAliveRequest) returns (WorkerAliveResponse) {
     // Client example:
     //   curl http://DOMAIN_NAME/v1/WorkerAlive
-    option (google.api.http) = { get: "/v1/WorkerAlive" };
+    option (google.api.http) = {
+      get : "/v1/WorkerAlive"
+    };
   }
   rpc Launch(LaunchRequest) returns (LaunchResponse) {
     //   curl http://DOMAIN_NAME/v1/launch/{client_id}/{label}
     option (google.api.http) = {
-      post: "/v1/launch/{client_id}/{label}"
-      body: "decision_config_params"
+      post : "/v1/launch/{client_id}/{label}"
+      body : "decision_config_params"
     };
   }
   // rpc GetWeights(GetWeightsRequest) returns (GetWeightsResponse) {}
   rpc DecisionPoint(DecisionPointRequest) returns (DecisionPointResponse) {
     //   curl http://DOMAIN_NAME/v1/decision_point/{client_id}/{worker_id}
     option (google.api.http) = {
-      post: "/v1/decision_point/{client_id}/{worker_id}"
-      body: "acme_config"
+      post : "/v1/decision_point/{client_id}/{worker_id}"
+      body : "acme_config"
     };
   }
   // rpc DecisionOutcome(DecisionOutcomeRequest)
   //     returns (DecisionOutcomeResponse) {}
-  // rpc CopyDataToReplayServer(CopyDataToReplayServerRequest) returns (CopyDataToReplayServerResponse) {}
+  // rpc CopyDataToReplayServer(CopyDataToReplayServerRequest) returns
+  // (CopyDataToReplayServerResponse) {}
   rpc Tell(TellRequest) returns (TellResponse) {
     //   curl http://DOMAIN_NAME/v1/tell/{client_id}/{worker_id}
     option (google.api.http) = {
-      post: "/v1/tell/{client_id}/{worker_id}"
+      post : "/v1/tell/{client_id}/{worker_id}"
     };
   }
   rpc Listen(ListenRequest) returns (ListenResponse) {
     //   curl http://DOMAIN_NAME/v1/listen/{client_id}/{worker_id}
     option (google.api.http) = {
-      get: "/v1/listen/{client_id}/{worker_id}"
+      get : "/v1/listen/{client_id}/{worker_id}"
     };
   }
 
   rpc CurrentStatus(CurrentStatusRequest) returns (CurrentStatusResponse) {
     //   curl http://DOMAIN_NAME/v1/current_status/{client_id}/{worker_id}
     option (google.api.http) = {
-      get: "/v1/current_status/{client_id}/{worker_id}"
+      get : "/v1/current_status/{client_id}/{worker_id}"
     };
   }
-  rpc FetchOptimalAction(FetchOptimalActionRequest) returns (FetchOptimalActionResponse) {
+  rpc FetchOptimalAction(FetchOptimalActionRequest)
+      returns (FetchOptimalActionResponse) {
     //   curl http://DOMAIN_NAME/v1/fetch_optimal_action/{client_id}/{worker_id}
     option (google.api.http) = {
-      get: "/v1/fetch_optimal_action/{client_id}/{worker_id}"
+      get : "/v1/fetch_optimal_action/{client_id}/{worker_id}"
     };
   }
 
   rpc ProposeAction(ProposeActionRequest) returns (ProposeActionResponse) {}
   rpc GetOutcome(GetOutcomeRequest) returns (GetOutcomeResponse) {}
 
-  rpc FinalizeEpisode(FinalizeEpisodeRequest) returns (FinalizeEpisodeResponse) {
+  rpc FinalizeEpisode(FinalizeEpisodeRequest)
+      returns (FinalizeEpisodeResponse) {
     //   curl http://DOMAIN_NAME/v1/finalize_episode/{client_id}/{worker_id}
     option (google.api.http) = {
-      post: "/v1/finalize_episode/{client_id}/{worker_id}"
-      body: "acme_config"
+      post : "/v1/finalize_episode/{client_id}/{worker_id}"
+      body : "acme_config"
     };
   }
 }
@@ -202,10 +213,10 @@ message Acme_Request {
 message Acme_Response {
   message Layer {
     message WeightsData {
-        repeated float b = 1;
-        numproto.protobuf.NDArray w = 2;
-        repeated float offset = 3;
-        repeated float scale = 4;
+      repeated float b = 1;
+      numproto.protobuf.NDArray w = 2;
+      repeated float offset = 3;
+      repeated float scale = 4;
     }
     string name = 1;
     WeightsData weights = 2;
@@ -215,6 +226,7 @@ message Acme_Response {
 message DecisionPointRequest {
   string client_id = 1;
   string worker_id = 2;
+  string question_label = 6;
   sight.x.proto.DecisionPoint decision_point = 3; // need or not?
   sight.x.proto.DecisionOutcome decision_outcome = 4;
   // attributes
@@ -252,21 +264,15 @@ message FetchOptimalActionRequest {
   string client_id = 1;
   string worker_id = 2;
 }
-message FetchOptimalActionResponse {
-  string response_str = 1;
-}
+message FetchOptimalActionResponse { string response_str = 1; }
 
 message TellRequest {
   string client_id = 1;
   string message_str = 2;
 }
-message TellResponse {
-  string response_str = 1;
-}
+message TellResponse { string response_str = 1; }
 
-message ListenRequest {
-  string client_id = 1;
-}
+message ListenRequest { string client_id = 1; }
 message ListenResponse {
   bool response_ready = 1;
   string response_str = 2;
@@ -278,7 +284,7 @@ message CurrentStatusRequest {
 }
 message CurrentStatusResponse {
   string response_str = 1;
-  enum Status{
+  enum Status {
     DEFAULT = 0;
     IN_PROGRESS = 1;
     SUCCESS = 2;
@@ -291,10 +297,10 @@ message LaunchRequest {
   sight.x.proto.DecisionConfigurationStart decision_config_params = 1;
   string label = 3;
   string client_id = 4;
+  // int64 question_id = 5;
+  string question_label = 6;
 }
-message LaunchResponse {
-  string display_string = 1;
-}
+message LaunchResponse { string display_string = 1; }
 
 message ProposeActionRequest {
   // message Action {
@@ -306,18 +312,19 @@ message ProposeActionRequest {
   // sight.x.proto.DecisionParam state_attrs = 3;
   // repeated sight.x.proto.Attribute attributes = 3;
   sight.x.proto.DecisionParam attributes = 3;
+
+  string question_label = 4;
 }
-message ProposeActionResponse {
-  int64 action_id = 1;
-}
+message ProposeActionResponse { int64 action_id = 1; }
 
 message GetOutcomeRequest {
   string client_id = 1;
   repeated int64 unique_ids = 2;
+  string question_label = 3;
 }
 message GetOutcomeResponse {
-  message Outcome{
-    enum Status{
+  message Outcome {
+    enum Status {
       DEFAULT = 0;
       PENDING = 1;
       ACTIVE = 2;
@@ -334,29 +341,28 @@ message GetOutcomeResponse {
     int64 action_id = 8;
   }
   repeated Outcome outcome = 1;
+  string outcomes_ref_key = 2; // cache ref key
 }
 
 message FinalizeEpisodeRequest {
   string client_id = 1;
   string worker_id = 2;
+  string question_label = 7;
   // sight.x.proto.DecisionPoint decision_point = 3;
   // sight.x.proto.DecisionOutcome decision_outcome = 4;
   sight.x.proto.DecisionConfigurationStart.OptimizerType optimizer_type = 5;
   Acme_Request acme_config = 6;
   // int64 action_id = 7;
   repeated sight.x.proto.DecisionMessage decision_messages = 8;
+  string decision_messages_ref_key = 9; // cache ref key
 }
 
 message FinalizeEpisodeResponse {
   string response_str = 1;
   bool stop_worker = 2;
 }
-message TestRequest {
-  string client_id = 1;
-}
-message TestResponse {
-  string val = 1;
-}
+message TestRequest { string client_id = 1; }
+message TestResponse { string val = 1; }
 // The format in which the log is stored.
 enum LogFormat {
   LF_UNKNOWN = 0;
@@ -392,15 +398,16 @@ message CreateResponse {
 
 message CloseRequest {
   string client_id = 1;
+  optional string question_label = 2;
 }
 
-message CloseResponse {
-  string response_str = 1;
-}
+message CloseResponse { string response_str = 1; }
 
 message WorkerAliveRequest {
   string client_id = 1;
   string worker_id = 2;
+  // int64 question_id = 3;
+  string question_label = 4;
 }
 
 message WorkerAliveResponse {

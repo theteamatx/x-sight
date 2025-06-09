@@ -37,4 +37,4 @@ logger.addHandler(handler)
 # adapter = CustomAdapter(logger, {'user': 'meetashah'})
 
 # Example of logging
-# logger.info("This is an info message logged to GCP")
+# logger.info("This is an info message logged to GCP from VM")

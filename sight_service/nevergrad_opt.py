@@ -27,6 +27,7 @@ from overrides import overrides
 import requests
 from sight.proto import sight_pb2
 from sight.utils.proto_conversion import convert_dict_to_proto
+from sight.utils.proto_conversion import convert_proto_to_dict
 from sight_service.normalizer import Normalizer
 from sight_service.optimizer_instance import OptimizerInstance
 from sight_service.proto import service_pb2
@@ -45,12 +46,12 @@ class NeverGradOpt(OptimizerInstance):
   def __init__(self):
     super().__init__()
     self.num_samples_issued = 0
-    self.active_samples = {}
-    self.complete_samples = {}
     self.possible_values = {}
     self._lock = threading.RLock()
     self._total_count = 0
     self._completed_count = 0
+    #! here we need new dataclass to work with multiple workers, this only works for single worker
+    self._selected_actions = {}
     self.normalizer = Normalizer()
 
   @overrides
@@ -166,7 +167,7 @@ class NeverGradOpt(OptimizerInstance):
 
     response.display_string = 'NeverGrad Start'
     print('response=%s' % response)
-    # raise SystemExit
+    print('here nevergrad object : ', self.__dict__)
     return response
 
   def _params_to_dict(self, dp: sight_pb2) -> Dict[str, float]:
@@ -186,26 +187,11 @@ class NeverGradOpt(OptimizerInstance):
     self._lock.acquire()
     selected_actions = self._optimizer.ask()
     # logging.info('selected_actions=%s', selected_actions.args)
-
     # logging.info('selected_actions=%s', selected_actions.kwargs)
-    self.active_samples[request.worker_id] = {
-        'action': selected_actions.args[0],
-        'sample_num': self.num_samples_issued,
-    }
-    # print('self.active_samples : ', self.active_samples)
-    self.last_action = selected_actions
     self.num_samples_issued += 1
     self._lock.release()
-
-    denormalized_actions = self.normalizer.denormalize_from_0_to_1(
-        selected_actions.args[0])
-    # print("denormalized_actions : ", denormalized_actions)
-
     dp_response = service_pb2.DecisionPointResponse()
-
-    dp_response.action.CopyFrom(
-        convert_dict_to_proto(dict=denormalized_actions))
-
+    dp_response.action.CopyFrom(convert_dict_to_proto(dict=selected_actions))
     dp_response.action_type = service_pb2.DecisionPointResponse.ActionType.AT_ACT
     return dp_response
 
@@ -214,26 +200,20 @@ class NeverGradOpt(OptimizerInstance):
       self, request: service_pb2.FinalizeEpisodeRequest
   ) -> service_pb2.FinalizeEpisodeResponse:
     # logging.info('FinalizeEpisode request=%s', request)
-    d = self.last_action
 
     self._lock.acquire()
-    # logging.info('FinalizeEpisode complete_samples=%s' % self.complete_samples)
-    self.complete_samples[self.active_samples[request.worker_id]['sample_num']] = {
-        # 'outcome': request.decision_outcome.reward,
-        # 'action': self.active_samples[request.worker_id]['action'],
-        'reward': request.decision_outcome.reward,
-        'action': self.active_samples[request.worker_id]['action'],
-        'outcome': request.decision_outcome.outcome_params
-    }
-    # print('self.complete_samples : ', self.complete_samples)
-    del self.active_samples[request.worker_id]
 
-    # logging.info('FinalizeEpisode outcome=%s / %s',
-    #              request.decision_outcome.reward, d)
-    self._optimizer.tell(d, 0 - request.decision_outcome.reward)
-    # self._completed_count += 1
+    for i in range(len(request.decision_messages)):
+      # last_action_done_by_woker = convert_proto_to_dict(
+      #     proto=request.decision_messages[i].decision_point.choice_params)
+      last_action_done_by_woker = self._selected_actions
 
-    del self.last_action
+      logging.info('FinalizeEpisode outcome=%s / %s',
+                   request.decision_messages[i].decision_outcome.reward,
+                   last_action_done_by_woker)
+      self._optimizer.tell(
+          last_action_done_by_woker,
+          0 - request.decision_messages[i].decision_outcome.reward)
     self._lock.release()
     return service_pb2.FinalizeEpisodeResponse(response_str='Success!')
 
@@ -241,39 +221,42 @@ class NeverGradOpt(OptimizerInstance):
   def current_status(
       self, request: service_pb2.CurrentStatusRequest
   ) -> service_pb2.CurrentStatusResponse:
-    response = '[NeverGrad (num_ask=#%s, num_tell=#%s)\n' % (
-        self._optimizer.num_ask, self._optimizer.num_tell)
+    return service_pb2.CurrentStatusResponse(
+        response_str='NEED TO UPDATE THIS RPC',
+        status=service_pb2.CurrentStatusResponse.Status.FAILURE)
+    # response = '[NeverGrad (num_ask=#%s, num_tell=#%s)\n' % (
+    #     self._optimizer.num_ask, self._optimizer.num_tell)
 
-    self._lock.acquire()
-    response += 'sample_num, ' + ', '.join(list(self.actions)) + ', outcome\n'
-    cur = [0] * len(self.actions)
-    keys = sorted(self.actions.keys())
-    logging.info('self.complete_samples=%s', self.complete_samples)
-    for s in sorted(self.complete_samples.items(),
-                    key=lambda x: x[1]['outcome'],
-                    reverse=True):
-      response += str(s[0]) + ', '
-      response += ', '.join([str(s[1]['action'][key]) for key in keys])
-      response += ', ' + str(s[1]['outcome']) + '\n'
+    # self._lock.acquire()
+    # response += 'sample_num, ' + ', '.join(list(self.actions)) + ', outcome\n'
+    # cur = [0] * len(self.actions)
+    # keys = sorted(self.actions.keys())
+    # logging.info('self.complete_samples=%s', self.complete_samples)
+    # for s in sorted(self.complete_samples.items(),
+    #                 key=lambda x: x[1]['outcome'],
+    #                 reverse=True):
+    #   response += str(s[0]) + ', '
+    #   response += ', '.join([str(s[1]['action'][key]) for key in keys])
+    #   response += ', ' + str(s[1]['outcome']) + '\n'
 
-    response += 'pareto_front:\n'
-    for trial in self._optimizer.pareto_front():
-      response += ', '.join([str(trial.args[0][key]) for key in keys]) + '\n'
-    response += ']\n'
-    self._lock.release()
+    # response += 'pareto_front:\n'
+    # for trial in self._optimizer.pareto_front():
+    #   response += ', '.join([str(trial.args[0][key]) for key in keys]) + '\n'
+    # response += ']\n'
+    # self._lock.release()
 
-    # print('self._total_count was : ', self._total_count)
-    # print('self._completed_count is now : ', self._completed_count)
+    # # print('self._total_count was : ', self._total_count)
+    # # print('self._completed_count is now : ', self._completed_count)
 
-    if (self._completed_count == self._total_count):
-      status = service_pb2.CurrentStatusResponse.Status.SUCCESS
-    elif (self._completed_count < self._total_count):
-      status = service_pb2.CurrentStatusResponse.Status.IN_PROGRESS
-    else:
-      status = service_pb2.CurrentStatusResponse.Status.FAILURE
+    # if (self._completed_count == self._total_count):
+    #   status = service_pb2.CurrentStatusResponse.Status.SUCCESS
+    # elif (self._completed_count < self._total_count):
+    #   status = service_pb2.CurrentStatusResponse.Status.IN_PROGRESS
+    # else:
+    #   status = service_pb2.CurrentStatusResponse.Status.FAILURE
 
-    return service_pb2.CurrentStatusResponse(response_str=response,
-                                             status=status)
+    # return service_pb2.CurrentStatusResponse(response_str=response,
+    #                                          status=status)
 
   @overrides
   def WorkerAlive(
@@ -281,14 +264,32 @@ class NeverGradOpt(OptimizerInstance):
   ) -> service_pb2.WorkerAliveResponse:
     method_name = "WorkerAlive"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
+    response = service_pb2.WorkerAliveResponse()
     if (self._completed_count == self._total_count):
-      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
+      response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_DONE
     # elif(not self.pending_samples):
     #    worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_RETRY
     else:
       # Increasing count here so that multiple workers can't enter the dp call for same sample at last
       self._completed_count += 1
-      worker_alive_status = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
-    logging.info("worker_alive_status is %s", worker_alive_status)
+
+      self._lock.acquire()
+      selected_actions = self._optimizer.ask()
+      self._selected_actions = selected_actions
+      self.num_samples_issued += 1
+      self._lock.release()
+
+      # logging.info('selected_actions : %s, %s', type(selected_actions),
+      #              selected_actions)
+      # logging.info('selected_actions.args[0] : %s, %s',
+      #              type(selected_actions.args[0]), selected_actions.args[0])
+      decision_message = response.decision_messages.add()
+      decision_message.action_id = self._completed_count
+      decision_message.action.CopyFrom(
+          convert_dict_to_proto(dict=selected_actions.args[0]))
+
+      response.status_type = service_pb2.WorkerAliveResponse.StatusType.ST_ACT
+
+    logging.info("worker_alive_status is %s", response.status_type)
     logging.debug("<<<<  Out %s of %s", method_name, _file_name)
-    return service_pb2.WorkerAliveResponse(status_type=worker_alive_status)
+    return response

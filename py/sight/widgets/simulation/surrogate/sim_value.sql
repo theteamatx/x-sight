@@ -1,4 +1,4 @@
-CREATE OR REPLACE TABLE `cameltrain.sight_logs.{log_id}_{type}_value_var_log` AS (
+CREATE OR REPLACE TABLE `cameltrain.sight_logs.{log_label}_{log_id}_{type}_value_var_log` AS (
 WITH
 Values AS (
   SELECT
@@ -10,7 +10,7 @@ Values AS (
     value.sub_type AS value_type,
     ancestor_start_location,
     array_reverse(ancestor_start_location)[offset(1)] AS parent_loc
-  FROM `cameltrain.sight_logs.{log_id}_log`
+  FROM `cameltrain.sight_logs.{log_label}_{log_id}_log`
   WHERE sub_type='ST_VALUE'
 ),
 Data AS (
@@ -30,7 +30,7 @@ Data AS (
   FROM
     Values
   JOIN
-    `cameltrain.sight_logs.{log_id}_{type}_named_var_log` AS NamedVar
+    `cameltrain.sight_logs.{log_label}_{log_id}_{type}_named_var_log` AS NamedVar
   ON NamedVar.named_var_location = Values.parent_loc
 )
 SELECT * FROM Data

@@ -36,11 +36,13 @@ load_dotenv()
 FLAGS = flags.FLAGS
 
 current_script_directory = os.path.dirname(os.path.abspath(__file__))
-_CERT_FILE_PATH = os.path.join(current_script_directory, '..', '..',
-                               'sight_service', 'sight_service.cert')
+#  Check which crt will works for you
+# _CERT_FILE_PATH = "/etc/ssl/certs/ca-certificates.crt"
+# _CERT_FILE_PATH = os.path.join(current_script_directory, '..', '..',
+#                                'sight_service', 'sight_service.cert')
 _SERVICE_NAME = flags.DEFINE_string(
     'service_name',
-    '',
+    'test-dev-service',
     'The name of the Sight service instance that will be managing this run.',
 )
 _SERVICE_DOCKER_FILE = flags.DEFINE_string(
@@ -63,10 +65,10 @@ _PORT = flags.DEFINE_string(
     '443',
     'port number on which service is deployed',
 )
-_DEPLOYMENT_MODE = flags.DEFINE_enum(
-    'deployment_mode',
-    None,
-    ['vm', 'distributed', 'local', 'dsub_local', 'docker_local', 'worker_mode'],
+_SERVER_MODE = flags.DEFINE_enum(
+    'server_mode',
+    'cloud_run',
+    ['vm', 'cloud_run', 'local'],
     ('The procedure to use when training a model to drive applications that '
      'use the Decision API.'),
 )
@@ -105,13 +107,10 @@ def get_service_id() -> str:
 
 
 def get_port_number() -> str:
-  if 'PORT' in os.environ:
-    return os.environ['PORT']
-  # need to use secure channel for cloud run server
-  elif (FLAGS.deployment_mode in ['local', 'vm']):
+  if (FLAGS.server_mode in ['local', 'vm']):
     return '8080'
   else:
-    return FLAGS.port
+    return _PORT.value
 
 
 def _service_addr() -> str:
@@ -127,6 +126,7 @@ def _service_addr() -> str:
   else:
     # print('fetching unique string.....')
     try:
+      # print('get_service_id()=', get_service_id())
       service_url = subprocess.getoutput(
           'gcloud run services describe'
           f" {_SERVICE_PREFIX}{get_service_id()} --region us-central1 --format='value(status.url)'"
@@ -134,7 +134,7 @@ def _service_addr() -> str:
       print("service url : ", service_url)
       _UNIQUE_STRING = re.search(r'https://.*-(\w+)-uc\.a\.run\.app',
                                  service_url).group(1)
-      print("_UNIQUE_STRING : ", _UNIQUE_STRING)
+      # print("_UNIQUE_STRING : ", _UNIQUE_STRING)
     except Exception as e:
       logging.exception("service not found : %s", e)
     # print("first _UNIQUE_STRING : ", _UNIQUE_STRING)
@@ -199,7 +199,7 @@ def _find_or_deploy_server() -> str:
         sys.exit(0)
 
   # deploy new service
-  print('_SERVICE_ID=', get_service_id())
+  # print('_SERVICE_ID=', get_service_id())
   docker_file_path = _SERVICE_DOCKER_FILE.value
   docker_img = _SERVICE_DOCKER_IMG.value
 
@@ -211,7 +211,7 @@ def _find_or_deploy_server() -> str:
     # )
 
   if (docker_file_path):
-    logging.info('building img from scratch.....................')
+    # logging.info('building img from scratch.....................')
     # Step 1: Build docker image
     build_out = subprocess.run(
         [
@@ -307,7 +307,7 @@ def _find_or_deploy_server() -> str:
   )
   print('deploy_out : ', deploy_out.stderr)
 
-  logging.info('_SERVICE_ID=%s', _SERVICE_ID)
+  # logging.info('_SERVICE_ID=%s', _SERVICE_ID)
   if (docker_file_path):
     logging.info('deleting newly built img')
     subprocess.run(
@@ -376,7 +376,6 @@ def get_id_token_of_service_account(user_access_token, service_account,
         headers=headers,
         data=data,
     )
-    # print('response=%s' % response.json())
     return response.json()['token']
   except Exception as e:
     logging.info('API CALL ERROR: %s', e)
@@ -392,9 +391,8 @@ def generate_id_token():
   # worker in cloud
 
   if 'worker_mode' in flags.FLAGS and flags.FLAGS.worker_mode == 'dsub_cloud_worker':
-    # print(
-    #     'using credentials of service account for : https://' + _service_addr()
-    # )
+    logging.info('using credentials of service account for : https://%s',
+                 _service_addr())
     auth_req = google.auth.transport.requests.Request()
     service_account_id_token = google.oauth2.id_token.fetch_id_token(
         auth_req, 'https://' + _service_addr())
@@ -410,20 +408,31 @@ def generate_id_token():
       # print("using service account's credentils..... :")
       user_access_token = creds.token
       service_account = f'{flags.FLAGS.service_account}@{os.environ["PROJECT_ID"]}.iam.gserviceaccount.com'
-      # print('user_access_token : ', user_access_token)
-      # print('service_account : ',service_account)
       url = f'https://{_service_addr()}'
       service_account_id_token = get_id_token_of_service_account(
           user_access_token, service_account, url)
       id_token = service_account_id_token
     # using user credentials
     else:
-      # print("using user's credentils..... creds=%s" % creds)
       user_id_token = creds.id_token
       id_token = user_id_token
 
-  # print('id_token : ', id_token)
   return id_token
+
+
+def get_docker0_ip():
+  try:
+    # Run the 'ip addr' command
+    output = subprocess.check_output(['ip', 'addr'], encoding='utf-8')
+
+    # Regex to find the IP address for the docker0 interface
+    match = re.search(r'docker0.*?inet (\d+\.\d+\.\d+\.\d+)', output, re.DOTALL)
+    if match:
+      return match.group(1)
+    else:
+      raise RuntimeError("docker0 interface not found")
+  except Exception as e:
+    return f"Error: {e}"
 
 
 def obtain_secure_channel(options=None):
@@ -433,20 +442,21 @@ def obtain_secure_channel(options=None):
     service_handle: to communicate with server
   """
   # hosted server
-  if 'SIGHT_SERVICE_PATH' in os.environ:
-    cert_file = (f'{os.environ["SIGHT_SERVICE_PATH"]}/sight_service.cert')
-  else:
-    cert_file = _CERT_FILE_PATH
-  with open(cert_file, 'rb') as f:
-    creds = grpc.ssl_channel_credentials(f.read())
+  # if 'SIGHT_SERVICE_PATH' in os.environ:
+  #   cert_file = (f'{os.environ["SIGHT_SERVICE_PATH"]}/sight_service.cert')
+  # else:
+  #   cert_file = _CERT_FILE_PATH
+  # with open(cert_file, 'rb') as f:
+
+  creds = grpc.ssl_channel_credentials()
 
   # if('IP_ADDR' in os.environ):
   #   url = os.environ['IP_ADDR']
   # else:
   url = _service_addr()
   target = '{}:{}'.format(url, get_port_number())
-  # print("service_url here : ", target)
-
+  logging.info("secure channel : target %s , creds %s and options %s here ", target, creds,
+               options)
   channel = grpc.secure_channel(
       target,
       creds,
@@ -461,12 +471,18 @@ def obtain_insecure_channel(options):
   Returns:
     service_handle: to communicate with server
   """
+  # server_mode is VM or (local in dsub worker)
   if 'IP_ADDR' in os.environ:
     host = os.environ["IP_ADDR"]
+  # elif FLAGS.worker_mode=='dsub_local_worker':
+  #   host = get_docker0_ip()
+  # server_mode is local in client
   else:
     host = 'localhost'
   target = '{}:{}'.format(host, get_port_number())
-  # print("service_url here : ", targpending action ids :et)
+  # print("service_url here : ", target)
+
+  logging.info("Insecure channel : target %s , and options %s here ", target, options)
 
   channel = grpc.insecure_channel(
       target,
@@ -475,39 +491,44 @@ def obtain_insecure_channel(options):
   return channel
 
 
-def generate_metadata():
-  """Generate metadata to call service with authentication."""
+class GRPCClientCache:
+  _secure_cache = None
+  _insecure_cache = None
 
-  channel_opts = [
-      ('grpc.max_send_message_length', 512 * 1024 * 1024),
-      ('grpc.max_receive_message_length', 512 * 1024 * 1024),
-  ]
+  @classmethod
+  def generate_metadata(cls):
+    """Generate metadata to call service with authentication."""
 
-  if 'IP_ADDR' in os.environ or ('deployment_mode' in FLAGS and
-                                 FLAGS.deployment_mode in ['local', 'vm']):
+    # logging.debug('_secure_cache %s and _insecure_cache %s ', cls._secure_cache,
+    #              cls._insecure_cache)
 
-    channel = obtain_insecure_channel(channel_opts)
-    sight_service = service_pb2_grpc.SightServiceStub(channel)
-    metadata = []
-    return sight_service, metadata
-  # elif 'deployment_mode' == "worker_mode":
-  #   return sight_service, metadata
-  else:
-    #for worker spawned using vm mode, they must be connect via insecure channel
-    # if():
+    channel_opts = [
+        ('grpc.max_send_message_length', 512 * 1024 * 1024),
+        ('grpc.max_receive_message_length', 512 * 1024 * 1024),
+    ]
 
-    # for client code, need to find or deploy cloud run service, workers will directly get via env
-    if 'deployment_mode' in FLAGS and FLAGS.deployment_mode == "distributed":
-      _find_or_deploy_server()
+    if FLAGS.server_mode in ['local', 'vm']:
+      if cls._insecure_cache is None:
+        channel = obtain_insecure_channel(channel_opts)
+        sight_service = service_pb2_grpc.SightServiceStub(channel)
+        metadata = []
+        cls._insecure_cache = (sight_service, metadata)
+      return cls._insecure_cache
 
-    secure_channel = obtain_secure_channel()
-    # print("secure_channel : ", secure_channel)
-    sight_service = service_pb2_grpc.SightServiceStub(secure_channel)
-    metadata = []
-    id_token = generate_id_token()
-    # print('id_token : ', id_token)
-    metadata.append(('authorization', 'Bearer ' + id_token))
-    return sight_service, metadata
+    else:
+      if cls._secure_cache is None:
+        # for client code, need to find or deploy cloud run service, workers will directly get via env
+        if FLAGS.worker_mode is None:
+          _find_or_deploy_server()
+        secure_channel = obtain_secure_channel()
+        logging.info("secure_channel : %s", secure_channel)
+        sight_service = service_pb2_grpc.SightServiceStub(secure_channel)
+        metadata = []
+        id_token = generate_id_token()
+        logging.info('id_token : %s', id_token)
+        metadata.append(('authorization', 'Bearer ' + id_token))
+        cls._secure_cache = (sight_service, metadata)
+      return cls._secure_cache
 
 
 # def calculate_response_time(start_time):
@@ -531,11 +552,10 @@ def call(invoke_func: Callable[[Any, Any], Any]) -> Any:
   Returns:
     response: response received from server side after invoking the function
   """
-  sight_service, metadata = generate_metadata()
+  sight_service, metadata = GRPCClientCache.generate_metadata()
   num_retries = 0
   backoff_interval = 0.5
-  # while True:
-  for i in range(1):
+  while True:
     try:
       response = invoke_func(sight_service, metadata)
       return response

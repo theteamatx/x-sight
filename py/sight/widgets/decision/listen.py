@@ -31,10 +31,10 @@ from sight_service.proto import service_pb2_grpc
 
 _LOG_ID = flags.DEFINE_string(
     'log_id', None, 'ID of the Sight log that tracks this execution.')
-_DEPLOYMENT_MODE = flags.DEFINE_enum(
-    'deployment_mode',
+_SERVER_MODE = flags.DEFINE_enum(
+    'server_mode',
     None,
-    ['distributed', 'dsub_local', 'docker_local', 'local', 'worker_mode'],
+    ['vm', 'cloud_run', 'local'],
     ('The procedure to use when training a model to drive applications that '
      'use the Decision API.'),
 )

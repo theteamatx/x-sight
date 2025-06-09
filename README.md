@@ -222,6 +222,85 @@ pip install pre-commit
 - make sure you created .style.yapf and .isort.cfg file in .config folder from the previous step.
 - make sure your repo contains .pre-commit-config.yaml file in root directory of repo
 
+## pre-commit
+
+### Setting Up Pre-Commit in Your Repository
+
+`pre-commit` is a framework for managing and maintaining multi-language pre-commit hooks. This ensures that your code adheres to predefined standards and guidelines before committing it to a repository.
+
+### Installation
+
+First, ensure you have Python installed. Then, install `pre-commit` globally using `pip`:
+
+You can install `pre-commit` using `pip`:
+
+```bash
+pip install pre-commit
+```
+
+### Initialize pre-commit in your repository
+
+```bash
+pre-commit install
+```
+
+### Create the `.pre-commit-config.yaml` File
+
+Add a `.pre-commit-config.yaml` file in the root of your repository. Below is an example configuration file:
+
+```yaml
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.0.1
+    hooks:
+      - id: trailing-whitespace
+        exclude: ^.*\.patch$
+
+      - id: end-of-file-fixer
+        exclude: ^.*\.patch$
+
+      - id: check-yaml
+
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: v5.10.1
+    hooks:
+      - id: isort
+        args: ["--settings-path", ".config/.isort.cfg"]
+
+  - repo: https://github.com/google/yapf
+    rev: v0.31.0
+    hooks:
+      - id: yapf
+        name: yapf and isort
+        entry: bash -c "yapf --style .config/.style.yapf -i $@ && isort --settings-path .config/.isort.cfg $@"
+        language: system
+        types: [python]
+
+```
+
+### When you run `git-commit`
+
+- pre-commit will run all the hooks defined in `.pre-commit-config.yaml` on the staged files.
+
+- If any hook fails, the commit is aborted. You’ll need to fix the issues, stage the changes again, and retry committing.
+
+#### Example Workflow
+
+```bash
+  git add file.py
+  git commit -m 'Add new code'
+```
+
+- If hooks pass , the commit is successful
+- If a hook fails (e.g., trailing whitespace is detected), you'll see an error, and the commit will not go through.
+
+### Advantages of Using Pre-Commit with Git
+
+- **Consistency**: Enforces coding standards across all contributors.
+- **Error Prevention**: Catches issues like merge conflicts, missing files, or format problems before they make it into the repository.
+- **Automation**: Some hooks (e.g., code formatters like black or isort) can automatically fix issues for you.
+- **Customization**: You can define custom hooks to enforce rules specific to your project.
+
 ## Test Cases
 
 ### 🧪 Test Suite Structure and Automation Overview
@@ -806,7 +885,7 @@ To run the application in training mode users must run the application's binary
 while setting the command line flag ```--decision_mode``` as ```train``` and must use the
 following flags to control the training process:
 
-- ```deployment_mode```: The procedure to use when training a model to drive
+- ```server_mode```: The procedure to use when training a model to drive
     applications that use the Decision API.
 
   - distributed: The application is executed in parallel on the GCP cloud.
@@ -864,7 +943,7 @@ command with all the mandatory flags mentioned [here](#running-decision-api-enab
 ```python
 python py/sight/demo/shower_demo_without_env.py \
 --decision_mode=train \
---deployment_mode=distributed \
+--server_mode=distributed \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
@@ -881,7 +960,7 @@ need to pass env_name flag:
 ```python
 python py/sight/demo/gym_demo_env.py \
 --decision_mode=train \
---deployment_mode=distributed \
+--server_mode=distributed \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
@@ -898,7 +977,7 @@ following
 ```python
 python py/sight/demo/sweetness.py \
 --decision_mode=train \
---deployment_mode=distributed \
+--server_mode=distributed \
 --optimizer_type=vizier \
 --num_train_workers=2 \
 --num_trials=5 \
@@ -910,7 +989,7 @@ python py/sight/demo/sweetness.py \
 ```python
 python py/sight/demo/sweetness.py \
 --decision_mode=train \
---deployment_mode=distributed \
+--server_mode=distributed \
 --optimizer_type=exhaustive_search \
 --num_train_workers=2 \
 --num_trials=5 \
@@ -949,7 +1028,7 @@ python py/sight/demo/gym_demo_env.py \
 --service_name=new-service \
 --service_docker_file=server/Dockerfile \
 --decision_mode=train \
---deployment_mode=distributed \
+--server_mode=distributed \
 --optimizer_type=dm_acme \
 --num_train_workers=2 \
 --num_trials=5 \
@@ -968,7 +1047,7 @@ cd ~/x-sight
 python sight_service/service_root.py
 ```
 
-And from another terminal session, User can run any valid command from [this](#example-training-invocation-commands) section and change the flag ```--deployment_mode=local``` to indicate that sight_service is running locally.
+And from another terminal session, User can run any valid command from [this](#example-training-invocation-commands) section and change the flag ```--server_mode=local``` to indicate that sight_service is running locally.
 
 ### VM server
 

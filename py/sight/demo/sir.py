@@ -47,7 +47,8 @@ def driver(sight: Sight) -> None:
   # data_structures.log_var('R', R, sight)
   action = decision.decision_point('init', sight)
   print('dt=%s, action=%s' % (dt, action))
-  I, R = 1, 0
+  I = int(action['I0'])
+  R = 0
   S = int(action['population']) - I - R
 
   hist = []
@@ -92,8 +93,18 @@ def main(argv: Sequence[str]) -> None:
     decision.run(
         driver_fn=driver,
         description='''
-I am building an SIR model to analyze the progress of Measles infections in Los Angeles during the summer of 2020.
-I need to configure this model's parameters based on data from the Los Angeles County Department of Public Health.
+The SIR model is one of the simplest compartmental models, and many models are derivatives of this basic form. The model consists of three compartments:
+
+S: The number of susceptible individuals. When a susceptible and an infectious individual come into "infectious contact", the susceptible individual contracts the disease and transitions to the infectious compartment.
+I: The number of infectious individuals. These are individuals who have been infected and are capable of infecting susceptible individuals.
+R for the number of removed (and immune) or deceased individuals. These are individuals who have been infected and have either recovered from the disease and entered the removed compartment, or died. It is assumed that the number of deaths is negligible with respect to the total population. This compartment may also be called "recovered" or "resistant".
+This model is reasonably predictive[11] for infectious diseases that are transmitted from human to human, and where recovery confers lasting resistance, such as measles, mumps, and rubella.
+
+These variables (S, I, and R) represent the number of people in each compartment at a particular time. To represent that the number of susceptible, infectious, and removed individuals may vary over time (even if the total population size remains constant), we make the precise numbers a function of t (time): S(t), I(t), and R(t). For a specific disease in a specific population, these functions may be worked out in order to predict possible outbreaks and bring them under control.[11] Note that in the SIR model, R(0) and R_{0}} are different quantities – the former describes the number of recovered at t = 0 whereas the latter describes the ratio between the frequency of contacts to the frequency of recovery.
+
+As implied by the variable function of t, the model is dynamic in that the numbers in each compartment may fluctuate over time. The importance of this dynamic aspect is most obvious in an endemic disease with a short infectious period, such as measles in the UK prior to the introduction of a vaccine in 1968. Such diseases tend to occur in cycles of outbreaks due to the variation in number of susceptibles (S(t)) over time. During an epidemic, the number of susceptible individuals falls rapidly as more of them are infected and thus enter the infectious and removed compartments. The disease cannot break out again until the number of susceptibles has built back up, e.g. as a result of offspring being born into the susceptible compartment.[citation needed]
+
+Each member of the population typically progresses from susceptible to infectious to recovered. This can be shown as a flow diagram in which the boxes represent the different compartments and the arrows the transition between compartments.
 ''',
         state_attrs={},
         action_attrs={
@@ -131,6 +142,15 @@ I need to configure this model's parameters based on data from the Los Angeles C
                     continuous_prob_dist=sight_pb2.ContinuousProbDist(
                         uniform=sight_pb2.ContinuousProbDist.Uniform(
                             min_val=0, max_val=.2))),
+            'I0':
+                sight_pb2.DecisionConfigurationStart.AttrProps(
+                    min_value=0,
+                    max_value=1000,
+                    description=
+                    'The number of individuals infected at the start of the epidemic.',
+                    discrete_prob_dist=sight_pb2.DiscreteProbDist(
+                        uniform=sight_pb2.DiscreteProbDist.Uniform(
+                            min_val=0, max_val=1000))),
         },
         outcome_attrs={
             'S':
