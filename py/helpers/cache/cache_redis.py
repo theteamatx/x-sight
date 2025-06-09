@@ -9,6 +9,7 @@ import redis
 from redis.commands.json import path
 
 from .cache_interface import CacheInterface
+from .constants import RedisConstants
 
 Path = path.Path
 
@@ -34,11 +35,10 @@ class RedisCache(CacheInterface):
       config = {}
     try:
       self.redis_client = redis.StrictRedis(
-          host=config.get("redis_host", "localhost"),
-          port=config.get("redis_port", 1234),
-          # port=config.get("redis_port", 6379),
-          password=config.get("redis_pass", ""),
-          db=config.get("redis_db", 0),
+          host=config.get("redis_host", RedisConstants.REDIS_HOST),
+          port=config.get("redis_port", RedisConstants.REDIS_PORT),
+          password=config.get("redis_pass", RedisConstants.REDIS_PASS),
+          db=config.get("redis_db", RedisConstants.REDIS_DB),
       )
       self.redis_client.ping()
     except (redis.ConnectionError, redis.TimeoutError) as e:
@@ -60,21 +60,17 @@ class RedisCache(CacheInterface):
   def get(self, key: str) -> Any:
     """Gets the value from the cache using key as string data"""
     self._is_redis_client_exist()
-    string_value = self.redis_client.get(key)
-    if string_value:
-      return json.loads(string_value)
-    return None
+    value = self.redis_client.get(key)
+    return value if value else None
 
   @override
   def set(self, key: str, value: Any) -> None:
     """Set the key with value as string data"""
     self._is_redis_client_exist()
     try:
-      string_value = json.dumps(value)
-      self.redis_client.set(key, string_value)
+      self.redis_client.set(key, value)
     except TypeError as e:
-      if "circular reference" in str(e):
-        raise TypeError("Circular JSON object detected") from e
+      raise e
 
   @override
   def bin_get(self, key: str):

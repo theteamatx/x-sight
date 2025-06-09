@@ -8,57 +8,20 @@ import unittest
 from helpers.cache.cache_factory import LocalCache
 from helpers.cache.cache_factory import RedisCache
 from helpers.cache.cache_helper import KeyMaker
+from helpers.cache.tests.integration.test_redis_contianer import (
+    RedisContainerTest
+)
 import redis
 from tests.colorful_tests import ColorfulTestRunner
 
 
-class CacheLocalWithRedisTest(unittest.TestCase):
+class CacheLocalWithRedisTest(RedisContainerTest):
   """Tests for Local Cache with Redis."""
-
-  def wait_for_redis(self, host, port, timeout=30):
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-      try:
-        client = redis.StrictRedis(host=host, port=port)
-        client.ping()
-        print("Redis is ready!")
-        return
-      except redis.ConnectionError:
-        time.sleep(1)
-    raise TimeoutError(f"Redis not ready after {timeout} seconds")
-
-  def _end_container(self):
-    """Stops the Docker containers."""
-    if self.cache and self.cache.get_redis_client():
-      client = self.cache.get_redis_client()
-      keys_to_delete = client.keys("testing:*")
-      if keys_to_delete:
-        client.delete(*keys_to_delete)  # Delete all matching keys
-    try:
-      print("Stopping Docker containers ...")
-      subprocess.run(["docker-compose", "down"], check=True)
-      print("Docker containers stopped successfully...")
-    except subprocess.CalledProcessError as e:
-      print(f"Failed to stop Docker containers : {e}")
-      raise e
-
-  def tearDown(self):
-    super().tearDown()
-    self._end_container()
 
   def setUp(self):
     super().setUp()
-    self.cache = None
-    self._end_container()
-    try:
-      print("Starting Docker containers ...")
-      subprocess.run(["docker-compose", "up", "-d"], check=True)
-      # Wait for Redis to be ready
-      self.wait_for_redis("localhost", 1234)
-      print("Docker containers started successfully...")
-    except subprocess.CalledProcessError as e:
-      print(f"Failed to start Docker containers : {e}")
-      raise e
+    redis_client = self.__class__.redis_client
+    redis_client.flushall()
 
   def test_local_get_set(self):
     """Tests the Local Cache."""
@@ -87,12 +50,12 @@ class CacheLocalWithRedisTest(unittest.TestCase):
     # Set data in the cache
     self.cache.set(
         key,
-        expected_result,
+        json.dumps(expected_result),
     )
 
     # Retrieve data from the cache
     result = self.cache.get(key)
-
+    result = json.loads(result)
     assert (result == expected_result
            ), f"Expected {expected_result}, but got {result}"
 

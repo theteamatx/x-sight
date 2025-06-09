@@ -118,6 +118,7 @@ async def propose_actions(sight,
   outcome = cache_client.get(key=cache_key)
 
   if outcome is not None:
+    outcome = json.loads(outcome)
     print('Getting response from cache !!')
     return outcome
 
@@ -141,5 +142,5 @@ async def propose_actions(sight,
     outcome[key] = final_value
   logging.info('cache_key=%s', cache_key)
   logging.info('outcome=%s', outcome)
-  cache_client.set(key=cache_key, value=outcome)
+  cache_client.set(key=cache_key, value=json.dumps(outcome))
   return outcome

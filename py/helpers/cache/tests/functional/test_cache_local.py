@@ -1,5 +1,6 @@
 """Tests for the Local Cache."""
 
+import json
 import pathlib
 import shutil
 import unittest
@@ -43,12 +44,12 @@ class CacheLocalTest(unittest.TestCase):
     # Set data in the cache
     self.cache.set(
         key,
-        expected_result,
+        json.dumps(expected_result),
     )
 
     # Retrieve data from the cache
     result = self.cache.get(key)
-
+    result = json.loads(result)
     assert (result == expected_result
            ), f"Expected {expected_result}, but got {result}"
 
