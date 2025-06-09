@@ -60,7 +60,6 @@ class LocalCache(CacheInterface):
       with open(path, "r") as file:
         value = file.read()
         self._set_to_redis('set', key, value)
-        value = json.loads(value)
         return value
     return None
 
@@ -71,7 +70,7 @@ class LocalCache(CacheInterface):
     path = self._local_cache_path(key)
     path.parent.mkdir(parents=True, exist_ok=True)
     with open(path, "w") as file:
-      file.write(json.dumps(value))
+      file.write(value)
 
   @override
   def bin_get(self, key: str) -> Any:

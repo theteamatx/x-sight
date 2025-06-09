@@ -1,5 +1,6 @@
 """Tests for CachedBatchMessages."""
 
+import json
 import unittest
 
 from sight_service import shared_batch_messages
@@ -21,9 +22,9 @@ class TestCachedBatchMessages(unittest.TestCase):
   def test_set_and_get_message(self):
     msg = shared_batch_messages.DecisionMessage(action_params={"key": "value"},
                                                 action_id=1)
-    self.cache.set(1, msg)
+    self.cache.set(1, json.dumps(msg))
 
-    retrieved_msg = self.cache.get(1)
+    retrieved_msg = json.loads(self.cache.get(1))
     self.assertIsNotNone(retrieved_msg)
     self.assertEqual(retrieved_msg.action_id, 1)
 
@@ -33,10 +34,10 @@ class TestCachedBatchMessages(unittest.TestCase):
   def test_update_message(self):
     msg = shared_batch_messages.DecisionMessage(action_params={"key": "value"},
                                                 action_id=1)
-    self.cache.set(1, msg)
+    self.cache.set(1, json.dumps(msg))
 
     self.cache.update(1, reward=20, discount=5)
-    updated_msg = self.cache.get(1)
+    updated_msg = json.loads(self.cache.get(1))
 
     self.assertEqual(updated_msg.reward, 20)
     self.assertEqual(updated_msg.discount, 5)
@@ -48,7 +49,7 @@ class TestCachedBatchMessages(unittest.TestCase):
   def test_update_invalid_field(self):
     msg = shared_batch_messages.DecisionMessage(action_params={"key": "value"},
                                                 action_id=1)
-    self.cache.set(1, msg)
+    self.cache.set(1, json.dumps(msg))
 
     with self.assertRaises(AttributeError):
       self.cache.update(1, invalid_field="value")
@@ -56,7 +57,7 @@ class TestCachedBatchMessages(unittest.TestCase):
   def test_delete_message(self):
     msg = shared_batch_messages.DecisionMessage(action_params={"key": "value"},
                                                 action_id=1)
-    self.cache.set(1, msg)
+    self.cache.set(1, json.dumps(msg))
 
     self.cache.delete(1)
     self.assertIsNone(self.cache.get(1))
@@ -72,8 +73,8 @@ class TestCachedBatchMessages(unittest.TestCase):
     msg2 = shared_batch_messages.DecisionMessage(
         action_params={"key2": "value2"}, action_id=2)
 
-    self.cache.set(1, msg1)
-    self.cache.set(2, msg2)
+    self.cache.set(1, json.dumps(msg1))
+    self.cache.set(1, json.dumps(msg2))
 
     all_messages = self.cache.all_messages()
     self.assertEqual(len(all_messages), 2)
@@ -87,8 +88,8 @@ class TestCachedBatchMessages(unittest.TestCase):
     msg2 = shared_batch_messages.DecisionMessage(
         action_params={"key2": "value2"}, action_id=2)
 
-    self.cache.set(1, msg1)
-    self.cache.set(2, msg2)
+    self.cache.set(1, json.dumps(msg1))
+    self.cache.set(1, json.dumps(msg2))
 
     self.cache.clear()
     self.assertEqual(len(self.cache.all_messages()), 0)

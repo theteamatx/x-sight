@@ -1,76 +1,27 @@
 """Tests for GCS cache."""
 
+import json
 import subprocess
 import time
 import unittest
 
 from helpers.cache.cache_factory import GCSCache
 from helpers.cache.cache_factory import RedisCache
+from helpers.cache.tests.integration.test_redis_contianer import (
+    RedisContainerTest
+)
 from helpers.logs.logs_handler import logger as logging
 import redis
 from tests.colorful_tests import ColorfulTestRunner
 
 
-class CacheGCSTest(unittest.TestCase):
+class CacheGCSTest(RedisContainerTest):
   """Tests for GCS cache."""
-
-  def wait_for_redis(self, host, port, timeout=30):
-    """Waits for Redis to be ready.
-
-    Args:
-      host: The host of the Redis server.
-      port: The port of the Redis server.
-      timeout: The timeout in seconds.
-
-    Raises:
-      TimeoutError: If Redis is not ready within the timeout.
-    """
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-      try:
-        client = redis.StrictRedis(host=host, port=port)
-        client.ping()
-        logging.info("Redis is ready!")
-        return
-      except redis.ConnectionError:
-        time.sleep(1)
-    raise TimeoutError(f"Redis not ready after {timeout} seconds")
-
-  def _end_container(self):
-    """Ends the Docker container.
-
-    This end the docker container and delete all the keys in the redis cache.
-    """
-    if self.cache and self.cache.get_redis_client():
-      client = self.cache.get_redis_client()
-      keys_to_delete = client.keys("testing:*")
-      if keys_to_delete:
-        client.delete(*keys_to_delete)  # Delete all matching keys
-    try:
-      logging.info("Stopping Docker containers ...")
-      subprocess.run(["docker-compose", "down"], check=True)
-      logging.info("Docker containers stopped successfully...")
-    except subprocess.CalledProcessError as e:
-      logging.info(f"Failed to stop Docker containers : {e}")
-      raise e
-
-  def tearDown(self):
-    super().tearDown()
-    self._end_container()
 
   def setUp(self):
     super().setUp()
-    self.cache = None
-    self._end_container()
-    try:
-      logging.info("Starting Docker containers ...")
-      subprocess.run(["docker-compose", "up", "-d"], check=True)
-      # Wait for Redis to be ready
-      self.wait_for_redis("localhost", 1234)
-      logging.info("Docker containers started successfully...")
-    except subprocess.CalledProcessError as e:
-      logging.info(f"Failed to start Docker containers : {e}")
-      raise e
+    redis_client = self.__class__.redis_client
+    redis_client.flushall()
 
   def test_gcs_get_set(self):
     """Tests the GCS Cache."""
@@ -90,12 +41,12 @@ class CacheGCSTest(unittest.TestCase):
     # Set data in the cache
     self.cache.set(
         "ACR203:2013:FVS:MANAGED:FIRE_0001011100",
-        {"Fire": [2023, 2034, 3004, "Nice And Working"]},
+        json.dumps({"Fire": [2023, 2034, 3004, "Nice And Working"]}),
     )
 
     # Retrieve data from the cache
     result = self.cache.get("ACR203:2013:FVS:MANAGED:FIRE_0001011100")
-
+    result = json.loads(result)
     # Assert the retrieved data is correct
     expected_result = {"Fire": [2023, 2034, 3004, "Nice And Working"]}
     assert (result == expected_result

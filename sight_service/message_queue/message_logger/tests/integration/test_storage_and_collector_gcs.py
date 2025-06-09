@@ -110,7 +110,7 @@ class TestCacheBasedLogStorageAndCollectorGCS(unittest.TestCase):
 
     # Manually create an additional file that isn't valid JSON
     self.log_storage_collect_strategy.cache.set("logs_chunks:invalid.json",
-                                                ["INVALID JSON"])
+                                                json.dumps(["INVALID JSON"]))
 
     # Collect logs
     collected_logs = self.log_storage_collect_strategy.collect_logs()

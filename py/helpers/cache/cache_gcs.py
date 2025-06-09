@@ -78,7 +78,6 @@ class GCSCache(CacheInterface):
     logging.debug('This is our path for key %s', blob.name)
     if blob.exists():
       value = blob.download_as_text()
-      value = json.loads(value)
       self._set_to_redis('set', key, value)
       return value
     return None
@@ -89,7 +88,7 @@ class GCSCache(CacheInterface):
     self._set_to_redis('set', key, value)
     blob = self.bucket.blob(self._gcs_cache_path(key=key))
     logging.info('This is our path for key %s', blob.name)
-    blob.upload_from_string(json.dumps(value))
+    blob.upload_from_string(value)
 
   @override
   def bin_get(self, key: str) -> Any:
