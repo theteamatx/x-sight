@@ -21,28 +21,26 @@ from absl import flags
 import numpy as np
 import pandas as pd
 from sight import data_structures
+from sight.widgets.decision import decision
 from sight.attribute import Attribute
 from sight.block import Block
 from sight.proto import sight_pb2
 from sight.sight import Sight
+from sight.widgets.decision import trials
 
 FLAGS = flags.FLAGS
-
-
-def get_sight_instance():
-  params = sight_pb2.Params(
-      label='original_demo',
-      bucket_name=f'{os.environ["PROJECT_ID"]}-sight',
-  )
-  sight_obj = Sight(params)
-  return sight_obj
-
 
 def main(argv):
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
 
-  with get_sight_instance() as sight:
+  config = decision.DecisionConfig(config_dir_path=FLAGS.config_path)
+
+  # Sight parameters dictionary with valid key values from sight_pb2.Params
+  params = {"label": "Dummy_label"}
+
+  # create sight object with configuration to spawn workers beforehand
+  with Sight.create(params, config) as sight:
     # if(FLAGS.parent_id):
     # sight_obj = sight_pb2.Object()
     # # sight_obj.log_uid = str(sight.id)
@@ -101,6 +99,17 @@ def main(argv):
     #       },
     #       sight,
     #   )
+
+    trials.start_jobs_in_dsub_local(
+        1,
+        "py/sight/demo/worker_demo.py",
+        'None',
+        "gcr.io/cameltrain/test-dummy-worker:latest",
+        'train',
+        'local',
+        'dsub_local_worker',
+        'none',
+        sight)
 
 
 if __name__ == "__main__":

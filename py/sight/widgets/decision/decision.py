@@ -226,9 +226,10 @@ class DecisionConfig:
                                           '/worker_config.yaml')
     # Load the configuration parameter's for this worker from the worker-specific
     # file path.
-    for name, cfg in self.workers.items():
-      self.workers[name] |= utils.load_yaml_config(
-          cfg['file_path'])[cfg['version']]
+    if(self.workers):
+      for name, cfg in self.workers.items():
+        self.workers[name] |= utils.load_yaml_config(
+            cfg['file_path'])[cfg['version']]
 
 
 def initialize(config: DecisionConfig, sight) -> None:

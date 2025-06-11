@@ -370,7 +370,7 @@ def start_jobs_in_dsub_local(
   remote_script = binary_path
 
   script_args = (
-      f'--decision_mode={decision_mode} --server_mode={server_mode} --worker_mode={worker_mode} --optimizer_type={optimizer_type}  --cache_mode={cache_mode} '
+      f'--decision_mode={decision_mode} --server_mode={server_mode} --worker_mode={worker_mode}  --cache_mode={cache_mode} '
   )
 
   env_vars = [

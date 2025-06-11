@@ -319,7 +319,7 @@ class Sight(object):
 
     # config should only be passed from client script, workers should never enter
     # this condition
-    if config and FLAGS.worker_mode is None:
+    if config.questions and FLAGS.worker_mode is None:
       decision.initialize(config, self)
 
   def get_location_state(self) -> SightLocationState:
