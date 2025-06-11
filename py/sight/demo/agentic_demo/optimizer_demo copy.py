@@ -28,9 +28,12 @@ from sight.widgets.decision import decision
 
 from langchain_core.messages import AIMessage
 from langchain_core.output_parsers import JsonOutputParser
+from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.messages.system import SystemMessage
 from langchain_core.messages.human import HumanMessage
 from helpers.logs.logs_handler import logger as logging
+
+from sight.demo.agentic_demo.python_parser import PythonCodeParser
 
 from sight_service.proto import service_pb2
 from sight import service_utils as service
@@ -40,9 +43,8 @@ find_dotenv = dotenv.find_dotenv
 load_dotenv(find_dotenv())
 FLAGS = flags.FLAGS
 
-llm = ChatGoogleGenerativeAI(
-    model="gemini-2.5-flash-preview-05-20",
-    )
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash-preview-05-20",)
+code_parser = PythonCodeParser()
 
 
 def get_question_label():
@@ -68,6 +70,7 @@ def is_valid_python(code_string: str) -> bool:
   except SyntaxError:
     return False
 
+
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
     raise app.UsageError("Too many command-line arguments.")
@@ -81,18 +84,15 @@ def main(argv: Sequence[str]) -> None:
   # create sight object with configuration to spawn workers beforehand
   with Sight.create(params, config) as sight:
 
-    # initialize agent with tools and llm
-    agent = initialize_agent(
-        tools=[],  #tools,
-        llm=llm,
-        agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
-        verbose=True,
-        # handle_parsing_errors=True,
-    )
+    # user_input = input(
+    #     "Enter the operations you want to perform in plain english: "
+    # )
 
-    # # user_input = input(
-    # #     "Enter the operations you want to perform in plain english: "
-    # # )
+    system_input = """You are an expert Python programmer.
+            Your sole task is to write a complete, working Python function based on the user's request.
+            The function should be well-commented, follow best practices, and be ready to use.
+            Do NOT include any explanations, introductory text, or concluding remarks.
+            """
 
     user_input = (
         "Generate a python function that takes input as X, Y and Z as "
@@ -102,22 +102,15 @@ def main(argv: Sequence[str]) -> None:
         "calculated reward and another element as outcome which is "
         "dictionary with key final_result and value as reward")
 
-    response = agent.invoke([
-        SystemMessage(content="""You are an expert Python programmer.
-            Your sole task is to write a complete, working Python function based on the user's request.
-            The function should be well-commented, follow best practices, and be ready to use.
-            Do NOT include any explanations, introductory text, or concluding remarks.
-            """),
-        HumanMessage(content=user_input)
-    ])
-    print("Response: ", response['output'])
+    prompt = ChatPromptTemplate.from_messages(
+        [SystemMessage(content=system_input),
+         HumanMessage(content=user_input)])
 
-    generated_python_function_string = response['output']
-    if is_valid_python(generated_python_function_string):
-      pass
-    else:
-      logging.error("Generated code is not valid Python after cleaning!")
-      return
+    # chain = prompt | llm
+    chain = prompt | llm | code_parser
+
+    generated_python_function_string = chain.invoke({})
+    print("Response: ", generated_python_function_string)
 
     # Sending generated function to sight
     req = service_pb2.SendFunctionRequest()

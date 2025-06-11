@@ -50,7 +50,7 @@ Division:
 
 Pyrolyzer:
   optimizer: "bayesian_opt"
-  num_questions: 100
+  num_questions: 1
   mode: "dsub_local_worker"
   workers:
     pyrolyzer_worker: 1
