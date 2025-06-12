@@ -34,6 +34,8 @@ from langchain_core.messages.human import HumanMessage
 from helpers.logs.logs_handler import logger as logging
 
 from sight.demo.agentic_demo.python_parser import PythonCodeParser
+from langchain.output_parsers import RetryWithErrorOutputParser
+from langchain_core.prompts import PromptTemplate
 
 from sight_service.proto import service_pb2
 from sight import service_utils as service
@@ -49,26 +51,6 @@ code_parser = PythonCodeParser()
 
 def get_question_label():
   return "Pyrolyzer"
-
-
-import ast
-
-
-def is_valid_python(code_string: str) -> bool:
-  """
-    Checks if a string contains syntactically valid Python code.
-
-    Args:
-        code_string: The string to validate.
-
-    Returns:
-        True if the syntax is valid, False otherwise.
-    """
-  try:
-    ast.parse(code_string)
-    return True
-  except SyntaxError:
-    return False
 
 
 def main(argv: Sequence[str]) -> None:
@@ -112,15 +94,15 @@ def main(argv: Sequence[str]) -> None:
     generated_python_function_string = chain.invoke({})
     print("Response: ", generated_python_function_string)
 
-    # Sending generated function to sight
-    req = service_pb2.SendFunctionRequest()
-    req.client_id = str(sight.id)
-    req.question_label = get_question_label()
-    req.function_code = generated_python_function_string
+    # # Sending generated function to sight
+    # req = service_pb2.SendFunctionRequest()
+    # req.client_id = str(sight.id)
+    # req.question_label = get_question_label()
+    # req.function_code = generated_python_function_string
 
-    response = service.call(
-        lambda s, meta: s.SendFunction(req, 300, metadata=meta))
-    logging.info('##### SendFunction response=%s #####', response)
+    # response = service.call(
+    #     lambda s, meta: s.SendFunction(req, 300, metadata=meta))
+    # logging.info('##### SendFunction response=%s #####', response)
 
 
 if __name__ == "__main__":
