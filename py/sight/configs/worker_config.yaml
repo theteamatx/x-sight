@@ -6,22 +6,22 @@ fvs_worker:
   version: "v0.1"
   file_path: "py/worker/worker_configs/fvs_worker.yaml"
 
-calculator_worker:
-  version: "v0.1"
-  file_path: "py/worker/worker_configs/calculator_worker.yaml"
+# calculator_worker:
+#   version: "v0.1"
+#   file_path: "py/worker/worker_configs/calculator_worker.yaml"
 
-addition_worker:
-  version: "v0.1"
-  file_path: "py/worker/worker_configs/addition_worker.yaml"
+# addition_worker:
+#   version: "v0.1"
+#   file_path: "py/worker/worker_configs/addition_worker.yaml"
 
-subtraction_worker:
-  version: "v0.1"
-  file_path: "py/worker/worker_configs/subtraction_worker.yaml"
+# subtraction_worker:
+#   version: "v0.1"
+#   file_path: "py/worker/worker_configs/subtraction_worker.yaml"
 
-multiplication_worker:
-  version: "v0.1"
-  file_path: "py/worker/worker_configs/multiplication_worker.yaml"
+# multiplication_worker:
+#   version: "v0.1"
+#   file_path: "py/worker/worker_configs/multiplication_worker.yaml"
 
-division_worker:
-  version: "v0.1"
-  file_path: "py/worker/worker_configs/division_worker.yaml"
+# division_worker:
+#   version: "v0.1"
+#   file_path: "py/worker/worker_configs/division_worker.yaml"

@@ -1065,7 +1065,7 @@ def finalize_episode(sight, question_label, optimizer_obj):
 
   logging.debug('<<<<  Out %s of %s', method_name, _file_name)
 
-
+#deprecated
 def get_outcome(sight):
   """Returns the outcome from the server.
 

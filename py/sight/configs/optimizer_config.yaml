@@ -12,38 +12,38 @@ Fvs:
   workers:
     fvs_worker: 1
 
-# optimizer mapping to be used for calculator worker in langchain demo
-Calculator:
-  optimizer: "worklist_scheduler"
-  num_questions: 1
-  mode: "dsub_local_worker"
-  workers:
-    calculator_worker: 1
+# # optimizer mapping to be used for calculator worker in langchain demo
+# Calculator:
+#   optimizer: "worklist_scheduler"
+#   num_questions: 1
+#   mode: "dsub_local_worker"
+#   workers:
+#     calculator_worker: 1
 
-Addition:
-  optimizer: "worklist_scheduler"
-  num_questions: 1
-  mode: "dsub_local_worker"
-  workers:
-    addition_worker: 1
+# Addition:
+#   optimizer: "worklist_scheduler"
+#   num_questions: 1
+#   mode: "dsub_local_worker"
+#   workers:
+#     addition_worker: 1
 
-Subtraction:
-  optimizer: "worklist_scheduler"
-  num_questions: 1
-  mode: "dsub_local_worker"
-  workers:
-    subtraction_worker: 1
+# Subtraction:
+#   optimizer: "worklist_scheduler"
+#   num_questions: 1
+#   mode: "dsub_local_worker"
+#   workers:
+#     subtraction_worker: 1
 
-Multiplication:
-  optimizer: "worklist_scheduler"
-  num_questions: 1
-  mode: "dsub_local_worker"
-  workers:
-    multiplication_worker: 1
+# Multiplication:
+#   optimizer: "worklist_scheduler"
+#   num_questions: 1
+#   mode: "dsub_local_worker"
+#   workers:
+#     multiplication_worker: 1
 
-Division:
-  optimizer: "worklist_scheduler"
-  num_questions: 1
-  mode: "dsub_local_worker"
-  workers:
-    division_worker: 1
+# Division:
+#   optimizer: "worklist_scheduler"
+#   num_questions: 1
+#   mode: "dsub_local_worker"
+#   workers:
+#     division_worker: 1
