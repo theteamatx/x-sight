@@ -47,17 +47,27 @@ def main(argv: Sequence[str]) -> None:
   # Sight parameters dictionary with valid key values from sight_pb2.Params
   params = {"label": "calculator_demo"}
 
+  # print('Config ==> ', config)
+
   # create sight object with configuration to spawn workers beforehand
   with Sight.create(params, config) as sight:
 
+    import uuid
+
+    random_value = str(uuid.uuid4())
+
     # Ideally this actions will be proposed from some other module
-    actions = {"operand1": 3, "operand2": 5, "operator": "multiply"}
+    actions = {
+        "operand1": 3,
+        "operand2": 5,
+        "operator": "multiply",
+        "random": random_value
+    }
 
     asyncio.run(
-        proposal.propose_actions(
-            sight, get_question_label_to_propose_actions(), actions
-        )
-    )
+        proposal.propose_actions(sight, get_question_label_to_propose_actions(),
+                                 actions))
+
 
 if __name__ == "__main__":
   app.run(main)

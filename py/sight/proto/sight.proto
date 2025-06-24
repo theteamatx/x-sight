@@ -761,6 +761,9 @@ message DecisionOutcome {
   float reward = 2;
   float discount = 3;
   DecisionParam outcome_params = 4;
+  // will not be using this in RPC
+  string outcome_params_ref_key = 5;
+  // actual outcome_params_cache_key will be based on action_dict
 }
 
 message Question {

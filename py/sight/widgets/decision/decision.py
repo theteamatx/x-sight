@@ -30,6 +30,8 @@ from google.protobuf import text_format
 from google.protobuf.text_format import Merge
 from helpers.cache.cache_factory import CacheFactory
 from helpers.cache.cache_factory import CacheType
+from helpers.cache.cache_helper import CacheConfig
+from helpers.cache.cache_helper import KeyMaker
 from helpers.cache.cache_payload_transport import CachedPayloadTransport
 # from absl import logging
 from helpers.logs.logs_handler import logger as logging
@@ -666,9 +668,10 @@ def get_decision_outcome_from_decision_message(
   decision_outcome_proto = sight_pb2.DecisionOutcome(
       outcome_label=outcome_label)
   decision_outcome_proto.reward = decision_message.reward
-  decision_outcome_proto.outcome_params.CopyFrom(
-      convert_dict_to_proto(dict=decision_message.outcome_params))
   decision_outcome_proto.discount = decision_message.discount
+  # decision_outcome_proto.outcome_params.CopyFrom(
+  #     convert_dict_to_proto(dict=decision_message.outcome_params))
+  decision_outcome_proto.outcome_params_ref_key = decision_message.outcome_ref_key
   # logging.info('decision decision_outcome_proto =>%s', decision_outcome_proto)
   return decision_outcome_proto
 
@@ -827,7 +830,7 @@ def decision_point(
   return chosen_action
 
 
-def _update_cached_batch(sight: Any):
+def _update_cached_batch(sight: Any, custom_part="sight_cache"):
   """Updates the cached batch with the latest decision state.
 
   Args:
@@ -840,13 +843,36 @@ def _update_cached_batch(sight: Any):
   if cached_messages and action_id:
     logging.info(
         f'_update_cached_batch() Caching batch for action_id: {action_id}')
-    cached_messages.update(
-        key=action_id,
-        action_params=cached_messages.get(action_id).action_params,
-        discount=sight.widget_decision_state['discount'],
-        reward=sight.widget_decision_state.get('sum_reward', 0),
-        outcome_params=sight.widget_decision_state.get('sum_outcome', {}),
-    )
+
+    if _CACHE_MODE.value not in [
+        CacheType.NONE, CacheType.LOCAL, CacheType.LOCAL_WITH_REDIS
+    ]:
+
+      cache_client = CacheFactory.get_cache(
+          FLAGS.cache_mode,
+          # * Update the config as per need , None config means it takes default redis config for localhost
+          with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode,
+                                                    config=None))
+      action_dict = cached_messages.get(action_id).action_params
+
+      logging.info('action_dict used by worker is => %s', action_dict)
+
+      key_maker = KeyMaker()
+      worker_version = 'v1'
+      custom_part = custom_part + ':' + worker_version
+      cache_key = key_maker.make_custom_key(custom_part, action_dict)
+      outcome_params = sight.widget_decision_state.get('sum_outcome', {})
+      cache_client.set(cache_key, json.dumps(outcome_params))
+      cached_messages.update(
+          key=action_id,
+          action_params=cached_messages.get(action_id).action_params,
+          discount=sight.widget_decision_state['discount'],
+          reward=sight.widget_decision_state.get('sum_reward', 0),
+          outcome_ref_key=cache_key)
+    else:
+      raise Exception(
+          'You are not using any centrailzed storage to pass the message , check your cache mode , it should be `gcs` , `gcs_with_redis` , `*_with_redis`'
+      )
 
 
 def decision_outcome(
@@ -977,18 +1003,23 @@ def _handle_optimizer_finalize(sight: Any, req: Any,
     decision_message.decision_point.choice_params.CopyFrom(choice_params)
     f_ep_req_proto_msg.decision_messages.append(decision_message)
 
-  # lets enable caching larger response when we use +CACHE_MODE.value other than local or none
-  if _CACHE_MODE.value not in [
-      CacheType.NONE, CacheType.LOCAL, CacheType.LOCAL_WITH_REDIS
-  ]:
-    cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
-        cache_type=_CACHE_MODE.value))
-    # Store the decision outcome in the cache and communicate the key to the server.
-    req.decision_messages_ref_key = cache_transport.store_payload(
-        text_format.MessageToString(f_ep_req_proto_msg))
-  else:
-    # Place the decision outcome in the FinalizeEpisode rpc to the server.
-    req.MergeFrom(f_ep_req_proto_msg)
+    # ! removing the uuid-cache key feature from below code
+    # ! ---->
+  # # lets enable caching larger response when we use +CACHE_MODE.value other than local or none
+  # if _CACHE_MODE.value not in [
+  #     CacheType.NONE, CacheType.LOCAL, CacheType.LOCAL_WITH_REDIS
+  # ]:
+  #   cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
+  #       cache_type=_CACHE_MODE.value))
+  #   # Store the decision outcome in the cache and communicate the key to the server.
+  #   req.decision_messages_ref_key = cache_transport.store_payload(
+  #       text_format.MessageToString(f_ep_req_proto_msg))
+  # else:
+  #   # Place the decision outcome in the FinalizeEpisode rpc to the server.
+  #   req.MergeFrom(f_ep_req_proto_msg)
+  # ! <----
+
+  req.MergeFrom(f_ep_req_proto_msg)
 
   logging.info('Finalize req=%s', req)
 

@@ -334,14 +334,15 @@ message GetOutcomeResponse {
     sight.x.proto.DecisionParam state_attrs = 1;
     sight.x.proto.DecisionParam action_attrs = 2;
     float reward = 3;
-    sight.x.proto.DecisionParam outcome_attrs = 4;
     sight.x.proto.DecisionParam attributes = 5;
     Status status = 6;
     string response_str = 7;
     int64 action_id = 8;
+    // sight.x.proto.DecisionParam outcome_attrs = 4; // removing this
+    // completing as completelist will only containt the cache_keys now
+    string outcome_attrs_ref_key = 9;
   }
   repeated Outcome outcome = 1;
-  string outcomes_ref_key = 2; // cache ref key
 }
 
 message FinalizeEpisodeRequest {
@@ -354,7 +355,6 @@ message FinalizeEpisodeRequest {
   Acme_Request acme_config = 6;
   // int64 action_id = 7;
   repeated sight.x.proto.DecisionMessage decision_messages = 8;
-  string decision_messages_ref_key = 9; // cache ref key
 }
 
 message FinalizeEpisodeResponse {

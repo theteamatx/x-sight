@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import base64
+import json
 import math
 import time
 
@@ -53,18 +54,12 @@ def get_all_outcomes(sight_id, question_label, action_ids):
   request.unique_ids.extend(action_ids)
 
   cache_mode = FLAGS.cache_mode or 'none'
-  cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
-      cache_type=cache_mode))
+
+  cache_client = CacheFactory.get_cache(cache_type=cache_mode)
 
   try:
     response = service.call(
         lambda s, meta: s.GetOutcome(request, 300, metadata=meta))
-
-    if response.outcomes_ref_key:
-      proto_cached_data = cache_transport.fetch_payload(
-          response.outcomes_ref_key)
-      text_format.Parse(proto_cached_data, response)
-
     # when worker finished fvs run of that sample
     # this `if` will goes inside for loop for each outcome
     outcome_list = []
@@ -78,8 +73,10 @@ def get_all_outcomes(sight_id, question_label, action_ids):
         outcome_dict['reward'] = outcome.reward
         outcome_dict['action'] = convert_proto_to_dict(
             proto=outcome.action_attrs)
-        outcome_dict['outcome'] = convert_proto_to_dict(
-            proto=outcome.outcome_attrs)
+        outcome_dict['outcome'] = json.loads(
+            cache_client.get(outcome.outcome_attrs_ref_key))
+        # outcome_dict['outcome'] = convert_proto_to_dict(
+        #     proto=outcome.outcome_attrs)
         outcome_dict['attributes'] = convert_proto_to_dict(
             proto=outcome.attributes)
       else:
@@ -108,6 +105,8 @@ def poll_network_batch_outcome(sight_id, question_label):
         # print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
         outcome_of_action_ids = get_all_outcomes(sight_id, question_label,
                                                  pending_action_ids)
+
+        # outcome_of_action_ids =
 
         # print(f'Outcome from get_all_outcome => {outcome_of_action_ids}')
 
