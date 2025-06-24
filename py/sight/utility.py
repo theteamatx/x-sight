@@ -74,6 +74,9 @@ def get_all_outcomes(sight_id, question_label, action_ids):
         outcome_dict['action'] = convert_proto_to_dict(
             proto=outcome.action_attrs)
         outcome_ref_key = outcome.outcome_attrs_ref_key
+        # The `outcome_ref_key` is crucial for retrieving the full outcome data from the
+        # centralized cache, as per the new caching mechanism. Its absence indicates a
+        # critical data flow issue or misconfiguration.
         if not outcome_ref_key:
           # It's good to log this for debugging before raising.
           logging.error(

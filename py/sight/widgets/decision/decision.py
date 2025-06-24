@@ -870,6 +870,8 @@ def _update_cached_batch(sight: Any, custom_part="sight_cache"):
           reward=sight.widget_decision_state.get('sum_reward', 0),
           outcome_ref_key=cache_key)
     else:
+      # Centralized storage is now mandatory because the completed list relies on cache keys,
+      # making local cache mode incompatible with the new caching mechanism.
       raise Exception(
           'You are not using any centralized storage to pass the message. Centralized storage (GCS or Redis) is required for this configuration. Check your cache mode; it should be `gcs`, `gcs_with_redis`, or `*_with_redis`.'
       )
