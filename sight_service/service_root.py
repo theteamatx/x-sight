@@ -303,8 +303,12 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
   @rpc_call
   def GetOutcome(self, request, context):
-    return self.optimizers.get_instance(
-        request.client_id, request.question_label).GetOutcome(request)
+    # return self.optimizers.get_instance(
+    #     request.client_id, request.question_label).GetOutcome(request)
+    sync_ctx = self.worker_sync_manager.get_instance(
+          request.client_id, request.question_label
+      )
+    return worker_sync_handler.handle_get_outcome(sync_ctx, request)
 
   @rpc_call
   def FinalizeEpisode(self, request, context):

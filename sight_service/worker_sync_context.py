@@ -12,6 +12,10 @@ from sight_service.message_queue.message_logger.log_storage_collect import (
 )
 from sight_service.message_queue.queue_factory import queue_factory
 datetime = datetime.datetime
+from sight.utils.proto_conversion import convert_dict_to_proto
+from sight_service.proto import service_pb2
+from sight_service.single_action_optimizer import MessageDetails
+
 
 logger_storage_strategy: ILogStorageCollectStrategy = (
         CachedBasedLogStorageCollectStrategy(
@@ -26,3 +30,17 @@ logger_storage_strategy: ILogStorageCollectStrategy = (
 @dataclass
 class WorkerSyncContext:
   queue: Optional[IMessageQueue] = None
+  is_exp_completed: Optional[str] = None
+
+  def add_outcome_to_outcome_response(
+      self, msg_details: MessageDetails, sample_id,
+      outcome: service_pb2.GetOutcomeResponse.Outcome):
+    outcome.action_id = sample_id
+    outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED
+    outcome.reward = msg_details.reward
+    outcome.action_attrs.CopyFrom(
+        convert_dict_to_proto(dict=msg_details.action))
+    outcome.outcome_attrs.CopyFrom(
+        convert_dict_to_proto(dict=msg_details.outcome))
+    outcome.attributes.CopyFrom(
+        convert_dict_to_proto(dict=msg_details.attributes))
