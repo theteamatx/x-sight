@@ -338,8 +338,11 @@ message GetOutcomeResponse {
     Status status = 6;
     string response_str = 7;
     int64 action_id = 8;
-    // sight.x.proto.DecisionParam outcome_attrs = 4; // removing this
-    // completing as completelist will only containt the cache_keys now
+    // sight.x.proto.DecisionParam outcome_attrs = 4; // Removed to centralize
+    // outcome storage. The actual outcome attributes are now stored on the
+    // worker side in a permanent cache. `outcome_attrs_ref_key` is used here as
+    // a reference key to these attributes, reducing payload size and ensuring
+    // the completed list only contains cache keys.
     string outcome_attrs_ref_key = 9;
   }
   repeated Outcome outcome = 1;

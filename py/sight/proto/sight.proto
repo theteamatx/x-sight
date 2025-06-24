@@ -750,7 +750,7 @@ message DecisionPoint {
   // Identifies the chosen option.
   string chosen_option = 2; // need or not?
 
-  // The parameters that characterize the chosen option.
+  // The parameters that characterize the chosen option.ssss
   DecisionParam choice_params = 3;
   DecisionParam state_params = 4;
 }
@@ -760,10 +760,13 @@ message DecisionOutcome {
   // The numeric value of this outcome, with higher values being more desirable.
   float reward = 2;
   float discount = 3;
+  // the below will not be using this in RPC
   DecisionParam outcome_params = 4;
-  // will not be using this in RPC
+  // This `outcome_params_ref_key` is a reference key used by the client to
+  // retrieve the actual outcome parameters. The full `outcome_params` object is
+  // now cached on the worker side, keyed by `action_dict_hash`, to reduce RPC
+  // payload size.
   string outcome_params_ref_key = 5;
-  // actual outcome_params_cache_key will be based on action_dict
 }
 
 message Question {

@@ -73,8 +73,25 @@ def get_all_outcomes(sight_id, question_label, action_ids):
         outcome_dict['reward'] = outcome.reward
         outcome_dict['action'] = convert_proto_to_dict(
             proto=outcome.action_attrs)
-        outcome_dict['outcome'] = json.loads(
-            cache_client.get(outcome.outcome_attrs_ref_key))
+        outcome_ref_key = outcome.outcome_attrs_ref_key
+        if not outcome_ref_key:
+          # It's good to log this for debugging before raising.
+          logging.error(
+              f"outcome_attrs_ref_key missing for action_id: {outcome.action_id}"
+          )
+          raise ValueError(
+              f"outcome_attrs_ref_key not found for action_id: {outcome.action_id}"
+          )
+
+        cached_outcome_data = cache_client.get(outcome_ref_key)
+        if cached_outcome_data is None:
+          # This handles cases where the key exists but the data isn't in the cache.
+          logging.error(
+              f"Outcome data not found in cache for key: {outcome_ref_key} (action_id: {outcome.action_id})"
+          )
+          raise ValueError(
+              f"Outcome data not found in cache for key: {outcome_ref_key}")
+        outcome_dict['outcome'] = json.loads(cached_outcome_data)
         # outcome_dict['outcome'] = convert_proto_to_dict(
         #     proto=outcome.outcome_attrs)
         outcome_dict['attributes'] = convert_proto_to_dict(

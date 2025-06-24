@@ -871,7 +871,7 @@ def _update_cached_batch(sight: Any, custom_part="sight_cache"):
           outcome_ref_key=cache_key)
     else:
       raise Exception(
-          'You are not using any centrailzed storage to pass the message , check your cache mode , it should be `gcs` , `gcs_with_redis` , `*_with_redis`'
+          'You are not using any centralized storage to pass the message. Centralized storage (GCS or Redis) is required for this configuration. Check your cache mode; it should be `gcs`, `gcs_with_redis`, or `*_with_redis`.'
       )
 
 
