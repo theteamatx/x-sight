@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import base64
+import json
 import math
 import time
 
@@ -53,18 +54,12 @@ def get_all_outcomes(sight_id, question_label, action_ids):
   request.unique_ids.extend(action_ids)
 
   cache_mode = FLAGS.cache_mode or 'none'
-  cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
-      cache_type=cache_mode))
+
+  cache_client = CacheFactory.get_cache(cache_type=cache_mode)
 
   try:
     response = service.call(
         lambda s, meta: s.GetOutcome(request, 300, metadata=meta))
-
-    if response.outcomes_ref_key:
-      proto_cached_data = cache_transport.fetch_payload(
-          response.outcomes_ref_key)
-      text_format.Parse(proto_cached_data, response)
-
     # when worker finished fvs run of that sample
     # this `if` will goes inside for loop for each outcome
     outcome_list = []
@@ -78,8 +73,31 @@ def get_all_outcomes(sight_id, question_label, action_ids):
         outcome_dict['reward'] = outcome.reward
         outcome_dict['action'] = convert_proto_to_dict(
             proto=outcome.action_attrs)
-        outcome_dict['outcome'] = convert_proto_to_dict(
-            proto=outcome.outcome_attrs)
+        outcome_ref_key = outcome.outcome_attrs_ref_key
+        # The `outcome_ref_key` is crucial for retrieving the full outcome data from the
+        # centralized cache, as per the new caching mechanism. Its absence indicates a
+        # critical data flow issue or misconfiguration.
+        # here we are trying to pick up the data that is stored by worker with given outcome_ref_key as cache_key in centralized cache
+        if not outcome_ref_key:
+          # It's good to log this for debugging before raising.
+          logging.error(
+              f"outcome_attrs_ref_key missing for action_id: {outcome.action_id}"
+          )
+          raise ValueError(
+              f"outcome_attrs_ref_key not found for action_id: {outcome.action_id}"
+          )
+
+        cached_outcome_data = cache_client.get(outcome_ref_key)
+        if cached_outcome_data is None:
+          # This handles cases where the key exists but the data isn't in the cache.
+          logging.error(
+              f"Outcome data not found in cache for key: {outcome_ref_key} (action_id: {outcome.action_id})"
+          )
+          raise ValueError(
+              f"Outcome data not found in cache for key: {outcome_ref_key}")
+        outcome_dict['outcome'] = json.loads(cached_outcome_data)
+        # outcome_dict['outcome'] = convert_proto_to_dict(
+        #     proto=outcome.outcome_attrs)
         outcome_dict['attributes'] = convert_proto_to_dict(
             proto=outcome.attributes)
       else:

@@ -760,7 +760,13 @@ message DecisionOutcome {
   // The numeric value of this outcome, with higher values being more desirable.
   float reward = 2;
   float discount = 3;
+  // the below will not be using this in RPC
   DecisionParam outcome_params = 4;
+  // This `outcome_params_ref_key` is a reference key used by the client to
+  // retrieve the actual outcome parameters. The full `outcome_params` object is
+  // now cached on the worker side, keyed by `action_dict_hash`, to reduce RPC
+  // payload size.
+  string outcome_params_ref_key = 5;
 }
 
 message Question {

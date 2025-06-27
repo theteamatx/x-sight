@@ -21,12 +21,12 @@ import contextvars
 import dataclasses
 import inspect
 import io
+import json
 import os
 import random
 import threading
 import time
-import json
-from typing import Any, Optional, Sequence, Callable, Union
+from typing import Any, Callable, Optional, Sequence, Union
 
 from absl import flags
 from dotenv import load_dotenv
@@ -44,7 +44,8 @@ from sight.utility import MessageToDict
 from sight.utility import poll_network_batch_outcome
 from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation_widget_state import (
-    SimulationWidgetState)
+    SimulationWidgetState
+)
 from sight_service.proto import service_pb2
 from sight_service.shared_batch_messages import DecisionMessage
 
@@ -157,12 +158,13 @@ class Sight(object):
   @classmethod
   def create(cls, params: Union[dict, sight_pb2.Params], config=None) -> Sight:
     if isinstance(params, dict):
-        try:
-            params = sight_pb2.Params(**params)
-        except TypeError as e:
-            raise ValueError(f"Invalid params for sight_pb2.Params: {e}")
+      try:
+        params = sight_pb2.Params(**params)
+      except TypeError as e:
+        raise ValueError(f"Invalid params for sight_pb2.Params: {e}")
     elif not isinstance(params, sight_pb2.Params):
-        raise ValueError("Expected params to be a dict or sight_pb2.Params instance.")
+      raise ValueError(
+          "Expected params to be a dict or sight_pb2.Params instance.")
 
     return Sight(params, config)
 
@@ -442,9 +444,9 @@ class Sight(object):
     #? need to check whether we need this condition at all?
     if not self.params.local and not self.params.in_memory:
       print('Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-          'log_id=%s.%s&log_owner=%s&project_id=%s' %
-          (self.SIGHT_API_KEY, self.params.dataset_name, self.table_name,
-           self.params.log_owner, os.environ['PROJECT_ID']))
+            'log_id=%s.%s&log_owner=%s&project_id=%s' %
+            (self.SIGHT_API_KEY, self.params.dataset_name, self.table_name,
+             self.params.log_owner, os.environ['PROJECT_ID']))
 
     if (FLAGS.decision_mode == 'train'):
       decision.finalize(self)
@@ -771,11 +773,10 @@ class Sight(object):
     # if sight_log_id flags already set, table is created already
     if (self.avro_file_counter == 1 and (not FLAGS.sight_log_id)):
       create_external_bq_table(self.params, self.table_name, self.id)
-      print(
-          'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-          'log_id=%s.%s&log_owner=%s&project_id=%s' % (self.SIGHT_API_KEY,
-          self.params.dataset_name, self.table_name, self.params.log_owner,
-          os.environ['PROJECT_ID']))
+      print('Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+            'log_id=%s.%s&log_owner=%s&project_id=%s' %
+            (self.SIGHT_API_KEY, self.params.dataset_name, self.table_name,
+             self.params.log_owner, os.environ['PROJECT_ID']))
     self.avro_log.close()
     self.avro_log = io.BytesIO()
 
@@ -966,18 +967,21 @@ def text_block(label: str, text_val: str, sight, frame=None) -> str:
 
 
 def run_worker(
-  driver_fn:  Callable[[Any], Any] = None,
-  sight_params: dict = None,
+    driver_fn: Callable[[Any], Any] = None,
+    sight_params: dict = None,
 ):
   """Wrapped the driver function with decision API,
      One can directly call run_generic_worker function,
      if have their own driver function.
   """
+
   def wrapped_driver_fn(sight):
     action = decision.decision_point(sight_params['label'], sight)
     reward, outcome = driver_fn(action)
     decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
+
   return run_generic_worker(wrapped_driver_fn, sight_params)
+
 
 def run_generic_worker(
     driver_fn: Optional[Callable[[Any], Any]] = None,
@@ -1048,6 +1052,8 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
   logging.info('cached_messages=%s',
                sight.widget_decision_state['cached_messages'])
 
+  cached_messages = sight.widget_decision_state['cached_messages']
+
   for action_id, action_params in decision_messages.items():
     logging.info('action_id=%s, action_params=%s', action_id, action_params)
     sight.enter_block('Decision Sample', sight_pb2.Object())
@@ -1055,7 +1061,6 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
     if 'constant_action' in sight.widget_decision_state:
       del sight.widget_decision_state['constant_action']
 
-    cached_messages = sight.widget_decision_state['cached_messages']
     sight.widget_decision_state['discount'] = 0
     sight.widget_decision_state['last_reward'] = None
     sight.widget_decision_state['action_id'] = action_id

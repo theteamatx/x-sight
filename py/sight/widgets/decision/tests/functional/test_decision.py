@@ -325,7 +325,6 @@ class DecisionTest(unittest.TestCase):
   #   # Ensure finalized episode triggered once at last
   #   mock_finalize_episode.assert_called_once_with(question_label, sight)
 
-
 # TODO @Meetatgoogle , resolve this test-case , commenting for now
 # def test_get_decision_configuration_for_opt_with_wrong_file_path(self):
 #   # Simulate an invalid question_config pointing to a non-existent proto file
@@ -360,6 +359,7 @@ class DecisionTest(unittest.TestCase):
     question_config = {
         'attrs_text_proto': 'py/sight/configs/.text_proto_configs/fvs.textproto'
     }
+
 
 #   # Prepare the input parameters
 #   sight = Sight(self.params)
@@ -481,7 +481,8 @@ class DecisionTest(unittest.TestCase):
     discount = 1.0
     outcome = {"o1": "o-1", "o2": 2}
 
-    decision.decision_outcome(outcome_label, sight, reward, outcome, discount)
+    decision.decision_outcome(outcome_label, sight, 'random_question_label',
+                              reward, outcome, discount)
     sight.close()
 
     self.assertEqual(sight.widget_decision_state['reward'], reward)
@@ -491,7 +492,8 @@ class DecisionTest(unittest.TestCase):
                      sight.widget_decision_state)  # Should be popped
 
     mock_log_object.assert_called_once()
-    mock_update_cached_batch.assert_called_once_with(sight)
+    mock_update_cached_batch.assert_called_once_with(sight,
+                                                     'random_question_label')
 
   @patch.object(sight, 'upload_blob_from_stream')
   @patch.object(sight, 'create_external_bq_table')
