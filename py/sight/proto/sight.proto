@@ -750,7 +750,7 @@ message DecisionPoint {
   // Identifies the chosen option.
   string chosen_option = 2; // need or not?
 
-  // The parameters that characterize the chosen option.ssss
+  // The parameters that characterize the chosen option.
   DecisionParam choice_params = 3;
   DecisionParam state_params = 4;
 }

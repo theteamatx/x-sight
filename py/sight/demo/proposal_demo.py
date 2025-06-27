@@ -15,6 +15,7 @@
 
 import asyncio
 from typing import Sequence
+import uuid
 import warnings
 
 from absl import app
@@ -51,8 +52,6 @@ def main(argv: Sequence[str]) -> None:
 
   # create sight object with configuration to spawn workers beforehand
   with Sight.create(params, config) as sight:
-
-    import uuid
 
     random_value = str(uuid.uuid4())
 

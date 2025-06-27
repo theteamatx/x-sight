@@ -830,7 +830,7 @@ def decision_point(
   return chosen_action
 
 
-def _update_cached_batch(sight: Any, custom_part="sight_cache"):
+def _update_cached_batch(sight: Any, question_label, custom_part="sight_cache"):
   """Updates the cached batch with the latest decision state.
 
   Args:
@@ -858,7 +858,7 @@ def _update_cached_batch(sight: Any, custom_part="sight_cache"):
       logging.info('action_dict used by worker is => %s', action_dict)
 
       key_maker = KeyMaker()
-      worker_version = 'v1'
+      worker_version = utils.get_worker_version(question_label)
       custom_part = custom_part + ':' + worker_version
       cache_key = key_maker.make_custom_key(custom_part, action_dict)
       outcome_params = sight.widget_decision_state.get('sum_outcome', {})
@@ -880,6 +880,7 @@ def _update_cached_batch(sight: Any, custom_part="sight_cache"):
 def decision_outcome(
     outcome_label: str,
     sight: Any,
+    question_label: Optional[str] = None,
     reward: Optional[float] = None,
     outcome: Optional[Dict[str, Any]] = None,
     discount=1.0,
@@ -934,7 +935,7 @@ def decision_outcome(
       inspect.currentframe().f_back.f_back,
   )
 
-  _update_cached_batch(sight)
+  _update_cached_batch(sight, question_label)
 
   if 'sum_reward' in sight.widget_decision_state:
     _rewards.append(sight.widget_decision_state['sum_reward'])

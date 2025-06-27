@@ -77,6 +77,7 @@ def get_all_outcomes(sight_id, question_label, action_ids):
         # The `outcome_ref_key` is crucial for retrieving the full outcome data from the
         # centralized cache, as per the new caching mechanism. Its absence indicates a
         # critical data flow issue or misconfiguration.
+        # here we are trying to pick up the data that is stored by worker with given outcome_ref_key as cache_key in centralized cache
         if not outcome_ref_key:
           # It's good to log this for debugging before raising.
           logging.error(
@@ -125,8 +126,6 @@ def poll_network_batch_outcome(sight_id, question_label):
         # print(f'BATCH POLLING THE IDS FOR => {pending_action_ids}')
         outcome_of_action_ids = get_all_outcomes(sight_id, question_label,
                                                  pending_action_ids)
-
-        # outcome_of_action_ids =
 
         # print(f'Outcome from get_all_outcome => {outcome_of_action_ids}')
 
