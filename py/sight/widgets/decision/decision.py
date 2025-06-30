@@ -184,10 +184,11 @@ _SERVER_QUEUE_BATCH_SIZE = flags.DEFINE_integer(
     'batch size of the server queue for message queue',
 )
 
-_CACHE_MODE = flags.DEFINE_enum(
-    'cache_mode', 'none',
-    ['gcs', 'local', 'redis', 'none', 'gcs_with_redis', 'local_with_redis'],
-    'Which Sight cache to use ? (default is none)')
+_CACHE_MODE = flags.DEFINE_enum('cache_mode', 'none', [
+    'gcs',
+    'redis',
+    'gcs_with_redis',
+], 'Which Sight cache to use ? (default is none)')
 
 _CONFIG_PATH = flags.DEFINE_string(
     'config_path', get_config_dir_path(),
