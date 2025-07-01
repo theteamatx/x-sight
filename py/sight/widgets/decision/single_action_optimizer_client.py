@@ -85,6 +85,7 @@ class SingleActionOptimizerClient(OptimizerClient):
       choice_config.never_grad_config.CopyFrom(ng_config)
     return choice_config
 
+  #! not sure if we're using this anymore?
   @override
   def decision_point(self, sight, request: service_pb2.DecisionPointRequest):
     # while True:

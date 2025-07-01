@@ -47,6 +47,7 @@ from sight.widgets.simulation.simulation_widget_state import (
     SimulationWidgetState)
 from sight_service.proto import service_pb2
 from sight_service.shared_batch_messages import DecisionMessage
+from sight.widgets.decision.optimizers.bayes_opt_client import BayesOptOptimizerClient
 
 load_dotenv()
 _PARENT_ID = flags.DEFINE_string('parent_id', None,
@@ -1076,3 +1077,36 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
     sight.exit_block('Decision Sample', sight_pb2.Object())
 
   decision.finalize_episode(sight, question_label, opt_obj)
+
+#tmp methods for optimizer workers
+def run_optimizer_worker(
+  driver_fn:  Callable[[Any], Any] = None,
+  sight_params: dict = None,
+):
+  """Wrapped the driver function with decision API,
+     One can directly call run_generic_worker function,
+     if have their own driver function.
+  """
+  def wrapped_driver_fn(opt_obj, sight, is_last_action):
+    action = opt_obj.get_sample()
+    reward, outcome = driver_fn(sight, action, is_last_action)
+    opt_obj.document_sample(action, reward, outcome)
+    decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
+  return run_optimizer_generic_worker(wrapped_driver_fn, sight_params)
+
+def run_optimizer_generic_worker(
+    driver_fn: Optional[Callable[[Any], Any]] = None,
+    sight_params: dict = None,
+):
+  with Sight.create(sight_params) as sight:
+    sight.widget_decision_state['num_decision_points'] = 0
+
+    #add mechanism to create optimizer object from flags
+    opt_obj = BayesOptOptimizerClient(sight)
+
+    num_questions = os.environ["NUM_QUESTIONS"]
+    is_last_action = False
+    for itr in range(int(num_questions)):
+      if itr == int(num_questions)-1:
+        is_last_action = True
+      driver_fn(opt_obj, sight, is_last_action)

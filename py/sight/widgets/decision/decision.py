@@ -917,7 +917,7 @@ def decision_outcome(
   logging.debug('<<<<  Out %s of %s', method_name, _file_name)
 
 
-def propose_actions(sight, question_label, action_dict):
+def propose_actions(sight, question_label, action_dict, last_action=False):
   """Proposes actions to the server."""
 
   attr_dict = sight.fetch_attributes()
@@ -927,6 +927,9 @@ def propose_actions(sight, question_label, action_dict):
   request.question_label = question_label
   request.action_attrs.CopyFrom(convert_dict_to_proto(dict=action_dict))
   request.attributes.CopyFrom(convert_dict_to_proto(dict=attr_dict))
+  #to mark the last propose action call for the experiment
+  if(last_action):
+    request.is_exp_completed = True
 
   response = service.call(
       lambda s, meta: s.ProposeAction(request, 300, metadata=meta))

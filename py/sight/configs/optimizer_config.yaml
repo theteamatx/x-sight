@@ -3,7 +3,8 @@ Generic:
   num_questions: 1
   mode: "dsub_local_worker"
   workers:
-    generic_worker: 1
+    # generic_worker: 1
+    optimizer_worker: 1
 
 Fvs:
   optimizer: "worklist_scheduler"

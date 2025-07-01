@@ -32,7 +32,7 @@ def handle_finalize_episode(
     context: WorkerSyncContext, request: service_pb2.FinalizeEpisodeRequest
 ) -> service_pb2.FinalizeEpisodeResponse:
 
-  #! changes needed for cache related update
+  # not needed after latest changes of cache module - changes needed for cache related update
   # cache_transport = self.cache_transport
 
   # If the decision outcome was communicated via the cache.
@@ -115,7 +115,7 @@ def handle_get_outcome(
           outcome.response_str = f'!! requested sample Id {sample_id} does not exist !!'
     # logging.info('self.queue => %s', self.queue)
 
-    #! Need to handle cache related changes
+    #not needed as of now - Need to handle cache related changes
     # if self.cache_mode not in [
     #     CacheType.NONE, CacheType.LOCAL, CacheType.LOCAL_WITH_REDIS
     # ]:

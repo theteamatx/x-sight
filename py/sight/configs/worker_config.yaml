@@ -1,6 +1,11 @@
-generic_worker:
+# generic_worker:
+#   version: "v0.1"
+#   file_path: "py/worker/worker_configs/generic_worker.yaml"
+
+optimizer_worker:
   version: "v0.1"
-  file_path: "py/worker/worker_configs/generic_worker.yaml"
+  file_path: "py/worker/worker_configs/optimizer_worker.yaml"
+
 
 fvs_worker:
   version: "v0.1"
