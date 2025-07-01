@@ -987,7 +987,6 @@ def run_generic_worker(
   """Generic worker utility for running applications that use the Decision API.
   """
 
-  # sight = Sight.create(sight_params)
   with Sight.create(sight_params) as sight:
     sight.widget_decision_state['num_decision_points'] = 0
 
@@ -1019,7 +1018,7 @@ def run_generic_worker(
         logging.info('backed off for %s seconds... and trying for %s',
                     backoff_interval, num_retries)
         num_retries += 1
-        if (num_retries >= 5):
+        if (num_retries >= 50):
           break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_ACT):

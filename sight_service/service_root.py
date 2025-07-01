@@ -127,7 +127,6 @@ def rpc_call(func):
   return wrapper
 
 
-# class Optimizers:
 class WorkerSyncManager:
   """
   WorkerSyncManager class to manage sync up between different worker of same
@@ -233,7 +232,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
   def __init__(self):
     super().__init__()
-    # self.optimizers = Optimizers()
     self.worker_sync_manager = WorkerSyncManager()
     logging.debug('SightService::__init__')
 
@@ -285,8 +283,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
   @rpc_call
   def ProposeAction(self, request, context):
     logging.info('called ProposeAction for lable %s', request.question_label)
-    # return self.optimizers.get_instance(
-    #     request.client_id, request.question_label).propose_action(request)
     sync_ctx = self.worker_sync_manager.get_instance(request.client_id,
                                                      request.question_label)
     return worker_sync_handler.handle_propose_action(sync_ctx, request)
@@ -294,8 +290,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
   @rpc_call
   def GetOutcome(self, request, context):
     logging.info('called GetOutcome for lable %s', request.question_label)
-    # return self.optimizers.get_instance(
-    #     request.client_id, request.question_label).GetOutcome(request)
     sync_ctx = self.worker_sync_manager.get_instance(request.client_id,
                                                      request.question_label)
     return worker_sync_handler.handle_get_outcome(sync_ctx, request)
@@ -303,8 +297,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
   @rpc_call
   def FinalizeEpisode(self, request, context):
     logging.info('called FinalizeEpisode for lable %s', request.question_label)
-    # return self.optimizers.get_instance(
-    #     request.client_id, request.question_label).finalize_episode(request)
     sync_ctx = self.worker_sync_manager.get_instance(request.client_id,
                                                      request.question_label)
     return worker_sync_handler.handle_finalize_episode(sync_ctx, request)
@@ -324,27 +316,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
     logging.info('request in close is : %s', request)
     with self.worker_sync_manager.instances_lock.gen_rlock():
-      # fixed now - there is an issue with this : even one of the worker calls the close,
-      # this will call the close on the optimizer - need to fix this
-      # logging.info("request => %s", request)
-      # if request.HasField("question_label"):
-      #   instance = self.worker_sync_manager.get_instance(request.client_id,
-      #                                            request.question_label)
-      #   # print('*********lenght of instances : ', len(instances))
-      #   if instance:
-      #   #   for question, obj in instances.items():
-      #     # logging.info('instance found : %s', instance)
-      #     obj = instance.close(request)
-      #   else:
-      #     logging.info(
-      #         "client id not present in server, no launch ever called for this client??"
-      #     )
-      #     obj = service_pb2.CloseResponse()
-      # else:
-      #   logging.info(
-      #       "root process close called"
-      #   )
-      #   obj = service_pb2.CloseResponse()
 
       if not request.HasField("question_label"):
         logging.info("root process close called")
@@ -373,8 +344,6 @@ class SightService(service_pb2_grpc.SightServiceServicer):
   @rpc_call
   def WorkerAlive(self, request, context):
     logging.info('called worker_alive for lable %s', request.question_label)
-    # return self.optimizers.get_instance(
-    #     request.client_id, request.question_label).WorkerAlive(request)
     sync_ctx = self.worker_sync_manager.get_instance(request.client_id,
                                                      request.question_label)
     return worker_sync_handler.handle_worker_alive(sync_ctx, request)
