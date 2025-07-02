@@ -1,63 +1,35 @@
 """Tests for the Redis cache."""
 
-import subprocess
+import json
 import time
 import unittest
 
 from helpers.cache.cache_factory import CacheFactory
 from helpers.cache.cache_redis import RedisCache
+from helpers.cache.tests.integration.test_redis_contianer import (
+    RedisContainerTest
+)
 from helpers.logs.logs_handler import logger as logging
 import redis
 from tests.colorful_tests import ColorfulTestRunner
 
 
-class CacheRedisTest(unittest.TestCase):
+class CacheRedisTest(RedisContainerTest):
   """Tests for the Redis cache."""
 
-  def wait_for_redis(self, host, port, timeout=30):
-    start_time = time.time()
-    while time.time() - start_time < timeout:
-      try:
-        client = redis.StrictRedis(host=host, port=port)
-        client.ping()
-        logging.info('Redis is ready!')
-        return
-      except redis.ConnectionError:
-        time.sleep(1)
-    raise TimeoutError(f'Redis not ready after {timeout} seconds')
+  @classmethod
+  def setUpClass(cls):
+    logging.info('Setting up the Container !!')
+    super().setUpClass()
 
-  def _end_container(self):
-    """Stops the Docker containers."""
-    if self.cache and self.cache.get_redis_client():
-      client = self.cache.get_redis_client()
-      keys_to_delete = client.keys('testing:*')
-      if keys_to_delete:
-        client.delete(*keys_to_delete)  # Delete all matching keys
-    try:
-      logging.info('Stopping Docker containers ...')
-      subprocess.run(['docker-compose', 'down'], check=True)
-      logging.info('Docker containers stopped successfully...')
-    except subprocess.CalledProcessError as e:
-      logging.info(f'Failed to stop Docker containers : {e}')
-      raise e
-
-  def tearDown(self):
-    super().tearDown()
-    self._end_container()
+  @classmethod
+  def tearDownClass(cls):
+    logging.info('Tearing Down the Container !!')
+    super().tearDownClass()
 
   def setUp(self):
-    super().setUp()
-    self.cache = None
-    self._end_container()
-    try:
-      logging.info('Starting Docker containers ...')
-      subprocess.run(['docker-compose', 'up', '-d'], check=True)
-      # Wait for Redis to be ready
-      self.wait_for_redis('localhost', 1234)
-      logging.info('Docker containers started successfully...')
-    except subprocess.CalledProcessError as e:
-      logging.info(f'Failed to start Docker containers : {e}')
-      raise e
+    redis_client = self.__class__.redis_client
+    redis_client.flushall()
 
   def test_redis_get_set(self):
     """Tests the Redis cache."""
@@ -73,12 +45,11 @@ class CacheRedisTest(unittest.TestCase):
     )
 
     # Set data in the Redis cache
-    self.cache.set('testing:ACR203:2013:FVS:MANAGED:FIRE_0001011100',
-                   {'Fire': [2023, 2034, 3004]})
+    self.cache.set('testing:test1:0', json.dumps({'Fire': [2023, 2034, 3004]}))
 
     # Retrieve data from the Redis cache
-    result = self.cache.get('testing:ACR203:2013:FVS:MANAGED:FIRE_0001011100')
-
+    result = self.cache.get('testing:test1:0')
+    result = json.loads(result)
     # Assert the retrieved data is correct
     expected_result = {'Fire': [2023, 2034, 3004]}
     self.assertEqual(result, expected_result,
@@ -98,14 +69,10 @@ class CacheRedisTest(unittest.TestCase):
     )
 
     # Set data in the Redis cache
-    self.cache.json_set(
-        'testing:ACR203:2013:FVS:MANAGED:FIRE_0001011100',
-        {'Fire': [2023, 2034, 3004]},
-    )
+    self.cache.json_set('testing:test:1', {'Fire': [2023, 2034, 3004]})
 
     # Retrieve data from the Redis cache
-    result = self.cache.json_get(
-        'testing:ACR203:2013:FVS:MANAGED:FIRE_0001011100')
+    result = self.cache.json_get('testing:test:1')
 
     # Assert the retrieved data is correct
     expected_result = {'Fire': [2023, 2034, 3004]}
@@ -119,8 +86,9 @@ class CacheRedisTest(unittest.TestCase):
         'redis_port': 1234,
         'redis_db': 0
     })
-    self.cache.json_set('testing:KEY', {'welcome': 'back'})
-    self.assertEqual({'welcome': 'back'}, self.cache.json_get('testing:KEY'))
+    self.cache.json_set('testing:factory:0', json.dumps({'welcome': 'back'}))
+    self.assertEqual({'welcome': 'back'},
+                     json.loads(self.cache.json_get('testing:factory:0')))
 
   def test_redis_bin_get_set(self):
     # Configuration for the Redis cache
@@ -135,13 +103,12 @@ class CacheRedisTest(unittest.TestCase):
 
     # Set data in the Redis cache
     self.cache.bin_set(
-        'testing:ACR203:2013:FVS:MANAGED:FIRE_0001011100',
+        'testing:test:2',
         {'Fire': [2023, 2034, 3004]},
     )
 
     # Retrieve data from the Redis cache
-    result = self.cache.bin_get(
-        'testing:ACR203:2013:FVS:MANAGED:FIRE_0001011100')
+    result = self.cache.bin_get('testing:test:2')
 
     # Assert the retrieved data is correct
     expected_result = {'Fire': [2023, 2034, 3004]}

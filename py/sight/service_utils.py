@@ -42,7 +42,7 @@ current_script_directory = os.path.dirname(os.path.abspath(__file__))
 #                                'sight_service', 'sight_service.cert')
 _SERVICE_NAME = flags.DEFINE_string(
     'service_name',
-    'test-dev-service',
+    'default',
     'The name of the Sight service instance that will be managing this run.',
 )
 _SERVICE_DOCKER_FILE = flags.DEFINE_string(
@@ -525,7 +525,7 @@ class GRPCClientCache:
         sight_service = service_pb2_grpc.SightServiceStub(secure_channel)
         metadata = []
         id_token = generate_id_token()
-        logging.info('id_token : %s', id_token)
+        logging.debug('id_token : %s', id_token)
         metadata.append(('authorization', 'Bearer ' + id_token))
         cls._secure_cache = (sight_service, metadata)
       return cls._secure_cache

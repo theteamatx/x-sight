@@ -1,5 +1,7 @@
 """LogStorageCollectStrategy module."""
 
+import json
+
 from helpers.cache.cache_factory import CacheFactory
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
@@ -49,7 +51,7 @@ class CachedBasedLogStorageCollectStrategy(ILogStorageCollectStrategy):
       file_name = f'{self.dir_prefix}chunk_{self.current_file_number}'
       logs = logs if isinstance(logs, list) else [logs]
       logging.debug(f'TRYING TO SET THIS CHUNK {file_name}')
-      self.cache.set(file_name, logs)  # Store the log chunk
+      self.cache.set(file_name, json.dumps(logs))  # Store the log chunk
       self.current_file_number += 1
     except (KeyError, ValueError) as e:
       logging.error(f'Failed to save logs: {e}')
@@ -70,6 +72,7 @@ class CachedBasedLogStorageCollectStrategy(ILogStorageCollectStrategy):
           chunk_files
       ):  # Sort for deterministic order like chunk 0 , chunk 1 , etc..
         logs = self.cache.get(f'{file_name}')
+        logs = json.loads(logs)
         if logs:
           all_logs.extend(logs)
     except (KeyError, ValueError) as e:
