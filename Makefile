@@ -40,4 +40,9 @@ run_local_server:
 	python sight_service/service_root.py
 
 build_and_push_sight_server:
-	docker build --tag gcr.io/$PROJECT_ID/sight-default:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD) -f sight_service/Dockerfile . &&     gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io &&     docker push gcr.io/$PROJECT_ID/sight-default:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD)
+	docker build --tag gcr.io/${PROJECT_ID}/sight-default:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD) -f sight_service/Dockerfile . &&     gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://gcr.io &&     docker push gcr.io/${PROJECT_ID}/sight-default:$(git rev-parse --abbrev-ref HEAD)-$(git rev-parse --short HEAD)
+
+build_and_push_my_sight_server:
+	docker build --tag gcr.io/${PROJECT_ID}/sight-${USER} -f sight_service/Dockerfile .
+	docker push gcr.io/${PROJECT_ID}/sight-${USER}
+	gcloud run deploy sight-${USER} --image=gcr.io/${PROJECT_ID}/sight-${USER}:latest --allow-unauthenticated --service-account=sight-service-account@${PROJECT_ID}.iam.gserviceaccount.com --concurrency=default --cpu=2 --memory=8Gi --min-instances=1 --max-instances=1 --no-cpu-throttling --region=us-central1 --project=${PROJECT_ID}
