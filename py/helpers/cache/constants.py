@@ -4,8 +4,11 @@ import os
 
 
 class CacheType():
-  REDIS = 'redis'
+  LOCAL = 'local'
   GCS = 'gcs'
+  REDIS = 'redis'
+  NONE = 'none'
+  LOCAL_WITH_REDIS = 'local_with_redis'
   GCS_WITH_REDIS = 'gcs_with_redis'
 
 
