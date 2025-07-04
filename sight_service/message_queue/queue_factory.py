@@ -48,7 +48,7 @@ def queue_factory(
         logger_storage_strategy=logger_storage_strategy,
     )
   else:
-    return ListLockMessageQueue(
+    return ListSharedLockMessageQueue(
         id_generator=id_generator,
         batch_size=batch_size,
         logger_storage_strategy=logger_storage_strategy,
