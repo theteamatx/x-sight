@@ -97,8 +97,7 @@ async def asyncio_wrapper(blocking_func, *args, max_threads=-1):
 async def propose_actions(sight,
                           question_label,
                           action_dict,
-                          custom_part="sight_cache",
-                          is_last_action=False):
+                          custom_part="sight_cache"):
 
   if (not global_outcome_mapping.get_for_key(
       f'is_poll_thread_started_{question_label}')):
@@ -127,7 +126,7 @@ async def propose_actions(sight,
   # unique_action_id = await asyncio.to_thread(decision.propose_actions, sight,
   #                                            action_dict)
   unique_action_id = await asyncio_wrapper(decision.propose_actions, sight,
-                                           question_label, action_dict, is_last_action)
+                                           question_label, action_dict)
   await push_message(sight.id, unique_action_id)
   response = await fetch_outcome(sight.id, unique_action_id)
   outcome = response.get('outcome', None)

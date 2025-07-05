@@ -965,8 +965,18 @@ def text_block(label: str, text_val: str, sight, frame=None) -> str:
     # pytype: enable=attribute-error
   return sight.text_block(label, text_val, frame)
 
-
 def run_worker(
+  driver_fn:  Callable[[Any], Any] = None,
+  sight_params: dict = None,
+  is_optimizer_worker: bool = False
+):
+  if(is_optimizer_worker):
+    run_optimizer_worker(driver_fn, sight_params)
+  else:
+    run_action_worker(driver_fn, sight_params)
+
+
+def run_action_worker(
   driver_fn:  Callable[[Any], Any] = None,
   sight_params: dict = None,
 ):
@@ -1086,11 +1096,10 @@ def run_optimizer_worker(
      One can directly call run_generic_worker function,
      if have their own driver function.
   """
-  def wrapped_driver_fn(opt_obj, sight, is_last_action):
-    action = opt_obj.get_sample()
-    reward, outcome = driver_fn(sight, action, is_last_action)
-    opt_obj.document_sample(action, reward, outcome)
-    decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
+  def wrapped_driver_fn(sight):
+    actions, rewards, outcomes = driver_fn(sight)
+    return actions, rewards, outcomes
+    # decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
   return run_optimizer_generic_worker(wrapped_driver_fn, sight_params)
 
 def run_optimizer_generic_worker(
@@ -1100,12 +1109,4 @@ def run_optimizer_generic_worker(
   with Sight.create(sight_params) as sight:
     sight.widget_decision_state['num_decision_points'] = 0
 
-    #add mechanism to create optimizer object from flags
-    opt_obj = BayesOptOptimizerClient(sight)
-
-    num_questions = os.environ["NUM_QUESTIONS"]
-    is_last_action = False
-    for itr in range(int(num_questions)):
-      if itr == int(num_questions)-1:
-        is_last_action = True
-      driver_fn(opt_obj, sight, is_last_action)
+    actions, rewards, outcomes = driver_fn(sight)

@@ -314,8 +314,6 @@ message ProposeActionRequest {
   sight.x.proto.DecisionParam attributes = 3;
 
   string question_label = 4;
-
-  optional bool is_exp_completed = 5;
 }
 message ProposeActionResponse { int64 action_id = 1; }
 

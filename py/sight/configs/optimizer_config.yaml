@@ -1,6 +1,6 @@
 Generic:
   optimizer: "bayesian_opt"
-  num_questions: 1
+  num_questions: 10
   mode: "dsub_local_worker"
   workers:
     # generic_worker: 1
