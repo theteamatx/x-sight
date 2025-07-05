@@ -47,6 +47,7 @@ from sight.widgets.simulation.simulation_widget_state import (
     SimulationWidgetState)
 from sight_service.proto import service_pb2
 from sight_service.shared_batch_messages import DecisionMessage
+from sight.widgets.decision.optimizers.bayes_opt_client import BayesOptOptimizerClient
 
 load_dotenv()
 _PARENT_ID = flags.DEFINE_string('parent_id', None,
@@ -964,8 +965,18 @@ def text_block(label: str, text_val: str, sight, frame=None) -> str:
     # pytype: enable=attribute-error
   return sight.text_block(label, text_val, frame)
 
-
 def run_worker(
+  driver_fn:  Callable[[Any], Any] = None,
+  sight_params: dict = None,
+  is_optimizer_worker: bool = False
+):
+  if(is_optimizer_worker):
+    run_optimizer_worker(driver_fn, sight_params)
+  else:
+    run_action_worker(driver_fn, sight_params)
+
+
+def run_action_worker(
   driver_fn:  Callable[[Any], Any] = None,
   sight_params: dict = None,
 ):
@@ -975,7 +986,7 @@ def run_worker(
   """
   def wrapped_driver_fn(sight):
     action = decision.decision_point(sight_params['label'], sight)
-    reward, outcome = driver_fn(action)
+    reward, outcome = driver_fn(sight, action)
     decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
   return run_generic_worker(wrapped_driver_fn, sight_params)
 
@@ -986,47 +997,48 @@ def run_generic_worker(
   """Generic worker utility for running applications that use the Decision API.
   """
 
-  sight = Sight.create(sight_params)
-  sight.widget_decision_state['num_decision_points'] = 0
+  with Sight.create(sight_params) as sight:
+    sight.widget_decision_state['num_decision_points'] = 0
 
-  optimizer = decision.Optimizer()
-  optimizer.obj = decision.setup_optimizer(sight, FLAGS.optimizer_type)
-  client_id, worker_location = decision._configure_client_and_worker(
-      sight=sight)
-  num_retries = 0
-  backoff_interval = 0.5
-  while True:
-    # #? new rpc just to check move forward or not?
+    optimizer = decision.Optimizer()
+    optimizer.obj = decision.setup_optimizer(sight, FLAGS.optimizer_type)
+    client_id, worker_location = decision._configure_client_and_worker(
+        sight=sight)
+    num_retries = 0
+    backoff_interval = 0.5
+    while True:
+      # #? new rpc just to check move forward or not?
 
-    req = service_pb2.WorkerAliveRequest(
-        client_id=client_id,
-        worker_id=f'client_{client_id}_worker_{worker_location}',
-        question_label=sight_params['label'])
-    response = service.call(
-        lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
-    logging.info('Response from WorkerAlive RPC: %s', response)
-    if (response.status_type ==
-        service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
-      break
-    elif (response.status_type ==
-          service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-      # logging.info('Retrying in 5 seconds......')
-      # time.sleep(5)
-      backoff_interval *= 2
-      time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
-      logging.info('backed off for %s seconds... and trying for %s',
-                   backoff_interval, num_retries)
-      num_retries += 1
-      if (num_retries >= 50):
+      req = service_pb2.WorkerAliveRequest(
+          client_id=client_id,
+          worker_id=f'client_{client_id}_worker_{worker_location}',
+          question_label=sight_params['label'])
+      response = service.call(
+          lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+      logging.info('Response from WorkerAlive RPC: %s', response)
+      if (response.status_type ==
+          service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
         break
-    elif (response.status_type ==
-          service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-      process_worker_action(response, sight, driver_fn, sight_params['label'],
-                            optimizer.obj)
-    else:
-      raise ValueError('Invalid response from server')
+      elif (response.status_type ==
+            service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+        # logging.info('Retrying in 5 seconds......')
+        # time.sleep(5)
+        backoff_interval *= 2
+        time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        logging.info('backed off for %s seconds... and trying for %s',
+                    backoff_interval, num_retries)
+        num_retries += 1
+        if (num_retries >= 50):
+          break
+      elif (response.status_type ==
+            service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
+        process_worker_action(response, sight, driver_fn, sight_params['label'],
+                              optimizer.obj)
+      else:
+        raise ValueError('Invalid response from server')
 
-    logging.info('Exiting the training loop.')
+      logging.info('Exiting the training loop.')
+    # sight.close()
 
   logging.debug('<<<<<< Exiting run method')
 
@@ -1074,3 +1086,27 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
     sight.exit_block('Decision Sample', sight_pb2.Object())
 
   decision.finalize_episode(sight, question_label, opt_obj)
+
+#tmp methods for optimizer workers
+def run_optimizer_worker(
+  driver_fn:  Callable[[Any], Any] = None,
+  sight_params: dict = None,
+):
+  """Wrapped the driver function with decision API,
+     One can directly call run_generic_worker function,
+     if have their own driver function.
+  """
+  def wrapped_driver_fn(sight):
+    actions, rewards, outcomes = driver_fn(sight)
+    return actions, rewards, outcomes
+    # decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
+  return run_optimizer_generic_worker(wrapped_driver_fn, sight_params)
+
+def run_optimizer_generic_worker(
+    driver_fn: Optional[Callable[[Any], Any]] = None,
+    sight_params: dict = None,
+):
+  with Sight.create(sight_params) as sight:
+    sight.widget_decision_state['num_decision_points'] = 0
+
+    actions, rewards, outcomes = driver_fn(sight)
