@@ -19,3 +19,18 @@ class RedisConstants:
   REDIS_PORT = os.environ.get('REDIS_PORT', '1234')
   REDIS_PASS = os.environ.get('REDIS_PASS', '')
   REDIS_DB = os.environ.get('REDIS_DB', '')
+
+  @classmethod
+  def initialize(cls, mode):
+    if mode == 'local':
+      cls.REDIS_HOST = 'localhost'
+      cls.REDIS_PORT = 1234
+      cls.REDIS_PASS = ''
+      cls.REDIS_DB = ''
+    elif mode == 'memorystore':
+      cls.REDIS_HOST = '10.226.111.131'  # Memorystore IP might change
+      cls.REDIS_PORT = 6379
+      cls.REDIS_PASS = ''
+      cls.REDIS_DB = ''
+    else:
+      raise ValueError(f"Unknown Redis mode: {mode}")
