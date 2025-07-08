@@ -3,6 +3,7 @@
 from typing import Dict, Union
 
 from absl import logging
+
 from .cache_gcs import GCSCache
 from .cache_interface import CacheInterface
 from .cache_local import LocalCache
@@ -32,7 +33,13 @@ class CacheFactory:
     Raises:
         ValueError: If the cache type is unknown.
     """
-    if with_redis == 'default':
+    # init the redis configuration based on the cache_type itself
+    if 'redis' in cache_type:
+      # if cache_type contain redis_local or redis_memorystore init the RedisConstants based on the mode
+      if 'local' in cache_type or 'memorystore' in cache_type:
+        _, mode = cache_type.split('redis_')
+        cache_type = _ + 'redis'
+        RedisConstants.initialize(mode=mode)
       with_redis = RedisCache(
           config={
               "redis_host": RedisConstants.REDIS_HOST,

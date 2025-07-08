@@ -51,13 +51,21 @@ class MessageDetails:
   action: Dict[str, str]
   attributes: Dict[str, str]
   reward: float
-  outcome: Dict[str, str]
+  outcome: Dict[
+      str,
+      str]  # outcome is replaced by outcome_ref_key , will delete it in future
+  outcome_ref_key: str = None
 
   @classmethod
   def create(cls, action, attributes, reward=None, outcome=None):
     return cls(action, attributes, reward, outcome)
 
-  def update(self, reward=None, outcome=None, action=None, attributes=None):
+  def update(self,
+             reward=None,
+             outcome=None,
+             action=None,
+             attributes=None,
+             outcome_ref_key=None):
     if reward is not None:
       self.reward = reward
     if outcome is not None:
@@ -66,6 +74,8 @@ class MessageDetails:
       self.action = action
     if attributes is not None:
       self.attributes = attributes
+    if outcome_ref_key is not None:
+      self.outcome_ref_key = outcome_ref_key
     return self
 
   def __str__(self):
@@ -88,17 +98,17 @@ class SingleActionOptimizer(OptimizerInstance):
     super().__init__()
     # logger_storage_strategy = NoneLogStorageCollectStrategy()
     # can use the following logger for analyis , how messages flow
-    logger_storage_strategy: ILogStorageCollectStrategy = (
-        CachedBasedLogStorageCollectStrategy(
-            cache_type="gcs",
-            config={
-                "gcs_base_dir": "sight_mq_logs_for_analysis",
-                "gcs_bucket": "cameltrain-sight",
-                "dir_prefix": f'log_chunks_{datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")}/',
-            },
-        ))
+    # logger_storage_strategy: ILogStorageCollectStrategy = (
+    #     CachedBasedLogStorageCollectStrategy(
+    #         cache_type="gcs",
+    #         config={
+    #             "gcs_base_dir": "sight_mq_logs_for_analysis",
+    #             "gcs_bucket": "cameltrain-sight",
+    #             "dir_prefix": f'log_chunks_{datetime.utcnow().strftime("%Y-%m-%d_%H-%M-%S")}/',
+    #         },
+    #     ))
     self.queue: IMessageQueue = queue_factory(
         queue_type="shared_lock_list",
         batch_size=batch_size,
-        logger_storage_strategy=logger_storage_strategy,
+        logger_storage_strategy=None,
     )

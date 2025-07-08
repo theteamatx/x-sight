@@ -90,11 +90,8 @@ def launch(
   logging.debug('<<<<<<<<<  Out %s method of %s file.', method_name, _file_name)
 
 
-def start_worker_jobs(sight,
-                      question_label: str,
-                      optimizer_config: dict,
-                      worker_configs:dict,
-                      optimizer_type: str):
+def start_worker_jobs(sight, question_label: str, optimizer_config: dict,
+                      worker_configs: dict, optimizer_type: str):
   # for worker_name in optimizer_config['worker_names']:
   #   worker_details = worker_configs[worker_name]
 
@@ -104,28 +101,21 @@ def start_worker_jobs(sight,
       continue
     worker_details = worker_configs[worker]
     if optimizer_config['mode'] == 'dsub_cloud_worker':
-      start_jobs_in_dsub_cloud(worker_count,
-                worker_details['binary'],
-                optimizer_type,
-                worker_details['docker'],
-                'train',
-                FLAGS.server_mode,
-                optimizer_config['mode'],
-                FLAGS.cache_mode,
-                sight)
+      start_jobs_in_dsub_cloud(worker_count, worker_details['binary'],
+                               optimizer_type, worker_details['docker'],
+                               'train', FLAGS.server_mode,
+                               optimizer_config['mode'], FLAGS.cache_mode,
+                               sight)
     elif optimizer_config['mode'] == 'dsub_local_worker':
-      start_jobs_in_dsub_local(
-        worker_count,
-        worker_details['binary'],
-        optimizer_type,
-        worker_details['docker'],
-        'train',
-        FLAGS.server_mode,
-        optimizer_config['mode'],
-        FLAGS.cache_mode,
-        sight)
+      start_jobs_in_dsub_local(worker_count, worker_details['binary'],
+                               optimizer_type, worker_details['docker'],
+                               'train', FLAGS.server_mode,
+                               optimizer_config['mode'], FLAGS.cache_mode,
+                               sight)
     else:
-      raise ValueError(f'Unknown worker mode {optimizer_config["mode"]} for question {question_label}.')
+      raise ValueError(
+          f'Unknown worker mode {optimizer_config["mode"]} for question {question_label}.'
+      )
 
 
 def append_ist_time_to_logging_path_12hr():
@@ -222,8 +212,9 @@ def start_job_in_docker(
 
 
 def start_jobs_in_dsub_cloud(num_train_workers: int, binary_path: Optional[str],
-               optimizer_type: str, docker_image, decision_mode: str,
-               server_mode: str, worker_mode: str, cache_mode: str, sight: Any):
+                             optimizer_type: str, docker_image,
+                             decision_mode: str, server_mode: str,
+                             worker_mode: str, cache_mode: str, sight: Any):
   """Starts the dsub workers that will run the optimization.
 
   Args:
@@ -380,8 +371,6 @@ def start_jobs_in_dsub_local(
       f'PROJECT_ID={os.environ["PROJECT_ID"]}',
       '--env',
       f'GOOGLE_CLOUD_PROJECT={os.environ["PROJECT_ID"]}',
-      '--env',
-      f'PARENT_LOG_ID={sight.id}',
       '--env',
       f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
       # '--env',
