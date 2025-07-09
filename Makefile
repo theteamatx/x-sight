@@ -30,7 +30,7 @@ run_multiple_opt_demo:
 	python3 py/sight/demo/multiple_opt_demo.py --server_mode local
 
 run_proposal_demo:
-	python3 py/sight/demo/proposal_demo.py --server_mode local --cache_mode gcs
+	python3 py/sight/demo/proposal_demo.py --server_mode local --cache_mode redis_local
 
 run_calculator_demo:
 	python3 py/sight/demo/agentic_demo/calculator_demo.py --server_mode local

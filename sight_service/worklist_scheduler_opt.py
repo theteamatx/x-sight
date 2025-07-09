@@ -17,9 +17,6 @@ import threading
 from typing import Any, Dict, List, Tuple
 
 from google.protobuf import text_format
-from helpers.cache.cache_factory import CacheFactory
-from helpers.cache.cache_factory import CacheType
-from helpers.cache.cache_payload_transport import CachedPayloadTransport
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
@@ -51,8 +48,6 @@ class WorklistScheduler(SingleActionOptimizer):
     self.exp_completed = False
     self.possible_values = {}
     self.max_reward_sample = {}
-    self.cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
-        cache_type=self.cache_mode))
 
   def add_outcome_to_outcome_response(
       self, msg_details: MessageDetails, sample_id,

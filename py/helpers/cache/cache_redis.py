@@ -60,9 +60,8 @@ class RedisCache(CacheInterface):
   def get(self, key: str) -> Any:
     """Gets the value from the cache using key as string data"""
     self._is_redis_client_exist()
-    data_as_bytes = self.redis_client.get(key)
-    value = data_as_bytes.decode('utf-8')
-    return value if value else None
+    value = self.redis_client.get(key)
+    return value.decode('utf-8') if value else None
 
   @override
   def set(self, key: str, value: Any) -> None:
