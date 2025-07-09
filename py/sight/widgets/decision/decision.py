@@ -883,9 +883,9 @@ def _update_cached_batch(sight: Any, question_label, custom_part="sight_cache"):
 def decision_outcome(
     outcome_label: str,
     sight: Any,
-    question_label: Optional[str] = None,
     reward: Optional[float] = None,
     outcome: Optional[Dict[str, Any]] = None,
+    question_label: Optional[str] = None,
     discount=1.0,
     # optimizer_type: str
 ) -> None:
