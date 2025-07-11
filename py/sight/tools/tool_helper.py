@@ -15,7 +15,8 @@ def generate_description(question_label, sight) -> str:
   # )
   arg_info_str = (
       "\n  The action input must contains a dictionary with "
-      " keys-values as follows : \n"
+      " keys-values. The dictionary must be in json format with no comments."
+      "The keys and their descriptions are: \n"
   )
   api_description, arguments_description = get_description_from_textproto(
       question_label, sight)
@@ -27,6 +28,7 @@ def generate_description(question_label, sight) -> str:
 def create_lc_tool(question_label, sight, tool_fn=proposal_api) -> StructuredTool:
 
   def tool_fn_with_sight(action):
+    # logging.info(f'type={type(action)} action={action}')
     if isinstance(action, str):
       action_dict = json.loads(action)
     else:
