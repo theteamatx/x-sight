@@ -65,11 +65,12 @@ def create_attr_props(
   return attr_prop_dict
 
 
-def get_text_proto_data(question_label) -> str:
+def get_text_proto_data(question_label, sight) -> str:
   """Get the text proto data for the given question label.
 
   Args:
     question_label: The label of the question.
+    sight: The Sight object that contains the decision configuration.
 
   Returns:
     The text proto data for the given question label.
@@ -77,13 +78,16 @@ def get_text_proto_data(question_label) -> str:
   Raises:
     FileNotFoundError: If the text proto file is not found.
   """
-  questions_info = utils.load_yaml_config(get_config_dir_path() +
-                                          "/question_config.yaml")
+  # questions_info = utils.load_yaml_config(get_config_dir_path() +
+  #                                         "/question_config.yaml")
+  questions = sight.get_decision_config().questions
+  # print(f'get_config_dir_path={get_config_dir_path()}')
+  print(f'questions={questions}')
 
-  if (question_label not in questions_info):
+  if (question_label not in questions):
     raise ValueError(f"Unknown question label: {question_label}")
 
-  relative_text_proto_path = questions_info[question_label]["attrs_text_proto"]
+  relative_text_proto_path = questions[question_label]["attrs_text_proto"]
   if os.path.exists(relative_text_proto_path):
     with open(relative_text_proto_path, "r") as f:
       text_proto_data = f.read()
@@ -93,8 +97,8 @@ def get_text_proto_data(question_label) -> str:
 
     absolute_text_proto_path = sight_repo_path.joinpath(
         relative_text_proto_path)
-    print("absolute_text_proto_path : ", absolute_text_proto_path)
-    print("relative_text_proto_path : ", relative_text_proto_path)
+    # print("absolute_text_proto_path : ", absolute_text_proto_path)
+    # print("relative_text_proto_path : ", relative_text_proto_path)
 
     if not os.path.exists(absolute_text_proto_path):
       raise FileNotFoundError(f"File not found {relative_text_proto_path}")
@@ -105,18 +109,19 @@ def get_text_proto_data(question_label) -> str:
   return text_proto_data
 
 
-def get_description_from_textproto(question_label) -> tuple[str, str]:
+def get_description_from_textproto(question_label, sight) -> tuple[str, str]:
   """Get the description from the textproto file for the given question label.
 
   Args:
     question_label: The label of the question.
+    sight: The Sight object that contains the decision configuration.
 
   Returns:
     The function description and argument description from the textproto file
     for the given question label.
   """
   # we get text_proto data in string type
-  text_proto_data = get_text_proto_data(question_label)
+  text_proto_data = get_text_proto_data(question_label, sight)
 
   # convert it into proto format
   proto_data = sight_pb2.DecisionConfigurationStart()

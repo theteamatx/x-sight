@@ -1,24 +1,24 @@
-Generic:
-  optimizer: "bayesian_opt"
-  num_questions: 1
-  mode: "dsub_local_worker"
-  workers:
-    generic_worker: 1
+# Generic:
+#   optimizer: "bayesian_opt"
+#   num_questions: 1
+#   mode: "dsub_local_worker"
+#   workers:
+#     generic_worker: 1
 
-Fvs:
-  optimizer: "worklist_scheduler"
-  num_questions: 1
-  mode: "dsub_local_worker"
-  workers:
-    fvs_worker: 1
+# Fvs:
+#   optimizer: "worklist_scheduler"
+#   num_questions: 1
+#   mode: "dsub_local_worker"
+#   workers:
+#     fvs_worker: 1
 
-# optimizer mapping to be used for calculator worker in langchain demo
-Calculator:
-  optimizer: "worklist_scheduler"
-  num_questions: 1
-  mode: "dsub_local_worker"
-  workers:
-    calculator_worker: 1
+# # optimizer mapping to be used for calculator worker in langchain demo
+# Calculator:
+#   optimizer: "worklist_scheduler"
+#   num_questions: 1
+#   mode: "dsub_local_worker"
+#   workers:
+#     calculator_worker: 1
 
 Addition:
   optimizer: "worklist_scheduler"

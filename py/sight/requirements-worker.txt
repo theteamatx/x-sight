@@ -1,16 +1,16 @@
-absl-py
-protobuf
-pandas
-google-cloud-logging
-python-dotenv
-readerwriterlock
-overrides
-fastavro
-google-cloud-bigquery
+absl-py==1.4.0
+protobuf==3.20.2
+pandas==2.1.4
+python-dotenv==1.0.0
+readerwriterlock==1.0.9
+overrides==7.4.0
+fastavro==1.7.0
+google-cloud-bigquery==3.29.0
+google-cloud-logging==3.1.2
 google-cloud-storage
 pyyaml
-redis
-
+redis==5.0.8
+astunparse==1.6.3
 
 
 

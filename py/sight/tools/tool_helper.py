@@ -6,14 +6,14 @@ from sight.tools.proposal_tool import proposal_api
 
 
 
-def generate_description(question_label) -> str:
+def generate_description(question_label, sight) -> str:
   arg_info_str = (
       "\n  The action input must contains a dictionary with only one key named "
       "`action_dict` and it's corresponding value must be dictionary with "
       " keys-values as follows : \n"
   )
   api_description, arguments_description = get_description_from_textproto(
-      question_label)
+      question_label, sight)
   description = api_description + arg_info_str + arguments_description
   logging.info("description : %s", description)
   return description
@@ -31,7 +31,7 @@ def create_lc_tool(question_label, sight, tool_fn=proposal_api) -> StructuredToo
       name=f"{question_label}_sight_tool",
       func=tool_fn_with_sight,
       verbose=True,
-      description=generate_description(question_label),
+      description=generate_description(question_label, sight),
   )
 
   return tool_with_sight
