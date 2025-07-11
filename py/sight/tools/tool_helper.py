@@ -1,4 +1,5 @@
 from helpers.logs.logs_handler import logger as logging
+import json
 from langchain_core.tools import StructuredTool
 from typing import Any, Dict
 from sight.worker.worker_helper import get_description_from_textproto
@@ -7,9 +8,13 @@ from sight.tools.proposal_tool import proposal_api
 
 
 def generate_description(question_label, sight) -> str:
+  # arg_info_str = (
+  #     "\n  The action input must contains a dictionary with only one key named "
+  #     "`action_dict` and it's corresponding value must be dictionary with "
+  #     " keys-values as follows : \n"
+  # )
   arg_info_str = (
-      "\n  The action input must contains a dictionary with only one key named "
-      "`action_dict` and it's corresponding value must be dictionary with "
+      "\n  The action input must contains a dictionary with "
       " keys-values as follows : \n"
   )
   api_description, arguments_description = get_description_from_textproto(
@@ -21,7 +26,11 @@ def generate_description(question_label, sight) -> str:
 
 def create_lc_tool(question_label, sight, tool_fn=proposal_api) -> StructuredTool:
 
-  def tool_fn_with_sight(action_dict: Dict[str, Any]):
+  def tool_fn_with_sight(action):
+    if isinstance(action, str):
+      action_dict = json.loads(action)
+    else:
+      action_dict = action
     return tool_fn(action_dict=action_dict,
                    sight=sight,
                    question_label=question_label)
