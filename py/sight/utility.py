@@ -135,11 +135,11 @@ def poll_network_batch_outcome(sight_id, question_label):
         global_outcome_mapping.update(new_dict)
 
       else:
-        logging.info(
-            f'Not sending request as no pending ids ...=> %s with counter => %s',
-            pending_action_ids, counter)
-        if counter <= 0:
-          return
+        # logging.info(
+        #     f'Not sending request as no pending ids ...=> %s with counter => %s',
+        #     pending_action_ids, counter)
+        # if counter <= 0:
+        #   return
         counter -= 1
       time.sleep(POLL_TIME_INTERVAL)
     except Exception as e:

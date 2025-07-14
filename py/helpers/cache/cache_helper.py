@@ -68,6 +68,7 @@ class KeyMaker:
         separators=(",", ":"),
         ensure_ascii=True,
     )
+    logging.info(f'serialized_combined={serialized_combined}')
     return serialized_combined
 
   def make_key(self, *args, **kwargs):
