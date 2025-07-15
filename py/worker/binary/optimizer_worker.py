@@ -99,17 +99,19 @@ async def optimize(sight: Sight, opt_obj):
       #some way to document all the actions with its outcome
       opt_obj.document_sample(batch_actions[b], reward, batch_outcome[b])
 
+  final_outcome = {"reward" : rewards, "outcome": outcomes}
   # return all actions with its rewards, outcomes
-  return actions, rewards, outcomes
+  return final_outcome
 
 
-def main(sight: Sight, opt_config: Dict) -> Tuple[float, Dict[str, int]]:
+def main(sight: Sight, action: Dict) -> Tuple[float, Dict[str, int]]:
 
+  # Here action will be containing optimizer config to create opt obj
+  opt_obj = BayesOptOptimizerClient(sight, action)
+  final_outcome = asyncio.run(optimize(sight, opt_obj))
 
-  opt_obj = BayesOptOptimizerClient(sight, opt_config)
-  actions, rewards, outcomes = asyncio.run(optimize(sight, opt_obj))
-
-  return actions, rewards, outcomes
+  # keeping reward fixed (0) as action contains optimizer config and not actual action attrs
+  return 0, final_outcome
 
 
 if __name__ == "__main__":
@@ -117,6 +119,5 @@ if __name__ == "__main__":
       main,
       {
           "label": get_question_label(),
-      },
-      True
+      }
   ))

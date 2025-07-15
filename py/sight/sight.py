@@ -965,18 +965,8 @@ def text_block(label: str, text_val: str, sight, frame=None) -> str:
     # pytype: enable=attribute-error
   return sight.text_block(label, text_val, frame)
 
+
 def run_worker(
-  driver_fn:  Callable[[Any], Any] = None,
-  sight_params: dict = None,
-  is_optimizer_worker: bool = False
-):
-  if(is_optimizer_worker):
-    run_optimizer_worker(driver_fn, sight_params)
-  else:
-    run_action_worker(driver_fn, sight_params)
-
-
-def run_action_worker(
   driver_fn:  Callable[[Any], Any] = None,
   sight_params: dict = None,
 ):
@@ -1087,24 +1077,3 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
 
   decision.finalize_episode(sight, question_label, opt_obj)
 
-#tmp methods for optimizer workers
-def run_optimizer_worker(
-    driver_fn: Callable[[Any], Any] = None,
-    sight_params: dict = None,
-):
-  """Wrapped the driver function with decision API,
-     One can directly call run_generic_worker function,
-     if have their own driver function.
-  """
-
-  def wrapped_driver_fn(sight):
-    opt_config = decision.decision_point(sight_params['label'], sight)
-    print('opt_config : ', opt_config)
-    actions, rewards, outcomes = driver_fn(sight, opt_config)
-    for i in range(len(actions)):
-      decision.decision_outcome('decision_outcome', sight, rewards[i],
-                                outcomes[i])
-    return actions, rewards, outcomes
-    # decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
-
-  return run_generic_worker(wrapped_driver_fn, sight_params)

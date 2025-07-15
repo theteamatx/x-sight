@@ -97,7 +97,6 @@ async def asyncio_wrapper(blocking_func, *args, max_threads=-1):
 async def propose_actions(sight,
                           question_label,
                           action_dict = None,
-                          is_cache_enabled = True,
                           custom_part="sight_cache"):
 
   if (not global_outcome_mapping.get_for_key(
@@ -114,7 +113,7 @@ async def propose_actions(sight,
   # We should not be using cache while proposing actions to optimizer worker as
   # actual actions will be resolved at optimizer worker - no use of cache here
   cache_client = CacheFactory.get_cache(
-      FLAGS.cache_mode if is_cache_enabled else CacheType.NONE,
+      FLAGS.cache_mode,
       # * Update the config as per need , None config means it takes default redis config for localhost
       with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode, config=None))
 

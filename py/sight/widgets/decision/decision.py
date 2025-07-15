@@ -798,9 +798,6 @@ def decision_point(
   # )
 
   # Increment decision point count
-
-  print(f'sight widget decision state => {sight.widget_decision_state}')
-
   sight.widget_decision_state['num_decision_points'] += 1
 
   # Return cached action if available

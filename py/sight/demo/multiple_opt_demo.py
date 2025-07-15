@@ -48,13 +48,12 @@ def main(argv: Sequence[str]) -> None:
 
     logging.info("spawned the workers.................")
 
-    actions = {"question_label_to_propose" : "Fvs", "num_questions" : 6, "batch_size" : 3}
+    actions = {"question_label_to_propose" : "Fvs", "num_questions" : 6, "batch_size" : 3, "random_seed" : 0}
     asyncio.run(
         proposal.propose_actions(
             sight=sight,
             question_label='Generic',
             action_dict=actions,
-            is_cache_enabled=False
         )
     )
 
