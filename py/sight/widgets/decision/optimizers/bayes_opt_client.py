@@ -13,6 +13,7 @@
 # limitations under the License.
 
 from sight.widgets.decision.base_optimizer_client import BaseOptimizerClient
+from sight.worker.worker_helper import get_action_from_textproto
 from bayes_opt import BayesianOptimization
 from bayes_opt import UtilityFunction
 
@@ -21,8 +22,11 @@ from bayes_opt import UtilityFunction
 def _create_bayes_opt_obj(actions):
   bayes_obj = BayesianOptimization(
       f=None,
+      # pbounds={
+      #     key: (p["min_value"], p["max_value"]) for key, p in actions.items()
+      # },
       pbounds={
-          key: (p["min_value"], p["max_value"]) for key, p in actions.items()
+          key: (v_obj.min_value, v_obj.max_value) for key, v_obj in actions.items()
       },
       verbose=2,
       allow_duplicate_points=True,
@@ -33,23 +37,16 @@ def _create_bayes_opt_obj(actions):
 
 class BayesOptOptimizerClient(BaseOptimizerClient):
 
-  def __init__(self, sight):
+  def __init__(self, sight, opt_config):
     self._sight = sight
     # self._client_id = client_id
-    # self._question_label = question_label
+    self.question_label = opt_config.get('question_label_to_propose', None)
+    self.num_questions = opt_config.get('num_questions', 1)
+    self.batch_size = opt_config.get('batch_size', 5)
     # self._last_action_id = None
 
-    #! need to find a way to get this dynamically
-    actions = {
-        'a1': {
-            'min_value': 2,
-            'max_value': 5
-        },
-        'a2': {
-            'min_value': 2,
-            'max_value': 5
-        }
-    }
+    # actions = get_action_from_textproto('Generic')
+    actions = get_action_from_textproto(self.question_label)
     self.bo_obj = _create_bayes_opt_obj(actions)
 
   def get_sample(self) -> dict:

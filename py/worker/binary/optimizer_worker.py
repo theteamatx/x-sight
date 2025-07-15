@@ -60,10 +60,9 @@ def get_question_label():
 #   return reward, outcome
 
 
-async def propose_parallely(sight: Sight, opt_obj):
-  num_questions = int(os.getenv('NUM_QUESTIONS', '1'))
-  batch_size = 5
-  is_last_action = False
+async def optimize(sight: Sight, opt_obj):
+  num_questions = opt_obj.num_questions
+  batch_size = opt_obj.batch_size
   # tasks = []
   actions = []
   rewards = []
@@ -76,9 +75,6 @@ async def propose_parallely(sight: Sight, opt_obj):
     tasks = []
     # proposing in batch actions
     for itr in range(i, min(i+batch_size, num_questions)):
-      if itr == num_questions - 1:
-        is_last_action = True
-
       action = opt_obj.get_sample()
       batch_actions.append(action)
       tasks.append(
@@ -107,10 +103,11 @@ async def propose_parallely(sight: Sight, opt_obj):
   return actions, rewards, outcomes
 
 
-def main(sight: Sight) -> Tuple[float, Dict[str, int]]:
+def main(sight: Sight, opt_config: Dict) -> Tuple[float, Dict[str, int]]:
 
-  opt_obj = BayesOptOptimizerClient(sight)
-  actions, rewards, outcomes = asyncio.run(propose_parallely(sight, opt_obj))
+
+  opt_obj = BayesOptOptimizerClient(sight, opt_config)
+  actions, rewards, outcomes = asyncio.run(optimize(sight, opt_obj))
 
   return actions, rewards, outcomes
 

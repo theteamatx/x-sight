@@ -15,12 +15,14 @@
 
 from typing import Sequence
 import warnings
-
+import asyncio
 from absl import app
 from absl import flags
 from helpers.logs.logs_handler import logger as logging
 from sight.sight import Sight
 from sight.widgets.decision import decision
+from sight.widgets.decision import proposal
+
 
 
 def warn(*args, **kwargs):
@@ -42,9 +44,19 @@ def main(argv: Sequence[str]) -> None:
   params = {"label": "multiple_opt_label"}
 
   # create sight object with configuration to spawn workers beforehand
-  with Sight.create(params, config):
+  with Sight.create(params, config) as sight:
 
     logging.info("spawned the workers.................")
+
+    actions = {"question_label_to_propose" : "Fvs", "num_questions" : 6, "batch_size" : 3}
+    asyncio.run(
+        proposal.propose_actions(
+            sight=sight,
+            question_label='Generic',
+            action_dict=actions,
+            is_cache_enabled=False
+        )
+    )
 
 
 if __name__ == "__main__":

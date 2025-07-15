@@ -732,6 +732,7 @@ def _process_llm_action(sight, req, optimizer_obj):
 
 def _make_decision(sight, req):
   """Handles decision-making based on the optimizer type."""
+  #! need to check here when optimizer is not initialized
   optimizer_obj = optimizer.get_instance()
   optimizer_type = _OPTIMIZER_TYPE.value
   widget_state = sight.widget_decision_state
@@ -898,6 +899,7 @@ def decision_outcome(
         # json.dumps(outcome[key].to_json())
         sight.widget_decision_state['sum_outcome'][key] = outcome[key]
 
+  #! not adding reward and outcome to sight logs as of now
   sight.log_object(
       sight_pb2.Object(
           sub_type=sight_pb2.Object.ST_DECISION_OUTCOME,

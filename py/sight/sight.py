@@ -158,12 +158,12 @@ class Sight(object):
   @classmethod
   def create(cls, params: Union[dict, sight_pb2.Params], config=None) -> Sight:
     if isinstance(params, dict):
-        try:
-            params = sight_pb2.Params(**params)
-        except TypeError as e:
-            raise ValueError(f"Invalid params for sight_pb2.Params: {e}")
+      try:
+        params = sight_pb2.Params(**params)
+      except TypeError as e:
+        raise ValueError(f"Invalid params for sight_pb2.Params: {e}")
     elif not isinstance(params, sight_pb2.Params):
-        raise ValueError("Expected params to be a dict or sight_pb2.Params instance.")
+      raise ValueError("Expected params to be a dict or sight_pb2.Params instance.")
 
     return Sight(params, config)
 
@@ -1089,24 +1089,22 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
 
 #tmp methods for optimizer workers
 def run_optimizer_worker(
-  driver_fn:  Callable[[Any], Any] = None,
-  sight_params: dict = None,
+    driver_fn: Callable[[Any], Any] = None,
+    sight_params: dict = None,
 ):
   """Wrapped the driver function with decision API,
      One can directly call run_generic_worker function,
      if have their own driver function.
   """
+
   def wrapped_driver_fn(sight):
-    actions, rewards, outcomes = driver_fn(sight)
+    opt_config = decision.decision_point(sight_params['label'], sight)
+    print('opt_config : ', opt_config)
+    actions, rewards, outcomes = driver_fn(sight, opt_config)
+    for i in range(len(actions)):
+      decision.decision_outcome('decision_outcome', sight, rewards[i],
+                                outcomes[i])
     return actions, rewards, outcomes
     # decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
-  return run_optimizer_generic_worker(wrapped_driver_fn, sight_params)
 
-def run_optimizer_generic_worker(
-    driver_fn: Optional[Callable[[Any], Any]] = None,
-    sight_params: dict = None,
-):
-  with Sight.create(sight_params) as sight:
-    sight.widget_decision_state['num_decision_points'] = 0
-
-    actions, rewards, outcomes = driver_fn(sight)
+  return run_generic_worker(wrapped_driver_fn, sight_params)

@@ -1,6 +1,7 @@
 Generic:
-  optimizer: "bayesian_opt"
-  num_questions: 10
+  # optimizer: "bayesian_opt"
+  optimizer: "worklist_scheduler"
+  num_questions: 1
   mode: "dsub_local_worker"
   workers:
     # generic_worker: 1

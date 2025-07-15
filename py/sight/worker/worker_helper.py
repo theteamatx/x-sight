@@ -22,6 +22,8 @@ from google.protobuf import text_format
 from sight.proto import sight_pb2
 from sight.widgets.decision import utils
 from sight.widgets.decision.utils import get_config_dir_path
+from helpers.logs.logs_handler import logger as logging
+
 
 FLAGS = flags.FLAGS
 
@@ -84,26 +86,41 @@ def get_text_proto_data(question_label) -> str:
     raise ValueError(f"Unknown question label: {question_label}")
 
   relative_text_proto_path = questions_info[question_label]["attrs_text_proto"]
-  if os.path.exists(relative_text_proto_path):
-    with open(relative_text_proto_path, "r") as f:
-      text_proto_data = f.read()
-  else:
-    current_file = Path(__file__).resolve()
-    sight_repo_path = current_file.parents[4]
 
-    absolute_text_proto_path = sight_repo_path.joinpath(
-        relative_text_proto_path)
-    print("absolute_text_proto_path : ", absolute_text_proto_path)
-    print("relative_text_proto_path : ", relative_text_proto_path)
+  # Always resolve relative paths from the project root
+  project_root = Path(__file__).resolve()
+  while project_root.name != "x-sight" and project_root.parent != project_root:
+      project_root = project_root.parent
 
-    if not os.path.exists(absolute_text_proto_path):
-      raise FileNotFoundError(f"File not found {relative_text_proto_path}")
+  absolute_text_proto_path = (project_root / relative_text_proto_path).resolve()
+  logging.info("project_root               :", project_root)
+  logging.info("absolute_text_proto_path   :", absolute_text_proto_path)
+  logging.info("relative_text_proto_path   :", relative_text_proto_path)
 
-    with open(absolute_text_proto_path, "r") as f:
-      text_proto_data = f.read()
+  if not os.path.exists(absolute_text_proto_path):
+    raise FileNotFoundError(f"File not found {absolute_text_proto_path}")
+
+  with open(absolute_text_proto_path, "r") as f:
+    text_proto_data = f.read()
 
   return text_proto_data
 
+def get_action_from_textproto(question_label):
+  # we get text_proto data in string type
+  text_proto_data = get_text_proto_data(question_label)
+
+  # convert it into proto format
+  proto_data = sight_pb2.DecisionConfigurationStart()
+  text_format.Parse(text_proto_data, proto_data)
+
+  api_description = proto_data.choice_config[
+      question_label].llm_config.description
+
+  # Extract only action_attrs
+  action_attrs = proto_data.action_attrs
+  # print(action_attrs)
+  print(type(action_attrs))
+  return action_attrs
 
 def get_description_from_textproto(question_label) -> tuple[str, str]:
   """Get the description from the textproto file for the given question label.
