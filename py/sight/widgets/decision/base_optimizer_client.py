@@ -19,9 +19,10 @@ from abc import ABC, abstractmethod
 
 class BaseOptimizerClient(ABC):
     """Abstract base for all optimizer clients (Bayes, NeverGrad, Queue, etc)."""
-    max_reward = 0
-    best_action = {}
-    outcome_of_best_action = {}
+    def __init__(self):
+      self.max_reward = 0
+      self.best_action = {}
+      self.outcome_of_best_action = {}
 
     @abstractmethod
     def get_sample(self) -> dict:

@@ -14,7 +14,7 @@
 """Generic worker which propose to worklist_scheduler optimizer."""
 
 import asyncio
-from typing import Tuple, Dict
+from typing import Tuple, Dict, Any
 import warnings
 
 import os
@@ -62,7 +62,7 @@ async def optimize(sight: Sight, opt_obj):
     batch_outcome = await asyncio.gather(*tasks)
     for b in range(len(batch_outcome)):
       outcomes.append(batch_outcome[b])
-      # some mechanchism to calculate reward from the response of WS worker
+      # TODO(user): Implement a mechanism to calculate reward from the response of the worker.
       reward = 100 #static
       rewards.append(reward)
 
@@ -74,7 +74,7 @@ async def optimize(sight: Sight, opt_obj):
   return final_outcome
 
 
-def main(sight: Sight, action: Dict) -> Tuple[float, Dict[str, int]]:
+def main(sight: Sight, action: Dict) -> Tuple[float, Dict[str, Any]]:
 
   # Here action will be containing optimizer config to create opt obj
   opt_obj = BayesOptOptimizerClient(action)
