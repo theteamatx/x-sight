@@ -24,7 +24,6 @@ from sight.widgets.decision import decision
 from sight.widgets.decision import proposal
 
 
-
 def warn(*args, **kwargs):
   pass
 

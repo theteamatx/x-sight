@@ -93,9 +93,9 @@ def get_text_proto_data(question_label) -> str:
       project_root = project_root.parent
 
   absolute_text_proto_path = (project_root / relative_text_proto_path).resolve()
-  logging.info("project_root               :", project_root)
-  logging.info("absolute_text_proto_path   :", absolute_text_proto_path)
-  logging.info("relative_text_proto_path   :", relative_text_proto_path)
+  logging.info("project_root               :%s", project_root)
+  logging.info("absolute_text_proto_path   :%s", absolute_text_proto_path)
+  logging.info("relative_text_proto_path   :%s", relative_text_proto_path)
 
   if not os.path.exists(absolute_text_proto_path):
     raise FileNotFoundError(f"File not found {absolute_text_proto_path}")
@@ -118,8 +118,6 @@ def get_action_from_textproto(question_label):
 
   # Extract only action_attrs
   action_attrs = proto_data.action_attrs
-  # print(action_attrs)
-  print(type(action_attrs))
   return action_attrs
 
 def get_description_from_textproto(question_label) -> tuple[str, str]:

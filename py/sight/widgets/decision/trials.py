@@ -112,7 +112,6 @@ def start_worker_jobs(sight,
                 FLAGS.server_mode,
                 optimizer_config['mode'],
                 FLAGS.cache_mode,
-                num_questions,
                 sight)
     elif optimizer_config['mode'] == 'dsub_local_worker':
       start_jobs_in_dsub_local(
@@ -124,7 +123,6 @@ def start_worker_jobs(sight,
         FLAGS.server_mode,
         optimizer_config['mode'],
         FLAGS.cache_mode,
-        num_questions,
         sight)
     else:
       raise ValueError(f'Unknown worker mode {optimizer_config["mode"]} for question {question_label}.')
@@ -225,7 +223,7 @@ def start_job_in_docker(
 
 def start_jobs_in_dsub_cloud(num_train_workers: int, binary_path: Optional[str],
                optimizer_type: str, docker_image, decision_mode: str,
-               server_mode: str, worker_mode: str, cache_mode: str, num_questions: int, sight: Any):
+               server_mode: str, worker_mode: str, cache_mode: str, sight: Any):
   """Starts the dsub workers that will run the optimization.
 
   Args:
@@ -286,9 +284,6 @@ def start_jobs_in_dsub_cloud(num_train_workers: int, binary_path: Optional[str],
       f'PORT={service.get_port_number()}',
       '--env',
       f'PROJECT_ID={os.environ["PROJECT_ID"]}',
-      '--env',
-      f'NUM_QUESTIONS={num_questions}'
-
   ]
 
   print("FLAGS.server_mode : ", FLAGS.server_mode)
@@ -339,7 +334,6 @@ def start_jobs_in_dsub_local(
     server_mode: str,
     worker_mode: str,
     cache_mode: str,
-    num_questions: int,
     sight: Any,
 ):
   """Starts the dsub workers that will run the optimization.
@@ -391,8 +385,6 @@ def start_jobs_in_dsub_local(
       f'PARENT_LOG_ID={sight.id}',
       '--env',
       f'SIGHT_SERVICE_ID={service._SERVICE_ID}',
-      '--env',
-      f'NUM_QUESTIONS={num_questions}'
       # '--env',
       # f'WORKERS_CONFIG_PATH={FLAGS.workers_config_path}',
       # '--env',

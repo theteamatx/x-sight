@@ -896,7 +896,6 @@ def decision_outcome(
         # json.dumps(outcome[key].to_json())
         sight.widget_decision_state['sum_outcome'][key] = outcome[key]
 
-  #! not adding reward and outcome to sight logs as of now
   sight.log_object(
       sight_pb2.Object(
           sub_type=sight_pb2.Object.ST_DECISION_OUTCOME,

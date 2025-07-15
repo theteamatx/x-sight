@@ -1028,7 +1028,6 @@ def run_generic_worker(
         raise ValueError('Invalid response from server')
 
       logging.info('Exiting the training loop.')
-    # sight.close()
 
   logging.debug('<<<<<< Exiting run method')
 

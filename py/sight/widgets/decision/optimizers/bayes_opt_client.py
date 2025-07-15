@@ -22,9 +22,6 @@ from bayes_opt import UtilityFunction
 def _create_bayes_opt_obj(actions):
   bayes_obj = BayesianOptimization(
       f=None,
-      # pbounds={
-      #     key: (p["min_value"], p["max_value"]) for key, p in actions.items()
-      # },
       pbounds={
           key: (v_obj.min_value, v_obj.max_value) for key, v_obj in actions.items()
       },
@@ -37,15 +34,11 @@ def _create_bayes_opt_obj(actions):
 
 class BayesOptOptimizerClient(BaseOptimizerClient):
 
-  def __init__(self, sight, opt_config):
-    self._sight = sight
-    # self._client_id = client_id
+  def __init__(self, opt_config):
     self.question_label = opt_config.get('question_label_to_propose', None)
     self.num_questions = opt_config.get('num_questions', 1)
     self.batch_size = opt_config.get('batch_size', 5)
-    # self._last_action_id = None
-
-    # actions = get_action_from_textproto('Generic')
+    
     actions = get_action_from_textproto(self.question_label)
     self.bo_obj = _create_bayes_opt_obj(actions)
 

@@ -128,9 +128,6 @@ def convert_dict_to_proto(dict: Dict[str, Any]) -> sight_pb2.DecisionParam:
 
   """
   proto_map = sight_pb2.DecisionParam()
-  if(dict is None):
-    return proto_map
-
   for k, v in dict.items():
     proto_map.params[k].CopyFrom(get_proto_value_from_value(v))
   return proto_map

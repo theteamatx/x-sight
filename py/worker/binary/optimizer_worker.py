@@ -23,6 +23,7 @@ from absl import flags
 from sight import sight
 from sight.sight import Sight
 from sight.widgets.decision import proposal
+from helpers.logs.logs_handler import logger as logging
 from sight.widgets.decision.optimizers.bayes_opt_client import BayesOptOptimizerClient
 
 
@@ -34,69 +35,38 @@ warnings.warn = warn
 
 FLAGS = flags.FLAGS
 
-
-def get_question_label_to_propose_actions():
-  return "Fvs"
-
-
 def get_question_label():
   return "Generic"
 
 
-# def main(sight: Sight, action: Dict[str, int], is_last_action: bool) -> Tuple[float, Dict[str, int]]:
-
-#   # using actions we received from optimizer to propose actions to
-#   # worklist_scheduler
-#   outcome = asyncio.run(
-#       proposal.propose_actions(sight,
-#                                get_question_label_to_propose_actions(),
-#                                action_dict=action,
-#                                is_last_action=is_last_action))
-
-#   vals = list(action.values())
-#   # some mechanchism to calculate reward from the response of WS worker
-#   reward = sum(xi**2 for xi in vals)
-
-#   return reward, outcome
-
-
 async def optimize(sight: Sight, opt_obj):
-  num_questions = opt_obj.num_questions
-  batch_size = opt_obj.batch_size
-  # tasks = []
-  actions = []
+
   rewards = []
   outcomes = []
 
-  for i in range(0, num_questions, batch_size):
-
+  for i in range(0, opt_obj.num_questions, opt_obj.batch_size):
     batch_actions = []
     batch_outcome = []
     tasks = []
     # proposing in batch actions
-    for itr in range(i, min(i+batch_size, num_questions)):
+    for itr in range(i, min(i+opt_obj.batch_size, opt_obj.num_questions)):
       action = opt_obj.get_sample()
       batch_actions.append(action)
       tasks.append(
           sight.create_task(
               proposal.propose_actions(sight,
-                                      get_question_label_to_propose_actions(),
+                                      opt_obj.question_label,
                                       action_dict=action)))
 
-    print('batch_actions : ', batch_actions, len(batch_actions))
     # wait for their output, update optimizer
     batch_outcome = await asyncio.gather(*tasks)
-    print('batch_outcome : ', batch_outcome, len(batch_outcome))
-    vals = list(batch_actions)
-    # some mechanchism to calculate reward from the response of WS worker
-    reward = 100 #static
-
     for b in range(len(batch_outcome)):
       outcomes.append(batch_outcome[b])
+      # some mechanchism to calculate reward from the response of WS worker
+      reward = 100 #static
       rewards.append(reward)
-      actions.append(batch_actions[b])
 
-      #some way to document all the actions with its outcome
+      # document all the actions with its outcome
       opt_obj.document_sample(batch_actions[b], reward, batch_outcome[b])
 
   final_outcome = {"reward" : rewards, "outcome": outcomes}
@@ -107,7 +77,7 @@ async def optimize(sight: Sight, opt_obj):
 def main(sight: Sight, action: Dict) -> Tuple[float, Dict[str, int]]:
 
   # Here action will be containing optimizer config to create opt obj
-  opt_obj = BayesOptOptimizerClient(sight, action)
+  opt_obj = BayesOptOptimizerClient(action)
   final_outcome = asyncio.run(optimize(sight, opt_obj))
 
   # keeping reward fixed (0) as action contains optimizer config and not actual action attrs
