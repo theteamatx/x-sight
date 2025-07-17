@@ -26,6 +26,7 @@ import os
 import random
 import threading
 import time
+import traceback
 from typing import Any, Callable, Optional, Sequence, Union
 
 from absl import flags
@@ -48,6 +49,8 @@ from sight.widgets.simulation.simulation_widget_state import (
 )
 from sight_service.proto import service_pb2
 from sight_service.shared_batch_messages import DecisionMessage
+from helpers.cache.cache_factory import CacheFactory
+from helpers.cache.cache_helper import CacheConfig
 
 load_dotenv()
 _PARENT_ID = flags.DEFINE_string('parent_id', None,
@@ -980,14 +983,30 @@ def run_worker(
      One can directly call run_generic_worker function,
      if have their own driver function.
   """
+  try:
+    def wrapped_driver_fn(sight):
+      action = decision.decision_point(sight_params['label'], sight)
+      reward, outcome = driver_fn(action)
+      decision.decision_outcome('decisionin_outcome', sight, reward, outcome,
+                                sight_params['label'])
+    return run_generic_worker(wrapped_driver_fn, sight_params)
+  except Exception as e:
+    error_type = type(e).__name__
+    error_message = str(e)
+    tb = traceback.format_exc()
 
-  def wrapped_driver_fn(sight):
-    action = decision.decision_point(sight_params['label'], sight)
-    reward, outcome = driver_fn(action)
-    decision.decision_outcome('decisionin_outcome', sight, reward, outcome,
-                              sight_params['label'])
+    combined_error = (
+      f"Worker failed with {error_type}: {error_message}\n"
+      f"Traceback:\n{tb}"
+    )
+    logging.info("ERROR: %s",combined_error)
 
-  return run_generic_worker(wrapped_driver_fn, sight_params)
+    cache_client = CacheFactory.get_cache(
+          FLAGS.cache_mode,
+          # * Update the config as per need , None config means it takes default redis config for localhost
+          with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode,
+                                                    config=None))
+    cache_client.set(f"{sight_params['label']}_Error", combined_error,)
 
 
 def run_generic_worker(

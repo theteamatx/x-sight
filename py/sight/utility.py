@@ -30,6 +30,7 @@ from google.protobuf.json_format import _Printer as BasePrinter
 from google.protobuf.json_format import SerializeToJsonError
 from google.protobuf.text_format import Merge
 from helpers.cache.cache_factory import CacheFactory
+from helpers.cache.cache_helper import CacheConfig
 from helpers.cache.cache_factory import CacheType
 from helpers.cache.cache_payload_transport import CachedPayloadTransport
 from helpers.logs.logs_handler import logger as logging
@@ -113,6 +114,17 @@ def poll_network_batch_outcome(sight_id, question_label):
   counter = POLL_LIMIT
   while True:
     try:
+      cache_client = CacheFactory.get_cache(
+          FLAGS.cache_mode,
+          # * Update the config as per need , None config means it takes default redis config for localhost
+          with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode,
+                                                    config=None))
+      is_error_occured = cache_client.get(f"{question_label}_Error")
+      if(is_error_occured):
+        logging.info("ERROR : %s", is_error_occured)
+        cache_client.set(f"{question_label}_Error", '')
+        break
+
       resource_dict = global_outcome_mapping.get()
       pending_action_ids = [
           id for id in resource_dict if resource_dict[id] is None
