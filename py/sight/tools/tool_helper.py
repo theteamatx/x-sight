@@ -3,6 +3,7 @@ import json
 from langchain_core.tools import StructuredTool
 from typing import Any, Dict
 from sight.worker.worker_helper import get_description_from_textproto
+from sight.worker.worker_helper import normalize_action
 from sight.tools.proposal_tool import proposal_api
 
 
@@ -28,11 +29,13 @@ def generate_description(question_label, sight) -> str:
 def create_lc_tool(question_label, sight, tool_fn=proposal_api) -> StructuredTool:
 
   def tool_fn_with_sight(action):
-    # logging.info(f'type={type(action)} action={action}')
+    logging.info(f'type={type(action)} action="{action}"')
+    action = action.replace('```', '')
     if isinstance(action, str):
-      action_dict = json.loads(action)
+      action_dict = json.loads(action.rstrip())
     else:
       action_dict = action
+    action_dict = normalize_action(action_dict, question_label, sight)
     return tool_fn(action_dict=action_dict,
                    sight=sight,
                    question_label=question_label)

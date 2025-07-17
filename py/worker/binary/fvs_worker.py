@@ -17,13 +17,13 @@ from typing import Tuple
 
 from absl import app
 from sight import sight
-
+from sight.sight import Sight
 
 def get_question_label():
   return 'Fvs'
 
 
-def main(action: dict) -> Tuple[float, dict]:
+def main(action: dict, sight: Sight) -> Tuple[float, dict]:
   mitigation_list = [
       227.6,
       273.4,

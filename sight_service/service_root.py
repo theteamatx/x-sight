@@ -353,7 +353,10 @@ class SightService(service_pb2_grpc.SightServiceServicer):
 
   @rpc_call
   def WorkerAlive(self, request, context):
-    logging.info('called worker_alive for lable %s', request.question_label)
+    logging.info('called worker_alive for request %s', request)
+    logging.info('called worker_alive for label %s', request.question_label)
+    logging.info('called worker_alive for label instance=%s', self.optimizers.get_instance(
+        request.client_id, request.question_label))
     return self.optimizers.get_instance(
         request.client_id, request.question_label).WorkerAlive(request)
 

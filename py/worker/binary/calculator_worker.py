@@ -16,14 +16,14 @@ from typing import Any, Dict, Tuple
 
 from absl import app
 from sight import sight
-
+from sight.sight import Sight
 
 # Question mapped to calculator problem
 def get_question_label():
   return "Calculator"
 
 
-def main(action: Dict[str, Any]) -> Tuple[float, Dict[str, Any]]:
+def main(action: Dict[str, Any], sight: Sight) -> Tuple[float, Dict[str, Any]]:
   ops = action["operator"]
   v1 = action["operand1"]
   v2 = action["operand2"]

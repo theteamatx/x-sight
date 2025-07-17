@@ -109,6 +109,7 @@ async def propose_actions(sight,
   worker_version = utils.get_worker_version(question_label)
   custom_part = custom_part + ':' + worker_version
   cache_key = key_maker.make_custom_key(custom_part, action_dict)
+  logging.info(f'cache_key={cache_key}')
 
   cache_client = CacheFactory.get_cache(
       FLAGS.cache_mode,

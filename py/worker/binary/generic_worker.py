@@ -41,7 +41,7 @@ def get_question_label():
   return "Generic"
 
 
-def main(sight: Sight, action: Dict[str, int]) -> Tuple[float, Dict[str, int]]:
+def main(action: Dict[str, int], sight: Sight) -> Tuple[float, Dict[str, int]]:
 
   # using actions we received from optimizer to propose actions to
   # worklist_scheduler

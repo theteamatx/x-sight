@@ -688,7 +688,7 @@ message DecisionConfigurationStart {
   map<string, ChoiceConfig> choice_config = 2;
 
   enum DataType {
-    DT_UNKOWN = 0;
+    DT_UNKNOWN = 0;
     DT_INT32 = 1;
     DT_INT64 = 2;
     DT_FLOAT32 = 3;
@@ -699,6 +699,7 @@ message DecisionConfigurationStart {
   message AttrProps {
     float min_value = 1;
     float max_value = 2;
+    float default_value = 10;
 
     // The size of a discrete valid quantum of values between min_value and
     // max_value (if step_size > 0).
