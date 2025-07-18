@@ -27,7 +27,7 @@ class RedisCache(CacheInterface):
   """
 
   _instances = {}
-  _lock = threading.Lock()  # to make GCSCache thread-safe
+  _lock = threading.Lock()  # to make RedisCache thread-safe
 
   def __new__(cls, config=None):
     config = config or {}
