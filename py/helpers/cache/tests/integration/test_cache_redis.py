@@ -53,89 +53,89 @@ class CacheRedisTest(RedisContainerTest):
         "Subsequent instantiations with same config should be significantly faster than cold start"
     )
 
-  # def test_redis_get_set(self):
-  #   """Tests the Redis cache."""
+  def test_redis_get_set(self):
+    """Tests the Redis cache."""
 
-  #   # Configuration for the Redis cache
-  #   config = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
-  #   # Initialize the Redis cache
-  #   self.cache = RedisCache(config=config)
+    # Configuration for the Redis cache
+    config = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
+    # Initialize the Redis cache
+    self.cache = RedisCache(config=config)
 
-  #   self.assertIsNotNone(
-  #       self.cache.get_redis_client(),
-  #       'Cache client is not found , check your redis connection !!',
-  #   )
+    self.assertIsNotNone(
+        self.cache.get_redis_client(),
+        'Cache client is not found , check your redis connection !!',
+    )
 
-  #   # Set data in the Redis cache
-  #   self.cache.set('testing:test1:0', json.dumps({'Fire': [2023, 2034, 3004]}))
+    # Set data in the Redis cache
+    self.cache.set('testing:test1:0', json.dumps({'Fire': [2023, 2034, 3004]}))
 
-  #   # Retrieve data from the Redis cache
-  #   result = self.cache.get('testing:test1:0')
-  #   result = json.loads(result)
-  #   # Assert the retrieved data is correct
-  #   expected_result = {'Fire': [2023, 2034, 3004]}
-  #   self.assertEqual(result, expected_result,
-  #                    f'Expected {expected_result}, but got {result}')
+    # Retrieve data from the Redis cache
+    result = self.cache.get('testing:test1:0')
+    result = json.loads(result)
+    # Assert the retrieved data is correct
+    expected_result = {'Fire': [2023, 2034, 3004]}
+    self.assertEqual(result, expected_result,
+                     f'Expected {expected_result}, but got {result}')
 
-  # def test_reds_json_get_set(self):
-  #   """Tests the Redis cache."""
+  def test_reds_json_get_set(self):
+    """Tests the Redis cache."""
 
-  #   # Configuration for the Redis cache
-  #   config = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
-  #   # Initialize the Redis cache
-  #   self.cache = RedisCache(config=config)
+    # Configuration for the Redis cache
+    config = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
+    # Initialize the Redis cache
+    self.cache = RedisCache(config=config)
 
-  #   self.assertIsNotNone(
-  #       self.cache.get_redis_client(),
-  #       'Cache client is not found , check your redis connection !!',
-  #   )
+    self.assertIsNotNone(
+        self.cache.get_redis_client(),
+        'Cache client is not found , check your redis connection !!',
+    )
 
-  #   # Set data in the Redis cache
-  #   self.cache.json_set('testing:test:1', {'Fire': [2023, 2034, 3004]})
+    # Set data in the Redis cache
+    self.cache.json_set('testing:test:1', {'Fire': [2023, 2034, 3004]})
 
-  #   # Retrieve data from the Redis cache
-  #   result = self.cache.json_get('testing:test:1')
+    # Retrieve data from the Redis cache
+    result = self.cache.json_get('testing:test:1')
 
-  #   # Assert the retrieved data is correct
-  #   expected_result = {'Fire': [2023, 2034, 3004]}
-  #   self.assertEqual(result, expected_result,
-  #                    f'Expected {expected_result}, but got {result}')
+    # Assert the retrieved data is correct
+    expected_result = {'Fire': [2023, 2034, 3004]}
+    self.assertEqual(result, expected_result,
+                     f'Expected {expected_result}, but got {result}')
 
-  # def test_redis_via_factory(self):
+  def test_redis_via_factory(self):
 
-  #   self.cache = CacheFactory.get_cache('redis', {
-  #       'redis_host': 'localhost',
-  #       'redis_port': 1234,
-  #       'redis_db': 0
-  #   })
-  #   self.cache.json_set('testing:factory:0', json.dumps({'welcome': 'back'}))
-  #   self.assertEqual({'welcome': 'back'},
-  #                    json.loads(self.cache.json_get('testing:factory:0')))
+    self.cache = CacheFactory.get_cache('redis', {
+        'redis_host': 'localhost',
+        'redis_port': 1234,
+        'redis_db': 0
+    })
+    self.cache.json_set('testing:factory:0', json.dumps({'welcome': 'back'}))
+    self.assertEqual({'welcome': 'back'},
+                     json.loads(self.cache.json_get('testing:factory:0')))
 
-  # def test_redis_bin_get_set(self):
-  #   # Configuration for the Redis cache
-  #   config = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
-  #   # Initialize the Redis cache
-  #   self.cache = RedisCache(config=config)
+  def test_redis_bin_get_set(self):
+    # Configuration for the Redis cache
+    config = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
+    # Initialize the Redis cache
+    self.cache = RedisCache(config=config)
 
-  #   self.assertIsNotNone(
-  #       self.cache.get_redis_client(),
-  #       'Cache client is not found , check your redis connection !!',
-  #   )
+    self.assertIsNotNone(
+        self.cache.get_redis_client(),
+        'Cache client is not found , check your redis connection !!',
+    )
 
-  #   # Set data in the Redis cache
-  #   self.cache.bin_set(
-  #       'testing:test:2',
-  #       {'Fire': [2023, 2034, 3004]},
-  #   )
+    # Set data in the Redis cache
+    self.cache.bin_set(
+        'testing:test:2',
+        {'Fire': [2023, 2034, 3004]},
+    )
 
-  #   # Retrieve data from the Redis cache
-  #   result = self.cache.bin_get('testing:test:2')
+    # Retrieve data from the Redis cache
+    result = self.cache.bin_get('testing:test:2')
 
-  #   # Assert the retrieved data is correct
-  #   expected_result = {'Fire': [2023, 2034, 3004]}
-  #   self.assertEqual(result, expected_result,
-  #                    f'Expected {expected_result}, but got {result}')
+    # Assert the retrieved data is correct
+    expected_result = {'Fire': [2023, 2034, 3004]}
+    self.assertEqual(result, expected_result,
+                     f'Expected {expected_result}, but got {result}')
 
 
 if __name__ == '__main__':
