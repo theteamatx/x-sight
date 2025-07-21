@@ -54,9 +54,6 @@ class RedisCache(CacheInterface):
     """
     if getattr(self, '_initialized', False):
       return  # prevent re-init
-
-    if config is None:
-      config = {}
     try:
       self.redis_client = redis.StrictRedis(
           host=config.get("redis_host", RedisConstants.REDIS_HOST),

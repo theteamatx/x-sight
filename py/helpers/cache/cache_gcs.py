@@ -33,10 +33,11 @@ class GCSCache(CacheInterface):
   _instances = {}
   _lock = threading.Lock()  # to make GCSCache thread-safe
 
-  def __new__(cls, config=None, with_redis_cache: RedisCache = None):
+  def __new__(cls, config=None):
     config = config or {}
+    # The GCSCache instance is unique solely based on 'config'.
+    # 'with_redis_cache' is used only during the first __init__ call for a given config.
     config_key = cls._get_config_hash(config)
-
     with cls._lock:
       if config_key not in cls._instances:
         instance = super(GCSCache, cls).__new__(cls)
