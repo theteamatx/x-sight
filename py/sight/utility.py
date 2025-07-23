@@ -78,6 +78,7 @@ def get_all_outcomes(sight_id, question_label, action_ids):
     # service_pb2.GetOutcomeResponse.Status.COMPLETED
     # print(f'Response => {[outcome for outcome in response.outcome]}')
     for outcome in response.outcome:
+      # logging.info('outcome=%s', outcome)
       if (outcome.status ==
           service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED):
         outcome_dict = {}

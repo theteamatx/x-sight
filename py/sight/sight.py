@@ -988,7 +988,7 @@ def run_worker(
   try:
     def wrapped_driver_fn(sight):
       action = decision.decision_point(sight_params['label'], sight)
-      reward, outcome = driver_fn(action)
+      reward, outcome = driver_fn(action, sight)
       decision.decision_outcome('decision_outcome', sight, reward, outcome,
                                 sight_params['label'])
     return run_generic_worker(wrapped_driver_fn, sight_params)
