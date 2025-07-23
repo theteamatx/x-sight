@@ -31,6 +31,59 @@ class CacheRedisTest(RedisContainerTest):
     redis_client = self.__class__.redis_client
     redis_client.flushall()
 
+  def test_singleton_with_same_config(self):
+    config = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
+
+    redis1 = RedisCache(config)
+    redis2 = RedisCache(config)
+
+    self.assertIs(
+        redis1,
+        redis2,
+        "Two instances with the same config should return the same singleton"
+        " instance.",
+    )
+
+  def test_different_config_returns_different_instance(self):
+    config1 = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
+    config2 = {
+        'redis_host': 'localhost',
+        'redis_port': 1234,
+        'redis_db': 1
+    }  # Different DB
+
+    redis1 = RedisCache(config1)
+    redis2 = RedisCache(config2)
+
+    self.assertIsNot(
+        redis1,
+        redis2,
+        "Two instances with different config should return different"
+        " instances.",
+    )
+
+  def test_singleton_is_faster_with_same_config(self):
+    config = {'redis_host': 'localhost', 'redis_port': 1234, 'redis_db': 0}
+
+    # First instantiation (cold start)
+    start = time.perf_counter()
+    _ = RedisCache(config)
+    cold_time = time.perf_counter() - start
+
+    # Multiple subsequent calls with same config
+    start = time.perf_counter()
+    for _ in range(100):
+      _ = RedisCache(config)
+    warm_time = time.perf_counter() - start
+
+    print(f"Cold init time: {cold_time:.6f}s")
+    print(f"Warm repeated init time (1000x): {warm_time:.6f}s")
+
+    self.assertLess(
+        warm_time, cold_time * 50,
+        "Subsequent instantiations with same config should be significantly faster than cold start"
+    )
+
   def test_redis_get_set(self):
     """Tests the Redis cache."""
 
