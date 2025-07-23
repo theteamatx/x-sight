@@ -287,9 +287,11 @@ def start_jobs_in_dsub_cloud(num_train_workers: int, binary_path: Optional[str],
   print('sight.id=%s' % sight.id)
   args = [
       'dsub',
-      '--provider=google-cls-v2',
+      '--provider=google-batch',
       f'--regions={_PROJECT_REGION.value}',
       '--use-private-address',
+      '--network=global/networks/default',
+      f'--subnetwork=projects/{os.environ["PROJECT_ID"]}/regions/{_PROJECT_REGION.value}/subnetworks/default',
       f'--image={docker_image}',
       f'--machine-type={_DSUB_MACHINE_TYPE.value}',
       f'--project={_PROJECT_ID.value}',
