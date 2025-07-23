@@ -43,6 +43,7 @@ from sight.proto import sight_pb2
 from sight.service_utils import finalize_server
 from sight.utility import MessageToDict
 from sight.utility import poll_network_batch_outcome
+from sight.utility import get_error_trace
 from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation_widget_state import (
     SimulationWidgetState
@@ -991,24 +992,19 @@ def run_worker(
                                 sight_params['label'])
     return run_generic_worker(wrapped_driver_fn, sight_params)
   except Exception as e:
-    error_type = type(e).__name__
-    error_message = str(e)
-    tb = traceback.format_exc()
+    error_trace = get_error_trace(f"Worker failed with following error :", e)
+    logging.error("%s", error_trace)
 
-    combined_error = (
-      f"Worker failed with {error_type}: {error_message}\n"
-      f"Traceback:\n{tb}"
-    )
-    logging.info("ERROR: %s",combined_error)
-
+    # Adding new entry in cache with question label as cache key and
+    # error traceback as value - client will always check for this before
+    # polling in get_outcome - generic error in worker
     cache_client = CacheFactory.get_cache(
           FLAGS.cache_mode,
-          # * Update the config as per need , None config means it takes default redis config for localhost
-          with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode,
-                                                    config=None))
-    cache_client.set(f"{sight_params['label']}_Error", combined_error,)
-
-
+          )
+    cache_client.set(
+        f"{sight_params['label']}_Error",
+        error_trace,
+    )
 def run_generic_worker(
     driver_fn: Optional[Callable[[Any], Any]] = None,
     sight_params: dict = None,
@@ -1016,49 +1012,49 @@ def run_generic_worker(
   """Generic worker utility for running applications that use the Decision API.
   """
 
-  sight = Sight.create(sight_params)
-  sight.widget_decision_state['num_decision_points'] = 0
+  with Sight.create(sight_params) as sight:
+    sight.widget_decision_state['num_decision_points'] = 0
 
-  optimizer = decision.Optimizer()
-  optimizer.obj = decision.setup_optimizer(sight, FLAGS.optimizer_type)
-  client_id, worker_location = decision._configure_client_and_worker(
-      sight=sight)
-  num_retries = 0
-  backoff_interval = 0.5
-  while True:
-    # #? new rpc just to check move forward or not?
+    optimizer = decision.Optimizer()
+    optimizer.obj = decision.setup_optimizer(sight, FLAGS.optimizer_type)
+    client_id, worker_location = decision._configure_client_and_worker(
+        sight=sight)
+    num_retries = 0
+    backoff_interval = 0.5
+    while True:
+      # #? new rpc just to check move forward or not?
 
-    req = service_pb2.WorkerAliveRequest(
-        client_id=client_id,
-        worker_id=f'client_{client_id}_worker_{worker_location}',
-        question_label=sight_params['label'])
-    response = service.call(
-        lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
-    logging.info('Response from WorkerAlive RPC: %s', response)
-    if (response.status_type ==
-        service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
-      break
-    elif (response.status_type ==
-          service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
-      # logging.info('Retrying in 5 seconds......')
-      # time.sleep(5)
-      backoff_interval *= 2
-      time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
-      logging.info('backed off for %s seconds... and trying for %s',
-                   backoff_interval, num_retries)
-      num_retries += 1
-      if (num_retries >= 50):
+      req = service_pb2.WorkerAliveRequest(
+          client_id=client_id,
+          worker_id=f'client_{client_id}_worker_{worker_location}',
+          question_label=sight_params['label'])
+      response = service.call(
+          lambda s, meta: s.WorkerAlive(req, 300, metadata=meta))
+      logging.info('Response from WorkerAlive RPC: %s', response)
+      if (response.status_type ==
+          service_pb2.WorkerAliveResponse.StatusType.ST_DONE):
         break
-    elif (response.status_type ==
-          service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
-      process_worker_action(response, sight, driver_fn, sight_params['label'],
-                            optimizer.obj)
-    else:
-      raise ValueError('Invalid response from server')
+      elif (response.status_type ==
+            service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
+        # logging.info('Retrying in 5 seconds......')
+        # time.sleep(5)
+        backoff_interval *= 2
+        time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        logging.info('backed off for %s seconds... and trying for %s',
+                    backoff_interval, num_retries)
+        num_retries += 1
+        if (num_retries >= 50):
+          break
+      elif (response.status_type ==
+            service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
+        process_worker_action(response, sight, driver_fn, sight_params['label'],
+                              optimizer.obj)
+      else:
+        raise ValueError('Invalid response from server')
 
-    logging.info('Exiting the training loop.')
+      logging.info('Exiting the training loop.')
 
-  logging.debug('<<<<<< Exiting run method')
+    logging.debug('<<<<<< Exiting run method')
 
 
 def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
@@ -1099,8 +1095,19 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
         ),
     )
 
-    driver_fn(sight)
-    sight._flush_log()
+    try:
+      driver_fn(sight)
+      sight._flush_log()
+    except Exception as e:
+      error_trace = get_error_trace(f"Worker failed with following error in action_id : {action_id}", e)
+      logging.error("%s", error_trace)
+
+      # updating entry in sight, mapping this error against action id -
+      # action specific error, will be eventually conveyed to client via server
+      cached_messages.update(
+            key=action_id,
+            error_traceback=error_trace,
+        )
 
     sight.exit_block('Decision Sample', sight_pb2.Object())
 

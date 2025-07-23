@@ -106,7 +106,7 @@ opt-einsum==3.3.0
 optax==0.1.5
 orbax-checkpoint==0.5.2
 overrides==7.4.0
-packaging==21.3
+packaging==23.2
 pandas==2.1.4
 parameterized==0.8.1
 pillow==10.2.0

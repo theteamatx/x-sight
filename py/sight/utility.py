@@ -16,6 +16,7 @@ import base64
 import json
 import math
 import time
+import traceback
 
 from absl import flags
 from google.protobuf import descriptor
@@ -44,6 +45,15 @@ FLAGS = flags.FLAGS
 POLL_LIMIT = 600  # POLL_TIME_INTERVAL th part of second
 POLL_TIME_INTERVAL = 5  # seconds
 global_outcome_mapping = RWLockDictWrapper()
+
+
+def get_error_trace(custome_msg: str, e: Exception):
+  error_type = type(e).__name__
+  error_message = str(e)
+  tb = traceback.format_exc()
+
+  return (f"{custome_msg} {error_type}: {error_message}\n"
+          f"Traceback:\n{tb}")
 
 
 def get_all_outcomes(sight_id, question_label, action_ids):
@@ -101,6 +111,11 @@ def get_all_outcomes(sight_id, question_label, action_ids):
         #     proto=outcome.outcome_attrs)
         outcome_dict['attributes'] = convert_proto_to_dict(
             proto=outcome.attributes)
+      elif (outcome.status ==
+            service_pb2.GetOutcomeResponse.Outcome.Status.ERROR):
+        outcome_dict = {}
+        outcome_dict['action_id'] = outcome.action_id
+        outcome_dict['error'] = outcome.response_str
       else:
         outcome_dict = None
       outcome_list.append(outcome_dict)
@@ -112,15 +127,12 @@ def get_all_outcomes(sight_id, question_label, action_ids):
 
 def poll_network_batch_outcome(sight_id, question_label):
   counter = POLL_LIMIT
+  cache_client = CacheFactory.get_cache(FLAGS.cache_mode)
   while True:
     try:
-      cache_client = CacheFactory.get_cache(
-          FLAGS.cache_mode,
-          # * Update the config as per need , None config means it takes default redis config for localhost
-          with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode,
-                                                    config=None))
+      # checking if worker crashed while serving the request
       is_error_occured = cache_client.get(f"{question_label}_Error")
-      if(is_error_occured):
+      if (is_error_occured):
         logging.info("ERROR : %s", is_error_occured)
         cache_client.set(f"{question_label}_Error", '')
         break

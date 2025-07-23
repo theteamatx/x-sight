@@ -55,6 +55,7 @@ class MessageDetails:
       str,
       str]  # outcome is replaced by outcome_ref_key , will delete it in future
   outcome_ref_key: str = None
+  error_traceback: str = None
 
   @classmethod
   def create(cls, action, attributes, reward=None, outcome=None):
@@ -65,7 +66,8 @@ class MessageDetails:
              outcome=None,
              action=None,
              attributes=None,
-             outcome_ref_key=None):
+             outcome_ref_key=None,
+             error_traceback=None):
     if reward is not None:
       self.reward = reward
     if outcome is not None:
@@ -76,6 +78,8 @@ class MessageDetails:
       self.attributes = attributes
     if outcome_ref_key is not None:
       self.outcome_ref_key = outcome_ref_key
+    if error_traceback is not None:
+      self.error_traceback = error_traceback
     return self
 
   def __str__(self):
