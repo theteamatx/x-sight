@@ -741,6 +741,7 @@ message DecisionMessage {
   DecisionParam action = 2;
   DecisionPoint decision_point = 3;
   DecisionOutcome decision_outcome = 4;
+  string error_traceback = 5;
 }
 
 message DecisionPoint {
@@ -761,7 +762,7 @@ message DecisionOutcome {
   float reward = 2;
   float discount = 3;
   // the below will not be using this in RPC
-  DecisionParam outcome_params = 4;
+  // DecisionParam outcome_params = 4;
   // This `outcome_params_ref_key` is a reference key used by the client to
   // retrieve the actual outcome parameters. The full `outcome_params` object is
   // now cached on the worker side, keyed by `action_dict_hash`, to reduce RPC

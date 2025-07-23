@@ -330,6 +330,7 @@ message GetOutcomeResponse {
       ACTIVE = 2;
       COMPLETED = 3;
       NOT_EXIST = 4;
+      ERROR = 5;
     }
     sight.x.proto.DecisionParam state_attrs = 1;
     sight.x.proto.DecisionParam action_attrs = 2;

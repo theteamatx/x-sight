@@ -25,6 +25,7 @@ class DecisionMessage:
   discount: Optional[int] = None
   outcome_params: Optional[Dict[str, Any]] = None
   outcome_ref_key: Optional[str] = None
+  error_traceback: Optional[str] = None
 
 
 class CachedBatchMessages:
