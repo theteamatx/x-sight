@@ -136,7 +136,7 @@ async def propose_actions(sight,
   if response is None or outcome is None:
     # error specific to particular action id in worker
     if error:
-      raise Exception(f'Error for the action id : {unique_action_id} ERROR : {error})')
+      raise Exception(f'Error for the action id : {unique_action_id} ERROR : {error}')
     # outcome received from cache using outcome_ref key has issue
     raise Exception('fetch_outcome response or respose["outcome"] is none')
   # converting the stringify data into json data if it can

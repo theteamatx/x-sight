@@ -170,22 +170,23 @@ class WorklistScheduler(SingleActionOptimizer):
     decision_messages = request.decision_messages
     logging.debug('we have decision messages %s', len(decision_messages))
 
-    for i in range(len(decision_messages)):
-      logging.debug('calling queue.complete_message for %s th msg', i)
-      d_message = decision_messages[i]
+    for d_message in decision_messages:
+      logging.debug('calling queue.complete_message for msg_id: %s', d_message.action_id)
+
+      # Use a default argument `dm=d_message` to capture the current value of d_message
       if d_message.error_traceback:
-        update_fn=lambda msg: msg.update(
-          error_traceback = d_message.error_traceback
+        update_fn = lambda msg, dm=d_message: msg.update(
+            error_traceback=dm.error_traceback
         )
       else:
-        update_fn=lambda msg: msg.update(
-              reward=d_message.decision_outcome.reward,
-              outcome_ref_key=d_message.decision_outcome.
-              outcome_params_ref_key,
-              # outcome=convert_proto_to_dict(proto=d_message.
-              #                               decision_outcome.outcome_params),
-              action=convert_proto_to_dict(proto=d_message.
-                                           decision_point.choice_params))
+        update_fn = lambda msg, dm=d_message: msg.update(
+            reward=dm.decision_outcome.reward,
+            outcome_ref_key=dm.decision_outcome.outcome_params_ref_key,
+            action=convert_proto_to_dict(
+                proto=dm.decision_point.choice_params
+            ),
+        )
+
       self.queue.complete_message(
           worker_id=request.worker_id,
           message_id=d_message.action_id,

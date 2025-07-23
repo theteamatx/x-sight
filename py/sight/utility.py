@@ -44,6 +44,7 @@ FLAGS = flags.FLAGS
 
 POLL_LIMIT = 600  # POLL_TIME_INTERVAL th part of second
 POLL_TIME_INTERVAL = 5  # seconds
+CACHE_KEY_ERROR_SUFFIX = "_error"
 global_outcome_mapping = RWLockDictWrapper()
 
 
@@ -131,10 +132,10 @@ def poll_network_batch_outcome(sight_id, question_label):
   while True:
     try:
       # checking if worker crashed while serving the request
-      is_error_occured = cache_client.get(f"{question_label}_Error")
+      is_error_occured = cache_client.get(f"{question_label}{CACHE_KEY_ERROR_SUFFIX}")
       if (is_error_occured):
         logging.info("ERROR : %s", is_error_occured)
-        cache_client.set(f"{question_label}_Error", '')
+        cache_client.set(f"{question_label}{CACHE_KEY_ERROR_SUFFIX}", '')
         break
 
       resource_dict = global_outcome_mapping.get()

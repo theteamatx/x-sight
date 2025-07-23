@@ -44,6 +44,7 @@ from sight.service_utils import finalize_server
 from sight.utility import MessageToDict
 from sight.utility import poll_network_batch_outcome
 from sight.utility import get_error_trace
+from sight.utility import CACHE_KEY_ERROR_SUFFIX
 from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation_widget_state import (
     SimulationWidgetState
@@ -1002,7 +1003,7 @@ def run_worker(
           FLAGS.cache_mode,
           )
     cache_client.set(
-        f"{sight_params['label']}_Error",
+        f"{sight_params['label']}{CACHE_KEY_ERROR_SUFFIX}",
         error_trace,
     )
 def run_generic_worker(
