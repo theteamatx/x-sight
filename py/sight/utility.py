@@ -16,6 +16,7 @@ import base64
 import json
 import math
 import time
+import traceback
 
 from absl import flags
 from google.protobuf import descriptor
@@ -30,6 +31,7 @@ from google.protobuf.json_format import _Printer as BasePrinter
 from google.protobuf.json_format import SerializeToJsonError
 from google.protobuf.text_format import Merge
 from helpers.cache.cache_factory import CacheFactory
+from helpers.cache.cache_helper import CacheConfig
 from helpers.cache.cache_factory import CacheType
 from helpers.cache.cache_payload_transport import CachedPayloadTransport
 from helpers.logs.logs_handler import logger as logging
@@ -42,7 +44,17 @@ FLAGS = flags.FLAGS
 
 POLL_LIMIT = 600  # POLL_TIME_INTERVAL th part of second
 POLL_TIME_INTERVAL = 5  # seconds
+CACHE_KEY_ERROR_SUFFIX = "_error"
 global_outcome_mapping = RWLockDictWrapper()
+
+
+def get_error_trace(custom_msg: str, e: Exception) -> str:
+  error_type = type(e).__name__
+  error_message = str(e)
+  tb = traceback.format_exc()
+
+  return (f"{custom_msg} {error_type}: {error_message}\n"
+          f"Traceback:\n{tb}")
 
 
 def get_all_outcomes(sight_id, question_label, action_ids):
@@ -100,6 +112,11 @@ def get_all_outcomes(sight_id, question_label, action_ids):
         #     proto=outcome.outcome_attrs)
         outcome_dict['attributes'] = convert_proto_to_dict(
             proto=outcome.attributes)
+      elif (outcome.status ==
+            service_pb2.GetOutcomeResponse.Outcome.Status.ERROR):
+        outcome_dict = {}
+        outcome_dict['action_id'] = outcome.action_id
+        outcome_dict['error'] = outcome.response_str
       else:
         outcome_dict = None
       outcome_list.append(outcome_dict)
@@ -111,8 +128,16 @@ def get_all_outcomes(sight_id, question_label, action_ids):
 
 def poll_network_batch_outcome(sight_id, question_label):
   counter = POLL_LIMIT
+  cache_client = CacheFactory.get_cache(FLAGS.cache_mode)
   while True:
     try:
+      # checking if worker crashed while serving the request
+      is_error_occured = cache_client.get(f"{question_label}{CACHE_KEY_ERROR_SUFFIX}")
+      if (is_error_occured):
+        logging.info("ERROR : %s", is_error_occured)
+        cache_client.set(f"{question_label}{CACHE_KEY_ERROR_SUFFIX}", '')
+        break
+
       resource_dict = global_outcome_mapping.get()
       pending_action_ids = [
           id for id in resource_dict if resource_dict[id] is None

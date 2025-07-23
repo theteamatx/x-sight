@@ -999,14 +999,20 @@ def _handle_optimizer_finalize(sight: Any, req: Any,
     # logging.info('action_id=%s, msg=%s', action_id, msg)
     # logging.info('msg.action_params=%s', msg.action_params)
     decision_message = sight_pb2.DecisionMessage()
-    decision_message.decision_outcome.CopyFrom(
-        get_decision_outcome_from_decision_message(outcome_label='outcome',
-                                                   decision_message=msg))
-    decision_message.action_id = action_id
 
+    decision_message.action_id = action_id
     choice_params = sight_pb2.DecisionParam()
     choice_params.CopyFrom(convert_dict_to_proto(dict=msg.action_params))
     decision_message.decision_point.choice_params.CopyFrom(choice_params)
+
+    if msg.error_traceback:
+      decision_message.error_traceback = msg.error_traceback
+    else:
+      decision_message.decision_outcome.CopyFrom(
+          get_decision_outcome_from_decision_message(outcome_label='outcome',
+                                                    decision_message=msg))
+
+
     f_ep_req_proto_msg.decision_messages.append(decision_message)
 
     # ! removing the uuid-cache key feature from below code

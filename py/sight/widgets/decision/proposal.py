@@ -130,8 +130,15 @@ async def propose_actions(sight,
                                            question_label, action_dict)
   await push_message(sight.id, unique_action_id)
   response = await fetch_outcome(sight.id, unique_action_id)
+  # atleast 1 of them must be none
   outcome = response.get('outcome', None)
+  error = response.get('error', None)
+
   if response is None or outcome is None:
+    # error specific to particular action id in worker
+    if error:
+      raise Exception(f'Error for the action id : {unique_action_id} ERROR : {error}')
+    # outcome received from cache using outcome_ref key has issue
     raise Exception('fetch_outcome response or respose["outcome"] is none')
   # converting the stringify data into json data if it can
   for key in outcome:

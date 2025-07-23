@@ -116,7 +116,11 @@ class WorklistScheduler(SingleActionOptimizer):
         outcome.action_id = sample_id
         if sample_id in all_completed_messages:
           given_msg_details = all_completed_messages[sample_id]
-          self.add_outcome_to_outcome_response(msg_details=given_msg_details,
+          if given_msg_details.error_traceback:
+            outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.ERROR
+            outcome.response_str = given_msg_details.error_traceback
+          else:
+            self.add_outcome_to_outcome_response(msg_details=given_msg_details,
                                                sample_id=sample_id,
                                                outcome=outcome)
         elif sample_id in all_pending_messages:
@@ -166,19 +170,27 @@ class WorklistScheduler(SingleActionOptimizer):
     decision_messages = request.decision_messages
     logging.debug('we have decision messages %s', len(decision_messages))
 
-    for i in range(len(decision_messages)):
-      logging.debug('calling queue.complete_message for %s th msg', i)
+    for d_message in decision_messages:
+      logging.debug('calling queue.complete_message for msg_id: %s', d_message.action_id)
+
+      # Use a default argument `dm=d_message` to capture the current value of d_message
+      if d_message.error_traceback:
+        update_fn = lambda msg, dm=d_message: msg.update(
+            error_traceback=dm.error_traceback
+        )
+      else:
+        update_fn = lambda msg, dm=d_message: msg.update(
+            reward=dm.decision_outcome.reward,
+            outcome_ref_key=dm.decision_outcome.outcome_params_ref_key,
+            action=convert_proto_to_dict(
+                proto=dm.decision_point.choice_params
+            ),
+        )
+
       self.queue.complete_message(
           worker_id=request.worker_id,
-          message_id=decision_messages[i].action_id,
-          update_fn=lambda msg: msg.update(
-              reward=decision_messages[i].decision_outcome.reward,
-              outcome_ref_key=decision_messages[i].decision_outcome.
-              outcome_params_ref_key,
-              # outcome=convert_proto_to_dict(proto=decision_messages[i].
-              #                               decision_outcome.outcome_params),
-              action=convert_proto_to_dict(proto=decision_messages[i].
-                                           decision_point.choice_params)))
+          message_id=d_message.action_id,
+          update_fn=update_fn)
 
     # logging.debug("self.queue => %s", self.queue)
 
