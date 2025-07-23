@@ -48,12 +48,12 @@ CACHE_KEY_ERROR_SUFFIX = "_error"
 global_outcome_mapping = RWLockDictWrapper()
 
 
-def get_error_trace(custome_msg: str, e: Exception):
+def get_error_trace(custom_msg: str, e: Exception) -> str:
   error_type = type(e).__name__
   error_message = str(e)
   tb = traceback.format_exc()
 
-  return (f"{custome_msg} {error_type}: {error_message}\n"
+  return (f"{custom_msg} {error_type}: {error_message}\n"
           f"Traceback:\n{tb}")
 
 
