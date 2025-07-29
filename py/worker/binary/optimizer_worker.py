@@ -25,6 +25,7 @@ from sight.sight import Sight
 from sight.widgets.decision import proposal
 from helpers.logs.logs_handler import logger as logging
 from sight.widgets.decision.optimizers.bayes_opt_client import BayesOptOptimizerClient
+from sight.worker.worker_helper import run_py_function_from_str
 
 
 def warn(*args, **kwargs):
@@ -38,8 +39,12 @@ FLAGS = flags.FLAGS
 def get_question_label():
   return "Generic"
 
+# def reward_fn(outcome):
+#   outcome_timeseries = outcome['time_series']
+#   return sum(outcome_timeseries) + 100
 
-async def optimize(sight: Sight, opt_obj):
+
+async def optimize(sight: Sight, opt_obj, reward_fn_str):
 
   rewards = []
   outcomes = []
@@ -60,10 +65,15 @@ async def optimize(sight: Sight, opt_obj):
 
     # wait for their output, update optimizer
     batch_outcome = await asyncio.gather(*tasks)
+
     for b in range(len(batch_outcome)):
       outcomes.append(batch_outcome[b])
       # TODO(user): Implement a mechanism to calculate reward from the response of the worker.
-      reward = 100 #static
+      # {'time_series': [227.6, 273.4, 273.3, 248.6, 165.3, 130.6, 106.4, 92.1, 81.7, 62.8]}
+
+      logging.info('here batch outcome is %s', batch_outcome[b])
+      reward = run_py_function_from_str(reward_fn_str, [batch_outcome[b]])
+      # reward = 100 #static
       rewards.append(reward)
 
       # document all the actions with its outcome
@@ -78,7 +88,7 @@ def main(sight: Sight, action: Dict) -> Tuple[float, Dict[str, Any]]:
 
   # Here action will be containing optimizer config to create opt obj
   opt_obj = BayesOptOptimizerClient(action)
-  final_outcome = asyncio.run(optimize(sight, opt_obj))
+  final_outcome = asyncio.run(optimize(sight, opt_obj, action['reward_fn_str']))
 
   # keeping reward fixed (0) as action contains optimizer config and not actual action attrs
   return 0, final_outcome

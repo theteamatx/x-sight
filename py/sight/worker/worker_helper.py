@@ -176,3 +176,20 @@ def create_choice_config(
 
   choice_config_dict[label] = choice_config
   return choice_config_dict
+
+
+def run_py_function_from_str(reward_fn, args) -> float:
+  function_name = "reward_fn"
+  exec_scope = {}
+  exec(reward_fn, {}, exec_scope)
+
+  if function_name in exec_scope and callable(exec_scope[function_name]):
+      # Get a reference to the dynamically defined function
+      reward_fn = exec_scope[function_name]
+      result = reward_fn(*args)
+      return result
+  else:
+      print(f"\nError: Function '{function_name}' not found or not callable in the generated code's scope.")
+      logging.info("ERROR : Please check the reward function passed in action, and the expected function name.")
+
+      return None

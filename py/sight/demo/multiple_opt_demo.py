@@ -16,6 +16,7 @@
 from typing import Sequence
 import warnings
 import asyncio
+import inspect
 from absl import app
 from absl import flags
 from helpers.logs.logs_handler import logger as logging
@@ -32,6 +33,10 @@ warnings.warn = warn
 
 FLAGS = flags.FLAGS
 
+def reward_fn(outcome):
+  outcome_timeseries = outcome['time_series']
+  return sum(outcome_timeseries) + 111
+
 
 def main(argv: Sequence[str]) -> None:
   if len(argv) > 1:
@@ -47,7 +52,7 @@ def main(argv: Sequence[str]) -> None:
 
     logging.info("spawned the workers.................")
 
-    actions = {"question_label_to_propose" : "Fvs", "num_questions" : 6, "batch_size" : 3, "random_seed" : 0}
+    actions = {"question_label_to_propose" : "Fvs", "num_questions" : 6, "batch_size" : 3, "random_seed" : 0, "reward_fn_str" : inspect.getsource(reward_fn)}
     asyncio.run(
         proposal.propose_actions(
             sight=sight,
