@@ -15,7 +15,7 @@
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from absl import flags
 from google.protobuf import text_format
@@ -93,9 +93,9 @@ def get_text_proto_data(question_label) -> str:
       project_root = project_root.parent
 
   absolute_text_proto_path = (project_root / relative_text_proto_path).resolve()
-  logging.info("project_root               :%s", project_root)
-  logging.info("absolute_text_proto_path   :%s", absolute_text_proto_path)
-  logging.info("relative_text_proto_path   :%s", relative_text_proto_path)
+  # logging.info("project_root               :%s", project_root)
+  # logging.info("absolute_text_proto_path   :%s", absolute_text_proto_path)
+  # logging.info("relative_text_proto_path   :%s", relative_text_proto_path)
 
   if not os.path.exists(absolute_text_proto_path):
     raise FileNotFoundError(f"File not found {absolute_text_proto_path}")
@@ -105,16 +105,13 @@ def get_text_proto_data(question_label) -> str:
 
   return text_proto_data
 
-def get_action_from_textproto(question_label):
+def get_action_from_textproto(question_label) -> Mapping[str, sight_pb2.DecisionConfigurationStart.AttrProps]:
   # we get text_proto data in string type
   text_proto_data = get_text_proto_data(question_label)
 
   # convert it into proto format
   proto_data = sight_pb2.DecisionConfigurationStart()
   text_format.Parse(text_proto_data, proto_data)
-
-  api_description = proto_data.choice_config[
-      question_label].llm_config.description
 
   # Extract only action_attrs
   action_attrs = proto_data.action_attrs
@@ -193,3 +190,6 @@ def run_py_function_from_str(reward_fn, args) -> float:
       logging.info("ERROR : Please check the reward function passed in action, and the expected function name.")
 
       return None
+
+
+action_d = get_action_from_textproto("Generic")

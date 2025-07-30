@@ -56,7 +56,7 @@ def main(argv: Sequence[str]) -> None:
     asyncio.run(
         proposal.propose_actions(
             sight=sight,
-            question_label='Generic',
+            question_label='Optimize',
             action_dict=actions,
         )
     )

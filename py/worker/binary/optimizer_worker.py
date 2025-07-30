@@ -37,7 +37,7 @@ warnings.warn = warn
 FLAGS = flags.FLAGS
 
 def get_question_label():
-  return "Generic"
+  return "Optimize"
 
 # def reward_fn(outcome):
 #   outcome_timeseries = outcome['time_series']
@@ -79,15 +79,22 @@ async def optimize(sight: Sight, opt_obj, reward_fn_str):
       # document all the actions with its outcome
       opt_obj.document_sample(batch_actions[b], reward, batch_outcome[b])
 
-  final_outcome = {"reward" : rewards, "outcome": outcomes}
   # return all actions with its rewards, outcomes
-  return final_outcome
+  return {"reward" : rewards, "outcome": outcomes}
 
 
 def main(sight: Sight, action: Dict) -> Tuple[float, Dict[str, Any]]:
 
   # Here action will be containing optimizer config to create opt obj
-  opt_obj = BayesOptOptimizerClient(action)
+  q_label_to_propose = action.get('question_label_to_propose', None)
+  if not q_label_to_propose:
+    logging.error("q_label_to_propose can't be None, it has to be passed from propose action API")
+    raise ValueError("Missing required key: 'question_label_to_propose' in action dict")
+
+  num_questions = action.get('num_questions', 1)
+  batch_size = action.get('batch_size', 5)
+
+  opt_obj = BayesOptOptimizerClient(q_label_to_propose, num_questions, batch_size)
   final_outcome = asyncio.run(optimize(sight, opt_obj, action['reward_fn_str']))
 
   # keeping reward fixed (0) as action contains optimizer config and not actual action attrs

@@ -34,11 +34,11 @@ def _create_bayes_opt_obj(actions):
 
 class BayesOptOptimizerClient(BaseOptimizerClient):
 
-  def __init__(self, opt_config):
+  def __init__(self, q_label_to_propose, num_questions, batch_size):
     super().__init__()
-    self.question_label = opt_config.get('question_label_to_propose', None)
-    self.num_questions = opt_config.get('num_questions', 1)
-    self.batch_size = opt_config.get('batch_size', 5)
+    self.question_label = q_label_to_propose
+    self.num_questions = num_questions
+    self.batch_size = batch_size
 
     actions = get_action_from_textproto(self.question_label)
     self.bo_obj = _create_bayes_opt_obj(actions)

@@ -1,0 +1,14 @@
+action_attrs {
+  key: "a1"
+  value {
+    min_value: 2
+    max_value: 4
+  }
+}
+action_attrs {
+  key: "a2"
+  value {
+    min_value: 2
+    max_value: 4
+  }
+}

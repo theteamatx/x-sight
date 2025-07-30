@@ -47,7 +47,6 @@ from sight.widgets.simulation.simulation_widget_state import (
     SimulationWidgetState)
 from sight_service.proto import service_pb2
 from sight_service.shared_batch_messages import DecisionMessage
-from sight.widgets.decision.optimizers.bayes_opt_client import BayesOptOptimizerClient
 
 load_dotenv()
 _PARENT_ID = flags.DEFINE_string('parent_id', None,
@@ -1027,7 +1026,7 @@ def run_generic_worker(
       else:
         raise ValueError('Invalid response from server')
 
-      logging.info('Exiting the training loop.')
+    logging.info('Exiting the training loop.')
 
   logging.debug('<<<<<< Exiting run method')
 

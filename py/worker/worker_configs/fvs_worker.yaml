@@ -1,3 +1,3 @@
 v0.1 :
-  docker: "gcr.io/cameltrain/test-generic-worker-local:latest"
+  docker: "gcr.io/cameltrain/test-fvs-worker-local:latest"
   binary: "py/worker/binary/fvs_worker.py"

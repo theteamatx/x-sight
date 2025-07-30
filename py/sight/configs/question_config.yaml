@@ -1,6 +1,10 @@
-Generic:
-  desc: "Generic question label"
-  attrs_text_proto: "py/worker/.text_proto_configs/generic.textproto"
+# Generic:
+#   desc: "Generic question label"
+#   attrs_text_proto: "py/worker/.text_proto_configs/generic.textproto"
+
+Optimize:
+  desc: "Optimize question label"
+  attrs_text_proto: "py/worker/.text_proto_configs/optimize.textproto"
 
 Fvs:
   desc: "Fvs question label"
