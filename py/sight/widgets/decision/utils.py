@@ -41,26 +41,6 @@ def load_yaml_config(file_path):
     exit(1)
 
 
-def get_worker_version(question_label):
-  #? this only works for single type worker attached to each question lable
-  #? for multiple workers, need to update the logic
-  # current_script_directory = os.path.dirname(os.path.abspath(__file__))
-
-  # !!! NEED TO CORRECT THIS FUNCRION
-
-  return 'v1'
-
-  workers_config_path = os.getenv(
-      "WORKERS_CONFIG_PATH")  #, "default/path/to/config.yaml")
-  print('workers_config_path from env: ', workers_config_path)
-  workers_config = load_yaml_config('/x-sight/' + workers_config_path)
-  optimizers_config_path = os.getenv(
-      "OPTIMIZERS_CONFIG_PATH")  #, "default/path/to/config.yaml")
-  print('optimizers_config_path from env: ', optimizers_config_path)
-  optimizers_config = load_yaml_config('/x-sight/' + optimizers_config_path)
-
-  optimizer_config = optimizers_config[question_label]
-  # as of now assuming only 1 worker_type for each question
-  for worker, worker_count in optimizer_config['workers'].items():
-    worker_details = workers_config[worker]
-    return worker_details['version']
+def get_worker_version(question_label, sight):
+  worker_name=list(sight.get_decision_config().optimizers[question_label]['workers'].keys())[0]
+  return sight.get_decision_config().workers[worker_name]['version']
