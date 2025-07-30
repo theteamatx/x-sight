@@ -106,7 +106,7 @@ async def propose_actions(sight,
         f'is_poll_thread_started_{question_label}', True)
 
   key_maker = KeyMaker()
-  worker_version = utils.get_worker_version(question_label)
+  worker_version = utils.get_worker_version(question_label, sight)
   custom_part = custom_part + ':' + worker_version
   cache_key = key_maker.make_custom_key(custom_part, action_dict)
 
