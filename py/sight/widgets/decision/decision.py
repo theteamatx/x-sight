@@ -238,22 +238,25 @@ def initialize(config: DecisionConfig, sight) -> None:
     config: The configuration of the decision module.
     sight: The sight object for which the decision module is being initialized.
   """
-  for question_label, question_config in config.questions.items():
-    if question_label not in config.optimizers:
-      continue
-    optimizer_type = config.optimizers[question_label]['optimizer']
-    logging.info('optimizer_type=%s', optimizer_type)
-    optimizer_config = config.optimizers[question_label]
-    logging.info('optimizer_config=%s', optimizer_config)
+  if config.questions:
+    for question_label, question_config in config.questions.items():
+      if question_label not in config.optimizers:
+        continue
+      optimizer_type = config.optimizers[question_label]['optimizer']
+      logging.info('optimizer_type=%s', optimizer_type)
+      optimizer_config = config.optimizers[question_label]
+      logging.info('optimizer_config=%s', optimizer_config)
 
-    opt_obj = setup_optimizer(sight, optimizer_type)
-    trials.launch(
-        configure_decision(sight, question_label, question_config,
-                           optimizer_config, opt_obj), sight)
+      opt_obj = setup_optimizer(sight, optimizer_type)
+      trials.launch(
+          configure_decision(sight, question_label, question_config,
+                            optimizer_config, opt_obj), sight)
 
-    # Start worker jobs
-    trials.start_worker_jobs(sight, question_label, optimizer_config,
-                             config.workers, optimizer_type)
+      # Start worker jobs
+      trials.start_worker_jobs(sight, question_label, optimizer_config,
+                              config.workers, optimizer_type)
+  else:
+    logging.info('No worker started due to empty question config')
 
 
 def configure(

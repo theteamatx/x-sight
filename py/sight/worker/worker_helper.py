@@ -192,4 +192,4 @@ def run_py_function_from_str(reward_fn, args) -> float:
       return None
 
 
-action_d = get_action_from_textproto("Generic")
+# action_d = get_action_from_textproto("Generic")
