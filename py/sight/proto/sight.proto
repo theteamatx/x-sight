@@ -687,14 +687,6 @@ message DecisionConfigurationStart {
   // choose the option.
   map<string, ChoiceConfig> choice_config = 2;
 
-  enum DataType {
-    DT_UNKOWN = 0;
-    DT_INT32 = 1;
-    DT_INT64 = 2;
-    DT_FLOAT32 = 3;
-    DT_FLOAT64 = 4;
-    DT_STRING = 5;
-  }
   // Properties of and constraints on attributes.
   message AttrProps {
     float min_value = 1;
@@ -719,7 +711,7 @@ message DecisionConfigurationStart {
     ContinuousProbDist continuous_prob_dist = 6;
     DiscreteProbDist discrete_prob_dist = 7;
 
-    DataType data_type = 9;
+    Value data_type = 9;
   }
 
   // The attributes of application's state

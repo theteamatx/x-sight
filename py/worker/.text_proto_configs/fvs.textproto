@@ -11,5 +11,14 @@ action_attrs {
 outcome_attrs {
   key: "time_series"
   value {
+    description: "A list of integer values."
+    data_type: {
+      sub_type: ST_JSON
+      list_value: {
+        values: {
+          sub_type: ST_INT64
+        }
+      }
+    }
   }
 }

@@ -29,6 +29,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages.system import SystemMessage
 from langchain_core.messages.human import HumanMessage
 from sight.demo.agentic_demo.tool_python_code_validator import validate_python_code
+from sight.worker.worker_helper import get_outcome_from_textproto
 
 
 def warn(*args, **kwargs):
@@ -70,21 +71,10 @@ def main(argv: Sequence[str]) -> None:
         verbose=True,
     )
 
-    # user_input = (
-    #     "Generate a python function that takes input as list of carbon offset "
-    #     "and calculate the reward by summing all the items in the list."
-    #     "output of the function should be reward value of float type"
-    #     "Finally, report the result of the validation as your final answer."
-    # )
-
     user_input = (
-        "1. Generate a Python function that takes a list of carbon offsets and "
-        "calculates the reward by summing all the items. KEEP function name as "
-        "reward_fn \n"
-
-        # "IMPORTANT: In the generated function, you MUST intentionally "
-        # "introduce a syntax error. For example, forget the colon ':' "
-        # "after the function definition 'def function_name(args)'."
+        "1. Generate a Python function that calculates the reward and have following"
+        f" Input : {get_outcome_from_textproto('Fvs')}"
+        " KEEP function name as reward_fn \n"
         "2. After generating the code, you MUST use the `validate_python_code` tool to verify it.\n"
         "3. **If the validation tool returns an error**, you MUST analyze the error, "
         "fix the Python code, and call the `validate_python_code` tool again on the "
@@ -109,7 +99,6 @@ def main(argv: Sequence[str]) -> None:
         "num_questions": 6,
         "batch_size": 3,
         "random_seed": 0,
-        # "reward_fn_str": inspect.getsource(reward_fn)
         "reward_fn_str": response['output']
     }
     asyncio.run(
