@@ -77,11 +77,11 @@ class TestGetProtoValueFromValue(unittest.TestCase):
     """Test converting a list from Python value to proto.
 
     This test case checks the conversion of a Python list to a
-    sight_pb2.Value proto with sub_type ST_JSON and a list_value.
+    sight_pb2.Value proto with sub_type ST_LIST and a list_value.
     For example:
         py_val: [1, 2]
         expected:
-            sub_type: ST_JSON
+            sub_type: ST_LIST
             list_value:
                 values:
                     - sub_type: ST_INT64
@@ -90,7 +90,7 @@ class TestGetProtoValueFromValue(unittest.TestCase):
                       int64_value: 2
     """
     val = get_proto_value_from_value([1, 2])
-    self.assertEqual(val.sub_type, sight_pb2.Value.SubType.ST_JSON)
+    self.assertEqual(val.sub_type, sight_pb2.Value.SubType.ST_LIST)
     self.assertTrue(val.HasField("list_value"))
     self.assertEqual(len(val.list_value.values), 2)
     self.assertEqual([v.int64_value for v in val.list_value.values], [1, 2])
@@ -99,11 +99,11 @@ class TestGetProtoValueFromValue(unittest.TestCase):
     """Test converting a map from Python value to proto.
 
     This test case checks the conversion of a Python dictionary to a
-    sight_pb2.Value proto with sub_type ST_JSON and a map_value.
+    sight_pb2.Value proto with sub_type ST_MAP and a map_value.
     For example:
         py_val: {"x": "y"}
         expected:
-            sub_type: ST_JSON
+            sub_type: ST_MAP
             map_value:
                 fields:
                     key: "x"
@@ -112,7 +112,7 @@ class TestGetProtoValueFromValue(unittest.TestCase):
                         string_value: "y"
     """
     val = get_proto_value_from_value({"x": "y"})
-    self.assertEqual(val.sub_type, sight_pb2.Value.SubType.ST_JSON)
+    self.assertEqual(val.sub_type, sight_pb2.Value.SubType.ST_MAP)
     self.assertTrue(val.HasField("map_value"))
     self.assertEqual(len(val.map_value.fields), 1)
     self.assertEqual(val.map_value.fields["x"].string_value, "y")
@@ -121,22 +121,22 @@ class TestGetProtoValueFromValue(unittest.TestCase):
     """Test converting a nested structure from Python value to proto.
 
     This test case checks the conversion of a nested Python structure to a
-    sight_pb2.Value proto with sub_type ST_JSON. The structure is a list
+    sight_pb2.Value proto with sub_type ST_LIST. The structure is a list
     containing a map, which in turn contains a list.
     For example:
         py_val: [{"id": 1, "tags": ["a", "b"]}]
         expected:
-            sub_type: ST_JSON
+            sub_type: ST_LIST
             list_value:
                 values:
-                    - sub_type: ST_JSON
+                    - sub_type: ST_MAP
                       map_value:
                         fields:
                             id:
                                 sub_type: ST_INT64
                                 int64_value: 1
                             tags:
-                                sub_type: ST_JSON
+                                sub_type: ST_LIST
                                 list_value:
                                     values:
                                         - sub_type: ST_STRING
@@ -146,7 +146,7 @@ class TestGetProtoValueFromValue(unittest.TestCase):
     """
     nested = [{"id": 1, "tags": ["a", "b"]}]
     val = get_proto_value_from_value(nested)
-    self.assertEqual(val.sub_type, sight_pb2.Value.SubType.ST_JSON)
+    self.assertEqual(val.sub_type, sight_pb2.Value.SubType.ST_LIST)
     nested_map = val.list_value.values[0]
     self.assertEqual(len(val.list_value.values), 1)
     self.assertEqual(nested_map.map_value.fields["id"].int64_value, 1)
@@ -163,11 +163,11 @@ class TestGetProtoValueFromValue(unittest.TestCase):
 
     This test case checks that a string that is a valid JSON document
     is correctly detected and converted to a sight_pb2.Value with sub_type
-    ST_JSON and the json_value field set to the original string.
+    ST_MAP and the json_value field set to the original string.
     For example:
         py_val: '{"foo": "bar"}'
         expected:
-            sub_type: ST_JSON
+            sub_type: ST_MAP
             json_value: '{"foo": "bar"}'
 
     The test case creates a string that is a valid JSON document and asserts
@@ -241,7 +241,7 @@ class TestGetValueFromProtoValue(unittest.TestCase):
     The proto list contains two int64 values.
     Example:
         proto_val:
-            sub_type: ST_JSON
+            sub_type: ST_LIST
             list_value:
                 values:
                     - sub_type: ST_INT64
@@ -251,7 +251,7 @@ class TestGetValueFromProtoValue(unittest.TestCase):
         expected: [1, 2]
     """
     proto_val = sight_pb2.Value(
-        sub_type=sight_pb2.Value.SubType.ST_JSON,
+        sub_type=sight_pb2.Value.SubType.ST_LIST,
         list_value=sight_pb2.ListValue(values=[
             sight_pb2.Value(sub_type=sight_pb2.Value.SubType.ST_INT64,
                             int64_value=1),
@@ -269,7 +269,7 @@ class TestGetValueFromProtoValue(unittest.TestCase):
     sight_pb2.Value proto to a Python dictionary.
     For example:
         proto_val:
-            sub_type: ST_JSON
+            sub_type: ST_MAP
             map_value:
                 fields:
                     key: "a"
@@ -283,7 +283,7 @@ class TestGetValueFromProtoValue(unittest.TestCase):
     value is a dictionary {"a": "b"}.
     """
     proto_val = sight_pb2.Value(
-        sub_type=sight_pb2.Value.SubType.ST_JSON,
+        sub_type=sight_pb2.Value.SubType.ST_MAP,
         map_value=sight_pb2.MapValue(
             fields={
                 "a": sight_pb2.Value(
@@ -303,17 +303,17 @@ class TestGetValueFromProtoValue(unittest.TestCase):
 
     Example:
         proto_val:
-            sub_type: ST_JSON
+            sub_type: ST_LIST
             list_value:
                 values:
-                    - sub_type: ST_JSON
+                    - sub_type: ST_MAP
                       map_value:
                         fields:
                             id:
                                 sub_type: ST_INT64
                                 int64_value: 1
                             tags:
-                                sub_type: ST_JSON
+                                sub_type: ST_LIST
                                 list_value:
                                     values:
                                         - sub_type: ST_STRING
@@ -323,10 +323,10 @@ class TestGetValueFromProtoValue(unittest.TestCase):
         expected: [{"id": 1, "tags": ["a", "b"]}]
     """
     proto_val = sight_pb2.Value(
-        sub_type=sight_pb2.Value.SubType.ST_JSON,
+        sub_type=sight_pb2.Value.SubType.ST_LIST,
         list_value=sight_pb2.ListValue(values=[
             sight_pb2.Value(
-                sub_type=sight_pb2.Value.SubType.ST_JSON,
+                sub_type=sight_pb2.Value.SubType.ST_MAP,
                 map_value=sight_pb2.MapValue(
                     fields={
                         "id": sight_pb2.Value(
@@ -334,7 +334,7 @@ class TestGetValueFromProtoValue(unittest.TestCase):
                             int64_value=1,
                         ),
                         "tags": sight_pb2.Value(
-                            sub_type=sight_pb2.Value.SubType.ST_JSON,
+                            sub_type=sight_pb2.Value.SubType.ST_LIST,
                             list_value=sight_pb2.ListValue(values=[
                                 sight_pb2.Value(
                                     sub_type=sight_pb2.Value.SubType.ST_STRING,

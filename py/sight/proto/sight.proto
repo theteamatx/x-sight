@@ -237,7 +237,9 @@ message Value {
     ST_DOUBLE = 4;
     ST_BOOL = 5;
     ST_NONE = 6;
-    ST_JSON = 7; // This includes the LIST , DICT as JSON
+    ST_JSON = 7; //@depericated
+    ST_LIST = 8;
+    ST_MAP = 9;
   }
   SubType sub_type = 1;
 
@@ -254,7 +256,7 @@ message Value {
 
     bool none_value = 7;
 
-    string json_value = 8; //@depericated
+    string json_value = 8; //@deprecated
 
     // This is both can use for json_type
     ListValue list_value = 9;
@@ -687,14 +689,6 @@ message DecisionConfigurationStart {
   // choose the option.
   map<string, ChoiceConfig> choice_config = 2;
 
-  enum DataType {
-    DT_UNKOWN = 0;
-    DT_INT32 = 1;
-    DT_INT64 = 2;
-    DT_FLOAT32 = 3;
-    DT_FLOAT64 = 4;
-    DT_STRING = 5;
-  }
   // Properties of and constraints on attributes.
   message AttrProps {
     float min_value = 1;
@@ -719,7 +713,7 @@ message DecisionConfigurationStart {
     ContinuousProbDist continuous_prob_dist = 6;
     DiscreteProbDist discrete_prob_dist = 7;
 
-    DataType data_type = 9;
+    Value.SubType data_type = 9;
   }
 
   // The attributes of application's state

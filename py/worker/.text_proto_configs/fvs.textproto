@@ -11,5 +11,7 @@ action_attrs {
 outcome_attrs {
   key: "time_series"
   value {
+    description: "A list of integer values."
+    data_type: ST_LIST
   }
 }

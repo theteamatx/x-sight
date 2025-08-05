@@ -14,6 +14,7 @@
 """Helper utility for worker related tasks."""
 
 import os
+import re
 from pathlib import Path
 from typing import Any, Mapping
 
@@ -27,11 +28,13 @@ from helpers.logs.logs_handler import logger as logging
 
 FLAGS = flags.FLAGS
 
-DATA_TYPE_MAP = {
-    "integer": sight_pb2.DecisionConfigurationStart.DT_INT64,
-    "float": sight_pb2.DecisionConfigurationStart.DT_FLOAT32,
-    "double": sight_pb2.DecisionConfigurationStart.DT_FLOAT64,
-    "string": sight_pb2.DecisionConfigurationStart.DT_STRING,
+SUBTYPE_MAP = {
+    "integer": sight_pb2.Value.ST_INT64,
+    "double": sight_pb2.Value.ST_DOUBLE,
+    "string": sight_pb2.Value.ST_STRING,
+    "boolean": sight_pb2.Value.ST_BOOL,
+    "list": sight_pb2.Value.ST_LIST,
+    "dict": sight_pb2.Value.ST_MAP,
 }
 
 
@@ -57,15 +60,23 @@ def create_attr_props(
         value_proto.description = value["description"]
       if "type" in value:
         data_type_str = value["type"].lower()
-        if data_type_str in DATA_TYPE_MAP:
-          value_proto.data_type = DATA_TYPE_MAP[data_type_str]
+        if data_type_str in SUBTYPE_MAP:
+          value_proto.data_type = SUBTYPE_MAP[data_type_str]
         else:
-          raise ValueError(f"Unknown data type: {data_type_str}")
+          raise ValueError(f"Unknown or Unsupported data type: {data_type_str}")
 
     attr_prop_dict[key] = value_proto
 
   return attr_prop_dict
 
+def get_proto_data(question_label) -> sight_pb2.DecisionConfigurationStart:
+  # we get text_proto data in string type
+  text_proto_data = get_text_proto_data(question_label)
+
+  # convert it into proto format
+  proto_data = sight_pb2.DecisionConfigurationStart()
+  text_format.Parse(text_proto_data, proto_data)
+  return proto_data
 
 def get_text_proto_data(question_label) -> str:
   """Get the text proto data for the given question label.
@@ -106,16 +117,17 @@ def get_text_proto_data(question_label) -> str:
   return text_proto_data
 
 def get_action_from_textproto(question_label) -> Mapping[str, sight_pb2.DecisionConfigurationStart.AttrProps]:
-  # we get text_proto data in string type
-  text_proto_data = get_text_proto_data(question_label)
-
-  # convert it into proto format
-  proto_data = sight_pb2.DecisionConfigurationStart()
-  text_format.Parse(text_proto_data, proto_data)
-
+  proto_data = get_proto_data(question_label)
   # Extract only action_attrs
   action_attrs = proto_data.action_attrs
   return action_attrs
+
+# todo : to process the output of this function which will be used in prompt directly
+def get_outcome_from_textproto(question_label) -> Mapping[str, sight_pb2.DecisionConfigurationStart.AttrProps]:
+  proto_data = get_proto_data(question_label)
+  # Extract only outcome_attrs
+  outcome_attrs = proto_data.outcome_attrs
+  return outcome_attrs
 
 def get_description_from_textproto(question_label) -> tuple[str, str]:
   """Get the description from the textproto file for the given question label.
@@ -127,13 +139,8 @@ def get_description_from_textproto(question_label) -> tuple[str, str]:
     The function description and argument description from the textproto file
     for the given question label.
   """
-  # we get text_proto data in string type
-  text_proto_data = get_text_proto_data(question_label)
 
-  # convert it into proto format
-  proto_data = sight_pb2.DecisionConfigurationStart()
-  text_format.Parse(text_proto_data, proto_data)
-
+  proto_data = get_proto_data(question_label)
   api_description = proto_data.choice_config[
       question_label].llm_config.description
 
@@ -192,4 +199,5 @@ def run_py_function_from_str(reward_fn, args) -> float:
       return None
 
 
-action_d = get_action_from_textproto("Generic")
+# action_d = get_action_from_textproto("Generic")
+# print(get_outcome_from_textproto('Fvs'))

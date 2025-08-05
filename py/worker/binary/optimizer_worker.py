@@ -72,7 +72,7 @@ async def optimize(sight: Sight, opt_obj, reward_fn_str):
       # {'time_series': [227.6, 273.4, 273.3, 248.6, 165.3, 130.6, 106.4, 92.1, 81.7, 62.8]}
 
       logging.info('here batch outcome is %s', batch_outcome[b])
-      reward = run_py_function_from_str(reward_fn_str, [batch_outcome[b]])
+      reward = run_py_function_from_str(reward_fn_str, args=[batch_outcome[b]['time_series']])
       # reward = 100 #static
       rewards.append(reward)
 

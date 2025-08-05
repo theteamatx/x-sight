@@ -44,24 +44,22 @@ def get_value_from_proto_value(proto_value: sight_pb2.Value) -> Any:
     return proto_value.bool_value
   elif proto_value.sub_type == sight_pb2.Value.ST_NONE:
     return None
-  # Handle ST_JSON, which can be either a list or a map
+  elif proto_value.sub_type == sight_pb2.Value.ST_LIST:
+    return [
+        get_value_from_proto_value(v) for v in proto_value.list_value.values
+    ]
+  elif proto_value.sub_type == sight_pb2.Value.ST_MAP:
+    return {
+        key: get_value_from_proto_value(val)
+        for key, val in proto_value.map_value.fields.items()
+    }
   elif proto_value.sub_type == sight_pb2.Value.ST_JSON:
-    if proto_value.HasField("list_value"):
-      return [
-          get_value_from_proto_value(v) for v in proto_value.list_value.values
-      ]
-    elif proto_value.HasField("map_value"):
-      return {
-          key: get_value_from_proto_value(val)
-          for key, val in proto_value.map_value.fields.items()
-      }
-    else:
-      #  !! depercated logic using json_value as string dummped value
-      try:
-        return json.loads(proto_value.json_value)
-      except (ValueError, TypeError):
-        return (proto_value.json_value
-               )  # Fall back to the raw string if JSON parsing fails
+    #  !! depercated logic using json_value as string dummped value
+    try:
+      return json.loads(proto_value.json_value)
+    except (ValueError, TypeError):
+      return (proto_value.json_value
+              )  # Fall back to the raw string if JSON parsing fails
   else:
     raise ValueError(f"Unsupported subtype: {proto_value.sub_type}")
 
@@ -79,11 +77,11 @@ def get_proto_value_from_value(v) -> sight_pb2.Value:
   """
   val = sight_pb2.Value()
   if isinstance(v, dict):
-    val.sub_type = sight_pb2.Value.ST_JSON
+    val.sub_type = sight_pb2.Value.ST_MAP
     for key, value in v.items():
       val.map_value.fields[key].CopyFrom(get_proto_value_from_value(value))
   elif isinstance(v, list):
-    val.sub_type = sight_pb2.Value.ST_JSON
+    val.sub_type = sight_pb2.Value.ST_LIST
     for item in v:
       nested_val = get_proto_value_from_value(item)
       val.list_value.values.append(nested_val)
