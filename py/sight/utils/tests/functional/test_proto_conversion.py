@@ -173,11 +173,10 @@ class TestGetProtoValueFromValue(unittest.TestCase):
     The test case creates a string that is a valid JSON document and asserts
     that the resulting proto has the correct sub_type and json_value.
     """
-    map_str = '{"foo": "bar"}'
-    val = get_proto_value_from_value(map_str)
-    self.assertEqual(val.sub_type, sight_pb2.Value.SubType.ST_MAP)
-    self.assertTrue(val.HasField("map_value"))
-    self.assertEqual(val.map_value.fields["foo"].string_value, "bar")
+    json_str = '{"foo": "bar"}'
+    val = get_proto_value_from_value(json_str)
+    self.assertEqual(val.sub_type, sight_pb2.Value.SubType.ST_JSON)
+    self.assertEqual(val.json_value, json_str)
 
 
 class TestGetValueFromProtoValue(unittest.TestCase):
