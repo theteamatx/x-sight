@@ -256,7 +256,7 @@ message Value {
 
     bool none_value = 7;
 
-    string json_value = 8; //@depericated
+    string json_value = 8; //@deprecated
 
     // This is both can use for json_type
     ListValue list_value = 9;

@@ -106,7 +106,8 @@ def main(argv: Sequence[str]) -> None:
             sight=sight,
             question_label='Optimize',
             action_dict=actions,
-        ))
+        )
+    )
 
 
 if __name__ == "__main__":

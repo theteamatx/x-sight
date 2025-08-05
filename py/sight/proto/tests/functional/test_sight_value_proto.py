@@ -103,7 +103,7 @@ class TestSightProtoValue(unittest.TestCase):
     self.assertIn("numbers", map_val.map_value.fields)
 
     numbers = map_val.map_value.fields["numbers"]
-    self.assertEqual(numbers.sub_type, sight_pb2.Value.ST_MAP)
+    self.assertEqual(numbers.sub_type, sight_pb2.Value.ST_LIST)
     self.assertTrue(numbers.HasField("list_value"))
     self.assertEqual(len(numbers.list_value.values), 3)
     self.assertEqual(numbers.list_value.values[0].int64_value, 1)
