@@ -33,6 +33,8 @@ SUBTYPE_MAP = {
     "double": sight_pb2.Value.ST_DOUBLE,
     "string": sight_pb2.Value.ST_STRING,
     "boolean": sight_pb2.Value.ST_BOOL,
+    "list": sight_pb2.Value.ST_LIST,
+    "dict": sight_pb2.Value.ST_MAP,
 }
 
 
@@ -57,34 +59,11 @@ def create_attr_props(
       if "description" in value:
         value_proto.description = value["description"]
       if "type" in value:
-        type_str = value["type"].lower().strip()
-
-        # Check for the list format, e.g., "list<integer>"
-        match = re.fullmatch(r"list\s*<\s*(\w+)\s*>", type_str)
-
-        if match:
-            # It's a list type
-            element_type_str = match.group(1)
-            element_subtype = SUBTYPE_MAP.get(element_type_str)
-            if not element_subtype:
-                raise ValueError(f"Unknown element type in list: {element_type_str}")
-
-            # Create the nested Value message for a list type
-            type_value = sight_pb2.Value(
-                sub_type=sight_pb2.Value.ST_JSON,
-                list_value=sight_pb2.ListValue(
-                    values=[sight_pb2.Value(sub_type=element_subtype)]
-                )
-            )
-            value_proto.data_type.CopyFrom(type_value)
-
-        elif type_str in SUBTYPE_MAP:
-            # It's a simple scalar type
-            sub_type_enum = SUBTYPE_MAP[type_str]
-            type_value = sight_pb2.Value(sub_type=sub_type_enum)
-            value_proto.data_type.CopyFrom(type_value)
+        data_type_str = value["type"].lower()
+        if data_type_str in SUBTYPE_MAP:
+          value_proto.data_type = SUBTYPE_MAP[data_type_str]
         else:
-          raise ValueError(f"Unknown or Unsupported data type: {type_str}")
+          raise ValueError(f"Unknown or Unsupported data type: {data_type_str}")
 
     attr_prop_dict[key] = value_proto
 

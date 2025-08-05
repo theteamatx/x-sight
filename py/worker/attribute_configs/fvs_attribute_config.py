@@ -2,8 +2,6 @@ from typing import Any
 
 from sight.worker.worker_helper import create_attr_props
 
-
-
 FVS_PARAMS = {
     "fire-SIMFIRE_{index}-6_stand_area_burned": None,
     "fire-SIMFIRE_{index}-1_cycle": None,
@@ -46,5 +44,10 @@ def get_action_attrs():
 def get_outcome_attrs():
   """Returns the outcome attributes for the FVS outcome.
   """
-  outcome_config = {'time_series': None}
+  outcome_config = {
+      'time_series': {
+          'description': 'A list of integer values.',
+          'type': 'list'
+      }
+  }
   return create_attr_props(outcome_config)

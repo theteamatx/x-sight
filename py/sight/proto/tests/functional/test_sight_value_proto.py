@@ -19,7 +19,7 @@ class TestSightProtoValue(unittest.TestCase):
   def test_json_list_value(self):
     """Test for Sight proto JSON list value."""
     val = sight_pb2.Value(
-        sub_type=sight_pb2.Value.ST_JSON,
+        sub_type=sight_pb2.Value.ST_LIST,
         list_value=sight_pb2.ListValue(values=[
             sight_pb2.Value(sub_type=sight_pb2.Value.ST_INT64, int64_value=42),
             sight_pb2.Value(sub_type=sight_pb2.Value.ST_BOOL, bool_value=True),
@@ -30,7 +30,7 @@ class TestSightProtoValue(unittest.TestCase):
         ]),
     )
 
-    self.assertEqual(val.sub_type, sight_pb2.Value.ST_JSON)
+    self.assertEqual(val.sub_type, sight_pb2.Value.ST_LIST)
     self.assertTrue(val.HasField("list_value"))
     self.assertEqual(len(val.list_value.values), 3)
 
@@ -42,7 +42,7 @@ class TestSightProtoValue(unittest.TestCase):
     """Test for Sight proto JSON map value."""
 
     val = sight_pb2.Value(
-        sub_type=sight_pb2.Value.ST_JSON,
+        sub_type=sight_pb2.Value.ST_MAP,
         map_value=sight_pb2.MapValue(
             fields={
                 "count": sight_pb2.Value(
@@ -58,7 +58,7 @@ class TestSightProtoValue(unittest.TestCase):
             }),
     )
 
-    self.assertEqual(val.sub_type, sight_pb2.Value.ST_JSON)
+    self.assertEqual(val.sub_type, sight_pb2.Value.ST_MAP)
     self.assertTrue(val.HasField("map_value"))
 
     fields = val.map_value.fields
@@ -76,7 +76,7 @@ class TestSightProtoValue(unittest.TestCase):
     """Test for Sight proto JSON map with list value."""
     # Construct the list
     list_val = sight_pb2.Value(
-        sub_type=sight_pb2.Value.ST_JSON,
+        sub_type=sight_pb2.Value.ST_LIST,
         list_value=sight_pb2.ListValue(values=[
             sight_pb2.Value(sub_type=sight_pb2.Value.ST_INT64, int64_value=1),
             sight_pb2.Value(sub_type=sight_pb2.Value.ST_INT64, int64_value=2),
@@ -86,7 +86,7 @@ class TestSightProtoValue(unittest.TestCase):
 
     # Embed the list inside a map
     map_val = sight_pb2.Value(
-        sub_type=sight_pb2.Value.ST_JSON,
+        sub_type=sight_pb2.Value.ST_MAP,
         map_value=sight_pb2.MapValue(
             fields={
                 "numbers": list_val,
@@ -98,12 +98,12 @@ class TestSightProtoValue(unittest.TestCase):
     )
 
     # Assertions
-    self.assertEqual(map_val.sub_type, sight_pb2.Value.ST_JSON)
+    self.assertEqual(map_val.sub_type, sight_pb2.Value.ST_MAP)
     self.assertTrue(map_val.HasField("map_value"))
     self.assertIn("numbers", map_val.map_value.fields)
 
     numbers = map_val.map_value.fields["numbers"]
-    self.assertEqual(numbers.sub_type, sight_pb2.Value.ST_JSON)
+    self.assertEqual(numbers.sub_type, sight_pb2.Value.ST_MAP)
     self.assertTrue(numbers.HasField("list_value"))
     self.assertEqual(len(numbers.list_value.values), 3)
     self.assertEqual(numbers.list_value.values[0].int64_value, 1)
@@ -117,7 +117,7 @@ class TestSightProtoValue(unittest.TestCase):
     """Test for Sight proto list with map and nested list."""
     # Inner list for "tags"
     tags_list = sight_pb2.Value(
-        sub_type=sight_pb2.Value.ST_JSON,
+        sub_type=sight_pb2.Value.ST_LIST,
         list_value=sight_pb2.ListValue(values=[
             sight_pb2.Value(sub_type=sight_pb2.Value.ST_STRING,
                             string_value="a"),
@@ -130,7 +130,7 @@ class TestSightProtoValue(unittest.TestCase):
 
     # Map containing "id" and "tags"
     inner_map = sight_pb2.Value(
-        sub_type=sight_pb2.Value.ST_JSON,
+        sub_type=sight_pb2.Value.ST_MAP,
         map_value=sight_pb2.MapValue(
             fields={
                 "id": sight_pb2.Value(sub_type=sight_pb2.Value.ST_INT64,
@@ -141,24 +141,24 @@ class TestSightProtoValue(unittest.TestCase):
 
     # Outer list containing the map
     outer_value = sight_pb2.Value(
-        sub_type=sight_pb2.Value.ST_JSON,
+        sub_type=sight_pb2.Value.ST_LIST,
         list_value=sight_pb2.ListValue(values=[inner_map]),
     )
 
     # Assertions
-    self.assertEqual(outer_value.sub_type, sight_pb2.Value.ST_JSON)
+    self.assertEqual(outer_value.sub_type, sight_pb2.Value.ST_LIST)
     self.assertTrue(outer_value.HasField("list_value"))
     self.assertEqual(len(outer_value.list_value.values), 1)
 
     map_in_list = outer_value.list_value.values[0]
-    self.assertEqual(map_in_list.sub_type, sight_pb2.Value.ST_JSON)
+    self.assertEqual(map_in_list.sub_type, sight_pb2.Value.ST_MAP)
     self.assertTrue(map_in_list.HasField("map_value"))
 
     fields = map_in_list.map_value.fields
     self.assertEqual(fields["id"].int64_value, 1)
 
     tags = fields["tags"]
-    self.assertEqual(tags.sub_type, sight_pb2.Value.ST_JSON)
+    self.assertEqual(tags.sub_type, sight_pb2.Value.ST_LIST)
     self.assertTrue(tags.HasField("list_value"))
     self.assertEqual([v.string_value for v in tags.list_value.values],
                      ["a", "b", "c"])
