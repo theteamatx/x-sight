@@ -1042,6 +1042,8 @@ def run_generic_worker(
         # time.sleep(5)
         # backoff_interval *= 2
         # time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        backoff_interval = random.uniform(3, 8)
+        time.sleep(backoff_interval)
         logging.info('backed off for %s seconds... and trying for %s',
                     backoff_interval, num_retries)
         num_retries += 1
