@@ -78,6 +78,7 @@ def get_all_outcomes(sight_id, question_label, action_ids):
     # service_pb2.GetOutcomeResponse.Status.COMPLETED
     # print(f'Response => {[outcome for outcome in response.outcome]}')
     for outcome in response.outcome:
+      # logging.info('outcome=%s', outcome)
       if (outcome.status ==
           service_pb2.GetOutcomeResponse.Outcome.Status.COMPLETED):
         outcome_dict = {}
@@ -160,11 +161,11 @@ def poll_network_batch_outcome(sight_id, question_label):
         global_outcome_mapping.update(new_dict)
 
       else:
-        logging.info(
-            f'Not sending request as no pending ids ...=> %s with counter => %s',
-            pending_action_ids, counter)
-        if counter <= 0:
-          return
+        # logging.info(
+        #     f'Not sending request as no pending ids ...=> %s with counter => %s',
+        #     pending_action_ids, counter)
+        # if counter <= 0:
+        #   return
         counter -= 1
       time.sleep(POLL_TIME_INTERVAL)
     except Exception as e:

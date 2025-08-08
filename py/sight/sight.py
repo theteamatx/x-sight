@@ -988,7 +988,7 @@ def run_worker(
   try:
     def wrapped_driver_fn(sight):
       action = decision.decision_point(sight_params['label'], sight)
-      reward, outcome = driver_fn(action)
+      reward, outcome = driver_fn(action, sight)
       decision.decision_outcome('decision_outcome', sight, reward, outcome,
                                 sight_params['label'])
     return run_generic_worker(wrapped_driver_fn, sight_params)
@@ -1006,6 +1006,7 @@ def run_worker(
         f"{sight_params['label']}{CACHE_KEY_ERROR_SUFFIX}",
         error_trace,
     )
+
 def run_generic_worker(
     driver_fn: Optional[Callable[[Any], Any]] = None,
     sight_params: dict = None,
@@ -1039,13 +1040,15 @@ def run_generic_worker(
             service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
         # logging.info('Retrying in 5 seconds......')
         # time.sleep(5)
-        backoff_interval *= 2
-        time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        # backoff_interval *= 2
+        # time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        backoff_interval = random.uniform(3, 8)
+        time.sleep(backoff_interval)
         logging.info('backed off for %s seconds... and trying for %s',
                     backoff_interval, num_retries)
         num_retries += 1
-        if (num_retries >= 50):
-          break
+        # if (num_retries >= 50):
+        #   break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
         process_worker_action(response, sight, driver_fn, sight_params['label'],

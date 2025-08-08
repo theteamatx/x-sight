@@ -651,9 +651,9 @@ def get_decision_outcome_proto(outcome_label: str,
   if 'sum_reward' in sight.widget_decision_state:
     decision_outcome_proto.reward = sight.widget_decision_state['sum_reward']
 
-  if 'sum_outcome' in sight.widget_decision_state:
-    decision_outcome_proto.outcome_params.CopyFrom(
-        convert_dict_to_proto(dict=sight.widget_decision_state['sum_outcome']))
+  # if 'sum_outcome' in sight.widget_decision_state:
+  #   decision_outcome_proto.outcome_params.CopyFrom(
+  #       convert_dict_to_proto(dict=sight.widget_decision_state['sum_outcome']))
 
   if 'discount' in sight.widget_decision_state:
     decision_outcome_proto.discount = sight.widget_decision_state['discount']
@@ -729,9 +729,9 @@ def _process_llm_action(sight, req, optimizer_obj):
   widget_state = sight.widget_decision_state
   if 'reward' in widget_state:
     req.decision_outcome.reward = widget_state['reward']
-  if 'outcome_value' in widget_state:
-    req.decision.outcome.outcome_params.CopyFrom(
-        convert_dict_to_proto(dict=widget_state['outcome_value']))
+  # if 'outcome_value' in widget_state:
+  #   req.decision.outcome.outcome_params.CopyFrom(
+  #       convert_dict_to_proto(dict=widget_state['outcome_value']))
   req.decision_outcome.discount = widget_state['discount']
   return optimizer_obj.decision_point(sight, req)
 

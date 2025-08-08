@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from absl import flags
+from absl import logging
 from google.protobuf import text_format
 from sight.proto import sight_pb2
 from sight.widgets.decision import utils
@@ -108,6 +109,26 @@ def get_text_proto_data(question_label, sight) -> str:
 
   return text_proto_data
 
+def num_to_str(number, large_threshold=1e6, small_threshold=1e-2, precision=2, 
+               data_type: sight_pb2.DecisionConfigurationStart.DataType = sight_pb2.DecisionConfigurationStart.DT_UNKNOWN):
+  """
+  Formats a number to scientific notation only if it's very large or very small.
+  Otherwise, formats as a regular float, ensuring to omit irrelevant digits.
+  """
+  if abs(number) >= large_threshold or (abs(number) > 0 and abs(number) < small_threshold):
+    return f"{number:.{precision}e}"
+  else:
+    # If the number has trailing digits due to decimal approximation of binary floats,
+    # cut the number of digits.
+    if data_type == sight_pb2.DecisionConfigurationStart.DT_FLOAT64 or data_type == sight_pb2.DecisionConfigurationStart.DT_FLOAT32:
+      if len(f"{number}") > 6:
+        return f"{number:.{precision}f}"
+      else:
+        return f"{number}"
+    else:
+      return f"{number}"
+  
+
 
 def get_description_from_textproto(question_label, sight) -> tuple[str, str]:
   """Get the description from the textproto file for the given question label.
@@ -136,13 +157,57 @@ def get_description_from_textproto(question_label, sight) -> tuple[str, str]:
   items = []
   for k, v_obj in action_attrs.items():
     # Access the description directly from the object and clean it
-    description_text = v_obj.description.strip().rstrip('.')
+    description_text = v_obj.description.strip().rstrip('.') + " | " + \
+            f"type={sight_pb2.DecisionConfigurationStart.DataType.Name(v_obj.data_type)}, "
+    if v_obj.data_type in [
+       sight_pb2.DecisionConfigurationStart.DT_INT32,
+       sight_pb2.DecisionConfigurationStart.DT_INT64,
+       sight_pb2.DecisionConfigurationStart.DT_FLOAT32,
+       sight_pb2.DecisionConfigurationStart.DT_FLOAT64,
+    ]:
+      description_text += \
+            f"min={num_to_str(v_obj.min_value, v_obj.data_type)}, " + \
+            f"max={num_to_str(v_obj.max_value, v_obj.data_type)}, " + \
+            f"default={num_to_str(v_obj.default_value, v_obj.data_type)}"
     items.append(f"{k} : {description_text}")
 
   # Join all items with a comma and space, add a period at the end if not empty
   argument_description = ", \n".join(items) + ("." if items else "")
 
   return api_description, argument_description
+
+def normalize_action(action: dict[str, Any], 
+                     question_label: str, 
+                     sight) -> tuple[str, str]:
+  """Convert the values in action based on their documented types.
+
+  Args:
+    action: Maps the names of attributes to their values.
+    question_label: The label of the question.
+    sight: The Sight object that contains the decision configuration.
+
+  Returns:
+    The function description and argument description from the textproto file
+    for the given question label.
+  """
+  # we get text_proto data in string type
+  text_proto_data = get_text_proto_data(question_label, sight)
+
+  # convert it into proto format
+  proto_data = sight_pb2.DecisionConfigurationStart()
+  text_format.Parse(text_proto_data, proto_data)
+
+  for k, v_obj in proto_data.action_attrs.items():
+    if k not in action:
+      action[k] = v_obj.default_value
+      continue
+    
+    if v_obj.data_type == sight_pb2.DecisionConfigurationStart.DT_INT64 or v_obj.data_type == sight_pb2.DecisionConfigurationStart.DT_INT32:
+      action[k] = int(action[k])
+    elif v_obj.data_type == sight_pb2.DecisionConfigurationStart.DT_FLOAT64 or v_obj.data_type == sight_pb2.DecisionConfigurationStart.DT_FLOAT32:
+      action[k] = float(action[k])
+
+  return action
 
 
 def create_choice_config(
