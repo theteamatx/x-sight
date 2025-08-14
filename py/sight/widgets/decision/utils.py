@@ -31,7 +31,7 @@ def is_numeric(val):
   return isinstance(val, (int, float))
 
 
-def load_yaml_config(file_path):
+def load_yaml_config(file_path):  
   print(f'loading file from {file_path}')
   try:
     with open(file_path, 'r') as f:
@@ -41,26 +41,11 @@ def load_yaml_config(file_path):
     exit(1)
 
 
-def get_worker_version(question_label):
-  #? this only works for single type worker attached to each question lable
-  #? for multiple workers, need to update the logic
-  # current_script_directory = os.path.dirname(os.path.abspath(__file__))
-
-  # !!! NEED TO CORRECT THIS FUNCRION
-
-  return 'v1'
-
-  workers_config_path = os.getenv(
-      "WORKERS_CONFIG_PATH")  #, "default/path/to/config.yaml")
-  print('workers_config_path from env: ', workers_config_path)
-  workers_config = load_yaml_config('/x-sight/' + workers_config_path)
-  optimizers_config_path = os.getenv(
-      "OPTIMIZERS_CONFIG_PATH")  #, "default/path/to/config.yaml")
-  print('optimizers_config_path from env: ', optimizers_config_path)
-  optimizers_config = load_yaml_config('/x-sight/' + optimizers_config_path)
-
-  optimizer_config = optimizers_config[question_label]
+def get_worker_version(question_label:str, sight)-> str:
+  optimizer_config = sight.get_decision_config().optimizers[question_label]
   # as of now assuming only 1 worker_type for each question
-  for worker, worker_count in optimizer_config['workers'].items():
-    worker_details = workers_config[worker]
+  for worker in optimizer_config['workers'].keys():
+    worker_details = sight.get_decision_config().workers[worker]
     return worker_details['version']
+  raise ValueError(f'No configuration for question label {question_label}')
+

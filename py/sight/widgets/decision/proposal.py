@@ -41,6 +41,7 @@ FLAGS = flags.FLAGS
 
 async def push_message(sight_id, action_id):
   try:
+    print(f'push_message(sight_id={sight_id}, action_id={action_id})')
     global_outcome_mapping.set_for_key(action_id, None)
   except Exception as e:
     print(f'Exception => {e}')
@@ -98,7 +99,6 @@ async def propose_actions(sight,
                           question_label,
                           action_dict,
                           custom_part="sight_cache"):
-
   if (not global_outcome_mapping.get_for_key(
       f'is_poll_thread_started_{question_label}')):
     decision.init_sight_polling_thread(sight.id, question_label)
@@ -106,7 +106,7 @@ async def propose_actions(sight,
         f'is_poll_thread_started_{question_label}', True)
 
   key_maker = KeyMaker()
-  worker_version = utils.get_worker_version(question_label)
+  worker_version = utils.get_worker_version(question_label, sight)
   custom_part = custom_part + ':' + worker_version
   cache_key = key_maker.make_custom_key(custom_part, action_dict)
 
