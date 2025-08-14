@@ -98,7 +98,6 @@ async def propose_actions(sight,
                           question_label,
                           action_dict,
                           custom_part="sight_cache"):
-
   if (not global_outcome_mapping.get_for_key(
       f'is_poll_thread_started_{question_label}')):
     decision.init_sight_polling_thread(sight.id, question_label)
