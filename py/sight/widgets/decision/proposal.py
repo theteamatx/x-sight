@@ -41,7 +41,6 @@ FLAGS = flags.FLAGS
 
 async def push_message(sight_id, action_id):
   try:
-    print(f'push_message(sight_id={sight_id}, action_id={action_id})')
     global_outcome_mapping.set_for_key(action_id, None)
   except Exception as e:
     print(f'Exception => {e}')

@@ -13,6 +13,7 @@
 # limitations under the License.
 """utility functions to be used in other functionalities."""
 
+from typing import Any
 import os
 from pathlib import Path
 from absl import flags
@@ -20,18 +21,18 @@ import yaml
 
 FLAGS = flags.FLAGS
 
-def get_config_dir_path():
+def get_config_dir_path() -> str:
   current_file = Path(__file__).resolve()
   sight_repo_path = current_file.parents[4]
   config_dir_path = str(sight_repo_path) + '/py/sight/configs'
   return config_dir_path
 
 
-def is_numeric(val):
+def is_numeric(val: Any) -> bool:
   return isinstance(val, (int, float))
 
 
-def load_yaml_config(file_path):  
+def load_yaml_config(file_path: str) -> str:
   print(f'loading file from {file_path}')
   try:
     with open(file_path, 'r') as f:
