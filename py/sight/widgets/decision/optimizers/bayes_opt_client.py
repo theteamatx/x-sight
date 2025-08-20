@@ -34,13 +34,14 @@ def _create_bayes_opt_obj(actions):
 
 class BayesOptOptimizerClient(BaseOptimizerClient):
 
-  def __init__(self, q_label_to_propose, num_questions, batch_size):
+  def __init__(self, q_label_to_propose, num_questions, batch_size, sight):
     super().__init__()
     self.question_label = q_label_to_propose
     self.num_questions = num_questions
     self.batch_size = batch_size
+    self.sight = sight
 
-    actions = get_action_from_textproto(self.question_label)
+    actions = get_action_from_textproto(self.question_label, self.sight)
     self.bo_obj = _create_bayes_opt_obj(actions)
 
   def get_sample(self) -> dict:

@@ -1,5 +1,6 @@
 """Cache Helper Module."""
 
+from absl import logging
 import hashlib
 import json
 import pickle
@@ -67,6 +68,7 @@ class KeyMaker:
         separators=(",", ":"),
         ensure_ascii=True,
     )
+    logging.info(f'serialized_combined={serialized_combined}')
     return serialized_combined
 
   def make_key(self, *args, **kwargs):
@@ -88,7 +90,9 @@ class KeyMaker:
         'd14a021a6816261521263c1f86948807'
     """
     serialized = self._serialize(*args, **kwargs)
+    logging.info(f'serialized={serialized}')
     key = f'{hashlib.md5(serialized.encode()).hexdigest()}'
+    logging.info(f'key={key}')
     return key
 
   def make_custom_key(self, custom_part, *args, **kwargs):

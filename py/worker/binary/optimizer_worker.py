@@ -94,7 +94,7 @@ def main(sight: Sight, action: Dict) -> Tuple[float, Dict[str, Any]]:
   num_questions = action.get('num_questions', 1)
   batch_size = action.get('batch_size', 5)
 
-  opt_obj = BayesOptOptimizerClient(q_label_to_propose, num_questions, batch_size)
+  opt_obj = BayesOptOptimizerClient(q_label_to_propose, num_questions, batch_size, sight)
   final_outcome = asyncio.run(optimize(sight, opt_obj, action['reward_fn_str']))
 
   # keeping reward fixed (0) as action contains optimizer config and not actual action attrs

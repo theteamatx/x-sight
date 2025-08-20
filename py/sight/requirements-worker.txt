@@ -10,8 +10,8 @@ fastavro
 google-cloud-bigquery
 google-cloud-storage
 pyyaml
-redis
-
+redis==5.0.8
+astunparse==1.6.3
 
 
 

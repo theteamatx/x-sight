@@ -693,6 +693,7 @@ message DecisionConfigurationStart {
   message AttrProps {
     float min_value = 1;
     float max_value = 2;
+    float default_value = 10;
 
     // The size of a discrete valid quantum of values between min_value and
     // max_value (if step_size > 0).
@@ -735,6 +736,7 @@ message DecisionMessage {
   DecisionParam action = 2;
   DecisionPoint decision_point = 3;
   DecisionOutcome decision_outcome = 4;
+  string error_traceback = 5;
 }
 
 message DecisionPoint {
@@ -754,7 +756,13 @@ message DecisionOutcome {
   // The numeric value of this outcome, with higher values being more desirable.
   float reward = 2;
   float discount = 3;
-  DecisionParam outcome_params = 4;
+  // the below will not be using this in RPC
+  // DecisionParam outcome_params = 4;
+  // This `outcome_params_ref_key` is a reference key used by the client to
+  // retrieve the actual outcome parameters. The full `outcome_params` object is
+  // now cached on the worker side, keyed by `action_dict_hash`, to reduce RPC
+  // payload size.
+  string outcome_params_ref_key = 5;
 }
 
 message Question {

@@ -21,12 +21,13 @@ import contextvars
 import dataclasses
 import inspect
 import io
+import json
 import os
 import random
 import threading
 import time
-import json
-from typing import Any, Optional, Sequence, Callable, Union
+import traceback
+from typing import Any, Callable, Optional, Sequence, Union
 
 from absl import flags
 from dotenv import load_dotenv
@@ -42,11 +43,16 @@ from sight.proto import sight_pb2
 from sight.service_utils import finalize_server
 from sight.utility import MessageToDict
 from sight.utility import poll_network_batch_outcome
+from sight.utility import get_error_trace
+from sight.utility import CACHE_KEY_ERROR_SUFFIX
 from sight.widgets.decision import decision
 from sight.widgets.simulation.simulation_widget_state import (
-    SimulationWidgetState)
+    SimulationWidgetState
+)
 from sight_service.proto import service_pb2
 from sight_service.shared_batch_messages import DecisionMessage
+from helpers.cache.cache_factory import CacheFactory
+from helpers.cache.cache_helper import CacheConfig
 
 load_dotenv()
 _PARENT_ID = flags.DEFINE_string('parent_id', None,
@@ -162,7 +168,8 @@ class Sight(object):
       except TypeError as e:
         raise ValueError(f"Invalid params for sight_pb2.Params: {e}")
     elif not isinstance(params, sight_pb2.Params):
-      raise ValueError("Expected params to be a dict or sight_pb2.Params instance.")
+      raise ValueError(
+          "Expected params to be a dict or sight_pb2.Params instance.")
 
     return Sight(params, config)
 
@@ -320,7 +327,13 @@ class Sight(object):
     # config should only be passed from client script, workers should never enter
     # this condition
     if config and FLAGS.worker_mode is None:
+      self._decision_config = config
       decision.initialize(config, self)
+    else:
+      self._decision_config = None
+
+  def get_decision_config(self) -> decision.DecisionConfig:
+    return self._decision_config
 
   def get_location_state(self) -> SightLocationState:
     return SightLocationState(
@@ -442,9 +455,9 @@ class Sight(object):
     #? need to check whether we need this condition at all?
     if not self.params.local and not self.params.in_memory:
       print('Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-          'log_id=%s.%s&log_owner=%s&project_id=%s' %
-          (self.SIGHT_API_KEY, self.params.dataset_name, self.table_name,
-           self.params.log_owner, os.environ['PROJECT_ID']))
+            'log_id=%s.%s&log_owner=%s&project_id=%s' %
+            (self.SIGHT_API_KEY, self.params.dataset_name, self.table_name,
+             self.params.log_owner, os.environ['PROJECT_ID']))
 
     if (FLAGS.decision_mode == 'train'):
       decision.finalize(self)
@@ -771,11 +784,10 @@ class Sight(object):
     # if sight_log_id flags already set, table is created already
     if (self.avro_file_counter == 1 and (not FLAGS.sight_log_id)):
       create_external_bq_table(self.params, self.table_name, self.id)
-      print(
-          'Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
-          'log_id=%s.%s&log_owner=%s&project_id=%s' % (self.SIGHT_API_KEY,
-          self.params.dataset_name, self.table_name, self.params.log_owner,
-          os.environ['PROJECT_ID']))
+      print('Log GUI : https://script.google.com/a/google.com/macros/s/%s/exec?'
+            'log_id=%s.%s&log_owner=%s&project_id=%s' %
+            (self.SIGHT_API_KEY, self.params.dataset_name, self.table_name,
+             self.params.log_owner, os.environ['PROJECT_ID']))
     self.avro_log.close()
     self.avro_log = io.BytesIO()
 
@@ -966,18 +978,34 @@ def text_block(label: str, text_val: str, sight, frame=None) -> str:
 
 
 def run_worker(
-  driver_fn:  Callable[[Any], Any] = None,
-  sight_params: dict = None,
+    driver_fn: Callable[[Any], Any] = None,
+    sight_params: dict = None,
 ):
   """Wrapped the driver function with decision API,
      One can directly call run_generic_worker function,
      if have their own driver function.
   """
-  def wrapped_driver_fn(sight):
-    action = decision.decision_point(sight_params['label'], sight)
-    reward, outcome = driver_fn(sight, action)
-    decision.decision_outcome('decisionin_outcome', sight, reward, outcome)
-  return run_generic_worker(wrapped_driver_fn, sight_params)
+  try:
+    def wrapped_driver_fn(sight):
+      action = decision.decision_point(sight_params['label'], sight)
+      reward, outcome = driver_fn(action, sight)
+      decision.decision_outcome('decision_outcome', sight, reward, outcome,
+                                sight_params['label'])
+    return run_generic_worker(wrapped_driver_fn, sight_params)
+  except Exception as e:
+    error_trace = get_error_trace(f"Worker failed with following error :", e)
+    logging.error("%s", error_trace)
+
+    # Adding new entry in cache with question label as cache key and
+    # error traceback as value - client will always check for this before
+    # polling in get_outcome - generic error in worker
+    cache_client = CacheFactory.get_cache(
+          FLAGS.cache_mode,
+          )
+    cache_client.set(
+        f"{sight_params['label']}{CACHE_KEY_ERROR_SUFFIX}",
+        error_trace,
+    )
 
 def run_generic_worker(
     driver_fn: Optional[Callable[[Any], Any]] = None,
@@ -1012,13 +1040,15 @@ def run_generic_worker(
             service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
         # logging.info('Retrying in 5 seconds......')
         # time.sleep(5)
-        backoff_interval *= 2
-        time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        # backoff_interval *= 2
+        # time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        backoff_interval = random.uniform(3, 8)
+        time.sleep(backoff_interval)
         logging.info('backed off for %s seconds... and trying for %s',
                     backoff_interval, num_retries)
         num_retries += 1
-        if (num_retries >= 50):
-          break
+        # if (num_retries >= 50):
+        #   break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
         process_worker_action(response, sight, driver_fn, sight_params['label'],
@@ -1026,9 +1056,9 @@ def run_generic_worker(
       else:
         raise ValueError('Invalid response from server')
 
-    logging.info('Exiting the training loop.')
+      logging.info('Exiting the training loop.')
 
-  logging.debug('<<<<<< Exiting run method')
+    logging.debug('<<<<<< Exiting run method')
 
 
 def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
@@ -1048,6 +1078,8 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
   logging.info('cached_messages=%s',
                sight.widget_decision_state['cached_messages'])
 
+  cached_messages = sight.widget_decision_state['cached_messages']
+
   for action_id, action_params in decision_messages.items():
     logging.info('action_id=%s, action_params=%s', action_id, action_params)
     sight.enter_block('Decision Sample', sight_pb2.Object())
@@ -1055,7 +1087,6 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
     if 'constant_action' in sight.widget_decision_state:
       del sight.widget_decision_state['constant_action']
 
-    cached_messages = sight.widget_decision_state['cached_messages']
     sight.widget_decision_state['discount'] = 0
     sight.widget_decision_state['last_reward'] = None
     sight.widget_decision_state['action_id'] = action_id
@@ -1068,8 +1099,19 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
         ),
     )
 
-    driver_fn(sight)
-    sight._flush_log()
+    try:
+      driver_fn(sight)
+      sight._flush_log()
+    except Exception as e:
+      error_trace = get_error_trace(f"Worker failed with following error in action_id : {action_id}", e)
+      logging.error("%s", error_trace)
+
+      # updating entry in sight, mapping this error against action id -
+      # action specific error, will be eventually conveyed to client via server
+      cached_messages.update(
+            key=action_id,
+            error_traceback=error_trace,
+        )
 
     sight.exit_block('Decision Sample', sight_pb2.Object())
 

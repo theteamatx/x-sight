@@ -98,7 +98,6 @@ async def propose_actions(sight,
                           question_label,
                           action_dict,
                           custom_part="sight_cache"):
-
   if (not global_outcome_mapping.get_for_key(
       f'is_poll_thread_started_{question_label}')):
     decision.init_sight_polling_thread(sight.id, question_label)
@@ -106,7 +105,7 @@ async def propose_actions(sight,
         f'is_poll_thread_started_{question_label}', True)
 
   key_maker = KeyMaker()
-  worker_version = utils.get_worker_version(question_label)
+  worker_version = utils.get_worker_version(question_label, sight)
   custom_part = custom_part + ':' + worker_version
   cache_key = key_maker.make_custom_key(custom_part, action_dict)
 
@@ -129,8 +128,15 @@ async def propose_actions(sight,
                                            question_label, action_dict)
   await push_message(sight.id, unique_action_id)
   response = await fetch_outcome(sight.id, unique_action_id)
+  # atleast 1 of them must be none
   outcome = response.get('outcome', None)
+  error = response.get('error', None)
+
   if response is None or outcome is None:
+    # error specific to particular action id in worker
+    if error:
+      raise Exception(f'Error for the action id : {unique_action_id} ERROR : {error}')
+    # outcome received from cache using outcome_ref key has issue
     raise Exception('fetch_outcome response or respose["outcome"] is none')
   # converting the stringify data into json data if it can
   for key in outcome:

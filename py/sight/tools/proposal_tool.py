@@ -13,6 +13,7 @@
 # limitations under the License.
 """Proposal tool that propose relavant actions to sight backend."""
 
+from absl import logging
 import asyncio
 from typing import Any, Dict
 

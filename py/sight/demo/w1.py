@@ -120,9 +120,10 @@ def main(argv: Sequence[str]) -> None:
     raise app.UsageError("Too many command-line arguments.")
 
   # Enry point for the worker to start asking for the Generic actions
-  sight.run_worker(question_label=get_question_label(),
-                   driver_fn=driver_fn,
-                   proposal_label=get_question_label_to_propose_actions())
+  sight.run_generic_worker(
+    question_label=get_question_label(),
+    driver_fn=driver_fn,
+    proposal_label=get_question_label_to_propose_actions())
 
 
 if __name__ == "__main__":

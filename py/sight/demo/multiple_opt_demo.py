@@ -73,7 +73,7 @@ def main(argv: Sequence[str]) -> None:
 
     user_input = (
         "1. Generate a Python function that calculates the reward and have following"
-        f" Input : {get_outcome_from_textproto('Fvs')}"
+        f" Input : {get_outcome_from_textproto('Fvs', sight)}"
         " KEEP function name as reward_fn \n"
         "2. After generating the code, you MUST use the `validate_python_code` tool to verify it.\n"
         "3. **If the validation tool returns an error**, you MUST analyze the error, "

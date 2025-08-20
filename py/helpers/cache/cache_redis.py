@@ -1,7 +1,9 @@
 """This module contains a Redis Cache implementation."""
 
+import hashlib
 import json
 import pickle
+import threading
 
 from helpers.logs.logs_handler import logger as logging
 from overrides import override
@@ -24,6 +26,25 @@ class RedisCache(CacheInterface):
   cache.
   """
 
+  _instances = {}
+  _lock = threading.Lock()  # to make RedisCache thread-safe
+
+  def __new__(cls, config=None):
+    config = config or {}
+    config_key = cls._get_config_hash(config)
+
+    with cls._lock:
+      if config_key not in cls._instances:
+        instance = super(RedisCache, cls).__new__(cls)
+        cls._instances[config_key] = instance
+        instance._initialized = False  # so __init__ only runs once per instance
+      return cls._instances[config_key]
+
+  @staticmethod
+  def _get_config_hash(config: dict) -> str:
+    config_str = json.dumps(config, sort_keys=True)
+    return hashlib.sha256(config_str.encode()).hexdigest()
+
   def __init__(self, config=None):
     """Initializes the RedisCache object.
 
@@ -31,8 +52,8 @@ class RedisCache(CacheInterface):
       config: A dictionary containing configuration options for the Redis
         connection.
     """
-    if config is None:
-      config = {}
+    if getattr(self, '_initialized', False):
+      return  # prevent re-init
     try:
       self.redis_client = redis.StrictRedis(
           host=config.get("redis_host", RedisConstants.REDIS_HOST),
@@ -41,6 +62,7 @@ class RedisCache(CacheInterface):
           db=config.get("redis_db", RedisConstants.REDIS_DB),
       )
       self.redis_client.ping()
+      self._initialized = True
     except (redis.ConnectionError, redis.TimeoutError) as e:
       logging.warning(f"RediConnection failed: {e}")
       self.redis_client = None
@@ -61,7 +83,7 @@ class RedisCache(CacheInterface):
     """Gets the value from the cache using key as string data"""
     self._is_redis_client_exist()
     value = self.redis_client.get(key)
-    return value if value else None
+    return value.decode('utf-8') if value else None
 
   @override
   def set(self, key: str, value: Any) -> None:
