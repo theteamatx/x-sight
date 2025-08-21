@@ -43,6 +43,9 @@ def load_yaml_config(file_path: str) -> str:
 
 
 def get_worker_version(question_label:str, sight)-> str:
+  # !!! NEED TO CORRECT THIS FUNCRION
+  return 'v1'
+
   optimizer_config = sight.get_decision_config().optimizers[question_label]
   # as of now assuming only 1 worker_type for each question
   for worker in sorted(optimizer_config['workers'].keys()):

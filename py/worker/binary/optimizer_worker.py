@@ -83,7 +83,7 @@ async def optimize(sight: Sight, opt_obj, reward_fn_str):
   return {"reward" : rewards, "outcome": outcomes}
 
 
-def main(sight: Sight, action: Dict) -> Tuple[float, Dict[str, Any]]:
+def main(action: Dict, sight: Sight) -> Tuple[float, Dict[str, Any]]:
 
   # Here action will be containing optimizer config to create opt obj
   q_label_to_propose = action.get('question_label_to_propose', None)

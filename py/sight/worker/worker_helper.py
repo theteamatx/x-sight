@@ -91,9 +91,9 @@ def get_text_proto_data(question_label, sight) -> str:
   Raises:
     FileNotFoundError: If the text proto file is not found.
   """
-  # questions_info = utils.load_yaml_config(get_config_dir_path() +
-  #                                         "/question_config.yaml")
-  questions = sight.get_decision_config().questions
+  questions = utils.load_yaml_config(get_config_dir_path() +
+                                          "/question_config.yaml")
+  # questions = sight.get_decision_config().questions
   # print(f'get_config_dir_path={get_config_dir_path()}')
   print(f'questions={questions}')
 
@@ -134,7 +134,7 @@ def get_outcome_from_textproto(question_label, sight) -> Mapping[str, sight_pb2.
   return outcome_attrs
 
 def num_to_str(number, large_threshold=1e6, small_threshold=1e-2, precision=2,
-               data_type: sight_pb2.DecisionConfigurationStart.DataType = sight_pb2.DecisionConfigurationStart.DT_UNKNOWN):
+               data_type: sight_pb2.Value.SubType = sight_pb2.Value.ST_UNKNOWN):
   """
   Formats a number to scientific notation only if it's very large or very small.
   Otherwise, formats as a regular float, ensuring to omit irrelevant digits.

@@ -184,7 +184,7 @@ _SERVER_QUEUE_BATCH_SIZE = flags.DEFINE_integer(
     'batch size of the server queue for message queue',
 )
 
-_CACHE_MODE = flags.DEFINE_enum('cache_mode', 'gcs', [
+_CACHE_MODE = flags.DEFINE_enum('cache_mode', 'redis_local', [
     'gcs',
     'redis_local',
     'gcs_with_redis_local',
@@ -862,7 +862,7 @@ def _update_cached_batch(sight: Any, question_label, custom_part="sight_cache"):
       logging.info('action_dict used by worker is => %s', action_dict)
 
       key_maker = KeyMaker()
-      worker_version = utils.get_worker_version(question_label)
+      worker_version = utils.get_worker_version(question_label, sight)
       custom_part = custom_part + ':' + worker_version
       cache_key = key_maker.make_custom_key(custom_part, action_dict)
       outcome_params = sight.widget_decision_state.get('sum_outcome', {})
