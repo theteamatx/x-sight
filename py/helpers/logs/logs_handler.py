@@ -9,7 +9,7 @@
 
 import logging
 
-from google.cloud import logging as cloud_logging
+# from google.cloud import logging as cloud_logging
 
 # Set this to True for Cloud logging
 USE_CLOUD_LOGGING = False
@@ -24,12 +24,13 @@ class CustomAdapter(logging.LoggerAdapter):
     return f'{extra_info} | {msg}', kwargs
 
 
-if USE_CLOUD_LOGGING:
-  logging_client = cloud_logging.Client()
-  handler = logging_client.get_default_handler()
-else:
-  handler = logging.StreamHandler()
+# if USE_CLOUD_LOGGING:
+#   logging_client = cloud_logging.Client()
+#   handler = logging_client.get_default_handler()
+# else:
+#   handler = logging.StreamHandler()
 
+handler = logging.StreamHandler()
 # Set up Python logging
 logger = logging.getLogger("myLogger")
 logger.setLevel(logging.INFO)

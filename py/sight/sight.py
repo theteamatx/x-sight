@@ -31,6 +31,7 @@ from typing import Any, Optional, Sequence, Callable, Union
 from absl import flags
 from dotenv import load_dotenv
 import fastavro
+from google.cloud import logging as cloud_logging
 from fastavro.schema import load_schema
 from helpers.logs.logs_handler import logger as logging
 from sight import service_utils as service
@@ -407,6 +408,7 @@ class Sight(object):
 
   def _close_avro_log(self):
     self.avro_file_counter += 1
+    self._upload_cloud_logging()
     upload_blob_from_stream(
         self.params.bucket_name,
         self.params.gcp_path,
@@ -786,9 +788,50 @@ class Sight(object):
     if self.avro_record_counter % 1000 == 0:
       self._upload_avro_file_to_gcs()
 
+  # TODO: make async to avoid blocking on logging or spin up new thread
+  def _upload_cloud_logging(self) -> None:
+    """Uploads avro log records to Google Cloud Logging as structured logs."""
+    # Ensure there's something to log. getvalue() gets all bytes regardless of position.
+    if not self.avro_log or not self.avro_log.getvalue():
+      return
+
+    log_stream_copy = io.BytesIO(self.avro_log.getvalue())
+
+    try:
+      # Initialize the Cloud Logging client
+      project_id = os.environ.get('PROJECT_ID')
+      if not project_id:
+        logging.warning('PROJECT_ID not set, skipping Cloud Logging upload.')
+        return
+      client = cloud_logging.Client(project=project_id)
+      # Use the table_name for consistency, which is like 'label_log-id_log'
+      cloud_logger = client.logger(self.table_name)
+
+      # fastavro.reader reads records from a file-like object
+      reader = fastavro.reader(log_stream_copy)
+
+      # Use a batch to efficiently send logs
+      with cloud_logger.batch() as batch:
+        count = 0
+        for record in reader:
+          # Each record is a dict, which can be logged as a structured payload
+          batch.log_struct(record)
+          count += 1
+
+      if count > 0:
+        logging.info(
+            'Successfully uploaded %d records to Cloud Logging in log [%s].',
+            count, self.table_name)
+    except Exception as e:
+      # Using exc_info=True to log the full traceback
+      logging.error('Failed to upload logs to Cloud Logging: %s', e, exc_info=True)
+    finally:
+      log_stream_copy.close()
+
   def _flush_log(self):
     """Flushes the log to remote storage."""
     if self.avro_log:
+      self._upload_cloud_logging()
       self._upload_avro_file_to_gcs()
 
   def log_object(self,

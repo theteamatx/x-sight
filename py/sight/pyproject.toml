@@ -1,0 +1,23 @@
+[project]
+name = "sight_service"
+version = "1.0.0"
+dependencies = [
+    # DEBT: taken from requirements-worker.txt, so deprecate that
+    # TODO: peg the versions
+    "absl-py",
+    "grpcio",
+    "grpcio-tools",
+    "numpy",
+    "portpicker",
+    "protobuf",
+    "pybind11",
+    "tensorflow",
+    "tf-agents",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["configs", "demo", "proto", "widgets", "worker"]
