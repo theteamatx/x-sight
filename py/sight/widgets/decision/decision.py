@@ -476,18 +476,21 @@ def get_decision_configuration_for_opt(
       decision_configuration: The decision configuration protobuf object with optimizer configuration.
   """
   relative_text_proto_path = question_config['attrs_text_proto']
+
+  #todo : need to add the logic of reading textproto data in common function - also used by worker helper
   if os.path.exists(relative_text_proto_path):
     with open(relative_text_proto_path, 'r') as f:
       text_proto_data = f.read()
   else:
     current_file = Path(__file__).resolve()
-    sight_repo_path = current_file.parents[4]
+    # sight_repo_path = current_file.parents[4]
+    root_repo_path = utils.find_root_repo(current_file)
 
-    absolute_text_proto_path = sight_repo_path.joinpath(
-        question_config['attrs_text_proto'])
+    absolute_text_proto_path = root_repo_path.joinpath(
+        relative_text_proto_path)
 
     if not os.path.exists(absolute_text_proto_path):
-      raise FileNotFoundError(f'File not found {relative_text_proto_path}')
+      raise FileNotFoundError(f'File not found {absolute_text_proto_path}')
 
     with open(absolute_text_proto_path, 'r') as f:
       text_proto_data = f.read()

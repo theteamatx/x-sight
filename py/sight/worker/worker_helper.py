@@ -22,7 +22,7 @@ from absl import flags
 from google.protobuf import text_format
 from sight.proto import sight_pb2
 from sight.widgets.decision import utils
-from sight.widgets.decision.utils import get_config_dir_path
+# from sight.widgets.decision.utils import get_config_dir_path
 from helpers.logs.logs_handler import logger as logging
 
 
@@ -91,7 +91,7 @@ def get_text_proto_data(question_label, sight) -> str:
   Raises:
     FileNotFoundError: If the text proto file is not found.
   """
-  questions = utils.load_yaml_config(get_config_dir_path() +
+  questions = utils.load_yaml_config(utils.get_config_dir_path() +
                                           "/question_config.yaml")
   # questions = sight.get_decision_config().questions
   # print(f'get_config_dir_path={get_config_dir_path()}')
@@ -101,22 +101,40 @@ def get_text_proto_data(question_label, sight) -> str:
     raise ValueError(f"Unknown question label: {question_label}")
 
   relative_text_proto_path = questions[question_label]["attrs_text_proto"]
+  # # Always resolve relative paths from the project root
+  # project_root = Path(__file__).resolve()
+  # while project_root.name != "x-sight" and project_root.parent != project_root:
+  #     project_root = project_root.parent
 
-  # Always resolve relative paths from the project root
-  project_root = Path(__file__).resolve()
-  while project_root.name != "x-sight" and project_root.parent != project_root:
-      project_root = project_root.parent
+  # absolute_text_proto_path = (project_root / relative_text_proto_path).resolve()
+  # # logging.info("project_root               :%s", project_root)
+  # # logging.info("absolute_text_proto_path   :%s", absolute_text_proto_path)
+  # # logging.info("relative_text_proto_path   :%s", relative_text_proto_path)
 
-  absolute_text_proto_path = (project_root / relative_text_proto_path).resolve()
-  # logging.info("project_root               :%s", project_root)
-  # logging.info("absolute_text_proto_path   :%s", absolute_text_proto_path)
-  # logging.info("relative_text_proto_path   :%s", relative_text_proto_path)
+  # if not os.path.exists(absolute_text_proto_path):
+  #   raise FileNotFoundError(f"File not found {absolute_text_proto_path}")
 
-  if not os.path.exists(absolute_text_proto_path):
-    raise FileNotFoundError(f"File not found {absolute_text_proto_path}")
+  # with open(absolute_text_proto_path, "r") as f:
+  #   text_proto_data = f.read()
 
-  with open(absolute_text_proto_path, "r") as f:
-    text_proto_data = f.read()
+  if os.path.exists(relative_text_proto_path):
+    with open(relative_text_proto_path, 'r') as f:
+      text_proto_data = f.read()
+  else:
+    current_file = Path(__file__).resolve()
+    # sight_repo_path = current_file.parents[4]
+    root_repo_path = utils.find_root_repo(current_file)
+    print("root_repo_path : ", root_repo_path)
+
+    absolute_text_proto_path = root_repo_path.joinpath(
+        relative_text_proto_path)
+    print("absolute_text_proto_path : ", absolute_text_proto_path)
+
+    if not os.path.exists(absolute_text_proto_path):
+      raise FileNotFoundError(f'File not found {absolute_text_proto_path}')
+
+    with open(absolute_text_proto_path, 'r') as f:
+      text_proto_data = f.read()
 
   return text_proto_data
 

@@ -23,8 +23,9 @@ FLAGS = flags.FLAGS
 
 def get_config_dir_path() -> str:
   current_file = Path(__file__).resolve()
-  sight_repo_path = current_file.parents[4]
-  config_dir_path = str(sight_repo_path) + '/py/sight/configs'
+  root_repo_path = find_root_repo(current_file)
+  #todo tmp-fix - works for kokua demo, need to change this dynamically
+  config_dir_path = str(root_repo_path) + '/analytics/optimizer/config'
   return config_dir_path
 
 
@@ -41,6 +42,18 @@ def load_yaml_config(file_path: str) -> str:
     print(f"Error: Config file not found at {file_path}")
     exit(1)
 
+def find_root_repo(current_path):
+    # root directory in docker image is fixed - can't find it based on .git folder
+    if os.path.exists('/.dockerenv'):
+        return Path('/x-sight')
+    else:
+      current_dir = Path(current_path).resolve()
+      while current_dir != current_dir.parent:
+          git_path = current_dir / '.git'
+          if git_path.is_dir():  # Only checks for a directory to eliminate submodule
+              return current_dir
+          current_dir = current_dir.parent
+      raise ValueError(f'No root folder found...')
 
 def get_worker_version(question_label:str, sight)-> str:
   # !!! NEED TO CORRECT THIS FUNCRION
