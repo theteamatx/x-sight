@@ -1,3 +1,0 @@
-v0.1 :
-  docker: "gcr.io/cameltrain/test-optimizer-worker-local:latest"
-  binary: "py/worker/binary/optimizer_worker.py"
