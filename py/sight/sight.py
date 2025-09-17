@@ -787,8 +787,8 @@ class Sight(object):
     fastavro.writer(self.avro_log, self.avro_schema, [dict_obj])
     self.avro_record_counter += 1
     if self.avro_record_counter % 1000 == 0:
-      self._upload_avro_file_to_gcs()
       self._upload_avro_file_to_cloud_logging()
+      self._upload_avro_file_to_gcs()
     
   def _upload_avro_file_to_cloud_logging(self):
     original_position = self.avro_log.tell()
