@@ -26,6 +26,9 @@ import random
 import threading
 import time
 import json
+
+from google.cloud import logging_v2
+
 from typing import Any, Optional, Sequence, Callable, Union
 
 from absl import flags
@@ -785,10 +788,49 @@ class Sight(object):
     self.avro_record_counter += 1
     if self.avro_record_counter % 1000 == 0:
       self._upload_avro_file_to_gcs()
+      self._upload_avro_file_to_cloud_logging()
+    
+  def _upload_avro_file_to_cloud_logging(self):
+    original_position = self.avro_log.tell()
+    try:
+        # TODO: add managed connection pooling for high volume callers
+        project_id = os.environ['PROJECT_ID']
+        client = logging_v2.Client(project=project_id)
+        self.avro_log.seek(0)
+        buffer_content = self.avro_log.read()
+
+        # TODO: implement non blocking decoding for large (> 1gb) files
+        content_string = buffer_content.decode('utf-8', 'ignore')
+
+        payload = {
+            "message": content_string,
+        }
+
+        log_path = f"projects/{project_id}/logs/sight"
+
+        entry = logging_v2.types.LogEntry(
+            log_name=log_path,
+            severity="INFO",
+            json_payload=payload
+        )
+
+        # This is a direct API call and does NOT use the standard Python logging system.
+        client.logging_service.write_log_entries(
+            entries=[entry],
+        )
+
+    except Exception as e:
+        print(f"An error occurred during logging to Cloud Logging: {e}")
+
+    finally:
+        self.avro_log.seek(original_position)
+
 
   def _flush_log(self):
     """Flushes the log to remote storage."""
     if self.avro_log:
+      # Order matters. The _upload_avro_file_to_gcs is destructive.
+      self._upload_avro_file_to_cloud_logging()
       self._upload_avro_file_to_gcs()
 
   def log_object(self,
