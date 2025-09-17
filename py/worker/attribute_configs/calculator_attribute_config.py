@@ -9,7 +9,7 @@ def get_action_attrs():
   action_config = {
       'operand1': {
           'description': 'The first integer operand.',
-          'type': 'integer'
+          'type': 'integer' # can use list, dict and json as well
       },
       'operand2': {
           'description': 'The second integer operand.',

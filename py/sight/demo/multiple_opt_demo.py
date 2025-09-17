@@ -15,12 +15,21 @@
 
 from typing import Sequence
 import warnings
-
+import asyncio
+import inspect
 from absl import app
 from absl import flags
 from helpers.logs.logs_handler import logger as logging
 from sight.sight import Sight
 from sight.widgets.decision import decision
+from sight.widgets.decision import proposal
+from langchain.agents import AgentType
+from langchain.agents import initialize_agent
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.messages.system import SystemMessage
+from langchain_core.messages.human import HumanMessage
+from sight.demo.agentic_demo.tool_python_code_validator import validate_python_code
+from sight.worker.worker_helper import get_outcome_from_textproto
 
 
 def warn(*args, **kwargs):
@@ -30,6 +39,14 @@ def warn(*args, **kwargs):
 warnings.warn = warn
 
 FLAGS = flags.FLAGS
+
+
+def reward_fn(outcome):
+  outcome_timeseries = outcome['time_series']
+  return sum(outcome_timeseries) + 111
+
+
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-pro")
 
 
 def main(argv: Sequence[str]) -> None:
@@ -42,9 +59,55 @@ def main(argv: Sequence[str]) -> None:
   params = {"label": "multiple_opt_label"}
 
   # create sight object with configuration to spawn workers beforehand
-  with Sight.create(params, config):
+  with Sight.create(params, config) as sight:
 
     logging.info("spawned the workers.................")
+
+    # initialize agent with tools and llm
+    agent = initialize_agent(
+        tools=[validate_python_code],  #tools,
+        llm=llm,
+        agent=AgentType.STRUCTURED_CHAT_ZERO_SHOT_REACT_DESCRIPTION,
+        verbose=True,
+    )
+
+    user_input = (
+        "1. Generate a Python function that calculates the reward and have following"
+        f" Input : {get_outcome_from_textproto('Fvs', sight)}"
+        " KEEP function name as reward_fn \n"
+        "2. After generating the code, you MUST use the `validate_python_code` tool to verify it.\n"
+        "3. **If the validation tool returns an error**, you MUST analyze the error, "
+        "fix the Python code, and call the `validate_python_code` tool again on the "
+        "corrected code. Repeat this process until the validation is successful.\n"
+        "4. Once the validation is successful, provide only the final, correct Python function as your answer."
+    )
+
+    response = agent.invoke([
+        SystemMessage(content="""You are an expert Python programmer.
+            Your sole task is to write a complete, working Python function based on the user's request.
+            The function should be well-commented, follow best practices, and be ready to use.
+            Do NOT include any import statements, explanations, introductory text, or concluding remarks.
+            Just plain, raw Python function. After generating the function, you MUST use the validate_python_code"
+            tool to verify it.
+        """),
+        HumanMessage(content=user_input)
+    ])
+    print("Response: ", response['output'])
+
+    actions = {
+        "question_label_to_propose": "Fvs",
+        "num_questions": 6,
+        "batch_size": 3,
+        "random_seed": 0,
+        "reward_fn_str": response['output']
+    }
+    asyncio.run(
+        proposal.propose_actions(
+            sight=sight,
+            question_label='Optimize',
+            action_dict=actions,
+        )
+    )
 
 
 if __name__ == "__main__":

@@ -273,6 +273,7 @@ def start_jobs_in_dsub_cloud(num_train_workers: int, binary_path: Optional[str],
       f'PARENT_LOG_ID={sight.id}',
       '--env',
       f'PORT={service.get_port_number()}',
+      '--env',
       f'PROJECT_ID={os.environ["PROJECT_ID"]}',
   ]
 

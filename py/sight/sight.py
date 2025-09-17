@@ -1116,3 +1116,4 @@ def process_worker_action(response, sight, driver_fn, question_label, opt_obj):
     sight.exit_block('Decision Sample', sight_pb2.Object())
 
   decision.finalize_episode(sight, question_label, opt_obj)
+

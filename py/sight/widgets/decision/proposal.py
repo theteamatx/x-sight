@@ -21,7 +21,7 @@ from absl import logging
 from helpers.cache.cache_factory import CacheFactory
 from helpers.cache.cache_helper import CacheConfig
 from helpers.cache.cache_helper import KeyMaker
-from helpers.cache.cache_interface import CacheInterface
+from helpers.cache.constants import CacheType
 from sight.attribute import Attribute
 from sight.block import Block
 from sight.proto import sight_pb2
