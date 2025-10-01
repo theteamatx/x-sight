@@ -1,16 +1,16 @@
-Generic:
-  optimizer: "worklist_scheduler"
-  num_questions: 1
-  mode: "dsub_local_worker"
-  workers:
-    generic_worker: 1
-
-# Calculator:
+# Generic:
 #   optimizer: "worklist_scheduler"
 #   num_questions: 1
 #   mode: "dsub_local_worker"
 #   workers:
-#     calculator_worker: 1
+#     generic_worker: 1
+
+Calculator:
+  optimizer: "worklist_scheduler"
+  num_questions: 1
+  mode: "dsub_local_worker"
+  workers:
+    calculator_worker: 1
 
 # Addition:
 #   optimizer: "worklist_scheduler"

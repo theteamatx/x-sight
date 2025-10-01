@@ -1,10 +1,10 @@
-generic_worker:
-  version: "v0.1"
-  file_path: "py/worker/worker_configs/generic_worker.yaml"
-
-# calculator_worker:
+# generic_worker:
 #   version: "v0.1"
-#   file_path: "py/worker/worker_configs/calculator_worker.yaml"
+#   file_path: "py/worker/worker_configs/generic_worker.yaml"
+
+calculator_worker:
+  version: "v0.1"
+  file_path: "py/worker/worker_configs/calculator_worker.yaml"
 
 # addition_worker:
 #   version: "v0.1"

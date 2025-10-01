@@ -184,7 +184,7 @@ _SERVER_QUEUE_BATCH_SIZE = flags.DEFINE_integer(
     'batch size of the server queue for message queue',
 )
 
-_CACHE_MODE = flags.DEFINE_enum('cache_mode', 'redis_local', [
+_CACHE_MODE = flags.DEFINE_enum('cache_mode', 'gcs', [
     'gcs',
     'redis_local',
     'gcs_with_redis_local',

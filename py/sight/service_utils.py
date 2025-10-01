@@ -474,6 +474,8 @@ def obtain_insecure_channel(options):
   # server_mode is VM or (local in dsub worker)
   if 'IP_ADDR' in os.environ:
     host = os.environ["IP_ADDR"]
+  elif FLAGS.ip_addr != 'localhost':
+    host = FLAGS.ip_addr
   # elif FLAGS.worker_mode=='dsub_local_worker':
   #   host = get_docker0_ip()
   # server_mode is local in client
