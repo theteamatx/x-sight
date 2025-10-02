@@ -8,7 +8,7 @@
 Calculator:
   optimizer: "worklist_scheduler"
   num_questions: 1
-  mode: "dsub_local_worker"
+  mode: "dsub_cloud_worker
   workers:
     calculator_worker: 1
 
