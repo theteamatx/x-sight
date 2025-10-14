@@ -1040,15 +1040,15 @@ def run_generic_worker(
             service_pb2.WorkerAliveResponse.StatusType.ST_RETRY):
         # logging.info('Retrying in 5 seconds......')
         # time.sleep(5)
-        # backoff_interval *= 2
-        # time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
-        backoff_interval = random.uniform(3, 8)
-        time.sleep(backoff_interval)
+        backoff_interval *= 2
+        time.sleep(random.uniform(backoff_interval / 2, backoff_interval))
+        # backoff_interval = random.uniform(3, 8)
+        # time.sleep(backoff_interval)
         logging.info('backed off for %s seconds... and trying for %s',
                     backoff_interval, num_retries)
         num_retries += 1
-        # if (num_retries >= 50):
-        #   break
+        if (num_retries >= 9):
+          break
       elif (response.status_type ==
             service_pb2.WorkerAliveResponse.StatusType.ST_ACT):
         process_worker_action(response, sight, driver_fn, sight_params['label'],
