@@ -126,7 +126,7 @@ def main(argv: Sequence[str]) -> None:
 
     out = subprocess.run(
         [
-            'gsutil', 'cp',
+            'gcloud', 'storage', 'cp',
             f'gs://{_PROJECT_ID.value}-sight/sight-logs/*{_LOG_ID.value}.sim_ordered_time_series.*.csv',
             '/tmp'
         ],
