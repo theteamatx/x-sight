@@ -258,7 +258,7 @@ def start_jobs_in_dsub_cloud(num_train_workers: int, binary_path: Optional[str],
       f'gs://{os.environ["PROJECT_ID"]}-sight/d-sub/binary/{str(sight.id)}/' +
       binary_path.split('/')[-1])
   print(f'Uploading {binary_path}...')
-  subprocess.run(['gcloud', 'storage', 'cp', '--continue-on-error', binary_path, remote_script], check=True)
+  subprocess.run(['gcloud', 'storage', 'cp', binary_path, remote_script], check=True)
 
   if not FLAGS.service_account:
     raise ValueError(
