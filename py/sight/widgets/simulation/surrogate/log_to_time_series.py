@@ -100,7 +100,7 @@ def load_ts(log_label: str, log_id: str, project_id: str) -> pd.DataFrame:
   extract_job.result()  # Waits for job to complete.
 
   out = subprocess.run(
-      ['gsutil', 'cp', 
+      ['gcloud', 'storage', 'cp', 
         f'gs://{project_id}-sight/sight-logs/*{log_label}_{log_id}.sim_ordered_time_series.*.csv',
         '/tmp'],
       capture_output=True,
