@@ -13,6 +13,7 @@
 # limitations under the License.
 """utility functions to be used in other functionalities."""
 
+from typing import Any
 import os
 from pathlib import Path
 from absl import flags
@@ -20,18 +21,19 @@ import yaml
 
 FLAGS = flags.FLAGS
 
-def get_config_dir_path():
+def get_config_dir_path() -> str:
   current_file = Path(__file__).resolve()
-  sight_repo_path = current_file.parents[4]
-  config_dir_path = str(sight_repo_path) + '/py/sight/configs'
+  root_repo_path = find_root_repo(current_file)
+  #todo tmp-fix - works for kokua demo, need to change this dynamically
+  config_dir_path = str(root_repo_path) + '/analytics/optimizer/config'
   return config_dir_path
 
 
-def is_numeric(val):
+def is_numeric(val: Any) -> bool:
   return isinstance(val, (int, float))
 
 
-def load_yaml_config(file_path):
+def load_yaml_config(file_path: str) -> str:
   print(f'loading file from {file_path}')
   try:
     with open(file_path, 'r') as f:
@@ -40,27 +42,27 @@ def load_yaml_config(file_path):
     print(f"Error: Config file not found at {file_path}")
     exit(1)
 
+def find_root_repo(current_path):
+    # root directory in docker image is fixed - can't find it based on .git folder
+    if os.path.exists('/.dockerenv'):
+        return Path('/x-sight')
+    else:
+      current_dir = Path(current_path).resolve()
+      while current_dir != current_dir.parent:
+          git_path = current_dir / '.git'
+          if git_path.is_dir():  # Only checks for a directory to eliminate submodule
+              return current_dir
+          current_dir = current_dir.parent
+      raise ValueError(f'No root folder found...')
 
-def get_worker_version(question_label):
-  #? this only works for single type worker attached to each question lable
-  #? for multiple workers, need to update the logic
-  # current_script_directory = os.path.dirname(os.path.abspath(__file__))
-
+def get_worker_version(question_label:str, sight)-> str:
   # !!! NEED TO CORRECT THIS FUNCRION
-
   return 'v1'
 
-  workers_config_path = os.getenv(
-      "WORKERS_CONFIG_PATH")  #, "default/path/to/config.yaml")
-  print('workers_config_path from env: ', workers_config_path)
-  workers_config = load_yaml_config('/x-sight/' + workers_config_path)
-  optimizers_config_path = os.getenv(
-      "OPTIMIZERS_CONFIG_PATH")  #, "default/path/to/config.yaml")
-  print('optimizers_config_path from env: ', optimizers_config_path)
-  optimizers_config = load_yaml_config('/x-sight/' + optimizers_config_path)
-
-  optimizer_config = optimizers_config[question_label]
+  optimizer_config = sight.get_decision_config().optimizers[question_label]
   # as of now assuming only 1 worker_type for each question
-  for worker, worker_count in optimizer_config['workers'].items():
-    worker_details = workers_config[worker]
+  for worker in sorted(optimizer_config['workers'].keys()):
+    worker_details = sight.get_decision_config().workers[worker]
     return worker_details['version']
+  raise ValueError(f'No configuration for question label {question_label}')
+

@@ -14,22 +14,27 @@
 """Helper utility for worker related tasks."""
 
 import os
+import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Mapping
 
 from absl import flags
 from google.protobuf import text_format
 from sight.proto import sight_pb2
 from sight.widgets.decision import utils
-from sight.widgets.decision.utils import get_config_dir_path
+# from sight.widgets.decision.utils import get_config_dir_path
+from helpers.logs.logs_handler import logger as logging
+
 
 FLAGS = flags.FLAGS
 
-DATA_TYPE_MAP = {
-    "integer": sight_pb2.DecisionConfigurationStart.DT_INT64,
-    "float": sight_pb2.DecisionConfigurationStart.DT_FLOAT32,
-    "double": sight_pb2.DecisionConfigurationStart.DT_FLOAT64,
-    "string": sight_pb2.DecisionConfigurationStart.DT_STRING,
+SUBTYPE_MAP = {
+    "integer": sight_pb2.Value.ST_INT64,
+    "double": sight_pb2.Value.ST_DOUBLE,
+    "string": sight_pb2.Value.ST_STRING,
+    "boolean": sight_pb2.Value.ST_BOOL,
+    "list": sight_pb2.Value.ST_LIST,
+    "dict": sight_pb2.Value.ST_MAP,
 }
 
 
@@ -55,21 +60,30 @@ def create_attr_props(
         value_proto.description = value["description"]
       if "type" in value:
         data_type_str = value["type"].lower()
-        if data_type_str in DATA_TYPE_MAP:
-          value_proto.data_type = DATA_TYPE_MAP[data_type_str]
+        if data_type_str in SUBTYPE_MAP:
+          value_proto.data_type = SUBTYPE_MAP[data_type_str]
         else:
-          raise ValueError(f"Unknown data type: {data_type_str}")
+          raise ValueError(f"Unknown or Unsupported data type: {data_type_str}")
 
     attr_prop_dict[key] = value_proto
 
   return attr_prop_dict
 
+def get_proto_data(question_label, sight) -> sight_pb2.DecisionConfigurationStart:
+  # we get text_proto data in string type
+  text_proto_data = get_text_proto_data(question_label, sight)
 
-def get_text_proto_data(question_label) -> str:
+  # convert it into proto format
+  proto_data = sight_pb2.DecisionConfigurationStart()
+  text_format.Parse(text_proto_data, proto_data)
+  return proto_data
+
+def get_text_proto_data(question_label, sight) -> str:
   """Get the text proto data for the given question label.
 
   Args:
     question_label: The label of the question.
+    sight: The Sight object that contains the decision configuration.
 
   Returns:
     The text proto data for the given question label.
@@ -77,35 +91,87 @@ def get_text_proto_data(question_label) -> str:
   Raises:
     FileNotFoundError: If the text proto file is not found.
   """
-  questions_info = utils.load_yaml_config(get_config_dir_path() +
+  questions = utils.load_yaml_config(utils.get_config_dir_path() +
                                           "/question_config.yaml")
+  # questions = sight.get_decision_config().questions
+  # print(f'get_config_dir_path={get_config_dir_path()}')
+  print(f'questions={questions}')
 
-  if (question_label not in questions_info):
+  if (question_label not in questions):
     raise ValueError(f"Unknown question label: {question_label}")
 
-  relative_text_proto_path = questions_info[question_label]["attrs_text_proto"]
+  relative_text_proto_path = questions[question_label]["attrs_text_proto"]
+  # # Always resolve relative paths from the project root
+  # project_root = Path(__file__).resolve()
+  # while project_root.name != "x-sight" and project_root.parent != project_root:
+  #     project_root = project_root.parent
+
+  # absolute_text_proto_path = (project_root / relative_text_proto_path).resolve()
+  # # logging.info("project_root               :%s", project_root)
+  # # logging.info("absolute_text_proto_path   :%s", absolute_text_proto_path)
+  # # logging.info("relative_text_proto_path   :%s", relative_text_proto_path)
+
+  # if not os.path.exists(absolute_text_proto_path):
+  #   raise FileNotFoundError(f"File not found {absolute_text_proto_path}")
+
+  # with open(absolute_text_proto_path, "r") as f:
+  #   text_proto_data = f.read()
+
   if os.path.exists(relative_text_proto_path):
-    with open(relative_text_proto_path, "r") as f:
+    with open(relative_text_proto_path, 'r') as f:
       text_proto_data = f.read()
   else:
     current_file = Path(__file__).resolve()
-    sight_repo_path = current_file.parents[4]
+    # sight_repo_path = current_file.parents[4]
+    root_repo_path = utils.find_root_repo(current_file)
+    print("root_repo_path : ", root_repo_path)
 
-    absolute_text_proto_path = sight_repo_path.joinpath(
+    absolute_text_proto_path = root_repo_path.joinpath(
         relative_text_proto_path)
     print("absolute_text_proto_path : ", absolute_text_proto_path)
-    print("relative_text_proto_path : ", relative_text_proto_path)
 
     if not os.path.exists(absolute_text_proto_path):
-      raise FileNotFoundError(f"File not found {relative_text_proto_path}")
+      raise FileNotFoundError(f'File not found {absolute_text_proto_path}')
 
-    with open(absolute_text_proto_path, "r") as f:
+    with open(absolute_text_proto_path, 'r') as f:
       text_proto_data = f.read()
 
   return text_proto_data
 
+def get_action_from_textproto(question_label, sight) -> Mapping[str, sight_pb2.DecisionConfigurationStart.AttrProps]:
+  proto_data = get_proto_data(question_label, sight)
+  # Extract only action_attrs
+  action_attrs = proto_data.action_attrs
+  return action_attrs
 
-def get_description_from_textproto(question_label) -> tuple[str, str]:
+# todo : to process the output of this function which will be used in prompt directly
+def get_outcome_from_textproto(question_label, sight) -> Mapping[str, sight_pb2.DecisionConfigurationStart.AttrProps]:
+  proto_data = get_proto_data(question_label, sight)
+  # Extract only outcome_attrs
+  outcome_attrs = proto_data.outcome_attrs
+  return outcome_attrs
+
+def num_to_str(number, large_threshold=1e6, small_threshold=1e-2, precision=2,
+               data_type: sight_pb2.Value.SubType = sight_pb2.Value.ST_UNKNOWN):
+  """
+  Formats a number to scientific notation only if it's very large or very small.
+  Otherwise, formats as a regular float, ensuring to omit irrelevant digits.
+  """
+  if abs(number) >= large_threshold or (abs(number) > 0 and abs(number) < small_threshold):
+    return f"{number:.{precision}e}"
+  else:
+    # If the number has trailing digits due to decimal approximation of binary floats,
+    # cut the number of digits.
+    if data_type == sight_pb2.DecisionConfigurationStart.DT_FLOAT64 or data_type == sight_pb2.DecisionConfigurationStart.DT_FLOAT32:
+      if len(f"{number}") > 6:
+        return f"{number:.{precision}f}"
+      else:
+        return f"{number}"
+    else:
+      return f"{number}"
+
+
+def get_description_from_textproto(question_label, sight) -> tuple[str, str]:
   """Get the description from the textproto file for the given question label.
 
   Args:
@@ -115,13 +181,8 @@ def get_description_from_textproto(question_label) -> tuple[str, str]:
     The function description and argument description from the textproto file
     for the given question label.
   """
-  # we get text_proto data in string type
-  text_proto_data = get_text_proto_data(question_label)
 
-  # convert it into proto format
-  proto_data = sight_pb2.DecisionConfigurationStart()
-  text_format.Parse(text_proto_data, proto_data)
-
+  proto_data = get_proto_data(question_label, sight)
   api_description = proto_data.choice_config[
       question_label].llm_config.description
 
@@ -131,13 +192,57 @@ def get_description_from_textproto(question_label) -> tuple[str, str]:
   items = []
   for k, v_obj in action_attrs.items():
     # Access the description directly from the object and clean it
-    description_text = v_obj.description.strip().rstrip('.')
+    description_text = v_obj.description.strip().rstrip('.') + " | " + \
+            f"type={sight_pb2.DecisionConfigurationStart.DataType.Name(v_obj.data_type)}, "
+    if v_obj.data_type in [
+       sight_pb2.DecisionConfigurationStart.DT_INT32,
+       sight_pb2.DecisionConfigurationStart.DT_INT64,
+       sight_pb2.DecisionConfigurationStart.DT_FLOAT32,
+       sight_pb2.DecisionConfigurationStart.DT_FLOAT64,
+    ]:
+      description_text += \
+            f"min={num_to_str(v_obj.min_value, v_obj.data_type)}, " + \
+            f"max={num_to_str(v_obj.max_value, v_obj.data_type)}, " + \
+            f"default={num_to_str(v_obj.default_value, v_obj.data_type)}"
     items.append(f"{k} : {description_text}")
 
   # Join all items with a comma and space, add a period at the end if not empty
   argument_description = ", \n".join(items) + ("." if items else "")
 
   return api_description, argument_description
+
+def normalize_action(action: dict[str, Any],
+                     question_label: str,
+                     sight) -> tuple[str, str]:
+  """Convert the values in action based on their documented types.
+
+  Args:
+    action: Maps the names of attributes to their values.
+    question_label: The label of the question.
+    sight: The Sight object that contains the decision configuration.
+
+  Returns:
+    The function description and argument description from the textproto file
+    for the given question label.
+  """
+  # we get text_proto data in string type
+  text_proto_data = get_text_proto_data(question_label, sight)
+
+  # convert it into proto format
+  proto_data = sight_pb2.DecisionConfigurationStart()
+  text_format.Parse(text_proto_data, proto_data)
+
+  for k, v_obj in proto_data.action_attrs.items():
+    if k not in action:
+      action[k] = v_obj.default_value
+      continue
+
+    if v_obj.data_type == sight_pb2.DecisionConfigurationStart.DT_INT64 or v_obj.data_type == sight_pb2.DecisionConfigurationStart.DT_INT32:
+      action[k] = int(action[k])
+    elif v_obj.data_type == sight_pb2.DecisionConfigurationStart.DT_FLOAT64 or v_obj.data_type == sight_pb2.DecisionConfigurationStart.DT_FLOAT32:
+      action[k] = float(action[k])
+
+  return action
 
 
 def create_choice_config(
@@ -161,3 +266,24 @@ def create_choice_config(
 
   choice_config_dict[label] = choice_config
   return choice_config_dict
+
+
+def run_py_function_from_str(reward_fn, args) -> float:
+  function_name = "reward_fn"
+  exec_scope = {}
+  exec(reward_fn, {}, exec_scope)
+
+  if function_name in exec_scope and callable(exec_scope[function_name]):
+      # Get a reference to the dynamically defined function
+      reward_fn = exec_scope[function_name]
+      result = reward_fn(*args)
+      return result
+  else:
+      print(f"\nError: Function '{function_name}' not found or not callable in the generated code's scope.")
+      logging.info("ERROR : Please check the reward function passed in action, and the expected function name.")
+
+      return None
+
+
+# action_d = get_action_from_textproto("Generic")
+# print(get_outcome_from_textproto('Fvs'))

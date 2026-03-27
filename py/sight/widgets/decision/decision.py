@@ -30,6 +30,8 @@ from google.protobuf import text_format
 from google.protobuf.text_format import Merge
 from helpers.cache.cache_factory import CacheFactory
 from helpers.cache.cache_factory import CacheType
+from helpers.cache.cache_helper import CacheConfig
+from helpers.cache.cache_helper import KeyMaker
 from helpers.cache.cache_payload_transport import CachedPayloadTransport
 # from absl import logging
 from helpers.logs.logs_handler import logger as logging
@@ -182,10 +184,13 @@ _SERVER_QUEUE_BATCH_SIZE = flags.DEFINE_integer(
     'batch size of the server queue for message queue',
 )
 
-_CACHE_MODE = flags.DEFINE_enum(
-    'cache_mode', 'none',
-    ['gcs', 'local', 'redis', 'none', 'gcs_with_redis', 'local_with_redis'],
-    'Which Sight cache to use ? (default is none)')
+_CACHE_MODE = flags.DEFINE_enum('cache_mode', 'redis_local', [
+    'gcs',
+    'redis_local',
+    'gcs_with_redis_local',
+    'redis_memorystore',
+    'gcs_with_redis_memorystore',
+], 'Which Sight cache to use ? (default is gcs)')
 
 _CONFIG_PATH = flags.DEFINE_string(
     'config_path', get_config_dir_path(),
@@ -238,22 +243,25 @@ def initialize(config: DecisionConfig, sight) -> None:
     config: The configuration of the decision module.
     sight: The sight object for which the decision module is being initialized.
   """
-  for question_label, question_config in config.questions.items():
-    if question_label not in config.optimizers:
-      continue
-    optimizer_type = config.optimizers[question_label]['optimizer']
-    logging.info('optimizer_type=%s', optimizer_type)
-    optimizer_config = config.optimizers[question_label]
-    logging.info('optimizer_config=%s', optimizer_config)
+  if config.questions:
+    for question_label, question_config in config.questions.items():
+      if question_label not in config.optimizers:
+        continue
+      optimizer_type = config.optimizers[question_label]['optimizer']
+      logging.info('optimizer_type=%s', optimizer_type)
+      optimizer_config = config.optimizers[question_label]
+      logging.info('optimizer_config=%s', optimizer_config)
 
-    opt_obj = setup_optimizer(sight, optimizer_type)
-    trials.launch(
-        configure_decision(sight, question_label, question_config,
-                           optimizer_config, opt_obj), sight)
+      opt_obj = setup_optimizer(sight, optimizer_type)
+      trials.launch(
+          configure_decision(sight, question_label, question_config,
+                            optimizer_config, opt_obj), sight)
 
-    # Start worker jobs
-    trials.start_worker_jobs(sight, question_label, optimizer_config,
-                             config.workers, optimizer_type)
+      # Start worker jobs
+      trials.start_worker_jobs(sight, question_label, optimizer_config,
+                              config.workers, optimizer_type)
+  else:
+    logging.info('No worker started due to empty question config')
 
 
 def configure(
@@ -468,18 +476,21 @@ def get_decision_configuration_for_opt(
       decision_configuration: The decision configuration protobuf object with optimizer configuration.
   """
   relative_text_proto_path = question_config['attrs_text_proto']
+
+  #todo : need to add the logic of reading textproto data in common function - also used by worker helper
   if os.path.exists(relative_text_proto_path):
     with open(relative_text_proto_path, 'r') as f:
       text_proto_data = f.read()
   else:
     current_file = Path(__file__).resolve()
-    sight_repo_path = current_file.parents[4]
+    # sight_repo_path = current_file.parents[4]
+    root_repo_path = utils.find_root_repo(current_file)
 
-    absolute_text_proto_path = sight_repo_path.joinpath(
-        question_config['attrs_text_proto'])
+    absolute_text_proto_path = root_repo_path.joinpath(
+        relative_text_proto_path)
 
     if not os.path.exists(absolute_text_proto_path):
-      raise FileNotFoundError(f'File not found {relative_text_proto_path}')
+      raise FileNotFoundError(f'File not found {absolute_text_proto_path}')
 
     with open(absolute_text_proto_path, 'r') as f:
       text_proto_data = f.read()
@@ -646,9 +657,9 @@ def get_decision_outcome_proto(outcome_label: str,
   if 'sum_reward' in sight.widget_decision_state:
     decision_outcome_proto.reward = sight.widget_decision_state['sum_reward']
 
-  if 'sum_outcome' in sight.widget_decision_state:
-    decision_outcome_proto.outcome_params.CopyFrom(
-        convert_dict_to_proto(dict=sight.widget_decision_state['sum_outcome']))
+  # if 'sum_outcome' in sight.widget_decision_state:
+  #   decision_outcome_proto.outcome_params.CopyFrom(
+  #       convert_dict_to_proto(dict=sight.widget_decision_state['sum_outcome']))
 
   if 'discount' in sight.widget_decision_state:
     decision_outcome_proto.discount = sight.widget_decision_state['discount']
@@ -666,9 +677,10 @@ def get_decision_outcome_from_decision_message(
   decision_outcome_proto = sight_pb2.DecisionOutcome(
       outcome_label=outcome_label)
   decision_outcome_proto.reward = decision_message.reward
-  decision_outcome_proto.outcome_params.CopyFrom(
-      convert_dict_to_proto(dict=decision_message.outcome_params))
   decision_outcome_proto.discount = decision_message.discount
+  # decision_outcome_proto.outcome_params.CopyFrom(
+  #     convert_dict_to_proto(dict=decision_message.outcome_params))
+  decision_outcome_proto.outcome_params_ref_key = decision_message.outcome_ref_key
   # logging.info('decision decision_outcome_proto =>%s', decision_outcome_proto)
   return decision_outcome_proto
 
@@ -723,15 +735,16 @@ def _process_llm_action(sight, req, optimizer_obj):
   widget_state = sight.widget_decision_state
   if 'reward' in widget_state:
     req.decision_outcome.reward = widget_state['reward']
-  if 'outcome_value' in widget_state:
-    req.decision.outcome.outcome_params.CopyFrom(
-        convert_dict_to_proto(dict=widget_state['outcome_value']))
+  # if 'outcome_value' in widget_state:
+  #   req.decision.outcome.outcome_params.CopyFrom(
+  #       convert_dict_to_proto(dict=widget_state['outcome_value']))
   req.decision_outcome.discount = widget_state['discount']
   return optimizer_obj.decision_point(sight, req)
 
 
 def _make_decision(sight, req):
   """Handles decision-making based on the optimizer type."""
+  #! need to check here when optimizer is not initialized
   optimizer_obj = optimizer.get_instance()
   optimizer_type = _OPTIMIZER_TYPE.value
   widget_state = sight.widget_decision_state
@@ -797,9 +810,6 @@ def decision_point(
   # )
 
   # Increment decision point count
-
-  print(f'sight widget decision state => {sight.widget_decision_state}')
-
   sight.widget_decision_state['num_decision_points'] += 1
 
   # Return cached action if available
@@ -827,7 +837,7 @@ def decision_point(
   return chosen_action
 
 
-def _update_cached_batch(sight: Any):
+def _update_cached_batch(sight: Any, question_label, custom_part="sight_cache"):
   """Updates the cached batch with the latest decision state.
 
   Args:
@@ -840,13 +850,38 @@ def _update_cached_batch(sight: Any):
   if cached_messages and action_id:
     logging.info(
         f'_update_cached_batch() Caching batch for action_id: {action_id}')
-    cached_messages.update(
-        key=action_id,
-        action_params=cached_messages.get(action_id).action_params,
-        discount=sight.widget_decision_state['discount'],
-        reward=sight.widget_decision_state.get('sum_reward', 0),
-        outcome_params=sight.widget_decision_state.get('sum_outcome', {}),
-    )
+
+    if _CACHE_MODE.value not in [
+        CacheType.NONE, CacheType.LOCAL, CacheType.LOCAL_WITH_REDIS
+    ]:
+
+      cache_client = CacheFactory.get_cache(
+          FLAGS.cache_mode,
+          # * Update the config as per need , None config means it takes default redis config for localhost
+          with_redis=CacheConfig.get_redis_instance(FLAGS.cache_mode,
+                                                    config=None))
+      action_dict = cached_messages.get(action_id).action_params
+
+      logging.info('action_dict used by worker is => %s', action_dict)
+
+      key_maker = KeyMaker()
+      worker_version = utils.get_worker_version(question_label, sight)
+      custom_part = custom_part + ':' + worker_version
+      cache_key = key_maker.make_custom_key(custom_part, action_dict)
+      outcome_params = sight.widget_decision_state.get('sum_outcome', {})
+      cache_client.set(cache_key, json.dumps(outcome_params))
+      cached_messages.update(
+          key=action_id,
+          action_params=cached_messages.get(action_id).action_params,
+          discount=sight.widget_decision_state['discount'],
+          reward=sight.widget_decision_state.get('sum_reward', 0),
+          outcome_ref_key=cache_key)
+    else:
+      # Centralized storage is now mandatory because the completed list relies on cache keys,
+      # making local cache mode incompatible with the new caching mechanism.
+      raise Exception(
+          'You are not using any centralized storage to pass the message. Centralized storage (GCS or Redis) is required for this configuration. Check your cache mode; it should be `gcs`, `gcs_with_redis`, or `*_with_redis`.'
+      )
 
 
 def decision_outcome(
@@ -854,6 +889,7 @@ def decision_outcome(
     sight: Any,
     reward: Optional[float] = None,
     outcome: Optional[Dict[str, Any]] = None,
+    question_label: Optional[str] = None,
     discount=1.0,
     # optimizer_type: str
 ) -> None:
@@ -906,7 +942,7 @@ def decision_outcome(
       inspect.currentframe().f_back.f_back,
   )
 
-  _update_cached_batch(sight)
+  _update_cached_batch(sight, question_label)
 
   if 'sum_reward' in sight.widget_decision_state:
     _rewards.append(sight.widget_decision_state['sum_reward'])
@@ -967,28 +1003,39 @@ def _handle_optimizer_finalize(sight: Any, req: Any,
     # logging.info('action_id=%s, msg=%s', action_id, msg)
     # logging.info('msg.action_params=%s', msg.action_params)
     decision_message = sight_pb2.DecisionMessage()
-    decision_message.decision_outcome.CopyFrom(
-        get_decision_outcome_from_decision_message(outcome_label='outcome',
-                                                   decision_message=msg))
-    decision_message.action_id = action_id
 
+    decision_message.action_id = action_id
     choice_params = sight_pb2.DecisionParam()
     choice_params.CopyFrom(convert_dict_to_proto(dict=msg.action_params))
     decision_message.decision_point.choice_params.CopyFrom(choice_params)
+
+    if msg.error_traceback:
+      decision_message.error_traceback = msg.error_traceback
+    else:
+      decision_message.decision_outcome.CopyFrom(
+          get_decision_outcome_from_decision_message(outcome_label='outcome',
+                                                    decision_message=msg))
+
+
     f_ep_req_proto_msg.decision_messages.append(decision_message)
 
-  # lets enable caching larger response when we use +CACHE_MODE.value other than local or none
-  if _CACHE_MODE.value not in [
-      CacheType.NONE, CacheType.LOCAL, CacheType.LOCAL_WITH_REDIS
-  ]:
-    cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
-        cache_type=_CACHE_MODE.value))
-    # Store the decision outcome in the cache and communicate the key to the server.
-    req.decision_messages_ref_key = cache_transport.store_payload(
-        text_format.MessageToString(f_ep_req_proto_msg))
-  else:
-    # Place the decision outcome in the FinalizeEpisode rpc to the server.
-    req.MergeFrom(f_ep_req_proto_msg)
+    # ! removing the uuid-cache key feature from below code
+    # ! ---->
+  # # lets enable caching larger response when we use +CACHE_MODE.value other than local or none
+  # if _CACHE_MODE.value not in [
+  #     CacheType.NONE, CacheType.LOCAL, CacheType.LOCAL_WITH_REDIS
+  # ]:
+  #   cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
+  #       cache_type=_CACHE_MODE.value))
+  #   # Store the decision outcome in the cache and communicate the key to the server.
+  #   req.decision_messages_ref_key = cache_transport.store_payload(
+  #       text_format.MessageToString(f_ep_req_proto_msg))
+  # else:
+  #   # Place the decision outcome in the FinalizeEpisode rpc to the server.
+  #   req.MergeFrom(f_ep_req_proto_msg)
+  # ! <----
+
+  req.MergeFrom(f_ep_req_proto_msg)
 
   logging.info('Finalize req=%s', req)
 
@@ -1065,7 +1112,7 @@ def finalize_episode(sight, question_label, optimizer_obj):
 
   logging.debug('<<<<  Out %s of %s', method_name, _file_name)
 
-
+#deprecated
 def get_outcome(sight):
   """Returns the outcome from the server.
 

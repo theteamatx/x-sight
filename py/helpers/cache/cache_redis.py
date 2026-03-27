@@ -1,7 +1,9 @@
 """This module contains a Redis Cache implementation."""
 
+import hashlib
 import json
 import pickle
+import threading
 
 from helpers.logs.logs_handler import logger as logging
 from overrides import override
@@ -9,6 +11,7 @@ import redis
 from redis.commands.json import path
 
 from .cache_interface import CacheInterface
+from .constants import RedisConstants
 
 Path = path.Path
 
@@ -23,6 +26,25 @@ class RedisCache(CacheInterface):
   cache.
   """
 
+  _instances = {}
+  _lock = threading.Lock()  # to make RedisCache thread-safe
+
+  def __new__(cls, config=None):
+    config = config or {}
+    config_key = cls._get_config_hash(config)
+
+    with cls._lock:
+      if config_key not in cls._instances:
+        instance = super(RedisCache, cls).__new__(cls)
+        cls._instances[config_key] = instance
+        instance._initialized = False  # so __init__ only runs once per instance
+      return cls._instances[config_key]
+
+  @staticmethod
+  def _get_config_hash(config: dict) -> str:
+    config_str = json.dumps(config, sort_keys=True)
+    return hashlib.sha256(config_str.encode()).hexdigest()
+
   def __init__(self, config=None):
     """Initializes the RedisCache object.
 
@@ -30,17 +52,17 @@ class RedisCache(CacheInterface):
       config: A dictionary containing configuration options for the Redis
         connection.
     """
-    if config is None:
-      config = {}
+    if getattr(self, '_initialized', False):
+      return  # prevent re-init
     try:
       self.redis_client = redis.StrictRedis(
-          host=config.get("redis_host", "localhost"),
-          port=config.get("redis_port", 1234),
-          # port=config.get("redis_port", 6379),
-          password=config.get("redis_pass", ""),
-          db=config.get("redis_db", 0),
+          host=config.get("redis_host", RedisConstants.REDIS_HOST),
+          port=config.get("redis_port", RedisConstants.REDIS_PORT),
+          password=config.get("redis_pass", RedisConstants.REDIS_PASS),
+          db=config.get("redis_db", RedisConstants.REDIS_DB),
       )
       self.redis_client.ping()
+      self._initialized = True
     except (redis.ConnectionError, redis.TimeoutError) as e:
       logging.warning(f"RediConnection failed: {e}")
       self.redis_client = None
@@ -60,21 +82,17 @@ class RedisCache(CacheInterface):
   def get(self, key: str) -> Any:
     """Gets the value from the cache using key as string data"""
     self._is_redis_client_exist()
-    string_value = self.redis_client.get(key)
-    if string_value:
-      return json.loads(string_value)
-    return None
+    value = self.redis_client.get(key)
+    return value.decode('utf-8') if value else None
 
   @override
   def set(self, key: str, value: Any) -> None:
     """Set the key with value as string data"""
     self._is_redis_client_exist()
     try:
-      string_value = json.dumps(value)
-      self.redis_client.set(key, string_value)
+      self.redis_client.set(key, value)
     except TypeError as e:
-      if "circular reference" in str(e):
-        raise TypeError("Circular JSON object detected") from e
+      raise e
 
   @override
   def bin_get(self, key: str):

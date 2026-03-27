@@ -17,9 +17,6 @@ import threading
 from typing import Any, Dict, List, Tuple
 
 from google.protobuf import text_format
-from helpers.cache.cache_factory import CacheFactory
-from helpers.cache.cache_factory import CacheType
-from helpers.cache.cache_payload_transport import CachedPayloadTransport
 from helpers.logs.logs_handler import logger as logging
 from overrides import overrides
 from readerwriterlock import rwlock
@@ -51,8 +48,6 @@ class WorklistScheduler(SingleActionOptimizer):
     self.exp_completed = False
     self.possible_values = {}
     self.max_reward_sample = {}
-    self.cache_transport = CachedPayloadTransport(cache=CacheFactory.get_cache(
-        cache_type=self.cache_mode))
 
   def add_outcome_to_outcome_response(
       self, msg_details: MessageDetails, sample_id,
@@ -62,8 +57,10 @@ class WorklistScheduler(SingleActionOptimizer):
     outcome.reward = msg_details.reward
     outcome.action_attrs.CopyFrom(
         convert_dict_to_proto(dict=msg_details.action))
-    outcome.outcome_attrs.CopyFrom(
-        convert_dict_to_proto(dict=msg_details.outcome))
+    outcome.outcome_attrs_ref_key = msg_details.outcome_ref_key
+    # outcome.outcome_attrs.CopyFrom(
+    #     convert_dict_to_proto(dict=msg_details.outcome))
+
     outcome.attributes.CopyFrom(
         convert_dict_to_proto(dict=msg_details.attributes))
 
@@ -119,7 +116,11 @@ class WorklistScheduler(SingleActionOptimizer):
         outcome.action_id = sample_id
         if sample_id in all_completed_messages:
           given_msg_details = all_completed_messages[sample_id]
-          self.add_outcome_to_outcome_response(msg_details=given_msg_details,
+          if given_msg_details.error_traceback:
+            outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.ERROR
+            outcome.response_str = given_msg_details.error_traceback
+          else:
+            self.add_outcome_to_outcome_response(msg_details=given_msg_details,
                                                sample_id=sample_id,
                                                outcome=outcome)
         elif sample_id in all_pending_messages:
@@ -132,14 +133,7 @@ class WorklistScheduler(SingleActionOptimizer):
           outcome.status = service_pb2.GetOutcomeResponse.Outcome.Status.NOT_EXIST
           outcome.response_str = f'!! requested sample Id {sample_id} does not exist !!'
     logging.info('self.queue => %s', self.queue)
-
-    if self.cache_mode not in [
-        CacheType.NONE, CacheType.LOCAL, CacheType.LOCAL_WITH_REDIS
-    ]:
-      response.outcomes_ref_key = self.cache_transport.store_payload(
-          text_format.MessageToString(g_o_res_proto_msg))
-    else:
-      response.MergeFrom(g_o_res_proto_msg)
+    response.MergeFrom(g_o_res_proto_msg)
 
     return response
 
@@ -173,28 +167,30 @@ class WorklistScheduler(SingleActionOptimizer):
     method_name = "finalize_episode"
     logging.debug(">>>>  In %s of %s", method_name, _file_name)
 
-    cache_transport = self.cache_transport
-
-    # If the decision outcome was communicated via the cache.
-    if request.decision_messages_ref_key:
-      proto_cached_data = cache_transport.fetch_payload(
-          request.decision_messages_ref_key)
-      text_format.Parse(proto_cached_data, request)
-
     decision_messages = request.decision_messages
     logging.debug('we have decision messages %s', len(decision_messages))
 
-    for i in range(len(decision_messages)):
-      logging.debug('calling queue.complete_message for %s th msg', i)
+    for d_message in decision_messages:
+      logging.debug('calling queue.complete_message for msg_id: %s', d_message.action_id)
+
+      # Use a default argument `dm=d_message` to capture the current value of d_message
+      if d_message.error_traceback:
+        update_fn = lambda msg, dm=d_message: msg.update(
+            error_traceback=dm.error_traceback
+        )
+      else:
+        update_fn = lambda msg, dm=d_message: msg.update(
+            reward=dm.decision_outcome.reward,
+            outcome_ref_key=dm.decision_outcome.outcome_params_ref_key,
+            action=convert_proto_to_dict(
+                proto=dm.decision_point.choice_params
+            ),
+        )
+
       self.queue.complete_message(
           worker_id=request.worker_id,
-          message_id=decision_messages[i].action_id,
-          update_fn=lambda msg: msg.update(
-              reward=decision_messages[i].decision_outcome.reward,
-              outcome=convert_proto_to_dict(proto=decision_messages[i].
-                                            decision_outcome.outcome_params),
-              action=convert_proto_to_dict(proto=decision_messages[i].
-                                           decision_point.choice_params)))
+          message_id=d_message.action_id,
+          update_fn=update_fn)
 
     # logging.debug("self.queue => %s", self.queue)
 
